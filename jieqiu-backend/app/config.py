@@ -36,6 +36,23 @@ class Settings(BaseSettings):
     odds_sports: str = "soccer_epl,soccer_spain_la_liga,soccer_germany_bundesliga,soccer_italy_serie_a,soccer_france_ligue_one,soccer_uefa_champs_league"
     odds_sync_min_interval_hours: float = 6.0
 
+    # ---- W5 认证（方案 B：自建 JWT + 验证码 + 第三方 OAuth）----
+    jwt_secret: str = ""              # 生产必填（未配置则认证端点 fail-closed）
+    jwt_access_minutes: int = 15
+    refresh_days: int = 30
+    code_ttl_seconds: int = 300        # 验证码 5 分钟
+    code_max_attempts: int = 5
+    code_send_interval_seconds: int = 60   # 同目标 60 秒一次
+    code_daily_limit: int = 10             # 同目标每日上限
+    auth_stub: bool = True             # 非生产环境启用 stub（dev_code 回显 / 假 OAuth）
+    sms_provider: str = "stub"         # stub | tencent
+    email_provider: str = "stub"       # stub | resend
+    resend_api_key: str = ""
+    wechat_app_id: str = ""
+    wechat_app_secret: str = ""
+    google_client_id: str = ""
+    apple_client_id: str = ""
+
     model_config = {"env_prefix": "JQ_", "env_file": ".env", "extra": "ignore"}
 
 

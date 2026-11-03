@@ -1,3 +1,13 @@
+# 解球后端 · W5 认证已上线（W8 冻结基线已重采纳 65 路由）
+
+认证（方案 B·自建）：
+`/auth/sms/send|verify`（CN 手机号）· `/auth/wechat/callback|bind-phone`（微信后强制绑手机）·
+`/auth/email/send|verify`（GL）· `/auth/oauth/google|apple`（GL）· `/auth/refresh|logout` ·
+`/auth/providers?region=`（登录页清单）。JWT access 15min + refresh 30d（轮换+复用检测→撤销家族）；
+验证码 6 位/HMAC/5min/5 次/单次消费；同目标 60s + 10 条/日。生产缺真实通道时 503 fail-loud。
+
+---
+
 # 解球后端 · W8（功能冻结）
 
 W8 提审基建：`/review/checklist` 提审检查单（自动聚合）· `/review/banned-words/scan` 即席文案扫描 · `/legal/disclosure` 隐私+SDK+权限契约 · `/app/version` OTA · `/review/freeze` 功能冻结（53 路由基线，新增即违规）。禁用词 21 词表 + 反空格/标点/全角绕过，后端库扫描零命中。

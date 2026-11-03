@@ -73,9 +73,14 @@ def purge_expired_deletions(db: Session, days: int = 7) -> dict:
 
 
 def user_from_token(db: Session, authorization: str | None) -> User | None:
+    """Bearer 兼容两种：W5 JWT access token（优先）与旧设备令牌（免登录态）。"""
     if not authorization or not authorization.lower().startswith("bearer "):
         return None
     token = authorization.split(" ", 1)[1].strip()
+    from .auth import verify_access
+    uid = verify_access(token)
+    if uid:
+        return db.get(User, uid)
     return db.scalar(select(User).where(User.device_token == token))
 
 

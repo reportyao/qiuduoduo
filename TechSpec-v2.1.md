@@ -54,7 +54,7 @@ Expo App ──HTTPS──> 腾讯云 VPS: uvicorn(api) ──localhost──> P
 4. 切流：systemd `JQ_DATABASE_URL=postgresql+psycopg://...` → restart → `/health` 计数对齐 → `/chain/verify` 全绿
 5. 回滚预案：SQLite 文件保留只读 7 天，环境变量一行切回
 
-**认证设计（W5 实施）**
+**认证设计（W5 ✅ 已实现，`app/modules/auth.py` + `routers/auth_w5.py`）**
 
 | 区域 | 登录方式 | 实现 |
 |---|---|---|

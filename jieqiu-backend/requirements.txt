@@ -9,3 +9,4 @@ httpx>=0.27
 pytest>=8.3
 penaltyblog>=0.5
 python-multipart>=0.0.9
+PyJWT>=2.8

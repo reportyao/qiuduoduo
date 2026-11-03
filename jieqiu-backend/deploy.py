@@ -67,6 +67,16 @@ def main() -> None:
     print("[4/6] deps:", out.strip().splitlines()[-1])
     assert "deps-ok" in out
 
+    # JWT 密钥：首次部署生成并固定（幂等：已有 unit 中保留）
+    import secrets as _secrets
+    code, out = run(ssh, "grep -o 'JQ_JWT_SECRET=[a-f0-9]*' /etc/systemd/system/jieqiu-backend.service 2>/dev/null | head -1")
+    jwt_secret = ""
+    if "JQ_JWT_SECRET=" in out:
+        jwt_secret = out.strip().split("JQ_JWT_SECRET=")[1]
+    else:
+        jwt_secret = _secrets.token_hex(32)
+    print("[jwt] secret", "kept" if "JQ_JWT_SECRET=" in out else "generated")
+
     # systemd 单元
     unit = f"""[Unit]
 Description=jieqiu backend (W2)
@@ -79,6 +89,7 @@ Environment=JQ_ENV=prod
 Environment=JQ_XG_DATA_PATH={ROOT}/xg_matches.csv
 Environment=JQ_XG_EXTRA_DIR={DATA}/xg_dumps
 Environment=JQ_FREEZE_BASELINE={DATA}/freeze_baseline.json
+Environment=JQ_JWT_SECRET={jwt_secret}
 Environment=JQ_CONSOLE_PASSWORD=Jq@Console#2026
 ExecStart={ROOT}/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8100
 Restart=always

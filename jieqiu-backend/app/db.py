@@ -72,6 +72,10 @@ _REQUIRED_COLUMNS = {
         "odds_format": "TEXT",
         "locale": "TEXT",
         "region": "TEXT",
+        "phone": "TEXT",
+        "email": "TEXT",
+        "phone_verified": "BOOLEAN",
+        "email_verified": "BOOLEAN",
         "deleted_at": "TIMESTAMP",
     },
 }

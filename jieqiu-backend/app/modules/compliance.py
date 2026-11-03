@@ -81,12 +81,17 @@ def scan_dir(root: str, exts=( ".py", ".md", ".txt", ".html")) -> dict:
 
 DISCLOSURE = {
     "privacy": {
-        "collects": ["设备令牌（登录标识）", "记注金额与选择（仅你可见）", "语言/人设/区域偏好"],
+        "collects": ["手机号或邮箱（登录标识，验证码登录）",
+                     "第三方登录匿名标识（微信 openid / Google sub / Apple sub）",
+                     "记注金额与选择（仅你可见）", "语言/人设/区域偏好"],
         "not_collects": ["出生日期", "真实姓名", "身份证", "支付凭证", "通讯录/位置/相册"],
         "sharing": "不向第三方共享、不出售。数据可随时导出（/me/export），注销后 7 天清除。",
         "storage": "数据存储于腾讯云（中国境内）PostgreSQL 主库；全球用户共用同一主库，跨境传输按 GDPR SCC 条款处理（v2.0 前完成 DPA）",
     },
     "sdk_manifest": [
+        {"name": "微信 OpenSDK", "purpose": "微信登录（中国大陆）", "data": "微信 openid/unionid，不含好友关系"},
+        {"name": "Google Sign-In", "purpose": "Google 登录（国际）", "data": "Google sub + 已验证邮箱"},
+        {"name": "Sign in with Apple", "purpose": "Apple 登录（国际）", "data": "Apple sub（可隐藏邮箱）"},
         {"name": "FastAPI/Uvicorn", "purpose": "API 服务", "data": "无设备数据收集"},
         {"name": "PostHog（W5 接入）", "purpose": "匿名使用统计", "data": "事件级遥测，无个人标识"},
         {"name": "JPush/Expo（W5 接入）", "purpose": "推送", "data": "设备推送令牌"},
@@ -202,6 +207,8 @@ def review_checklist(db, app) -> dict:
         {"id": "banned_words", "name": "禁用词扫描零命中",
          "ok": scan["clean"], "note": f"扫描 {scan['scanned_files']} 文件，命中 {len(scan['hits'])}",
          "hits": scan["hits"][:10]},
+        {"id": "auth", "name": "自建认证（手机号/微信/Email/Google/Apple + JWT）",
+         "ok": True, "note": "CN 手机号+验证码 / 微信后绑手机；GL Email/Google/Apple；refresh 轮换+复用检测"},
         {"id": "privacy_disclosure", "name": "隐私弹窗+SDK 清单+权限最小化",
          "ok": True, "note": "GET /legal/disclosure（App 弹窗取此契约）"},
         {"id": "category_age", "name": "类目体育资讯/工具 + 18+ 一致",

@@ -206,6 +206,11 @@ class User(Base):
     odds_format: Mapped[str] = mapped_column(String(12), default="decimal")
     locale: Mapped[str] = mapped_column(String(8), default="zh")
     region: Mapped[str] = mapped_column(String(8), default="cn")   # cn / global（F18 双区域）
+    # W5 认证：手机号/邮箱（登录标识）
+    phone: Mapped[str | None] = mapped_column(String(24), nullable=True, index=True)
+    email: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    phone_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # 注销冷静期
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
@@ -266,4 +271,50 @@ class ModelRun(Base):
     gate: Mapped[str] = mapped_column(String(16))  # price / market / model
     result: Mapped[str] = mapped_column(String(16))  # pass / fail / pending_data
     detail: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+class AuthIdentity(Base):
+    """第三方/验证码登录标识（phone/email 也落此表，便于多方式归并到同一用户）。"""
+
+    __tablename__ = "auth_identities"
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_uid", name="uq_identity_provider_uid"),
+        UniqueConstraint("user_id", "provider", name="uq_user_provider"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    provider: Mapped[str] = mapped_column(String(16), index=True)  # phone/email/wechat/google/apple
+    provider_uid: Mapped[str] = mapped_column(String(128), index=True)
+    identifier_masked: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class VerificationCode(Base):
+    """短信/邮箱验证码（6 位，HMAC 存储，5 分钟有效，5 次尝试，单次消费）。"""
+
+    __tablename__ = "verification_codes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    channel: Mapped[str] = mapped_column(String(8))                    # sms / email
+    target_hash: Mapped[str] = mapped_column(String(64), index=True)   # HMAC(phone|email)
+    code_hash: Mapped[str] = mapped_column(String(64))
+    purpose: Mapped[str] = mapped_column(String(16), default="login")  # login/bind/wechat_bind
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    consumed: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class RefreshToken(Base):
+    """刷新令牌（不透明随机串，哈希入库；轮换 + 复用检测 → 撤销整个 family）。"""
+
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    family_id: Mapped[str] = mapped_column(String(32), index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

@@ -1,0 +1,212 @@
+"""W5 认证测试：CN 手机号/微信绑手机；GL 邮箱/Google/Apple；JWT/refresh 安全。"""
+import time
+
+from sqlalchemy import select
+
+from app.models import AuthIdentity, RefreshToken, User
+from app.modules import auth as A
+from app.modules.users import user_from_token
+from tests.conftest import today_cn
+
+
+def _reset_limits():
+    A._last_send.clear()
+    A._daily_count.clear()
+
+
+def _send_and_verify(client, channel: str, target: str, purpose="login"):
+    _reset_limits()
+    body = {"phone": target} if channel == "sms" else {"email": target}
+    if purpose != "login":
+        r = client.post(f"/auth/{channel}/send", json={**body, "purpose": purpose})
+    else:
+        r = client.post(f"/auth/{channel}/send", json=body)
+    assert r.status_code == 200, r.text
+    code = r.json()["dev_code"]
+    if channel == "sms":
+        return client.post("/auth/sms/verify", json={"phone": target, "code": code, "purpose": purpose})
+    return client.post("/auth/email/verify", json={"email": target, "code": code})
+
+
+# ---------- CN：手机号 ----------
+
+def test_phone_register_and_login(db, client):
+    r = _send_and_verify(client, "sms", "13800138000")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["created"] is True
+    u = body["user"]
+    assert u["region"] == "cn" and u["phone"] == "138****8000" and u["phone_verified"]
+    assert body["access_token"] and body["refresh_token"]
+
+    # 再次登录：同一用户、created=False
+    r2 = _send_and_verify(client, "sms", "13800138000")
+    b2 = r2.json()
+    assert b2["created"] is False and b2["user"]["user_id"] == u["user_id"]
+    assert len(db.scalars(select(User)).all()) == 1
+
+    # JWT 可访问 /me
+    me = client.get("/me", headers={"Authorization": "Bearer " + b2["access_token"]})
+    assert me.status_code == 200 and me.json()["user_id"] == u["user_id"]
+
+
+def test_phone_format_validation(db, client):
+    assert client.post("/auth/sms/send", json={"phone": "12345"}).status_code == 422
+    assert client.post("/auth/sms/send", json={"phone": "23800138000"}).status_code == 422
+
+
+def test_code_wrong_and_single_use(db, client):
+    _reset_limits()
+    r = client.post("/auth/sms/send", json={"phone": "13900139000"})
+    code = r.json()["dev_code"]
+    wrong = "000000" if code != "000000" else "111111"
+    assert client.post("/auth/sms/verify", json={"phone": "13900139000", "code": wrong}).status_code == 401
+    ok = client.post("/auth/sms/verify", json={"phone": "13900139000", "code": code})
+    assert ok.status_code == 200
+    # 单次消费：再用同码 → 401
+    assert client.post("/auth/sms/verify", json={"phone": "13900139000", "code": code}).status_code == 401
+
+
+def test_send_rate_limit(db, client):
+    _reset_limits()
+    assert client.post("/auth/sms/send", json={"phone": "13700137000"}).status_code == 200
+    r = client.post("/auth/sms/send", json={"phone": "13700137000"})
+    assert r.status_code == 429  # 60s 内第二条
+
+
+# ---------- CN：微信后绑手机 ----------
+
+def test_wechat_login_requires_phone_bind(db, client):
+    _reset_limits()
+    r = client.post("/auth/wechat/callback", json={"code": "wxcode-abc"})
+    assert r.status_code == 200
+    b = r.json()
+    assert b["needs_phone_bind"] is True and b["bind_token"]
+    # 未绑手机无法直接登录
+    assert "access_token" not in b
+    # 发绑定验证码（purpose=wechat_bind）→ 绑定成功
+    s = client.post("/auth/wechat/bind-phone/send", json={"phone": "13600136000", "purpose": "wechat_bind"})
+    code = s.json()["dev_code"]
+    r2 = client.post("/auth/wechat/bind-phone",
+                     json={"bind_token": b["bind_token"], "phone": "13600136000", "code": code})
+    assert r2.status_code == 200, r2.text
+    b2 = r2.json()
+    assert b2["created"] is True and "wechat" in b2["bound"] and b2["user"]["phone_verified"]
+    # 再次微信登录 → 直接出令牌
+    r3 = client.post("/auth/wechat/callback", json={"code": "wxcode-abc"})
+    b3 = r3.json()
+    assert b3["needs_phone_bind"] is False and b3["access_token"]
+    assert b3["user"]["user_id"] == b2["user"]["user_id"]
+
+
+def test_wechat_bind_merges_existing_phone_user(db, client):
+    """微信后绑的手机号若已注册 → 合并到老用户（不建重复账号）。"""
+    r = _send_and_verify(client, "sms", "13500135000")
+    old_uid = r.json()["user"]["user_id"]
+    _reset_limits()
+    w = client.post("/auth/wechat/callback", json={"code": "wxcode-merge"}).json()
+    s = client.post("/auth/wechat/bind-phone/send", json={"phone": "13500135000", "purpose": "wechat_bind"})
+    code = s.json()["dev_code"]
+    r2 = client.post("/auth/wechat/bind-phone",
+                     json={"bind_token": w["bind_token"], "phone": "13500135000", "code": code})
+    b = r2.json()
+    assert b["created"] is False and b["user"]["user_id"] == old_uid
+    assert len(db.scalars(select(User)).all()) == 1
+
+
+def test_wechat_bind_token_forged_rejected(db, client):
+    r = client.post("/auth/wechat/bind-phone",
+                    json={"bind_token": "forged.token.value", "phone": "13400134000", "code": "123456"})
+    assert r.status_code == 401
+
+
+# ---------- GL：邮箱 ----------
+
+def test_email_register_and_login(db, client):
+    r = _send_and_verify(client, "email", "user@example.com")
+    assert r.status_code == 200, r.text
+    b = r.json()
+    assert b["created"] is True and b["user"]["region"] == "global"
+    assert b["user"]["email"] == "u***@example.com" and b["user"]["email_verified"]
+    r2 = _send_and_verify(client, "email", "user@example.com")
+    assert r2.json()["created"] is False
+    # 大小写归一
+    assert r2.json()["user"]["email"] == "u***@example.com"
+
+
+# ---------- GL：Google / Apple ----------
+
+def test_google_login_and_account_merge(db, client):
+    r = client.post("/auth/oauth/google",
+                    json={"id_token": "stub:google:g-123:user@example.com"})
+    assert r.status_code == 200, r.text
+    b = r.json()
+    assert b["created"] is True and b["provider"] == "google"
+    assert b["user"]["region"] == "global" and b["user"]["email_verified"] is True
+    uid = b["user"]["user_id"]
+    # 同 Google sub 再登录 → 同用户
+    b2 = client.post("/auth/oauth/google",
+                     json={"id_token": "stub:google:g-123:user@example.com"}).json()
+    assert b2["created"] is False and b2["user"]["user_id"] == uid
+    # 邮箱已存在（上例 email 用户）→ 合并，不重复建号
+    n_before = len(db.scalars(select(User)).all())
+    b3 = client.post("/auth/oauth/google",
+                     json={"id_token": "stub:google:g-999:user@example.com"}).json()
+    assert len(db.scalars(select(User)).all()) == n_before, "同邮箱应合并而非新建"
+
+
+def test_apple_login(db, client):
+    r = client.post("/auth/oauth/apple",
+                    json={"id_token": "stub:apple:a-1:appleuser@icloud.com"})
+    assert r.status_code == 200
+    assert r.json()["provider"] == "apple"
+    # Apple 隐藏邮箱（无 email）也能建号
+    r2 = client.post("/auth/oauth/apple", json={"id_token": "stub:apple:a-2:"})
+    assert r2.status_code == 200 and r2.json()["created"] is True
+
+
+def test_oauth_invalid_token_rejected(db, client):
+    assert client.post("/auth/oauth/google", json={"id_token": "garbage"}).status_code == 401
+    assert client.post("/auth/oauth/apple", json={"id_token": "stub:google:x:y"}).status_code == 401
+
+
+# ---------- JWT / refresh 安全 ----------
+
+def test_refresh_rotation_and_reuse_detection(db, client):
+    r = _send_and_verify(client, "sms", "13300133000").json()
+    rt = r["refresh_token"]
+    # 轮换
+    r1 = client.post("/auth/refresh", json={"refresh_token": rt})
+    assert r1.status_code == 200
+    new_rt = r1.json()["refresh_token"]
+    assert new_rt != rt
+    # 复用旧 token → 401 且整个 family 撤销
+    r2 = client.post("/auth/refresh", json={"refresh_token": rt})
+    assert r2.status_code == 401
+    # family 内新 token 也被撤销
+    r3 = client.post("/auth/refresh", json={"refresh_token": new_rt})
+    assert r3.status_code == 401
+
+
+def test_logout_revokes_refresh(db, client):
+    r = _send_and_verify(client, "sms", "13200132000").json()
+    assert client.post("/auth/logout", json={"refresh_token": r["refresh_token"]}).status_code == 200
+    assert client.post("/auth/refresh", json={"refresh_token": r["refresh_token"]}).status_code == 401
+
+
+def test_legacy_device_token_still_works(db, client):
+    """兼容：旧设备令牌仍是有效 Bearer（免登录态）。"""
+    r = client.post("/auth/device", json={"device_token": "legacy-dev"})
+    tok = r.json()["token"]
+    me = client.get("/me", headers={"Authorization": f"Bearer {tok}"})
+    assert me.status_code == 200
+
+
+# ---------- 登录页方式清单 ----------
+
+def test_auth_providers_by_region(client):
+    cn = client.get("/auth/providers?region=cn").json()
+    gl = client.get("/auth/providers?region=global").json()
+    assert [p["id"] for p in cn["providers"]] == ["phone", "wechat"]
+    assert [p["id"] for p in gl["providers"]] == ["email", "google", "apple"]
+    assert cn["providers"][0]["primary"] is True and gl["providers"][0]["primary"] is True
