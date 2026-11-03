@@ -110,7 +110,8 @@ packages/api       生成的 client
 - 生产/CI 使用 Postgres 16；
 - Alembic 是 schema 事实源；
 - SQLite 仅允许纯单元测试或一次性工具；
-- OpenAPI 由 FastAPI 生成，`packages/api-client` 从 `/openapi.json` 生成；
+- OpenAPI 由 FastAPI 生成；后端导出 `packages/api-client/openapi.json` 快照，client 从快照离线生成；
+- 迁移先于应用启动；Alembic baseline 已覆盖当前全部表；
 - AI 输出必须通过 Pydantic / JSON Schema 校验；
 - 领域事件必须有 `dedupe_key`、`payload_hash`、`data_cutoff`。
 

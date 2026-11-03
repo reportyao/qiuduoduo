@@ -19,7 +19,7 @@ export default function HomeScreen() {
           </Text>
         ) : (
           <Text style={styles.cardBody}>
-            已连接 · {String(health.data?.status ?? "unknown")}
+            已连接 · 引擎正常
           </Text>
         )}
       </View>

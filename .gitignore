@@ -10,6 +10,7 @@ sp-collector/probe.json
 jieqiu-backend/.git.bak/
 jieqiu-backend/venv/
 jieqiu-backend/app/modules/freeze_baseline.json
+jieqiu-backend/freeze_baseline.json
 jieqiu-backend/sync.log
 jieqiu-backend/backtest.log
 jieqiu-backend/purge.log
@@ -24,6 +25,8 @@ jieqiu-app/*.bak-*
 
 jieqiu-backend/assistant.log
 .expo/
+export-check/
+.export-check/
 dist/
 .turbo/
 *.tsbuildinfo

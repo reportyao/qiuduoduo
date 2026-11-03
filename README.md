@@ -1,3 +1,9 @@
+# 解球 Monorepo
+
+工程入口见 [AGENTS.md](./AGENTS.md)。当前结构：`jieqiu-backend/`（FastAPI 后端，过渡期目录）、`apps/mobile/`（Expo RN）、`packages/api-client/`（OpenAPI 生成 client）。下文仅描述仓库内的 SP 采集器。
+
+---
+
 # 竞彩 SP 采集器 v0.1
 
 **采集内容**：体彩官网在售竞彩场次 + SP 赔率（had/hhad 双池 + 让球线 + 单关标记），每 5 分钟一张快照存 SQLite。

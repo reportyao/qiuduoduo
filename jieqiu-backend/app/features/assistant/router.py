@@ -54,6 +54,62 @@ class PushUnregister(BaseModel):
     token: str
 
 
+class InboxItem(BaseModel):
+    id: int
+    event_id: int | None = None
+    title: str
+    body: str
+    deeplink: str | None = None
+    created_at: str
+    opened_at: str | None = None
+    clicked_at: str | None = None
+
+
+class InboxResponse(BaseModel):
+    unread: int
+    items: list[InboxItem]
+
+
+class UnreadResponse(BaseModel):
+    unread: int
+
+
+class OkResponse(BaseModel):
+    ok: bool = True
+
+
+class ReadAllResponse(OkResponse):
+    count: int
+
+
+class ClickResponse(OkResponse):
+    deeplink: str | None = None
+
+
+class WatchItem(BaseModel):
+    id: int
+    target_type: str
+    target_id: str
+    events: list[str]
+
+
+class WatchListResponse(BaseModel):
+    items: list[WatchItem]
+
+
+class NotifyResponse(BaseModel):
+    channels: list[str]
+    event_types: list[str]
+    quiet_start: str
+    quiet_end: str
+    daily_cap: int
+    paused: bool
+
+
+class PushRegisterResponse(OkResponse):
+    id: int
+
+
 def _notify_dict(row: NotifySettings | None) -> dict:
     if row is None:
         return {"channels": ["inapp", "push"], "event_types": [],
@@ -75,7 +131,7 @@ def _hm(v: str) -> bool:
         return False
 
 
-@router.get("/me/inbox")
+@router.get("/me/inbox", response_model=InboxResponse)
 def inbox(unread: bool = False, limit: int = 30,
           user: User = Depends(current_user), db: Session = Depends(get_db)):
     limit = max(1, min(limit, 100))
@@ -95,7 +151,7 @@ def inbox(unread: bool = False, limit: int = 30,
     } for n in rows]}
 
 
-@router.get("/me/inbox/unread-count")
+@router.get("/me/inbox/unread-count", response_model=UnreadResponse)
 def inbox_unread(user: User = Depends(current_user), db: Session = Depends(get_db)):
     n = db.scalar(select(func.count(Notification.id)).where(
         Notification.user_id == user.id, Notification.channel == "inapp",
@@ -103,7 +159,7 @@ def inbox_unread(user: User = Depends(current_user), db: Session = Depends(get_d
     return {"unread": n}
 
 
-@router.post("/me/inbox/{notification_id}/read")
+@router.post("/me/inbox/{notification_id}/read", response_model=OkResponse)
 def mark_read(notification_id: int, user: User = Depends(current_user),
               db: Session = Depends(get_db)):
     n = db.get(Notification, notification_id)
@@ -115,7 +171,7 @@ def mark_read(notification_id: int, user: User = Depends(current_user),
     return {"ok": True}
 
 
-@router.post("/me/inbox/read-all")
+@router.post("/me/inbox/read-all", response_model=ReadAllResponse)
 def read_all(user: User = Depends(current_user), db: Session = Depends(get_db)):
     rows = db.scalars(select(Notification).where(
         Notification.user_id == user.id, Notification.channel == "inapp",
@@ -127,7 +183,7 @@ def read_all(user: User = Depends(current_user), db: Session = Depends(get_db)):
     return {"ok": True, "count": len(rows)}
 
 
-@router.post("/me/inbox/{notification_id}/click")
+@router.post("/me/inbox/{notification_id}/click", response_model=ClickResponse)
 def click(notification_id: int, user: User = Depends(current_user),
           db: Session = Depends(get_db)):
     n = db.get(Notification, notification_id)
@@ -140,7 +196,7 @@ def click(notification_id: int, user: User = Depends(current_user),
     return {"ok": True, "deeplink": n.deeplink}
 
 
-@router.get("/me/watch")
+@router.get("/me/watch", response_model=WatchListResponse)
 def watch_list(user: User = Depends(current_user), db: Session = Depends(get_db)):
     rows = db.scalars(select(WatchTarget).where(WatchTarget.user_id == user.id)
                       .order_by(WatchTarget.id.desc())).all()
@@ -149,7 +205,7 @@ def watch_list(user: User = Depends(current_user), db: Session = Depends(get_db)
                       for w in rows]}
 
 
-@router.post("/me/watch")
+@router.post("/me/watch", response_model=WatchItem)
 def watch_add(body: WatchBody, user: User = Depends(current_user),
               db: Session = Depends(get_db)):
     if body.target_type not in ("match", "team", "league"):
@@ -174,7 +230,7 @@ def watch_add(body: WatchBody, user: User = Depends(current_user),
             "events": row.events or []}
 
 
-@router.delete("/me/watch/{watch_id}")
+@router.delete("/me/watch/{watch_id}", response_model=OkResponse)
 def watch_remove(watch_id: int, user: User = Depends(current_user),
                  db: Session = Depends(get_db)):
     row = db.get(WatchTarget, watch_id)
@@ -185,12 +241,12 @@ def watch_remove(watch_id: int, user: User = Depends(current_user),
     return {"ok": True}
 
 
-@router.get("/me/notify-settings")
+@router.get("/me/notify-settings", response_model=NotifyResponse)
 def notify_get(user: User = Depends(current_user), db: Session = Depends(get_db)):
     return _notify_dict(db.get(NotifySettings, user.id))
 
 
-@router.put("/me/notify-settings")
+@router.put("/me/notify-settings", response_model=NotifyResponse)
 def notify_put(body: NotifyBody, user: User = Depends(current_user),
                db: Session = Depends(get_db)):
     row = db.get(NotifySettings, user.id)
@@ -219,7 +275,8 @@ def notify_put(body: NotifyBody, user: User = Depends(current_user),
     db.commit()
     return _notify_dict(row)
 
-@router.post("/push/register")
+
+@router.post("/push/register", response_model=PushRegisterResponse)
 def push_register(body: PushRegister, user: User = Depends(current_user),
                   db: Session = Depends(get_db)):
     if body.platform != "android":
@@ -248,7 +305,7 @@ def push_register(body: PushRegister, user: User = Depends(current_user),
     return {"ok": True, "id": row.id}
 
 
-@router.post("/push/unregister")
+@router.post("/push/unregister", response_model=OkResponse)
 def push_unregister(body: PushUnregister, user: User = Depends(current_user),
                     db: Session = Depends(get_db)):
     row = db.scalar(select(PushToken).where(

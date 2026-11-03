@@ -10,7 +10,7 @@
 ## 决策
 
 1. FastAPI 是 OpenAPI 的唯一生成源；
-2. `packages/api-client` 从 `/openapi.json` 生成 TypeScript 类型与请求 client；
+2. 后端代码导出 `packages/api-client/openapi.json` 契约快照，`packages/api-client` 从快照离线生成 TypeScript 类型与请求 client（不对着可能过期的运行中服务生成）；
 3. 禁止前端手写接口类型；
 4. CI 增加 OpenAPI diff 检查；
 5. 破坏性变更必须先改后端契约，再同步前端；

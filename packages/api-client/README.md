@@ -4,15 +4,32 @@ OpenAPI 生成的类型安全 client。
 
 ## 生成
 
-后端启动后：
+**不要对着本地正在跑的 8100 端口生成** —— 那可能是旧进程，会把 assistant 等新接口整体漏掉（本次 review 已实际踩到：8100 是 0.7.0-w7，生成结果只有 59 条路径，当前代码是 71 条）。
+
+正确流程是从当前代码导出契约快照，再离线生成类型：
 
 ```bash
-cd packages/api-client
-pnpm install
-pnpm generate
+# 仓库根目录
+just api-client-generate
 ```
 
+等价于：
+
+```bash
+just api-openapi          # 后端代码 → packages/api-client/openapi.json
+cd packages/api-client
+corepack pnpm generate    # openapi.json → src/schema.d.ts
+```
+
+`openapi.json` 是契约快照，需要随接口变更一起提交，便于 diff 和离线生成。
 `src/schema.d.ts` 由 `openapi-typescript` 生成，禁止手改。
+
+仅在联调远端环境时使用：
+
+```bash
+pnpm generate:url         # 本机 8100 当前进程（需确认版本）
+pnpm generate:staging     # staging
+```
 
 ## 使用
 

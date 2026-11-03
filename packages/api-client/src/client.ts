@@ -17,6 +17,22 @@ export interface RequestProfile {
   market?: string;
 }
 
+function errorMessage(body: unknown, fallback: string): string {
+  if (typeof body === "string" && body.trim()) {
+    return body;
+  }
+  if (body && typeof body === "object" && "detail" in body) {
+    const detail = (body as { detail: unknown }).detail;
+    if (typeof detail === "string") {
+      return detail;
+    }
+    if (detail != null) {
+      return JSON.stringify(detail);
+    }
+  }
+  return fallback;
+}
+
 export function createApiClient(config: ApiClientConfig) {
   const client = createClient<paths>({
     baseUrl: config.baseUrl.replace(/\/$/, ""),
@@ -47,11 +63,7 @@ export function createApiClient(config: ApiClientConfig) {
           .clone()
           .json()
           .then((body: unknown) => {
-            const message =
-              typeof body === "object" && body && "detail" in body
-                ? String((body as { detail: unknown }).detail)
-                : response.statusText;
-            config.onError?.(response.status, message);
+            config.onError?.(response.status, errorMessage(body, response.statusText));
           })
           .catch(() => {
             config.onError?.(response.status, response.statusText);

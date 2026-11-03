@@ -8,7 +8,7 @@
 apps/
   mobile/        Expo React Native + TypeScript（Android 先发，iOS 后补）
   web/           Next.js 落地页 / 公开账本 / 分享页（规划中）
-  admin/         管理后台（规划中；当前旧控制台在 services/api）
+  admin/         管理后台（规划中；当前旧控制台在 jieqiu-backend/app/routers/console.py）
 packages/
   api-client/    OpenAPI 生成的 TS client，禁止手写接口类型
   ui/            设计 tokens / 基础组件（规划中）
@@ -75,10 +75,12 @@ app/features/<feature>/
 - 文案必须走 `packages/i18n`，禁止硬编码中文/英文/货币/赔率术语。
 - 图标使用 `react-native-svg` 线性图标，不使用 emoji 表达核心状态。
 - 触控目标 ≥ 44pt；列表使用 FlashList；动画使用 Reanimated。
+- 仓库 `.npmrc` 固定 `node-linker=hoisted`；Windows 下 pnpm 严格布局会让 Hermes 编译器路径过长而失败，不要改回 isolated。
+- 构建前必须跑 `expo export`（Metro + Hermes）；typecheck 通过不代表 bundle 能出包。
 
 ## 4. 数据与契约
 
-- OpenAPI 是唯一接口事实源；`packages/api-client` 从 `/openapi.json` 生成。
+- OpenAPI 是唯一接口事实源；后端代码导出 `packages/api-client/openapi.json` 快照，client 从快照离线生成；禁止对着可能过期的本地服务生成。
 - Postgres 是生产事实源；SQLite 只允许用于纯单元测试或本地工具。
 - Alembic 管理迁移；迁移必须可 up/down；生产禁止 `create_all`。
 - 领域事件必须有 `dedupe_key`、`payload_hash`、`data_cutoff`。
