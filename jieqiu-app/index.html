@@ -558,6 +558,7 @@ const API={base:(location.hostname==="127.0.0.1"||location.hostname==="localhost
   headers(){const h={"Content-Type":"application/json"};if(this.token)h.Authorization="Bearer "+this.token;return h},
   async get(path){const r=await fetch(this.base+path,{headers:this.headers()});if(!r.ok)throw new Error(r.status);return r.json()},
   async post(path,body){const r=await fetch(this.base+path,{method:"POST",headers:this.headers(),body:JSON.stringify(body||{})});if(!r.ok){const err=new Error(r.status);err.status=r.status;err.response=r;throw err}return r.json()},
+  async patch(path,body){const r=await fetch(this.base+path,{method:"PATCH",headers:this.headers(),body:JSON.stringify(body||{})});if(!r.ok){const err=new Error(r.status);err.status=r.status;err.response=r;throw err}return r.json()},
   async login(){if(this.token)return this.token;const r=await this.post("/auth/device",{device_token:null});this.token=r.token;localStorage.setItem("jq_token",r.token);return r.token},
   async stream(){try{const s=await this.get("/stream");this.online=true;return s}catch(e){this.online=false;return null}},  /* 后端 stream 契约 → 页面 D 常量形状 */
   mapStream(s){
@@ -573,7 +574,12 @@ const API={base:(location.hostname==="127.0.0.1"||location.hostname==="localhost
         pick:top.pick,hash:(top.hash||"")+"",sealed:!!top.sealed_at,
         probs:top.probs,spFull:top.sp,rakeThreshold:top.rake_threshold},
       avoid:s.avoid.map(a=>({no:a.match_no,a:a.home,b:a.away,why:a.why,verdict_id:a.verdict_id})),
-      all:(s.verdicts||s.watch||[]).map(function(x){return {id:x.id,no:x.match_no,a:x.home,b:x.away,lg:x.league||"",close:(x.kickoff||"").slice(11,16),status:x.status,gates:x.gates,pool:x.pool,goal_line:x.goal_line};}),
+      all:(function(){
+        const out=(s.verdicts||s.watch||[]).map(function(x){return {id:x.id,mid:x.match_id,no:x.match_no,a:x.home,b:x.away,lg:x.league||"",close:(x.kickoff||"").slice(11,16),status:x.status,gates:x.gates,pool:x.pool,goal_line:x.goal_line};});
+        const seen={};out.forEach(function(x){seen[x.no]=1});
+        (s.onsale||[]).forEach(function(o){if(!seen[o.match_no])out.push({id:o.match_id,mid:o.match_id,no:o.match_no,a:o.home,b:o.away,lg:o.league||"",close:(o.kickoff||"").slice(11,16),status:"screening",gates:null,pool:"",goal_line:""});});
+        return out;
+      })(),
       postmortems:s.postmortems||[]};
   }
 };
@@ -1703,7 +1709,7 @@ const ACT={
     else{const r=document.getElementById("pickedzone");if(r&&cur().id==="stream")r.innerHTML='<article class="card"><div class="eyebrow">👋 登录成功</div><div class="meta">可以记注、看周报、管理记忆了。</div></article>'}},
   subscribe:function(){S.member=1;save();toast("订阅成功（演示）· 会员已开通");render()},
   persona:function(){go("persona")},
-  personaSet:function(el){S.persona=el.getAttribute("data-k");save();vib(15);toast("已切换为「"+D.personas[S.persona].name+"」");back()},
+  personaSet:function(el){S.persona=el.getAttribute("data-k");save();vib(15);toast("已切换为「"+D.personas[S.persona].name+"」");if(S.user&&API.online){API.login().then(function(){return API.patch("/me",{persona:S.persona})}).catch(function(){})}back()},
   lang:function(el){S.lang=el.getAttribute("data-k");save();renderTabs();toast(S.lang==="zh"?"已切换中文":"Switched to English");render()},
   odds:function(el){S.odds=el.getAttribute("data-k");save();toast("赔率格式已切换");render()},
   demo:function(el){const k=el.getAttribute("data-k");S[k]=S[k]?0:1;save();render()},
@@ -1781,7 +1787,7 @@ const ACT={
   profileOrLogin:function(){if(S.user)go("profile");else go("login")},
   setAvatar:function(el){S.avatar=el.getAttribute("data-k");S.avatarData="";save();render();toast("头像已更新")},
   pickFile:function(){const el=document.getElementById("avatarFile");if(el)el.click()},
-  saveProfile:function(){const el=document.getElementById("nickname");const name=(el?el.value:"").trim();if(!name){toast("昵称不能为空",1);return}if(name.length>12){toast("昵称最多 12 个字",1);return}S.nickname=name;save();back();toast("资料已保存")},
+  saveProfile:function(){const el=document.getElementById("nickname");const name=(el?el.value:"").trim();if(!name){toast("昵称不能为空",1);return}if(name.length>12){toast("昵称最多 12 个字",1);return}S.nickname=name;save();if(S.user&&API.online){API.login().then(function(){return API.patch("/me",{display_name:name})}).catch(function(){})}back();toast("资料已保存")},
   loginOrToast:function(){if(S.user){toast("当前账号："+S.user)}else{go("login")}},
   logout:function(){S.user=null;S.member=0;save();toast("已退出登录");render()},
   legal:function(){sheet('<div class="ttl" style="margin-bottom:8px">披露与条款</div><div class="meta" style="line-height:1.85">解球是数据分析工具，不构成投注建议，不承诺盈利。<br>数据来源：竞彩官方、国际盘、赛果与 xG 公开数据；所有结论赛前封存、赛后公开。<br>未满 18 周岁禁止购买彩票。自排除与帮助热线永久免费。<br>会员服务可随时取消，7 天内可申请退款。</div><div class="btnrow" style="margin-top:14px"><button class="btn primary" data-act="closeSheet">知道了</button></div>')},

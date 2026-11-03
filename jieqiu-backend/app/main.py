@@ -15,8 +15,8 @@ from .routers.assistant import router as assistant_router
 
 app = FastAPI(
     title="解球 API",
-    version="0.7.0-w7",
-    description="W7: F20 分享体系 · F18 双区域 · 数据导出 · 注销清除",
+    version="0.8.0-w8+assistant",
+    description="W8 + AI 助理运行时 P0：事件监控 / 站内信 / 关注 / JPush dry-run",
 )
 # W7 后端硬化：限流 + 结构化访问日志（内层）
 app.add_middleware(RateLimitMiddleware)

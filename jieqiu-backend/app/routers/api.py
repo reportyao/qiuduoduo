@@ -123,6 +123,7 @@ def matches_on_sale(db: Session = Depends(get_db)):
     for m in rows:
         v = verdicts.get(m.match_id)
         matches.append({
+            "match_id": m.match_id,
             "match_no": m.match_no, "league": m.league, "home": m.home, "away": m.away,
             "kickoff": m.kickoff, "sale_close": m.kickoff, "single": m.single_flag,
             "rake": v.rake if v else None,

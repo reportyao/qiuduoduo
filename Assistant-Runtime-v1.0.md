@@ -496,6 +496,8 @@ JQ_LLM_PROVIDER=glm
 
 ## 17. 代码评审记录（2026-11-03）
 
+> 本节是评审当时（P0 开发前）的记录；已修复/已实现项见 §18。
+
 ### 17.1 评审范围
 
 - 后端：`app/models.py`、`app/routers/w6.py`、`app/modules/users.py`、`app/modules/chat.py`、`app/modules/messaging.py`、`app/routers/api.py`、`app/routers/console.py`、`app/main.py`；
@@ -565,15 +567,25 @@ JQ_LLM_PROVIDER=glm
 | 隐私 | `purge_expired_deletions` 覆盖 notifications/watch/push/user_events/notify_settings |
 | 测试 | `156 passed`（新增 7 项：监控幂等、扇出、inbox、push dry-run、静默/上限、iOS 拒绝、控制台页、删除清理） |
 
+### 部署与验证
+
+- 已部署腾讯云 `43.128.24.244:8100`，后端 `0.8.0-w8+assistant`；
+- `JQ_CORS_EXTRA_ORIGINS` 已写入 `deploy.py` 的 systemd unit（避免重部署丢 CORS）；
+- 每分钟 assistant worker cron 已安装；
+- `/review/freeze` 重新 adopt：**79 路由，clean**；
+- 生产 smoke：设备登录 → 关注比赛 → 推送注册 → 事件 → 站内信 → 点击深链 → push dry-run `sent`；
+- 前端实时模式：`/stream` 12 场，吉祥物选比赛 12 行；
+- 前端 persona/display_name 在 JWT 登录态下同步 `PATCH /me`；prod 设备登录关闭时不会触发（符合安全策略）。
+
 ### 仍需 P1/P2
 
-- 前端接 `/me/inbox`、`/me/watch`、`/me/notify-settings`（当前仍本地）；
+- 前端接 `/me/inbox`、`/me/watch`、`/me/notify-settings` 的 **UI**（persona/display_name 同步已接）；
 - 真实 JPush AppKey/Master Secret + Android 厂商通道 + 深链冷启动；
 - `chat.respond` 读取 persona；前端 `PATCH /me` 同步人设/昵称；
 - 派生记忆（favorite/risk/active_hours/push_tolerance）与五类展示；
 - 未决 T-30m、T-3h 动态触发、盘口异动/阵容监控；
 - `/console/ai`、`/console/memory`；
-- 控制台 token/CSRF/XSS 加固与 freeze baseline 重新 adopt。
+- 控制台 token 仍在 URL、POST 无 CSRF token（cookie SameSite/HttpOnly、变体输出转义已修）；freeze baseline 已 adopt。
 
 ### 运行
 

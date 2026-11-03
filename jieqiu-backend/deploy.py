@@ -91,6 +91,7 @@ Environment=JQ_XG_EXTRA_DIR={DATA}/xg_dumps
 Environment=JQ_FREEZE_BASELINE={DATA}/freeze_baseline.json
 Environment=JQ_JWT_SECRET={jwt_secret}
 Environment=JQ_CONSOLE_PASSWORD=Jq@Console#2026
+Environment=JQ_CORS_EXTRA_ORIGINS=http://43[.]128[.]24[.]244:8899
 ExecStart={ROOT}/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8100
 Restart=always
 RestartSec=3

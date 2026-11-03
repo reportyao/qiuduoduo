@@ -105,6 +105,7 @@ def build_stream(db: Session, trade_date: str, cursor: str | None = None,
         payload = v.payload or {}
         return {
             "id": v.id,
+            "match_id": v.match_id,
             "match_no": v.match_no,
             "league": v.league,
             "home": v.home,
@@ -161,7 +162,8 @@ def build_stream(db: Session, trade_date: str, cursor: str | None = None,
     matches = db.scalars(select(SPMatch).where(SPMatch.match_id.in_([v.match_id for v in verdicts]))).all() if verdicts else []
     onsale = sorted(
         [
-            {"match_no": m.match_no, "league": m.league, "home": m.home, "away": m.away,
+            {"match_id": m.match_id, "match_no": m.match_no, "league": m.league,
+             "home": m.home, "away": m.away,
              "kickoff": m.kickoff, "single": m.single_flag}
             for m in matches
         ],

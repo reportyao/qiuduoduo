@@ -136,7 +136,8 @@ def console_login(request: Request, pw: str = Form("")):
     tok = secrets.token_urlsafe(24)
     _SESSIONS[tok] = time.time() + _TOK_TTL
     resp = RedirectResponse("/console?t=" + tok, status_code=302)
-    resp.set_cookie("console_t", tok, httponly=True, max_age=86400)
+    resp.set_cookie("console_t", tok, httponly=True, max_age=86400,
+                    samesite="strict", secure=(request.url.scheme == "https"))
     return resp
 
 
@@ -245,10 +246,11 @@ def console_variants(request: Request, db=Depends(get_db)):
                 f'<button style="{"font-weight:700" if mark == m else ""};cursor:pointer;border:1px solid #ccc;background:'
                 f'{"#E9F3EE" if mark == m else "#fff"};border-radius:6px;padding:2px 8px">{m}</button></form>'
                 for m in ("A", "Q", "X"))
-            cards.append(f"<div style='margin:6px 0'><b>{p}</b> {btns}<br>"
-                         f"<span style='color:#555;font-size:12px'>{text}</span></div>")
+            cards.append(f"<div style='margin:6px 0'><b>{html.escape(p)}</b> {btns}<br>"
+                         f"<span style='color:#555;font-size:12px'>{html.escape(text)}</span></div>")
         out.append(f"<div style='background:#fff;border:1px solid #E7E4DC;border-radius:12px;padding:12px;margin:10px 0'>"
-                   f"<b>{v.match_no} {v.home} vs {v.away}</b>（{v.status}）" + "".join(cards) + "</div>")
+                   f"<b>{html.escape(v.match_no)} {html.escape(v.home)} vs {html.escape(v.away)}</b>"
+                   f"（{html.escape(v.status)}）" + "".join(cards) + "</div>")
     body = ("<div class='meta' style='font-size:12px;color:#73787F;margin-bottom:8px'>"
             "A=入选投放 · Q=排队 · X=弃。v1.5 换 narrative_pool 表持久化（当前进程内存）。</div>" +
             ("".join(out) or "<p>今日暂无判决</p>"))
