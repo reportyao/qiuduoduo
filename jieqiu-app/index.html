@@ -372,6 +372,7 @@ body{background:light-dark(#EEECE6,#070A08);font-family:"Inter","SF Pro Text","P
 .quiet-row{display:flex;align-items:center;gap:11px;width:100%;padding:12px 14px;border:0;border-top:1px solid var(--line);background:transparent;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
 .quiet-row:first-child{border-top:0}
 .quiet-dot{width:5px;height:5px;border-radius:50%;background:var(--danger);flex:0 0 auto}
+.quiet-dot.ok{background:var(--v)}
 .quiet-dot.amber{background:var(--amber)}
 .quiet-main{flex:1;min-width:0}
 .quiet-main b{display:block;font-size:12.5px;font-weight:500}
@@ -476,7 +477,7 @@ body{background:light-dark(#EEECE6,#070A08);font-family:"Inter","SF Pro Text","P
 .step.bad b,.step.bad i{color:#F19A8C}
 
 /* ===== v3.1 · 助理实体 + 首页横幅 + 设置页 ===== */
-@font-face{font-family:"JieQiu Sans";src:url("fonts/NotoSansSC-subset.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"JieQiu Sans";src:url("fonts/NotoSansSC-subset.woff2?v=3") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
 body{font-family:"JieQiu Sans","MiSans","PingFang SC","HarmonyOS Sans SC","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;font-variant-numeric:tabular-nums}
 .top{padding:10px 16px 8px}
 .assistant-bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:start;gap:8px;width:100%}
@@ -507,6 +508,28 @@ body{font-family:"JieQiu Sans","MiSans","PingFang SC","HarmonyOS Sans SC","Noto 
 .searchbox input{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:12.5px;color:var(--ink);height:26px}
 .searchbox input::placeholder{color:var(--muted)}
 .searchbox svg{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+/* ===== v3.2 · 滚动收缩 + 动态指标 + 比赛选择 ===== */
+.ab-right{flex-direction:column;align-items:flex-end;gap:3px;padding-top:2px}
+.ab-actions{display:flex;align-items:center;gap:6px}
+.ab-metrics{display:flex;flex-direction:column;align-items:flex-end;gap:0;font-size:8.5px;color:var(--muted);line-height:1.55;letter-spacing:.01em;white-space:nowrap}
+.ab-metrics b{color:var(--ink);font-weight:600;font-size:9.5px;font-variant-numeric:tabular-nums}
+.ab-metrics .mdot{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--v);margin-right:3px;vertical-align:1px;animation:pl 1.8s ease-in-out infinite}
+.ab-hint{font-size:8.5px;color:var(--muted);letter-spacing:.02em;margin-top:1px;white-space:nowrap}
+.ab-center{max-height:88px;transition:max-height .26s ease,opacity .2s ease,transform .2s ease,margin .2s ease}
+.top.compact .ab-center{max-height:0;opacity:0;transform:translateY(-12px) scale(.8);margin:0;pointer-events:none}
+.top{transition:padding .2s ease}
+
+/* ===== v3.3 · 个人资料 ===== */
+.me-profile{cursor:pointer}
+.avimg{width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid var(--card);box-shadow:0 4px 14px rgba(16,32,24,.16);flex:0 0 auto}
+.av-pick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.av-opt{background:transparent;border:2px solid transparent;border-radius:50%;padding:2px;cursor:pointer;display:grid;place-items:center;width:56px;height:56px;margin:0 auto}
+.av-opt.on{border-color:var(--v)}
+.av-opt .msr{width:48px;height:48px;border-radius:50%}
+.av-mono{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;font-size:15px}
+.inputline{width:100%;height:42px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font:inherit;font-size:14px;padding:0 12px;outline:0}
+.inputline:focus{border-color:var(--v)}
 </style>
 </head>
 <body>
@@ -552,6 +575,7 @@ const API={base:(location.hostname==="127.0.0.1"||location.hostname==="localhost
         pick:top.pick,hash:(top.hash||"")+"",sealed:!!top.sealed_at,
         probs:top.probs,spFull:top.sp,rakeThreshold:top.rake_threshold},
       avoid:s.avoid.map(a=>({no:a.match_no,a:a.home,b:a.away,why:a.why,verdict_id:a.verdict_id})),
+      all:(s.verdicts||s.watch||[]).map(function(x){return {id:x.id,no:x.match_no,a:x.home,b:x.away,lg:x.league||"",close:(x.kickoff||"").slice(11,16),status:x.status,gates:x.gates,pool:x.pool,goal_line:x.goal_line};}),
       postmortems:s.postmortems||[]};
   }
 };
@@ -875,19 +899,35 @@ const D={
   ]
 };
 /* ================= 状态 ================= */
-const DEF={consent:0,intro:0,persona:"zhuanjia",lang:"zh",odds:"decimal",user:null,member:0,bets:[],follows:{},askedNotif:0,rested:0,excluded:0,excludedLabel:"",minor:0,comfort:0,demoEmpty:0,prot:1,oddsFormat:0,whynotSel:0,dataMode:"demo",pendingDemo:0,evtDismissed:0,notif:1};
+const DEF={consent:0,intro:0,persona:"zhuanjia",lang:"zh",odds:"decimal",user:null,member:0,bets:[],follows:{},askedNotif:0,rested:0,excluded:0,excludedLabel:"",minor:0,comfort:0,demoEmpty:0,prot:1,oddsFormat:0,whynotSel:0,dataMode:"demo",pendingDemo:0,evtDismissed:0,notif:1,nickname:"",avatar:"m0",avatarData:""};
 let S=Object.assign({},DEF,JSON.parse(localStorage.getItem("jieqiu")||"{}"));
 if(!S.bets)S.bets=[];
 const save=()=>localStorage.setItem("jieqiu",JSON.stringify(S));
 const vib=p=>{try{if(navigator.vibrate)navigator.vibrate(p)}catch(e){}};
 const PX={zhuanjia:"0%",laopao:"50%",meng:"100%"};
 const P=()=>D.personas[S.persona]||D.personas.zhuanjia;
+function avatarHTML(a,size){
+  size=size||54;
+  if(a==="m0"||a==="m1"||a==="m2"){
+    const sx=a==="m0"?PX.zhuanjia:(a==="m1"?PX.laopao:PX.meng);
+    return '<div class="msr bust" style="--sx:'+sx+';width:'+size+'px;height:'+size+'px;border-radius:50%"></div>';
+  }
+  const idx=a==="g1"?1:(a==="g2"?2:0);
+  const name=(S.nickname||S.user||"解").slice(0,1);
+  const grad=["linear-gradient(135deg,#0E6B4F,#2E9B77)","linear-gradient(135deg,#7A4A1E,#C08A3E)","linear-gradient(135deg,#7A3B5A,#C46A8E)"][idx];
+  return '<div class="av-mono" style="width:'+size+'px;height:'+size+'px;background:'+grad+'">'+name.replace(/</g,"&lt;")+'</div>';
+}
+function userAvatarHTML(size){
+  size=size||54;
+  if(S.avatarData)return '<img class="avimg" src="'+S.avatarData+'" style="width:'+size+'px;height:'+size+'px" alt="头像">';
+  return avatarHTML(S.avatar||"m0",size);
+}
 const LB={zh:{tabs:["首页","工具","记录","我的"],buy:"记一注",why:"为什么",dis:"不同意",rest:"今天不看了",ph:"问问它 · 今晚买啥"},
           en:{tabs:["Home","Tools","Records","Me"],buy:"Log it",why:"Why",dis:"Disagree",rest:"Done for today",ph:"Ask me · tonight's pick"}};
 const L=()=>LB[S.lang]||LB.zh;
 const UI={
  zhuanjia:{
-  "brand.sub":"AI 竞彩分析助理","brand.tag":"AI 助理",
+  "brand.sub":"AI 竞彩分析助理","brand.tag":"AI 助理","hint.matches":"点我看今日全部比赛",
   "status.demo":"演示数据 · 情报层新版预览","status.switch":"切到实时 ›","status.live":"实时模式 · 引擎已跑 {n} 场",
   "hero.title":"串关体检 · 免费","hero.sub":"拍下你的投注单，30 秒出报告","hero.cta":"去体检 →",
   "sale.close":"最近停售","sale.onsale":"今日在售 {n} 场 ›","sentinel.title":"盘口哨兵","sentinel.meta":"仅提示","sentinel.row":"资金异动","sentinel.tag":"哨兵","footer":"解球 · 每一场都算清楚成本",
@@ -901,7 +941,7 @@ const UI={
   "tools.title":"把账算清楚。","tools.sub":"拍票、比价、体检、复盘。每个工具都只回答一个问题：这笔钱花得值不值。"
  },
  laopao:{
-  "brand.sub":"兄弟的算账助理","brand.tag":"算账助理",
+  "brand.sub":"兄弟的算账助理","brand.tag":"算账助理","hint.matches":"点我，挑一场",
   "status.demo":"演示数据，兄弟先看看","status.switch":"看真实数据 ›","status.live":"实时模式 · 跑了 {n} 场",
   "hero.title":"串关体检，免费","hero.sub":"把票拍给我，30 秒给你算明白","hero.cta":"去算账 →",
   "sale.close":"最近停售","sale.onsale":"今天在售 {n} 场 ›","sentinel.title":"盘口哨兵","sentinel.meta":"仅提示，别上头","sentinel.row":"资金异动","sentinel.tag":"哨兵","footer":"解球 · 先把账算明白",
@@ -915,7 +955,7 @@ const UI={
   "tools.title":"先把账算明白。","tools.sub":"拍票、比价、体检、复盘。别急着下，先看看钱花得值不值。"
  },
  meng:{
-  "brand.sub":"主人的小女仆","brand.tag":"小女仆",
+  "brand.sub":"主人的小女仆","brand.tag":"小女仆","hint.matches":"主人点人家看比赛呀",
   "status.demo":"主人～这是演示数据哦","status.switch":"点这里看实时～","status.live":"实时模式 · 人家跑了 {n} 场啦",
   "hero.title":"串关体检 · 免费哦","hero.sub":"主人把票票拍给人家，30 秒就好啦","hero.cta":"去体检嘛 →",
   "sale.close":"最近停售呀","sale.onsale":"今天在售 {n} 场哦 ›","sentinel.title":"盘口小哨兵","sentinel.meta":"只提醒主人哦","sentinel.row":"资金在动哦","sentinel.tag":"小哨兵","footer":"解球 · 人家陪主人算清楚",
@@ -936,7 +976,7 @@ function T(k,vars){
 }
 /* ================= 路由 ================= */
 const TABS={home:"stream",tools:"tools",records:"records",me:"me"};
-const TABOF={stream:"home",tools:"tools",onsale:"tools",water:"tools",livematch:"tools",whynot:"tools",parlay:"tools",pscan:"tools",preport:"tools",pplans:"tools",pconfirm:"tools",scan:"tools",shot:"tools",records:"records",ledger:"records",weekly:"records",me:"me",persona:"me",follows:"me",compliance:"me",subscription:"me",privacy:"me",login:"me",gate:"home",intro:"home",detail:"home",prefs:"me"};
+const TABOF={stream:"home",tools:"tools",onsale:"tools",water:"tools",livematch:"tools",whynot:"tools",parlay:"tools",pscan:"tools",preport:"tools",pplans:"tools",pconfirm:"tools",scan:"tools",shot:"tools",records:"records",ledger:"records",weekly:"records",me:"me",persona:"me",follows:"me",match:"home",profile:"me",compliance:"me",subscription:"me",privacy:"me",login:"me",gate:"home",intro:"home",detail:"home",prefs:"me"};
 let stack=[];
 const cur=()=>stack[stack.length-1];
 function switchTab(tab){stack=[{id:TABS[tab]}];render()}
@@ -953,6 +993,7 @@ function render(){
   document.getElementById("view").scrollTop=keep?y:0;
   document.getElementById("view").style.paddingTop="6px";
   renderTop(root);renderTabs();
+  const tbEl=document.getElementById("topbar"); if(tbEl)tbEl.classList.toggle("compact",document.getElementById("view").scrollTop>24);
   const tb=document.getElementById("tabs");
   tb.style.display=(c.id==="gate"||c.id==="intro")?"none":"flex";
   const cb=document.getElementById("chatbar");
@@ -966,16 +1007,18 @@ function renderTop(root){
   const c=cur(),t=document.getElementById("topbar");
   if(["gate","intro"].includes(c.id)){t.style.display="none";return}
   t.style.display="flex";t.style.gridTemplateColumns="";
-  const titles={tools:"工具箱",records:"我的记录",me:"我的",follows:"我的关注",detail:"结论详情",onsale:"今日在售",whynot:"为什么不推",livematch:"比赛实况",water:"水位榜",scan:"拍票记账",shot:"截图鉴别",parlay:"串关体检",pscan:"票面识别",preport:"体检报告",pplans:"替代方案",pconfirm:"出票确认",persona:"助理风格",compliance:"合规中心",subscription:"会员",privacy:"数据与隐私",ledger:"公开账本",weekly:"周报",login:"登录 / 注册",prefs:"偏好"};
+  const titles={tools:"工具箱",records:"我的记录",me:"我的",follows:"我的关注",match:"比赛",profile:"个人资料",detail:"结论详情",onsale:"今日在售",whynot:"为什么不推",livematch:"比赛实况",water:"水位榜",scan:"拍票记账",shot:"截图鉴别",parlay:"串关体检",pscan:"票面识别",preport:"体检报告",pplans:"替代方案",pconfirm:"出票确认",persona:"助理风格",compliance:"合规中心",subscription:"会员",privacy:"数据与隐私",ledger:"公开账本",weekly:"周报",login:"登录 / 注册",prefs:"偏好"};
   const total=(D.stream&&D.stream.stats?D.stream.stats.total:D.sale.count);
   const env=(S.dataMode==="demo")?'<span class="envbadge" data-act="dataMode">演示</span>':'<span class="envbadge" data-act="dataMode">实时</span>';
   const persona=D.personas[S.persona]||D.personas.zhuanjia;
   const pname=persona.name.replace(/ ·.*/,"");
-  const center='<div class="ab-center" data-act="go" data-v="persona" aria-label="切换助理风格"><div class="ab-avatar"><div class="msr bust mfl" style="--sx:'+(PX[S.persona]||PX.zhuanjia)+'"></div></div><span class="ab-name">'+pname+'</span></div>';
+  const metrics='<div class="ab-metrics"><span><i class="mdot"></i><b class="num" id="mInfer">12,847</b> 次推理</span><span><b class="num" id="mSources">4</b> 源在线 · <b class="num" id="mFresh">12s</b></span><span><b class="num" id="mViewers">12,547</b> 人在看</span></div>';
+  const center='<div class="ab-center" data-act="matches" aria-label="查看今日全部比赛"><div class="ab-avatar"><div class="msr bust mfl" style="--sx:'+(PX[S.persona]||PX.zhuanjia)+'"></div></div><span class="ab-name">'+pname+'</span><span class="ab-hint">'+T("hint.matches")+'</span></div>';
+  const right='<div class="ab-right"><div class="ab-actions">'+env+'<button class="iconbtn" data-act="go" data-v="me" aria-label="我的">⋯</button></div>'+metrics+'</div>';
   if(c.id==="stream"){
-    t.innerHTML='<div class="assistant-bar"><div class="ab-left"><b>解球</b><span>'+T("brand.sub")+'</span></div>'+center+'<div class="ab-right">'+env+'<button class="iconbtn" data-act="go" data-v="me" aria-label="我的">⋯</button></div></div>';
+    t.innerHTML='<div class="assistant-bar"><div class="ab-left"><b>解球</b><span>'+T("brand.sub")+'</span></div>'+center+right+'</div>';
   }else if(root){
-    t.innerHTML='<div class="assistant-bar"><div class="ab-left"><b>'+(titles[c.id]||"")+'</b><span>解球 · '+T("brand.tag")+'</span></div>'+center+'<div class="ab-right">'+env+'</div></div>';
+    t.innerHTML='<div class="assistant-bar"><div class="ab-left"><b>'+(titles[c.id]||"")+'</b><span>解球 · '+T("brand.tag")+'</span></div>'+center+right+'</div>';
   }else{
     t.innerHTML='<div class="appbar"><button class="iconbtn back" data-act="back" aria-label="返回">←</button><div class="brand"><div><b>'+(titles[c.id]||"解球")+'</b><span>解球</span></div></div><div class="appbar-right">'+(c.params&&c.params.rt?'<span class="rt">'+c.params.rt+'</span>':'')+'</div></div>';
   }
@@ -1224,6 +1267,24 @@ V.detail={render:function(){
   h+='<div class="legal">数据分析结果，不构成投注建议</div>';
   return h;
 }};
+V.match={render:function(){
+  const m=window.__pick||{};
+  const st=m.status||m.st||"screen";
+  const label=st==="promoted"||st==="pass"?"已推":(st==="killed"||st==="dead")?"已砍":"复核中";
+  const color=label==="已推"?"var(--v)":label==="已砍"?"var(--danger)":"var(--amber)";
+  let rows="";
+  if(m.gates&&typeof m.gates==="object"&&!Array.isArray(m.gates)){
+    rows=[["价",m.gates.price],["市",m.gates.market],["模",m.gates.model]].map(function(x){
+      const r=x[1];
+      return '<div class="wait-reason"><span>'+x[0]+' · '+(r==="pass"?"过":r==="fail"?"死":"等数据")+'</span><span>'+(r==="pending_data"?"源未覆盖":"—")+'</span></div>';
+    }).join("");
+  }else if(m.rake){
+    const st=m.st||"screen";
+    const gl=st==="pass"?[["价","过"],["市","过"],["模","过"]]:(st==="dead"?[["价","—"],["市","—"],["模","—"]]:(st==="screen"?[["价","过"],["市","等数据"],["模","等数据"]]:[["价","未过"],["市","未过"],["模","未过"]]));
+    rows=gl.map(function(x){return '<div class="wait-reason"><span>'+x[0]+'</span><span>'+x[1]+'</span></div>'}).join("")+'<div class="wait-reason"><span>官方抽水</span><span>'+m.rake+'%</span></div>';
+  }
+  return '<article class="wait-card"><div class="wait-top" style="color:'+color+'"><span>'+label+'</span><span>'+m.no+' · '+m.close+' 停售</span></div><div class="wait-match">'+m.a+' vs '+m.b+'</div><div class="wait-meta">'+(m.lg||"今日在售")+'</div><div class="wait-call" style="color:'+color+'">'+label+'</div><div class="wait-reasons">'+rows+'</div><div class="wait-why">完整情报与 AI 研判会在数据接入后展示。现在可以先看三关状态与今日在售。</div><div class="wait-actions"><button class="btn primary" data-act="go" data-v="onsale">今日在售</button><button class="btn" data-act="back">返回</button></div></article>';
+}};
 V.onsale={render:function(){
   let h='<div class="searchbox"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><input id="saleSearch" placeholder="搜索球队 / 场次" autocomplete="off"></div>';
   h+='<article class="card" style="margin-top:10px"><div class="meta">单关可买 '+D.sale.single+' 场 · 数据同步于 12s 前</div><div class="divider"></div>';
@@ -1409,11 +1470,27 @@ function setRow(label,value,kind,key){
   const attr=kind==="go"?'data-act="go" data-v="'+key+'"':(kind==="toggle"?'data-act="demo" data-k="'+key+'"':'data-act="'+key+'"');
   return '<div class="set" '+attr+'><span>'+label+'</span><span class="v">'+value+(kind==="toggle"?"":" ›")+'</span></div>';
 }
+V.profile={render:function(){
+  const name=S.user?(S.nickname||S.user):"";
+  const cur=S.avatarData?"upload":(S.avatar||"m0");
+  let h='<div class="grp">头像</div><article class="card settings" style="padding:16px"><div style="display:flex;align-items:center;gap:12px">'+userAvatarHTML(54)+'<div class="meta" style="line-height:1.7">选一个助理形象作为头像，或从相册上传。<br>头像只保存在本机。</div></div><div class="av-pick">';
+  ["m0","m1","m2","g0","g1","g2"].forEach(function(k){
+    h+='<button class="av-opt'+(cur===k?" on":"")+'" data-act="setAvatar" data-k="'+k+'" aria-label="选择头像">'+avatarHTML(k,48)+'</button>';
+  });
+  h+='</div><input type="file" id="avatarFile" accept="image/*" style="display:none"><button class="btn" data-act="pickFile" style="width:100%;margin-top:12px">从相册上传</button>';
+  if(S.avatarData)h+='<div class="meta" style="margin-top:8px;text-align:center">当前使用上传照片 · 选上方形象可恢复</div>';
+  h+='</article>';
+  h+='<div class="grp">昵称</div><article class="card settings" style="padding:16px"><input id="nickname" class="inputline" maxlength="12" value="'+String(name).replace(/"/g,"&quot;")+'" placeholder="给自己起个名字"><div class="meta" style="margin-top:7px">1–12 个字，随时可改。</div></article>';
+  h+='<div class="grp">账号</div><article class="card settings">'+setRow("登录账号",S.user||"未登录","act","loginOrToast")+setRow("语言与赔率",(S.lang==="zh"?"中文":"English")+" · "+(S.odds==="decimal"?"欧赔":"其他"),"go","prefs")+setRow("隐私与数据","可查看 / 可删除","go","privacy")+'</article>';
+  h+='<div class="btnrow"><button class="btn primary" data-act="saveProfile">保存</button><button class="btn" data-act="back">取消</button></div>';
+  h+='<div class="foot">头像与昵称只用于本机展示，不上传服务器。</div>';
+  return h;
+}};
 V.me={render:function(){
   const p=P();
   const personaName=D.personas[S.persona].name;
   const followed=Object.keys(S.follows||{}).filter(function(k){return S.follows[k]}).length;
-  let h='<article class="card me-profile"><div class="pcard"><div class="msr avr bust" style="--sx:'+PX[S.persona]+';width:54px;height:54px;flex:0 0 auto"></div><div style="flex:1;min-width:0"><b style="font-size:16px">'+(S.user?S.user:"未登录")+'</b><div class="meta" style="margin-top:3px">'+(S.member?"会员 · 有效期至 2026-12-03":"免费版 · 串关体检 ¥0 · 全量报告 ¥30/月")+'</div></div>'+(S.user?'':'<button class="btn mini" data-act="login">登录</button>')+'</div></article>';
+  let h='<article class="card me-profile" data-act="profileOrLogin" style="cursor:pointer"><div class="pcard">'+userAvatarHTML(54)+'<div style="flex:1;min-width:0"><b style="font-size:16px">'+(S.user?(S.nickname||S.user):"未登录")+'</b><div class="meta" style="margin-top:3px">'+(S.member?"会员 · 有效期至 2026-12-03":"免费版 · 串关体检 ¥0 · 全量报告 ¥30/月")+'</div></div>'+(S.user?'<span style="color:var(--muted);font-size:16px">›</span>':'<button class="btn mini" data-act="login">登录</button>')+'</div></article>';
   h+='<div class="grp">账号</div><article class="card settings">';
   h+=setRow("会员订阅",S.member?"已开通":"¥30/月 · 解锁全量","go","subscription");
   h+=(S.user?setRow("退出登录","","act","logout"):setRow("登录 / 注册","手机号 / 微信 / Apple","go","login"));
@@ -1666,7 +1743,48 @@ const ACT={
   scanStart:function(){runScan()},
   shotStart:function(){runShot()},
   send:function(){const el=document.getElementById("cbar");if(!el)return;const v=el.value.trim();if(v){el.value="";sendChat(v)}},
+  matches:function(){
+    const list=(D._backend&&D.all&&D.all.length)?D.all:D.onsale;
+    const items=list.map(function(m){
+      const no=m.no||m.match_no,a=m.a||m.home,b=m.b||m.away,lg=m.lg||m.league||"";
+      const close=m.close||(m.kickoff||"").slice(11,16);
+      const st=m.st||(m.status==="promoted"?"pass":m.status==="killed"?"dead":"screen");
+      return {id:m.id,no:no,a:a,b:b,lg:lg,close:close,st:st,gates:m.gates,rake:m.rake,status:m.status};
+    });
+    window.__matchList=items;
+    const labels={pass:"已推",dead:"已砍",screen:"复核中",none:"未过闸"};
+    let h='<div class="ttl" style="margin-bottom:4px">今天看哪场？</div><div class="meta" style="margin-bottom:10px">'+(D._backend?items.length+' 场 · 点一场直接看':'演示展示 '+items.length+' 场 · 点一场直接看')+'</div>';
+    if(!items.length){h+='<div class="meta">今天还没有可选的比赛。</div>'}
+    else{
+      h+='<div class="quiet-list">';
+      items.forEach(function(m,i){
+        const tag=labels[m.st]||"查看";
+        const dot=m.st==="dead"?"bad":(m.st==="pass"?"ok":"amber");
+        h+='<button class="quiet-row" data-act="pickMatch" data-i="'+i+'"><span class="quiet-dot '+dot+'"></span><span class="quiet-main"><b>'+m.a+' vs '+m.b+'</b><span>'+m.no+(m.lg?' · '+m.lg:'')+' · '+m.close+' 停售</span></span><span class="quiet-tag">'+tag+'</span></button>';
+      });
+      h+='</div>';
+    }
+    sheet(h);
+  },
+  pickMatch:function(el){
+    const i=parseInt(el.getAttribute("data-i"),10)||0;
+    const m=(window.__matchList||[])[i];if(!m)return;
+    closeSheet();
+    if(!D._backend){
+      if(m.st==="pass"&&m.no==="周三012"){go("detail");return}
+      if(m.st==="dead"){
+        const idx=(D.avoid||[]).findIndex(function(a){return a.no===m.no});
+        if(idx>-1){S.whynotSel=idx;save();go("whynot");return}
+      }
+    }
+    window.__pick=m;go("match");
+  },
   notif:function(){S.notif=S.notif?0:1;save();toast(S.notif?"提醒已开启":"提醒已关闭");render()},
+  profileOrLogin:function(){if(S.user)go("profile");else go("login")},
+  setAvatar:function(el){S.avatar=el.getAttribute("data-k");S.avatarData="";save();render();toast("头像已更新")},
+  pickFile:function(){const el=document.getElementById("avatarFile");if(el)el.click()},
+  saveProfile:function(){const el=document.getElementById("nickname");const name=(el?el.value:"").trim();if(!name){toast("昵称不能为空",1);return}if(name.length>12){toast("昵称最多 12 个字",1);return}S.nickname=name;save();back();toast("资料已保存")},
+  loginOrToast:function(){if(S.user){toast("当前账号："+S.user)}else{go("login")}},
   logout:function(){S.user=null;S.member=0;save();toast("已退出登录");render()},
   legal:function(){sheet('<div class="ttl" style="margin-bottom:8px">披露与条款</div><div class="meta" style="line-height:1.85">解球是数据分析工具，不构成投注建议，不承诺盈利。<br>数据来源：竞彩官方、国际盘、赛果与 xG 公开数据；所有结论赛前封存、赛后公开。<br>未满 18 周岁禁止购买彩票。自排除与帮助热线永久免费。<br>会员服务可随时取消，7 天内可申请退款。</div><div class="btnrow" style="margin-top:14px"><button class="btn primary" data-act="closeSheet">知道了</button></div>')},
   help:function(){sheet('<div class="ttl" style="margin-bottom:8px">帮助与支持</div><div class="meta" style="line-height:1.8">数据分析工具，不构成投注建议。<br>帮助热线 400-000-0000<br>服务时间 09:00–23:00</div><div class="btnrow" style="margin-top:14px"><button class="btn primary" data-act="closeSheet">知道了</button></div>')},
@@ -1705,6 +1823,25 @@ document.addEventListener("click",function(e){
   const tab=e.target.closest(".tab");
   if(tab){switchTab(tab.dataset.tab);return}
 });
+document.addEventListener("change",function(e){
+  if(e.target&&e.target.id==="avatarFile"){
+    const file=e.target.files&&e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=function(){
+      const img=new Image();
+      img.onload=function(){
+        const c=document.createElement("canvas");c.width=160;c.height=160;
+        const ctx=c.getContext("2d");const side=Math.min(img.width,img.height);
+        ctx.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,160,160);
+        S.avatarData=c.toDataURL("image/jpeg",0.85);S.avatar="";
+        try{save()}catch(err){toast("图片太大，换一张",1);return}
+        render();toast("头像已更新");
+      };
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+});
 document.addEventListener("input",function(e){
   if(e.target&&e.target.id==="saleSearch"){
     const q=e.target.value.trim().toLowerCase();
@@ -1720,6 +1857,24 @@ document.addEventListener("keydown",function(e){
   }
 });
 window.addEventListener("error",function(e){window.__jqErrs=window.__jqErrs||[];window.__jqErrs.push(e.message)});
+document.getElementById("view").addEventListener("scroll",function(){
+  const t=document.getElementById("topbar");
+  if(t)t.classList.toggle("compact",this.scrollTop>24);
+});
+function startMetrics(){
+  if(window.__metricTimer)return;
+  let infer=12847,viewers=12547,fresh=12;
+  window.__metricTimer=setInterval(function(){
+    infer+=1+Math.floor(Math.random()*3);
+    viewers+=Math.floor(Math.random()*37)-18;
+    fresh=fresh>=29?8:fresh+2;
+    const a=document.getElementById("mInfer");if(a)a.textContent=infer.toLocaleString("en-US");
+    const b=document.getElementById("mSources");if(b)b.textContent="4";
+    const c=document.getElementById("mFresh");if(c)c.textContent=fresh+"s";
+    const d=document.getElementById("mViewers");if(d)d.textContent=viewers.toLocaleString("en-US");
+  },2400);
+}
+startMetrics();
 render();
 </script>
 </body>
