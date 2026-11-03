@@ -38,16 +38,22 @@ FastAPI 模块化单体。W2-W4：流/判决三关/封存链/账本/叙述/校�
 
 ```bash
 pip install -r requirements.txt
-python -m app.seed ../sp-collector/sp_data.db   # ingest → intl → understat → 三关 → 赛果 → 结算 → 锚点
-python -m app.backtest_cli                      # 校准回测
-python -m app.purge_cli                         # 注销期满清除
+JQ_DB_STATEMENT_TIMEOUT_MS=0 python -m app.seed ../sp-collector/sp_data.db   # 批量导入；放宽 API 的 15s 超时
+JQ_DB_STATEMENT_TIMEOUT_MS=0 python -m app.backtest_cli   # 校准回测（批量）
+JQ_DB_STATEMENT_TIMEOUT_MS=0 python -m app.purge_cli        # 注销期满清除
 uvicorn app.main:app --port 8100
 ```
 
 ## 部署
 
 ```bash
-python deploy.py   # VPS：数据代码分离；三 cron（30min 同步 / 周一回测 / 每日 purge）
+# 密码不再写进代码；部署前导出
+export JQ_DEPLOY_PASSWORD='...'
+export JQ_CONSOLE_PASSWORD='...'
+# 可选：切自建 Postgres（不设则继续旧 SQLite）
+export JQ_PROD_DATABASE_URL='postgresql+psycopg2://jieqiu:...@10.0.0.5:5432/jieqiu'
+
+python deploy.py   # VPS：数据代码分离；cron：同步/回测/purge/助理 worker/每周日数据保留
 ```
 
 ---

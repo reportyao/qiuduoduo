@@ -71,7 +71,8 @@ class Verdict(Base):
     __table_args__ = (
         Index("ix_verdicts_trade_status_rake", "trade_date", "rake", "status"),
         Index("ix_verdicts_match_trade", "match_id", "trade_date"),
-        Index("ix_verdicts_status_settled_kickoff", "status", "settled", "kickoff"),
+        Index("ix_verdicts_trade_kickoff", "trade_date", "kickoff"),
+        Index("ix_verdicts_status_settled_kickoff", "status", "kickoff", "settled"),
     )
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)  # v{trade_date}-{match_no}

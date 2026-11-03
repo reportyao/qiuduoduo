@@ -29,6 +29,10 @@ def test_health(client, db):
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "ok" and body["env"] == "test"
+    assert body["db"]["backend"] == "sqlite" and body["db"]["latency_ms"] >= 0
+    assert "counts" not in body  # 探针默认不跑大表 COUNT
+    detailed = client.get("/health?detailed=1").json()
+    assert "counts" in detailed and "sp_snapshots" in detailed["counts"]
 
 
 def test_stream_full_pipeline(client, db):

@@ -1,6 +1,8 @@
 # 解球 · 数据库架构（自建 PostgreSQL）
 
-> 状态：生产目标架构。**不使用 Supabase**，也不依赖任何托管 BaaS。主库是自建 PostgreSQL 16（腾讯云 CVM + Docker volume / 云硬盘），SQLite 只用于纯单元测试和一次性本地工具。
+> 状态：生产目标架构。**不使用 Supabase**，也不依赖任何托管 BaaS。主库是自建 PostgreSQL 16（腾讯云 CVM + Docker volume / 云硬盘），SQLite 只用于纯单元测试、一次性本地工具，以及尚未切换的旧部署回退。
+>
+> 深审记录：[docs/reviews/2026-11-04-database.md](reviews/2026-11-04-database.md)。
 
 ## 1. 拓扑
 
@@ -11,8 +13,8 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
                                       ▼
                              自建 PostgreSQL 16
                              ├─ 主库（读写）
-                             ├─ 每日 pg_dump -Fc（对象存储/异机）
-                             ├─ WAL 归档 → PITR（上线前补齐）
+                             ├─ pg_dump -Fc（下方命令；尚未自动化，需部署时配置 cron）
+                             ├─ WAL 归档 → PITR（上线前补齐，尚未配置）
                              └─ 只读副本（规模上来后）
 ```
 
@@ -38,8 +40,10 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 
 - Postgres 使用 `QueuePool`：`pool_size=10`、`max_overflow=20`、`pool_timeout=30s`、`pool_recycle=1800s`、`pool_pre_ping=True`。
 - 连接级 `statement_timeout=15000ms`、`lock_timeout=5000ms`、`application_name=jieqiu-api`，避免慢查询/锁等待拖垮 API。
-- SQLite 使用 `NullPool` + WAL + `busy_timeout=5000`，仅测试/本地。
+- SQLite 使用 `NullPool` + WAL + `busy_timeout=5000`，仅测试/本地以及尚未切换的旧部署。
 - `get_db()` 捕获异常先 `rollback()` 再关闭，失败事务不会带着脏连接回到池。
+- **生产 Postgres 启动不跑 `create_all`/`ALTER`**：`init_db()` 在 Postgres 方言下直接返回，schema 只由部署阶段的 `alembic upgrade head` 管理，避免多 worker 并发 DDL 和绕过迁移审计。SQLite（本地/测试/尚未切换的旧部署）仍保留 `init_db()` 兼容旧库；旧 SQLite 表已存在时，`init_db()` 还会补建模型里新增、但 `create_all` 不会自动补的索引。
+- **Alembic 迁移连接**用 `NullPool` + `application_name=jieqiu-migrate`；`statement_timeout=0`（大表建索引不被 API 的 15s 超时打断），`lock_timeout` 仍取 5s，避免长时间排队锁。
 - 所有时间列统一 **naive UTC**（`models.utcnow()` 去 tzinfo）；竞彩业务时间（开赛/停售/trade_date）用中国时间字符串。两者不混用。
 
 连接数估算：
@@ -76,7 +80,8 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 |---|---|---|
 | `ix_verdicts_trade_status_rake` | verdicts | 判决流按日期 + 状态 + 抽水排序 |
 | `ix_verdicts_match_trade` | verdicts | 一场比赛跨竞彩日的最新判决回退 |
-| `ix_verdicts_status_settled_kickoff` | verdicts | 结算扫描 / 公开账本 |
+| `ix_verdicts_trade_kickoff` | verdicts | 公开账本按日期 + 开赛时间 |
+| `ix_verdicts_status_settled_kickoff` | verdicts | 已推判决按开赛时间（结算/复盘） |
 | `ix_verdict_revisions_verdict_created` | revisions | 封存页取修订史 |
 | `ix_bets_user_created` | bets | 我的票单 / 周报 |
 | `ix_notifications_user_channel_opened` | notifications | 收件箱未读 |
@@ -91,7 +96,7 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 | `ix_refresh_tokens_expires_at` | refresh_tokens | 过期清理 |
 | `uq_users_phone` / `uq_users_email` | users | 手机/邮箱唯一；Postgres 部分唯一索引，NULL 不参与 |
 
-原则：**先有查询再有索引**。没有出现在 `EXPLAIN` 热路径里的索引不加；新增索引必须同时出现在 ORM `__table_args__` 与 Alembic migration，保证 `alembic check` 无漂移。
+原则：**先有查询再有索引**。没有出现在 `EXPLAIN` 热路径里的索引不加；新增索引必须同时出现在 ORM `__table_args__` 与 Alembic migration，保证 `alembic check` 无漂移。Postgres 由 Alembic 建索引；旧 SQLite 由 `init_db()` 的 `_ensure_indexes()` 补建（`create_all` 对已存在表不会补索引）。
 
 ## 6. 数据保留
 
@@ -99,8 +104,8 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 
 | 数据 | 默认保留 | 原因 |
 |---|---|---|
-| 已扇出 events | 90 天 | 通知内容已落 notifications；事件本身可回收 |
-| 已送达/失败 notifications | 180 天 | 收件箱历史 |
+| 已扇出/已过期 events | 90 天 | 通知内容已落 notifications；事件本身可回收；未扇出且未过期的事件保留；仍被 notification 引用的 event 延后到引用清掉后的下一轮 |
+| 已送达/失败/被抑制 notifications | 180 天 | 收件箱历史 |
 | model_runs | 365 天 | 复盘/审计一年 |
 | user_events | 180 天 | 行为信号 |
 | verification_codes | 7 天 | 已过期验证码 |
@@ -115,7 +120,7 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 - 串关体检/赔率/仓位/回本线：纯本地计算，无 `parlay_reports` 等服务端表。
 - 订阅/支付：尚未接入，不建空表，避免出现与接口不一致的“假 schema”。
 
-建议低峰执行：
+部署 cron 默认每周日 04:10 执行 `--apply`（日志 `db_maint.log`）。手动演练先 dry-run：
 
 ```bash
 cd jieqiu-backend
@@ -127,7 +132,7 @@ JQ_DB_STATEMENT_TIMEOUT_MS=0 python -m app.db_maint --apply --json  # 备份后�
 
 ## 7. 备份 / 恢复 / 迁移
 
-### 备份
+### 备份（部署时配置，不是当前自动任务）
 
 ```bash
 # 每日 03:20，压缩自定义格式
@@ -139,13 +144,17 @@ pg_restore --list /backup/jieqiu-2026-11-04.dump | head
 - 保留 14 天日备 + 每月 1 份月备；至少一份异机/对象存储。
 - 上线前配置 WAL 归档（`archive_mode=on` + `archive_command`/pgBackRest），目标 RPO ≤ 5 分钟、RTO ≤ 1 小时。
 - 每季度做一次恢复演练：恢复到临时库，跑 `alembic current`、关键表 count、`/health` 链路。
+- **当前未自动化备份/PITR**：这两个是生产上线阻塞项；不要因为文档写了命令就认为已经在跑。
 
 ### SQLite → Postgres 切换
 
 1. 停写（或进入维护窗口），备份 SQLite。
 2. 建空 Postgres，`alembic upgrade head`。
 3. 用一次性导入脚本按表迁数据（先父表后子表；或 `pgloader`）。
-4. 校验行数、`payload_hash`、`bets.sp`、`users.phone/email` 唯一。
+4. 校验行数、`payload_hash`、`bets.sp`、`users.phone/email` 唯一；迁移前先跑重复检查：
+   `select phone, count(*) from users where phone is not null group by phone having count(*) > 1;`
+   （email 同理）。部分唯一索引遇到重复行会拒绝创建，必须先人工归并，不能删数据了事。
+   旧 SQLite 启动补索引时也会遇到同样的唯一冲突，升级前同样先查重。
 5. 切 `JQ_DATABASE_URL`，启动 API，跑 `/health`、`/stream`、`/me/inbox`、worker `--once`。
 6. 旧 SQLite 保留一个 release 周期，只读回滚。
 
@@ -184,6 +193,7 @@ select pid, wait_event_type, wait_event, query from pg_stat_activity where wait_
 ## 10. 安全
 
 - 角色分离：`jieqiu_app`（DML）、`jieqiu_migrator`（DDL）、`jieqiu_readonly`（报表）；应用不使用超级用户。
+- 数据库 URL/控制台密码/JWT 密钥写 `/etc/jieqiu-backend.env`（root:root 0600），systemd unit 只引用 `EnvironmentFile`，不把密钥写进 world-readable 的 unit。
 - 密码只放 systemd EnvironmentFile/密钥管理，不进仓库；`.env` 已 gitignore。
 - 只允许 VPC 内网；开启云盘加密与备份加密；审计登录与 DDL。
 - `statement_timeout`/`lock_timeout` 已在连接级配置；慢查询不会无限占用连接。

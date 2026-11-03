@@ -1,25 +1,27 @@
 """应用配置：全部可被环境变量覆盖（12-factor）。"""
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # sqlite:///./jieqiu.db（开发/当前）或 postgresql+psycopg://user:pass@host/db（腾讯云 PG 生产，方案 B）
+    # sqlite:///./jieqiu.db（开发/当前）或 postgresql+psycopg2://user:pass@host/db（自建 Postgres 生产）
     database_url: str = "sqlite:///./jieqiu.db"
-    # 生产 Postgres 连接池/超时（SQLite 忽略这些参数）
-    db_pool_size: int = 10
-    db_max_overflow: int = 20
-    db_pool_timeout_seconds: int = 30
-    db_pool_recycle_seconds: int = 1800
-    db_statement_timeout_ms: int = 15000
-    db_lock_timeout_ms: int = 5000
+    # 生产 Postgres 连接池/超时（SQLite 忽略这些参数）；加下界防止误配成 0/负数
+    db_pool_size: int = Field(default=10, ge=1, le=100)
+    db_max_overflow: int = Field(default=20, ge=0, le=200)
+    db_pool_timeout_seconds: int = Field(default=30, ge=1, le=300)
+    db_pool_recycle_seconds: int = Field(default=1800, ge=60)
+    db_statement_timeout_ms: int = Field(default=15000, ge=0)
+    db_lock_timeout_ms: int = Field(default=5000, ge=0)
     # 数据保留（天）：CLI app.db_maint 默认 dry-run，--apply 才真正删除
-    event_retention_days: int = 90
-    notification_retention_days: int = 180
-    model_run_retention_days: int = 365
-    user_event_retention_days: int = 180
-    verification_code_retention_days: int = 7
+    # 必须 >=1 天；防止负值把“创建时间 < 未来”当成全表删除。
+    event_retention_days: int = Field(default=90, ge=1, le=3650)
+    notification_retention_days: int = Field(default=180, ge=1, le=3650)
+    model_run_retention_days: int = Field(default=365, ge=1, le=3650)
+    user_event_retention_days: int = Field(default=180, ge=1, le=3650)
+    verification_code_retention_days: int = Field(default=7, ge=1, le=3650)
     # 时区：竞彩全部按中国标准时间
     tz_offset_hours: int = 8
     # 流里避雷展示条数

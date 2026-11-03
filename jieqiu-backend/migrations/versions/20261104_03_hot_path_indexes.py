@@ -17,7 +17,8 @@ depends_on = None
 INDEXES = [
     ("ix_verdicts_trade_status_rake", "verdicts", ["trade_date", "rake", "status"], False),
     ("ix_verdicts_match_trade", "verdicts", ["match_id", "trade_date"], False),
-    ("ix_verdicts_status_settled_kickoff", "verdicts", ["status", "settled", "kickoff"], False),
+    ("ix_verdicts_trade_kickoff", "verdicts", ["trade_date", "kickoff"], False),
+    ("ix_verdicts_status_settled_kickoff", "verdicts", ["status", "kickoff", "settled"], False),
     ("ix_verdict_revisions_verdict_created", "verdict_revisions", ["verdict_id", "created_at"], False),
     ("ix_users_deleted_at", "users", ["deleted_at"], False),
     ("ix_bets_user_created", "bets", ["user_id", "created_at"], False),

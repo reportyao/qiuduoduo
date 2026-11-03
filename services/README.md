@@ -6,7 +6,7 @@
 
 迁移顺序：
 
-1. ~~完成 Alembic baseline~~ **已完成**：`migrations/versions/71af760b1e99_baseline_w8_assistant_runtime.py` 覆盖当前 24 张表，`20261104_02_bet_sp.py` 增加注单赔率快照；已在空库验证 `upgrade head` 与 `alembic check`；
+1. ~~完成 Alembic baseline~~ **已完成**：`migrations/versions/71af760b1e99_baseline_w8_assistant_runtime.py` 覆盖当前 24 张表，`20261104_02_bet_sp.py` 增加注单赔率快照、`20261104_03_hot_path_indexes.py` 增加热路径与部分唯一索引；已在空库验证 `upgrade head` 与 `alembic check`；
 2. 将 `jieqiu-backend/app` 迁到 `services/api/app`；
 3. 保留 deploy/worker/cron 配置；
 4. 旧目录保留一个 release 周期后删除。

@@ -14,6 +14,7 @@ jieqiu-backend/freeze_baseline.json
 jieqiu-backend/sync.log
 jieqiu-backend/backtest.log
 jieqiu-backend/purge.log
+jieqiu-backend/db_maint.log
 __pycache__/
 *.pyc
 .pytest_cache/

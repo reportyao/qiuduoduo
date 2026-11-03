@@ -17,7 +17,7 @@ import argparse
 import json
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, exists, func, select
 
 from .config import get_settings
 from .db import SessionLocal
@@ -35,19 +35,27 @@ def _count(db, model, condition) -> int:
     return int(db.scalar(select(func.count()).select_from(model).where(condition)) or 0)
 
 
+def _event_condition(st):
+    # 不能只按 events 自己的年龄删：notifications 保留 180 天、events 只保留 90 天，
+    # 没有外键，但 event_id 仍是扇出去重键。SQLite 的 INTEGER PRIMARY KEY 在删掉
+    # 最高行后会复用 ID，旧通知的 event_id 可能撞上新事件，导致新通知被判“已存在”。
+    # 因此只要还有 notification 引用，就先保留 event；等通知被清掉后的下一轮再删。
+    return (Event.created_at < _cutoff(st.event_retention_days)) & (
+        Event.fanout_at.isnot(None) | (Event.expires_at < NOW)
+    ) & ~exists(select(Notification.id).where(Notification.event_id == Event.id))
+
+
+def _notification_condition(st):
+    return (Notification.created_at < _cutoff(st.notification_retention_days)) & (
+        Notification.status.in_(("sent", "failed", "suppressed"))
+    )
+
+
 def plan(db) -> dict[str, int]:
     st = get_settings()
     return {
-        "events": _count(
-            db, Event,
-            (Event.created_at < _cutoff(st.event_retention_days))
-            & Event.fanout_at.isnot(None),
-        ),
-        "notifications": _count(
-            db, Notification,
-            (Notification.created_at < _cutoff(st.notification_retention_days))
-            & Notification.status.in_(("sent", "failed", "skipped")),
-        ),
+        "events": _count(db, Event, _event_condition(st)),
+        "notifications": _count(db, Notification, _notification_condition(st)),
         "model_runs": _count(
             db, ModelRun,
             ModelRun.created_at < _cutoff(st.model_run_retention_days),
@@ -67,31 +75,50 @@ def plan(db) -> dict[str, int]:
     }
 
 
+def _delete_batches(db, model, condition, batch_size: int = 1000) -> int:
+    """按主键分批删除，避免一次大事务长时间持锁。
+
+    清理的是可再生日志，不要求跨表原子性；每批独立提交，失败时已完成批次保留，
+    真实错误直接向上抛给运维，不静默吞掉。
+    """
+    total = 0
+    while True:
+        ids = db.scalars(
+            select(model.id).where(condition).order_by(model.id).limit(batch_size)
+        ).all()
+        if not ids:
+            break
+        result = db.execute(delete(model).where(model.id.in_(ids)))
+        affected = (result.rowcount
+                    if result.rowcount is not None and result.rowcount >= 0
+                    else len(ids))
+        if affected == 0:
+            # 条件选出了行但一行都没删掉：再循环会原地打转，直接暴露给运维。
+            raise RuntimeError(f"retention delete made no progress on {model.__tablename__}")
+        total += affected
+        db.commit()
+        if len(ids) < batch_size:
+            break
+    return total
+
+
 def apply(db) -> dict[str, int]:
     st = get_settings()
     deleted: dict[str, int] = {}
 
-    result = db.execute(delete(Event).where(
-        (Event.created_at < _cutoff(st.event_retention_days))
-        & Event.fanout_at.isnot(None)))
-    deleted["events"] = result.rowcount or 0
-
-    result = db.execute(delete(Notification).where(
-        (Notification.created_at < _cutoff(st.notification_retention_days))
-        & Notification.status.in_(("sent", "failed", "skipped"))))
-    deleted["notifications"] = result.rowcount or 0
+    deleted["events"] = _delete_batches(db, Event, _event_condition(st))
+    deleted["notifications"] = _delete_batches(db, Notification, _notification_condition(st))
 
     for key, model, cutoff in (
         ("model_runs", ModelRun, st.model_run_retention_days),
         ("user_events", UserEvent, st.user_event_retention_days),
         ("verification_codes", VerificationCode, st.verification_code_retention_days),
     ):
-        result = db.execute(delete(model).where(model.created_at < _cutoff(cutoff)))
-        deleted[key] = result.rowcount or 0
+        deleted[key] = _delete_batches(db, model, model.created_at < _cutoff(cutoff))
 
-    result = db.execute(delete(RefreshToken).where(RefreshToken.expires_at < NOW))
-    deleted["refresh_tokens"] = result.rowcount or 0
-    db.commit()
+    deleted["refresh_tokens"] = _delete_batches(
+        db, RefreshToken, RefreshToken.expires_at < NOW
+    )
     return deleted
 
 

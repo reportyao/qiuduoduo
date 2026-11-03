@@ -58,17 +58,34 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     except Exception:
         # 任何未处理异常都先回滚，避免连接带着失败事务回到池里。
-        db.rollback()
+        # 连接已断时 rollback 也可能失败，不能让清理异常覆盖原始错误。
+        try:
+            db.rollback()
+        except Exception:
+            pass
         raise
     finally:
         db.close()
 
 
 def init_db() -> None:
+    """仅 SQLite/本地开发建表；Postgres 的 schema 只由 Alembic 管。
+
+    生产启动时执行 create_all/ALTER 会绕过迁移审计，多 worker 并发启动还可能
+    同时抢 DDL 锁。Postgres 部署由 deploy.py 在重启前跑 `alembic upgrade head`，
+    应用启动只负责连接，不负责改 schema。
+    """
     from . import models  # noqa: F401 确保模型注册
 
+    if engine.dialect.name in ("postgresql", "postgres"):
+        return
+    # 旧 SQLite 库已有表时，create_all 不会补建后来新增的索引；先记下是否存在。
+    from sqlalchemy import inspect
+    existed = bool(inspect(engine).get_table_names())
     Base.metadata.create_all(bind=engine)
-    _ensure_columns()
+    if existed:
+        _ensure_columns()
+        _ensure_indexes()
 
 
 # 轻量列迁移：create_all 不给已有表加列，这里按需 ALTER（W2→W3 verdicts 扩展）
@@ -123,6 +140,17 @@ def _existing_columns(conn, table: str) -> set[str]:
             "WHERE table_schema = current_schema() AND table_name = :t"), {"t": table}).fetchall()
         return {r[0] for r in rows}
     return set()
+
+
+def _ensure_indexes() -> None:
+    """给旧 SQLite 库补建模型里声明的索引。
+
+    create_all(checkfirst=True) 只建缺失的表，不会给已存在的表补索引；生产即便
+    暂时还跑 SQLite，也要让热路径索引真正生效。Postgres 不走这里，由 Alembic 管。
+    """
+    for table in Base.metadata.tables.values():
+        for index in table.indexes:
+            index.create(bind=engine, checkfirst=True)
 
 
 def _ensure_columns() -> None:
