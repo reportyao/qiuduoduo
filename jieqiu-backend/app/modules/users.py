@@ -122,8 +122,8 @@ def bet_pnl(bet: Bet, verdict: Verdict) -> float | None:
     sp = bet.sp or (verdict.pick or {}).get("sp")
     if isinstance(sp, (int, float)) and sp > 1:
         return round(bet.amount * (float(sp) - 1), 2)
-    # 旧注单没有赔率快照：只能用本金兜底并保持符号正确。
-    return round(bet.amount, 2)
+    # 旧注单没有赔率快照：不能把赢单算成 +100% 利润（会高估 P&L）；返回未知。
+    return None
 
 
 def user_streak(db: Session, user: User) -> dict:

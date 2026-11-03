@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import { goBackOr } from "@/lib/navigation";
 import { useRouter } from "expo-router";
 import { SettingsPage } from "@/components/SettingsPage";
 import { Avatar, Button, Card, Icon, Text, useToast } from "@/components/ui";
@@ -17,25 +19,27 @@ export default function PersonaScreen() {
   const setPersona = usePrefsStore((s) => s.setPersona);
   const session = useAuthStore((s) => s.session);
   const patchMe = usePatchMeMutation();
+  const [saving, setSaving] = useState(false);
 
   const select = async (id: PersonaId) => {
-    if (id === current) return;
+    if (id === current || saving) return;
     const previous = current;
+    setSaving(true);
     setPersona(id);
-    if (session?.mode === "jwt") {
-      try {
-        await patchMe.mutateAsync({ persona: id });
-      } catch (e) {
-        setPersona(previous);
-        toast.show(errorText(e), "error");
-        return;
-      }
+    try {
+      if (session?.mode === "jwt") await patchMe.mutateAsync({ persona: id });
+      toast.show(`已切换为${PERSONAS[id].name}，文案立即生效`, "success");
+    } catch (e) {
+      // 串行化后不会出现旧请求回滚新选择；失败才回到 previous。
+      setPersona(previous);
+      toast.show(errorText(e), "error");
+    } finally {
+      setSaving(false);
     }
-    toast.show(`已切换为${PERSONAS[id].name}，文案立即生效`, "success");
   };
 
   return (
-    <SettingsPage title="助理风格" subtitle="只改语气，不改判断" onBack={() => router.back()}>
+    <SettingsPage title="助理风格" subtitle="只改语气，不改判断" onBack={() => goBackOr(router)}>
       <Card style={styles.intro}>
         <Text variant="h3">选一个说话方式</Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>
@@ -51,6 +55,7 @@ export default function PersonaScreen() {
             <Pressable
               key={id}
               onPress={() => select(id)}
+              disabled={saving}
               accessibilityRole="radio"
               accessibilityState={{ selected }}
               accessibilityLabel={persona.name}

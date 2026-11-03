@@ -1,4 +1,5 @@
 import { ScrollView, StyleSheet, View } from "react-native";
+import { goBackOr } from "@/lib/navigation";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
@@ -22,7 +23,7 @@ export default function LegalScreen() {
 
   return (
     <AppScreen bottom={false}>
-      <AppHeader title={TITLES[key]} showAssistant={false} onBack={() => router.back()} />
+      <AppHeader title={TITLES[key]} showAssistant={false} onBack={() => goBackOr(router)} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         {key === "terms" ? <Terms /> : key === "privacy" ? <Privacy disclosure={disclosure.data} /> : <AiNotice />}
 
@@ -80,7 +81,7 @@ function Privacy({ disclosure }: { disclosure?: ReturnType<typeof useDisclosureQ
     <>
       <Text variant="h2" style={styles.title}>我们收集什么</Text>
       <Card style={styles.block}>
-        {(disclosure?.privacy.collects ?? [
+        {(disclosure?.privacy?.collects ?? [
           "手机号或邮箱（登录标识）",
           "第三方登录匿名标识",
           "记注金额与选择（仅你可见）",
@@ -91,7 +92,7 @@ function Privacy({ disclosure }: { disclosure?: ReturnType<typeof useDisclosureQ
       </Card>
       <Text variant="h2" style={styles.title}>不收集什么</Text>
       <Card style={styles.block}>
-        {(disclosure?.privacy.not_collects ?? [
+        {(disclosure?.privacy?.not_collects ?? [
           "出生日期",
           "真实姓名与身份证",
           "支付凭证",
@@ -102,10 +103,10 @@ function Privacy({ disclosure }: { disclosure?: ReturnType<typeof useDisclosureQ
       </Card>
       <Section title="共享与存储">
         <Text variant="body" color={colors.muted} style={styles.paragraph}>
-          {disclosure?.privacy.sharing ??
+          {disclosure?.privacy?.sharing ??
             "不向第三方共享、不出售。数据可随时导出，注销后 7 天清除。"}
           {"\n"}
-          {disclosure?.privacy.storage ??
+          {disclosure?.privacy?.storage ??
             "数据存储于中国境内主库；跨境传输按适用法律处理。"}
         </Text>
       </Section>

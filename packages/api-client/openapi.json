@@ -2232,6 +2232,8 @@
             "required": true,
             "schema": {
               "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 1,
               "title": "Bet Id"
             }
           },
@@ -2289,6 +2291,8 @@
             "required": true,
             "schema": {
               "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 1,
               "title": "Bet Id"
             }
           },
@@ -2570,6 +2574,22 @@
               "default": "zhuanjia",
               "title": "Persona"
             }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
           }
         ],
         "responses": {
@@ -2791,6 +2811,49 @@
         }
       }
     },
+    "/s/{share_id}": {
+      "get": {
+        "tags": [
+          "v0.5-w7"
+        ],
+        "summary": "Share Page",
+        "description": "分享卡的公开 HTTPS 落地页；外部用户没有 App 也能查看并独立核验。",
+        "operationId": "share_page_s__share_id__get",
+        "parameters": [
+          {
+            "name": "share_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Share Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/shares/mine": {
       "get": {
         "tags": [
@@ -2984,6 +3047,25 @@
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/console/logout": {
+      "get": {
+        "tags": [
+          "editor-console"
+        ],
+        "summary": "Console Logout",
+        "operationId": "console_logout_console_logout_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -3972,6 +4054,8 @@
             "required": true,
             "schema": {
               "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 1,
               "title": "Notification Id"
             }
           },
@@ -4081,6 +4165,8 @@
             "required": true,
             "schema": {
               "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 1,
               "title": "Notification Id"
             }
           },
@@ -4248,6 +4334,8 @@
             "required": true,
             "schema": {
               "type": "integer",
+              "maximum": 9223372036854775807,
+              "minimum": 1,
               "title": "Watch Id"
             }
           },
@@ -5024,6 +5112,8 @@
         "properties": {
           "verdict_id": {
             "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
             "title": "Verdict Id"
           },
           "amount": {
@@ -5125,6 +5215,8 @@
         "properties": {
           "text": {
             "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
             "title": "Text"
           }
         },
@@ -5222,7 +5314,8 @@
           "device_token": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -5233,7 +5326,8 @@
           "display_name": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -5244,7 +5338,8 @@
           "region": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 8
               },
               {
                 "type": "null"
@@ -5746,7 +5841,8 @@
           "display_name": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -5757,7 +5853,8 @@
           "persona": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 16
               },
               {
                 "type": "null"
@@ -5768,7 +5865,8 @@
           "odds_format": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 12
               },
               {
                 "type": "null"
@@ -5779,7 +5877,8 @@
           "locale": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 8
               },
               {
                 "type": "null"
@@ -5795,10 +5894,12 @@
         "properties": {
           "value": {
             "type": "string",
+            "maxLength": 256,
             "title": "Value"
           },
           "source": {
             "type": "string",
+            "maxLength": 8,
             "title": "Source",
             "default": "你说过"
           },
@@ -5818,10 +5919,12 @@
         "properties": {
           "value": {
             "type": "string",
+            "maxLength": 256,
             "title": "Value"
           },
           "source": {
             "type": "string",
+            "maxLength": 8,
             "title": "Source",
             "default": "你说过"
           },
@@ -5832,6 +5935,8 @@
           },
           "key": {
             "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
             "title": "Key"
           }
         },
@@ -5955,7 +6060,8 @@
           "quiet_start": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 5
               },
               {
                 "type": "null"
@@ -5966,7 +6072,8 @@
           "quiet_end": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 5
               },
               {
                 "type": "null"
@@ -6048,6 +6155,8 @@
         "properties": {
           "id_token": {
             "type": "string",
+            "maxLength": 8192,
+            "minLength": 1,
             "title": "Id Token"
           }
         },
@@ -6147,20 +6256,25 @@
         "properties": {
           "platform": {
             "type": "string",
+            "maxLength": 8,
             "title": "Platform",
             "default": "android"
           },
           "provider": {
             "type": "string",
+            "maxLength": 16,
             "title": "Provider",
             "default": "jpush"
           },
           "token": {
             "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
             "title": "Token"
           },
           "app_version": {
             "type": "string",
+            "maxLength": 32,
             "title": "App Version",
             "default": ""
           }
@@ -6193,6 +6307,8 @@
         "properties": {
           "token": {
             "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
             "title": "Token"
           }
         },
@@ -6308,6 +6424,8 @@
         "properties": {
           "refresh_token": {
             "type": "string",
+            "maxLength": 512,
+            "minLength": 1,
             "title": "Refresh Token"
           }
         },
@@ -6452,7 +6570,8 @@
           "phone": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 24
               },
               {
                 "type": "null"
@@ -6463,7 +6582,8 @@
           "email": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 128
               },
               {
                 "type": "null"
@@ -6473,6 +6593,7 @@
           },
           "purpose": {
             "type": "string",
+            "maxLength": 16,
             "title": "Purpose",
             "default": "login"
           }
@@ -6964,6 +7085,8 @@
         "properties": {
           "email": {
             "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
             "title": "Email"
           },
           "code": {
@@ -6975,7 +7098,8 @@
           "device_token": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -6995,6 +7119,8 @@
         "properties": {
           "phone": {
             "type": "string",
+            "maxLength": 24,
+            "minLength": 1,
             "title": "Phone"
           },
           "code": {
@@ -7005,13 +7131,15 @@
           },
           "purpose": {
             "type": "string",
+            "maxLength": 16,
             "title": "Purpose",
             "default": "login"
           },
           "device_token": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 64
               },
               {
                 "type": "null"
@@ -7031,11 +7159,14 @@
         "properties": {
           "target_type": {
             "type": "string",
+            "maxLength": 8,
             "title": "Target Type",
             "default": "match"
           },
           "target_id": {
             "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
             "title": "Target Id"
           },
           "events": {
@@ -7262,10 +7393,14 @@
         "properties": {
           "bind_token": {
             "type": "string",
+            "maxLength": 1024,
+            "minLength": 1,
             "title": "Bind Token"
           },
           "phone": {
             "type": "string",
+            "maxLength": 24,
+            "minLength": 1,
             "title": "Phone"
           },
           "code": {
@@ -7287,6 +7422,8 @@
         "properties": {
           "code": {
             "type": "string",
+            "maxLength": 512,
+            "minLength": 1,
             "title": "Code"
           }
         },

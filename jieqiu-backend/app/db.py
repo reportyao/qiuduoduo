@@ -1,10 +1,13 @@
 """数据库引擎与会话。SQLAlchemy 2.0，SQLite 开发 / PostgreSQL 16（腾讯云，方案 B）生产同套代码。"""
+import logging
 from collections.abc import Generator
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from .config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 class Base(DeclarativeBase):
@@ -179,5 +182,6 @@ def _ensure_columns() -> None:
             try:
                 conn.execute(text(stmt))
             except Exception:
-                pass
+                # 旧库可能有重复手机/邮箱；不能静默通过，否则 auth 会绑到任意一行。
+                logger.warning("legacy unique index not created: %s", stmt, exc_info=True)
         conn.commit()

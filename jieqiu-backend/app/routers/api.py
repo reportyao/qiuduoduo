@@ -11,6 +11,7 @@ from ..config import get_settings
 from ..db import get_db
 from ..models import ModelRun, SPMatch, SPSnapshot, TeamAlias, Verdict
 from ..modules.messaging import build_stream, build_stream_cached
+from ..modules.timeutil import trade_date_now, trade_window
 
 router = APIRouter()
 
@@ -125,11 +126,10 @@ def analysis_log(date: str | None = None, match_id: str | None = None,
 def matches_on_sale(db: Session = Depends(get_db)):
     """今日在售（竞彩规则：当日及次日 04:59 前开赛），带抽水与三关状态（F17）。"""
     now = cn_now()
-    today = now.strftime("%Y-%m-%d")
-    next_day = (now + timedelta(days=1)).strftime("%Y-%m-%d")
-    end = f"{next_day} 04:59:59"
+    today = trade_date_now(now)
+    start, end = trade_window(today)
     rows = db.scalars(
-        select(SPMatch).where(SPMatch.kickoff >= now.strftime("%Y-%m-%d %H:%M:%S"),
+        select(SPMatch).where(SPMatch.kickoff >= max(start, now.strftime("%Y-%m-%d %H:%M:%S")),
                                SPMatch.kickoff <= end).order_by(SPMatch.kickoff)
     ).all()
     # 同一场比赛可能跨竞彩日：取该 match 最新日期的判决，
@@ -161,11 +161,10 @@ def matches_on_sale(db: Session = Depends(get_db)):
 def sale_schedule(db: Session = Depends(get_db)):
     """停售时间表（F10）：竞彩足球停售时刻 = 开赛时刻，官方口径零误差。"""
     now = cn_now()
-    today = now.strftime("%Y-%m-%d")
-    next_day = (now + timedelta(days=1)).strftime("%Y-%m-%d")
-    end = f"{next_day} 04:59:59"
+    today = trade_date_now(now)
+    start, end = trade_window(today)
     rows = db.scalars(
-        select(SPMatch).where(SPMatch.kickoff >= now.strftime("%Y-%m-%d %H:%M:%S"),
+        select(SPMatch).where(SPMatch.kickoff >= max(start, now.strftime("%Y-%m-%d %H:%M:%S")),
                                SPMatch.kickoff <= end).order_by(SPMatch.kickoff)
     ).all()
     return {

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { Linking, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SettingsPage } from "@/components/SettingsPage";
@@ -34,6 +35,8 @@ const EVENT_OPTIONS = [
 ];
 
 const ALL_TYPES = EVENT_OPTIONS.map((option) => option.id);
+// 后端约定空数组 = 全部；用哨兵表达“明确一个都不要”，避免取消最后一个类型后又变回全选。
+const NONE_TYPE = "__none__";
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -41,19 +44,29 @@ export default function NotificationsScreen() {
   const query = useNotifySettingsQuery();
   const update = useUpdateNotifyMutation();
   const [draft, setDraft] = useState<NotifySettings | null>(null);
+  const dirty = useRef(false);
 
   useEffect(() => {
-    if (query.data) setDraft(query.data);
+    if (query.data && !dirty.current) setDraft(query.data);
   }, [query.data]);
+
+  const updateDraft = (next: NotifySettings) => {
+    dirty.current = true;
+    setDraft(next);
+  };
 
   const selectedTypes = useMemo(() => {
     if (!draft) return [];
+    if (draft.eventTypes.includes(NONE_TYPE)) return [];
     return draft.eventTypes.length === 0 ? ALL_TYPES : draft.eventTypes;
   }, [draft]);
 
   const setTypes = (types: string[]) => {
     if (!draft) return;
-    setDraft({ ...draft, eventTypes: types.length === ALL_TYPES.length ? [] : types });
+    const next =
+      types.length === 0 ? [NONE_TYPE]
+        : types.length === ALL_TYPES.length ? [] : types;
+    updateDraft({ ...draft, eventTypes: next });
   };
 
   const save = async () => {
@@ -63,10 +76,12 @@ export default function NotificationsScreen() {
       return;
     }
     try {
-      await update.mutateAsync({
+      const saved = await update.mutateAsync({
         ...draft,
         channels: draft.channels.length > 0 ? draft.channels : ["inapp"],
       });
+      dirty.current = false;
+      setDraft(saved);
       toast.show("通知设置已保存", "success");
     } catch (e) {
       toast.show(errorText(e), "error");
@@ -74,7 +89,7 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SettingsPage title="通知设置" subtitle="只推你关心的" onBack={() => router.back()}>
+    <SettingsPage title="通知设置" subtitle="只推你关心的" onBack={() => goBackOr(router)}>
       {query.isError && !draft ? (
         <ErrorState message={errorText(query.error)} onRetry={() => query.refetch()} />
       ) : query.isLoading || !draft ? (
@@ -109,7 +124,7 @@ export default function NotificationsScreen() {
                     const channels = next
                       ? Array.from(new Set([...draft.channels, "inapp"]))
                       : draft.channels.filter((c) => c !== "inapp");
-                    setDraft({ ...draft, channels: channels.length ? channels : ["inapp"] });
+                    updateDraft({ ...draft, channels: channels.length ? channels : ["inapp"] });
                   }}
                   label="站内信"
                 />
@@ -125,7 +140,7 @@ export default function NotificationsScreen() {
                     const channels = next
                       ? Array.from(new Set([...draft.channels, "push"]))
                       : draft.channels.filter((c) => c !== "push");
-                    setDraft({ ...draft, channels });
+                    updateDraft({ ...draft, channels });
                   }}
                   label="推送"
                 />
@@ -162,7 +177,7 @@ export default function NotificationsScreen() {
               right={
                 <Toggle
                   value={draft.paused}
-                  onChange={(paused) => setDraft({ ...draft, paused })}
+                  onChange={(paused) => updateDraft({ ...draft, paused })}
                   label="暂停推送"
                 />
               }
@@ -175,7 +190,7 @@ export default function NotificationsScreen() {
             <Text variant="caption" color={colors.muted}>0 = 只留站内信；最多 10 条。</Text>
             <Stepper
               value={draft.dailyCap}
-              onChange={(dailyCap) => setDraft({ ...draft, dailyCap })}
+              onChange={(dailyCap) => updateDraft({ ...draft, dailyCap })}
               min={0}
               max={10}
               step={1}
@@ -188,7 +203,7 @@ export default function NotificationsScreen() {
               <Field
                 label="静默开始"
                 value={draft.quietStart}
-                onChangeText={(quietStart) => setDraft({ ...draft, quietStart })}
+                onChangeText={(quietStart) => updateDraft({ ...draft, quietStart })}
                 keyboardType="numbers-and-punctuation"
                 placeholder="23:30"
               />
@@ -197,7 +212,7 @@ export default function NotificationsScreen() {
               <Field
                 label="静默结束"
                 value={draft.quietEnd}
-                onChangeText={(quietEnd) => setDraft({ ...draft, quietEnd })}
+                onChangeText={(quietEnd) => updateDraft({ ...draft, quietEnd })}
                 keyboardType="numbers-and-punctuation"
                 placeholder="08:00"
               />

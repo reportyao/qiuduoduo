@@ -102,10 +102,14 @@ def _whatif_promoted(v: Verdict) -> str:
 
 def killed_outcomes(db: Session, days: int = 7) -> dict:
     """被砍场的真实结局（诚实公开：砍对/砍错都给）。口径与周报一致（近 N 天）。"""
-    rows = db.scalars(select(Verdict).where(Verdict.status == "killed")).all()
-    recent = [v for v in rows if _within_days(v.trade_date, days)]
-    settled = [v for v in recent if v.settled]
-    lose = sum(1 for v in settled if v.settled == "lose")
+    cutoff_date = (datetime.now(CN) - timedelta(days=days)).strftime("%Y-%m-%d")
+    rows = db.execute(
+        select(Verdict.trade_date, Verdict.settled)
+        .where(Verdict.status == "killed", Verdict.trade_date >= cutoff_date)
+    ).all()
+    recent = [(d, s) for d, s in rows if _within_days(d, days)]
+    settled = [s for _d, s in recent if s]
+    lose = sum(1 for s in settled if s == "lose")
     win = len(settled) - lose
     return {
         "range_days": days,
@@ -120,9 +124,11 @@ def killed_outcomes(db: Session, days: int = 7) -> dict:
 
 def weekly_report(db: Session, user_id: str | None = None) -> dict:
     """周报：近 7 天判决汇总 + 归因分布 + 砍场诚实披露 + 用户注单 P&L（可选）。"""
+    today = datetime.now(CN).strftime("%Y-%m-%d")
     cutoff_date = (datetime.now(CN) - timedelta(days=7)).strftime("%Y-%m-%d")
     rows = db.scalars(
-        select(Verdict).where(Verdict.trade_date >= cutoff_date)
+        select(Verdict).where(Verdict.trade_date >= cutoff_date,
+                              Verdict.trade_date <= today)
         .order_by(Verdict.trade_date.desc())).all()
     recent = [v for v in rows if _within_days(v.trade_date, 7)]
     promoted = [v for v in recent if v.status == "promoted"]
@@ -166,6 +172,7 @@ def _within_days(date_str: str, days: int) -> bool:
     try:
         y, m, d = map(int, date_str.split("-"))
         today = (datetime.now(CN) - _td(hours=4)).date()  # 04:00 前仍算前一天（竞彩日界）
-        return (today - _d(y, m, d)).days <= days
+        delta = (today - _d(y, m, d)).days
+        return 0 <= delta <= days
     except Exception:
         return False

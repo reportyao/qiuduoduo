@@ -40,17 +40,23 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translate = useRef(new Animated.Value(10)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastId = useRef(0);
 
   const hide = useCallback(() => {
+    const id = toastId.current;
     Animated.parallel([
       Animated.timing(opacity, { toValue: 0, duration: 160, useNativeDriver: true }),
       Animated.timing(translate, { toValue: 10, duration: 160, useNativeDriver: true }),
-    ]).start(() => setToast(null));
+    ]).start(() => {
+      // 旧 toast 的淡出回调不能清掉淡出期间新 show 的 toast。
+      if (toastId.current === id) setToast(null);
+    });
   }, [opacity, translate]);
 
   const show = useCallback(
     (message: string, kind: ToastKind = "info") => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
+      toastId.current += 1;
       setToast({ message, kind });
       opacity.setValue(0);
       translate.setValue(10);

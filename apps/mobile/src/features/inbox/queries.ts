@@ -148,7 +148,9 @@ export function useUpdateNotifyMutation() {
       return adaptNotify(raw) as NotifySettings;
     },
     onSuccess: (data) => {
-      queryClient.setQueriesData({ queryKey: inboxKeys.notify }, data);
+      // 只更新当前账号的精确 key；前缀匹配会把 B 的设置写进 A 的缓存。
+      const userId = useAuthStore.getState().session?.userId ?? "anon";
+      queryClient.setQueryData([...inboxKeys.notify, userId], data);
     },
   });
 }

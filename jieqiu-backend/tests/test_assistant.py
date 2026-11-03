@@ -1,7 +1,7 @@
 """AI 助理运行时：事件 → 扇出 → 站内信/推送 → 设置/幂等。"""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.features.assistant.events import emit_event
 from app.features.assistant.fanout import fanout_events
@@ -111,6 +111,30 @@ def test_watch_fanout_inbox_and_push_dryrun(db, client):
     assert push.status == "sent" and push.provider_msg_id.startswith("dryrun:")
 
 
+def test_stale_sending_push_is_reclaimed(db, client):
+    uid, h = _login(client)
+    _match(db)
+    client.post("/me/watch", headers=h, json={"target_type": "match", "target_id": "990001"})
+    client.post("/push/register", headers=h, json={
+        "platform": "android", "provider": "jpush", "token": "reg-stale-1"})
+    _verdict(db, status="promoted")
+    emit_event(db, type="verdict_promoted", dedupe_key="test:stale:1", severity=2,
+               match_id="990001", payload={"verdict_id": "v-test-901"})
+    fanout_events(db, now_cn=datetime(2026, 11, 3, 12, 0, tzinfo=CN))
+    push = db.query(Notification).filter(Notification.channel == "push").one()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    push.status = "sending"
+    push.attempt = 1
+    push.lease_until = now - timedelta(seconds=1)
+    push.scheduled_at = now - timedelta(minutes=1)
+    db.commit()
+
+    out = send_pending_push(db, now=now)
+    assert out["sent"] == 1
+    db.refresh(push)
+    assert push.status == "sent"
+
+
 def test_notify_settings_and_quiet_cap(db, client):
     uid, h = _login(client)
     _match(db)
@@ -140,10 +164,9 @@ def test_push_register_rejects_ios(db, client):
 
 def test_console_assistant_and_push_pages(db, client):
     r = client.post("/console/login", data={"pw": "dev"}, follow_redirects=False)
-    assert r.status_code == 302
-    tok = r.headers["location"].split("t=")[1]
-    assert client.get(f"/console/assistant?t={tok}").status_code == 200
-    assert client.get(f"/console/push?t={tok}").status_code == 200
+    assert r.status_code == 303
+    assert client.get("/console/assistant").status_code == 200
+    assert client.get("/console/push").status_code == 200
 
 
 def test_purge_removes_assistant_data(db):

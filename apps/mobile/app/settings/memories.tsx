@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { Alert, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SettingsPage } from "@/components/SettingsPage";
@@ -70,7 +71,7 @@ export default function MemoriesScreen() {
   };
 
   return (
-    <SettingsPage title="它记得你什么" subtitle="可见、可改、可删" onBack={() => router.back()}>
+    <SettingsPage title="它记得你什么" subtitle="可见、可改、可删" onBack={() => goBackOr(router)}>
       <Card tone="green">
         <Text variant="small" color={colors.muted} style={styles.note}>
           记忆只用来调整助理的说话方式和偏好，不参与比赛概率计算，也不会出现在推送里。

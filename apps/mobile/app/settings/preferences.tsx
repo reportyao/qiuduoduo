@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import { goBackOr } from "@/lib/navigation";
 import { useRouter } from "expo-router";
 import { SettingsPage } from "@/components/SettingsPage";
 import { Card, Icon, SettingsGroup, SettingsRow, Text, useToast } from "@/components/ui";
@@ -24,24 +26,26 @@ export default function PreferencesScreen() {
   const setOddsFormat = usePrefsStore((s) => s.setOddsFormat);
   const session = useAuthStore((s) => s.session);
   const patchMe = usePatchMeMutation();
+  const [saving, setSaving] = useState(false);
 
   const choose = async (format: OddsFormat) => {
+    if (format === current || saving) return;
     const previous = current;
+    setSaving(true);
     setOddsFormat(format);
-    if (session?.mode === "jwt") {
-      try {
-        await patchMe.mutateAsync({ oddsFormat: format });
-      } catch (e) {
-        setOddsFormat(previous);
-        toast.show(errorText(e), "error");
-        return;
-      }
+    try {
+      if (session?.mode === "jwt") await patchMe.mutateAsync({ oddsFormat: format });
+      toast.show(`已切换为${oddsFormatLabel(format)}`, "success");
+    } catch (e) {
+      setOddsFormat(previous);
+      toast.show(errorText(e), "error");
+    } finally {
+      setSaving(false);
     }
-    toast.show(`已切换为${oddsFormatLabel(format)}`, "success");
   };
 
   return (
-    <SettingsPage title="偏好" subtitle="赔率格式与语言" onBack={() => router.back()}>
+    <SettingsPage title="偏好" subtitle="赔率格式与语言" onBack={() => goBackOr(router)}>
       <Text variant="overline" color={colors.green}>赔率格式</Text>
       <Text variant="small" color={colors.muted} style={styles.lead}>
         只改显示方式，不改变赔率本身。以欧洲盘 2.05 为例：
@@ -53,6 +57,7 @@ export default function PreferencesScreen() {
             <Pressable
               key={format.id}
               onPress={() => choose(format.id)}
+              disabled={saving}
               accessibilityRole="radio"
               accessibilityState={{ selected }}
               accessibilityLabel={oddsFormatLabel(format.id)}

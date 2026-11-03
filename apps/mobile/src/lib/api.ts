@@ -16,5 +16,9 @@ export const api = createApiClient({
     if (status === 410) {
       void useAuthStore.getState().logout();
     }
+    // 设备令牌/JWT 被服务端拒绝时不能永久卡在 401；退出会单飞创建一个新游客。
+    if (status === 401 && useAuthStore.getState().session) {
+      void useAuthStore.getState().logout();
+    }
   },
 });

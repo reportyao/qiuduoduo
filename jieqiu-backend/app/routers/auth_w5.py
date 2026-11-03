@@ -34,12 +34,13 @@ def _ensure_login_ready(kind: str = "jwt") -> None:
     kind: jwt | sms | email | wechat | google | apple
     """
     st = get_settings()
-    if st.env != "prod":
+    # 只有显式 dev/test 才允许 stub；env 写成 development/staging 等也不能绕过。
+    if st.env in ("dev", "test") and st.auth_stub:
         return
     if not st.jwt_secret:
         raise HTTPException(503, "认证服务未配置：JQ_JWT_SECRET 缺失")
     if st.auth_stub:
-        raise HTTPException(503, "认证服务未配置：生产禁止 auth_stub（会伪造验证码）")
+        raise HTTPException(503, "当前环境禁止 auth_stub：请配置真实短信/邮件通道")
     if kind == "sms" and st.sms_provider == "stub":
         raise HTTPException(503, "短信通道未接入：JQ_SMS_PROVIDER=tencent + 短信密钥/模板")
     if kind == "email" and st.email_provider == "stub":
@@ -53,40 +54,40 @@ def _ensure_login_ready(kind: str = "jwt") -> None:
 
 
 class SendBody(BaseModel):
-    phone: str | None = None
-    email: str | None = None
-    purpose: str = "login"
+    phone: str | None = Field(default=None, max_length=24)
+    email: str | None = Field(default=None, max_length=128)
+    purpose: str = Field(default="login", max_length=16)
 
 
 class VerifySmsBody(BaseModel):
-    phone: str
+    phone: str = Field(min_length=1, max_length=24)
     code: str = Field(min_length=4, max_length=8)
-    purpose: str = "login"
-    device_token: str | None = None  # 游客设备账户：登录时合并注单/记忆/关注
+    purpose: str = Field(default="login", max_length=16)
+    device_token: str | None = Field(default=None, max_length=64)  # 游客设备账户
 
 
 class VerifyEmailBody(BaseModel):
-    email: str
+    email: str = Field(min_length=1, max_length=128)
     code: str = Field(min_length=4, max_length=8)
-    device_token: str | None = None
+    device_token: str | None = Field(default=None, max_length=64)
 
 
 class WechatBody(BaseModel):
-    code: str
+    code: str = Field(min_length=1, max_length=512)
 
 
 class WechatBindBody(BaseModel):
-    bind_token: str
-    phone: str
+    bind_token: str = Field(min_length=1, max_length=1024)
+    phone: str = Field(min_length=1, max_length=24)
     code: str = Field(min_length=4, max_length=8)
 
 
 class OAuthBody(BaseModel):
-    id_token: str
+    id_token: str = Field(min_length=1, max_length=8192)
 
 
 class RefreshBody(BaseModel):
-    refresh_token: str
+    refresh_token: str = Field(min_length=1, max_length=512)
 
 
 # ---------- 发送验证码 ----------

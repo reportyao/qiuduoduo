@@ -16,8 +16,9 @@ interface PersistedCompliance {
 
 interface ComplianceState extends PersistedCompliance {
   hydrated: boolean;
+  storageError: boolean;
   hydrate: () => Promise<void>;
-  exclude: (choice: ExclusionChoice) => void;
+  exclude: (choice: ExclusionChoice) => Promise<boolean>;
   setPgsi: (score: number) => void;
 }
 
@@ -29,22 +30,24 @@ const DEFAULTS: PersistedCompliance = {
   lastPgsiAt: null,
 };
 
+function serialize(state: PersistedCompliance): string {
+  return JSON.stringify({
+    excludedUntil: state.excludedUntil,
+    excludedAt: state.excludedAt,
+    excludedPermanent: state.excludedPermanent,
+    lastPgsiScore: state.lastPgsiScore,
+    lastPgsiAt: state.lastPgsiAt,
+  });
+}
+
 function persist(state: ComplianceState): void {
-  void AsyncStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({
-      excludedUntil: state.excludedUntil,
-      excludedAt: state.excludedAt,
-      excludedPermanent: state.excludedPermanent,
-      lastPgsiScore: state.lastPgsiScore,
-      lastPgsiAt: state.lastPgsiAt,
-    }),
-  ).catch(() => {});
+  void AsyncStorage.setItem(STORAGE_KEY, serialize(state)).catch(() => {});
 }
 
 export const useComplianceStore = create<ComplianceState>((set, get) => ({
   ...DEFAULTS,
   hydrated: false,
+  storageError: false,
 
   hydrate: async () => {
     try {
@@ -58,26 +61,35 @@ export const useComplianceStore = create<ComplianceState>((set, get) => ({
           lastPgsiScore:
             typeof parsed.lastPgsiScore === "number" ? parsed.lastPgsiScore : null,
           lastPgsiAt: typeof parsed.lastPgsiAt === "number" ? parsed.lastPgsiAt : null,
+          storageError: false,
         });
       }
     } catch {
-      // 读取失败不能把已有的自排除静默清掉；保持默认但标记 hydrated，
-      // 服务端同步/重新进入页面时会再次校验。
+      // 读取失败时不能宣称“未排除”；标记错误，由入口提示重试（fail closed）。
+      set({ storageError: true });
     } finally {
       set({ hydrated: true });
     }
   },
 
-  exclude: (choice) => {
+  exclude: async (choice) => {
     const now = Date.now();
     const until =
       choice === "permanent" ? PERMANENT_UNTIL : now + choice * 24 * 60 * 60 * 1000;
-    set({
+    const next = {
       excludedUntil: until,
       excludedAt: now,
       excludedPermanent: choice === "permanent",
-    });
-    persist(get());
+    };
+    try {
+      // 先持久化再宣布成功：写失败时绝不显示“已生效”。
+      await AsyncStorage.setItem(STORAGE_KEY, serialize({ ...get(), ...next }));
+      set({ ...next, storageError: false });
+      return true;
+    } catch {
+      set({ storageError: true });
+      return false;
+    }
   },
 
   setPgsi: (score) => {

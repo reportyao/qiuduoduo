@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     wechat_app_secret: str = ""
     google_client_id: str = ""
     apple_client_id: str = ""
+    # 编辑台（管理后台）：密码/白名单支持 .env 与 systemd EnvironmentFile
+    console_password: str = ""
+    console_ip_whitelist: str = ""
+    console_cookie_secure: bool = False
 
     model_config = {"env_prefix": "JQ_", "env_file": ".env", "extra": "ignore"}
 

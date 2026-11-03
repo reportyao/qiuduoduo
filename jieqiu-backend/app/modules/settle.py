@@ -179,22 +179,26 @@ def settle_verdicts(db: Session, trade_date: str | None = None) -> int:
 
 def ledger_stats(db: Session) -> dict:
     """公开账本统计：全部 promoted 判决的胜负与当前连败（连败公开是产品承诺）。"""
-    rows = db.scalars(
-        select(Verdict).where(Verdict.status == "promoted").order_by(Verdict.kickoff)
+    from sqlalchemy import func
+    promoted_total = db.scalar(select(func.count(Verdict.id)).where(
+        Verdict.status == "promoted")) or 0
+    settled_rows = db.scalars(
+        select(Verdict.settled).where(
+            Verdict.status == "promoted", Verdict.settled.isnot(None))
+        .order_by(Verdict.kickoff)
     ).all()
-    settled = [v for v in rows if v.settled]
-    wins = sum(1 for v in settled if v.settled == "win")
+    wins = sum(1 for s in settled_rows if s == "win")
     streak = 0
-    for v in reversed(settled):
-        if v.settled == "lose":
+    for s in reversed(settled_rows):
+        if s == "lose":
             streak += 1
         else:
             break
     return {
-        "promoted_total": len(rows),
-        "settled": len(settled),
+        "promoted_total": promoted_total,
+        "settled": len(settled_rows),
         "wins": wins,
-        "losses": len(settled) - wins,
+        "losses": len(settled_rows) - wins,
         "current_losing_streak": streak,
-        "unsettled": len(rows) - len(settled),
+        "unsettled": promoted_total - len(settled_rows),
     }

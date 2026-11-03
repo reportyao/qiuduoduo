@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import hashlib
 
-from sqlalchemy import select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from ..models import DailyAnchor, VerdictRevision, utcnow
@@ -49,13 +49,25 @@ def link_revision(db: Session, rev: VerdictRevision) -> None:
     if rev.chain_hash:
         return
     db.flush()  # autoflush=False：让同批次先落档的修订在查询中可见（链必须逐节相扣）
+    if db.bind is not None and db.bind.dialect.name == "postgresql":
+        # 两个 seed/worker 并发时，普通 SELECT 会读到同一链尾并分叉；事务级 advisory
+        # lock 让链尾计算串行化，提交后自动释放。SQLite 由单写锁天然串行。
+        db.execute(text(
+            "SELECT pg_advisory_xact_lock(hashtext('jieqiu-verdict-chain')::bigint)"))
     date = (rev.payload or {}).get("trade_date", "")
-    day_revs = [r for r in _day_revisions(db, date) if r.id != rev.id]  # 排除自身
-    last = day_revs[-1] if day_revs else None
-    if last is not None and last.id != rev.id and last.chain_hash:
-        rev.chain_prev = last.chain_hash
+    # 只取链尾一个 hash；不要加载整日修订（payload 很大，会退化成 O(n²)）。
+    last_hash = db.scalar(
+        select(VerdictRevision.chain_hash)
+        .where(VerdictRevision.trade_date == date, VerdictRevision.id != rev.id)
+        .order_by(VerdictRevision.id.desc()).limit(1)
+    ) if date else None
+    if last_hash:
+        rev.chain_prev = last_hash
     else:
-        rev.chain_prev = _prev_day_root(db, date) or GENESIS
+        # 兼容历史 trade_date 为空的数据；正常新数据不会走这里。
+        legacy = [r for r in _day_revisions(db, date)
+                  if r.id != rev.id and r.chain_hash]
+        rev.chain_prev = legacy[-1].chain_hash if legacy else (_prev_day_root(db, date) or GENESIS)
     rev.chain_hash = chain_link(rev.chain_prev, rev.payload_hash, _ts(rev.created_at))
     db.flush()
 
@@ -104,7 +116,15 @@ def backfill_revision_dates(db: Session) -> int:
 
 
 def build_anchor(db: Session, date: str) -> DailyAnchor:
-    """构建/刷新当日锚点（seed 每轮调用；跨日自动相链）。"""
+    """构建/刷新当日锚点（seed 每轮调用；跨日自动相链）。
+
+    已出现更晚锚点的日期视为“已封存”：绝不重写旧锚，否则后一日的 chain_prev
+    会永久对不上。迟到的 past-day 修订会让该日 anchor_match=False 报警，但不会
+    把后续已经公开的链一起改坏。
+    """
+    latest_date = db.scalar(select(func.max(DailyAnchor.date)))
+    if latest_date and date < latest_date:
+        return db.get(DailyAnchor, date)
     revs = _day_revisions(db, date)
     if not revs:
         return db.get(DailyAnchor, date)

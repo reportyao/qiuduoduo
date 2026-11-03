@@ -116,3 +116,17 @@ def test_real_collector_db_end_to_end(client, db, tmp_path):
     body = client.get("/stream").json()
     assert body["stats"]["total"] == 1
     assert body["watch"][0]["home"] == "曼城"  # 对齐后
+
+
+def test_trade_day_boundary_helper():
+    from app.modules.timeutil import trade_date_from_kickoff, trade_window
+    assert trade_date_from_kickoff("2026-11-05 02:00:00") == "2026-11-04"
+    assert trade_date_from_kickoff("2026-11-05 05:00:00") == "2026-11-05"
+    assert trade_window("2026-11-04") == ("2026-11-04 05:00:00", "2026-11-05 04:59:59")
+
+
+def test_huge_path_id_is_422(client):
+    tok = client.post("/auth/device", json={"device_token": "path-bound-test"}).json()["token"]
+    r = client.get("/bets/999999999999999999999999/postmortem",
+                   headers={"Authorization": f"Bearer {tok}"})
+    assert r.status_code == 422

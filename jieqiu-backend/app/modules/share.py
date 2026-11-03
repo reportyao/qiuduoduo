@@ -10,6 +10,7 @@ import json
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
@@ -130,24 +131,37 @@ def _store(db: Session, payload: dict, kind: str, user: User | None,
     cj, ch, sid = _seal(payload)
     existing = db.get(ShareCard, sid)
     if existing:
+        if user is not None and existing.user_id is None:
+            # 先匿名分享、后登录再分享同内容：补上归属，便于 /shares/mine。
+            existing.user_id = user.id
+            db.commit()
         return existing  # 幂等：同内容同编号
     card = ShareCard(share_id=sid, kind=kind, user_id=user.id if user else None,
                      verdict_id=verdict_id, text=payload.get("text", ""),
                      payload=payload, content_hash=ch)
     db.add(card)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        existing = db.get(ShareCard, sid)
+        if existing is None:
+            raise
+        return existing
     return card
 
 
 def verify_share(card: ShareCard) -> dict:
     cj, ch, sid = _seal(card.payload)
+    id_matches = card.share_id == sid
     return {
         "share_id": card.share_id,
         "kind": card.kind,
         "payload": card.payload,
         "content_hash": card.content_hash,
         "recomputed_hash": ch,
-        "match": ch == card.content_hash,
+        "id_matches": id_matches,
+        "match": ch == card.content_hash and id_matches,
         "deep_link": f"jieqiu://share/{card.share_id}",
         "verdict_seal_url": (f"/verdicts/{card.verdict_id}/seal"
                              if card.verdict_id else None),

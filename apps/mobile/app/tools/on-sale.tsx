@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
@@ -19,6 +20,7 @@ import { useWatchMatchMutation } from "@/features/verdict/queries";
 import type { OnSaleItem } from "@/domain/types";
 import { errorText } from "@/lib/errors";
 import { countdownText, formatTime, pct, tradeDateCnFromKickoff } from "@/lib/format";
+import { useNow } from "@/lib/useNow";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 
 type Filter = "all" | "single" | "promoted" | "screening";
@@ -32,6 +34,7 @@ export default function OnSaleScreen() {
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<OnSaleItem | null>(null);
   const [pulling, setPulling] = useState(false);
+  const now = useNow(60_000);
 
   const rows = useMemo(() => {
     const list = query.data ?? [];
@@ -59,7 +62,7 @@ export default function OnSaleScreen() {
 
   return (
     <AppScreen bottom={false}>
-      <AppHeader title="今日在售" showAssistant={false} onBack={() => router.back()} />
+      <AppHeader title="今日在售" showAssistant={false} onBack={() => goBackOr(router)} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
@@ -127,7 +130,7 @@ export default function OnSaleScreen() {
                   </Text>
                   <View style={styles.metaRow}>
                     <Text variant="caption" color={colors.muted}>
-                      {countdownText(item.saleClose)}停售 · {item.rake != null ? `抽水 ${pct(item.rake)}` : "尚未复核"}
+                      {countdownText(item.saleClose, now)}停售 · {item.rake != null ? `抽水 ${pct(item.rake)}` : "尚未复核"}
                     </Text>
                     {item.single ? <Chip label="单关" tone="green" /> : null}
                   </View>
@@ -191,7 +194,7 @@ export default function OnSaleScreen() {
             </View>
             <View style={styles.kv}>
               <Text variant="small" color={colors.muted}>停售时间</Text>
-              <Text variant="bodyStrong">{formatTime(selected.saleClose)}（{countdownText(selected.saleClose)}）</Text>
+              <Text variant="bodyStrong">{formatTime(selected.saleClose)}（{countdownText(selected.saleClose, now)}）</Text>
             </View>
             <View style={styles.kv}>
               <Text variant="small" color={colors.muted}>抽水</Text>

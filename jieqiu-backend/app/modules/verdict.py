@@ -178,7 +178,14 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
             snap = latest.get((m.match_id, pool))
         if snap is None:
             continue
-        p_h, p_d, p_a, rake = implied_probs(snap.sp_h, snap.sp_d, snap.sp_a)
+        if pool == "hhad" and not (snap.goal_line or "").strip():
+            # 让球盘没有让球线时不能退化成 1x2 结算，否则标签与口径不一致。
+            continue
+        try:
+            p_h, p_d, p_a, rake = implied_probs(snap.sp_h, snap.sp_d, snap.sp_a)
+        except ValueError:
+            # 单条历史脏快照（SP=1.0 等）不能拖垮整日判决；新数据由契约拦截。
+            continue
         stage.append({"m": m, "snap": snap, "pool": pool,
                       "probs": (p_h, p_d, p_a), "rake": rake})
 

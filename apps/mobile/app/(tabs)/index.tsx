@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
@@ -40,11 +40,24 @@ export default function HomeScreen() {
   const { copy } = usePersonaContent();
   const session = useAuthStore((s) => s.session);
   const [date, setDate] = useState(currentTradeDateCn());
+  const [manualDate, setManualDate] = useState(false);
+  const now = useNow(60_000);
+  const today = currentTradeDateCn(now);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
   const [betTarget, setBetTarget] = useState<VerdictSummary | null>(null);
   const [sealTarget, setSealTarget] = useState<string | null>(null);
   const [pulling, setPulling] = useState(false);
+
+  useEffect(() => {
+    // 跨过 05:00 竞彩日界时，自动跟随“今天”；用户手动选了旧日期则不打扰。
+    if (!manualDate && date !== today) setDate(today);
+  }, [date, manualDate, today]);
+
+  const chooseDate = (next: string) => {
+    setDate(next);
+    setManualDate(next !== currentTradeDateCn());
+  };
 
   const streamQuery = useStreamQuery(date);
   const onsaleQuery = useOnSaleQuery();
@@ -106,7 +119,7 @@ export default function HomeScreen() {
           }
         >
           <AssistantHero onPress={() => setPickerOpen(true)} />
-          <DateStrip value={date} onChange={setDate} />
+          <DateStrip value={date} onChange={chooseDate} />
           <DataStatusBanner stream={stream} onPress={() => setDataOpen(true)} />
           <SaleBanner onsale={onsale} onPress={() => router.push("/tools/on-sale")} />
           <ParlayBanner onPress={() => router.push("/tools/parlay")} />
@@ -141,7 +154,7 @@ export default function HomeScreen() {
                 <EmptyDayCard
                   copyTitle={stream.stats.total === 0 ? copy.pendingTitle : copy.emptyTitle}
                   copyBody={stream.stats.total === 0 ? copy.pendingBody : copy.emptyBody}
-                  onYesterday={() => setDate(shiftDateCn(currentTradeDateCn(), -1))}
+                  onYesterday={() => chooseDate(shiftDateCn(currentTradeDateCn(), -1))}
                   onOnSale={() => router.push("/tools/on-sale")}
                 />
               ) : (

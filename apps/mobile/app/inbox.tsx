@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
@@ -21,15 +22,18 @@ export default function InboxScreen() {
   const inbox = query.data;
   const items = useMemo(() => inbox?.items ?? [], [inbox]);
 
-  const open = async (item: InboxItem) => {
-    try {
-      if (!item.openedAt) await markRead.mutateAsync(item.id);
-      const result = await click.mutateAsync(item.id);
-      const link = result.deeplink || item.deepLink;
-      routeDeepLink(link, router);
-    } catch (e) {
-      toast.show(errorText(e), "error");
+  const opening = useRef(false);
+  const open = (item: InboxItem) => {
+    if (opening.current) return;
+    opening.current = true;
+    // 深链已在本地，先导航；已读/点击上报只是 best-effort，失败不拦用户。
+    const handled = routeDeepLink(item.deepLink, router);
+    if (!handled) {
+      toast.show("这条提醒暂时没有可打开的页面。", "info");
     }
+    opening.current = false;
+    if (!item.openedAt) void markRead.mutateAsync(item.id).catch(() => {});
+    void click.mutateAsync(item.id).catch(() => {});
   };
 
   return (
@@ -38,7 +42,7 @@ export default function InboxScreen() {
         title="收件箱"
         subtitle={inbox ? `${inbox.unread} 条未读` : "站内信与提醒"}
         showAssistant={false}
-        onBack={() => router.back()}
+        onBack={() => goBackOr(router)}
         right={
           (inbox?.unread ?? 0) > 0 ? (
             <Button
@@ -120,21 +124,25 @@ export default function InboxScreen() {
 function routeDeepLink(
   link: string | null,
   router: ReturnType<typeof useRouter>,
-): void {
-  if (!link) return;
+): boolean {
+  if (!link) return false;
   const verdict = link.match(/jieqiu:\/\/verdict\/([^/?#]+)/);
   if (verdict) {
     router.push({ pathname: "/verdict/[id]", params: { id: verdict[1] } });
-    return;
+    return true;
   }
   const match = link.match(/jieqiu:\/\/match\/([^/?#]+)/);
   if (match) {
     const dateMatch = link.match(/[?&]date=([^&]+)/);
     const date = dateMatch ? decodeURIComponent(dateMatch[1]) : currentTradeDateCn();
     router.push({ pathname: "/match/[id]", params: { id: match[1], date } });
-    return;
+    return true;
   }
-  if (link.startsWith("jieqiu://today")) router.push("/(tabs)");
+  if (link.startsWith("jieqiu://today")) {
+    router.push("/(tabs)");
+    return true;
+  }
+  return false;
 }
 
 const styles = StyleSheet.create({

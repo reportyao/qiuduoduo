@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import { Platform } from "react-native";
@@ -25,10 +26,11 @@ export default function ProfileScreen() {
   const avatarUri = usePrefsStore((s) => s.avatarUri);
   const setAvatarUri = usePrefsStore((s) => s.setAvatarUri);
   const [name, setName] = useState("");
+  const dirty = useRef(false);
   const me = meQuery.data;
 
   useEffect(() => {
-    if (me?.displayName) setName(me.displayName);
+    if (me?.displayName && !dirty.current) setName(me.displayName);
   }, [me?.displayName]);
 
   const chooseAvatar = async (id: PersonaId) => {
@@ -53,15 +55,16 @@ export default function ProfileScreen() {
     }
     try {
       await patchMe.mutateAsync({ displayName: trimmed });
+      dirty.current = false;
       toast.show("资料已保存", "success");
-      router.back();
+      goBackOr(router);
     } catch (e) {
       toast.show(errorText(e), "error");
     }
   };
 
   return (
-    <SettingsPage title="个人资料" subtitle="昵称与头像" onBack={() => router.back()}>
+    <SettingsPage title="个人资料" subtitle="昵称与头像" onBack={() => goBackOr(router)}>
       <Card style={styles.card}>
         <Text variant="overline" color={colors.green}>头像</Text>
         <View style={styles.currentRow}>
@@ -140,7 +143,7 @@ export default function ProfileScreen() {
         <Field
           label="昵称"
           value={name}
-          onChangeText={setName}
+          onChangeText={(value) => { dirty.current = true; setName(value); }}
           maxLength={12}
           hint="1–12 个字，随时可改。"
           placeholder="怎么称呼你？"

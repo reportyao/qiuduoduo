@@ -28,6 +28,8 @@ export function BetSheet({ visible, verdict, you, onClose, onRecorded }: BetShee
   const [amount, setAmount] = useState(100);
   const [step, setStep] = useState<Step>("amount");
   const [createdId, setCreatedId] = useState<number | null>(null);
+  const [recordedAmount, setRecordedAmount] = useState<number | null>(null);
+  const [undoDeadline, setUndoDeadline] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(5);
   const [error, setError] = useState<string | null>(null);
   const [protectionStreak, setProtectionStreak] = useState(0);
@@ -45,6 +47,8 @@ export function BetSheet({ visible, verdict, you, onClose, onRecorded }: BetShee
     if (!visible) return;
     setStep("amount");
     setCreatedId(null);
+    setRecordedAmount(null);
+    setUndoDeadline(0);
     setSecondsLeft(5);
     setError(null);
     setAlreadyRecorded(false);
@@ -52,17 +56,24 @@ export function BetSheet({ visible, verdict, you, onClose, onRecorded }: BetShee
   }, [visible]);
 
   useEffect(() => {
-    if (step !== "success" || secondsLeft <= 0) return;
-    const timer = setTimeout(() => setSecondsLeft((n) => n - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [secondsLeft, step]);
+    if (step !== "success" || !undoDeadline) return;
+    const tick = () => {
+      // 用绝对截止时间重算，App 退后台/JS 定时器被节流后不会显示虚假的剩余秒数。
+      const left = Math.max(0, Math.ceil((undoDeadline - Date.now()) / 1000));
+      setSecondsLeft(left);
+    };
+    tick();
+    const timer = setInterval(tick, 250);
+    return () => clearInterval(timer);
+  }, [step, undoDeadline]);
 
   if (!verdict) return null;
   const pickLabel = pickDirectionLabel(verdict.pool, verdict.pick?.dir);
   const sp = verdict.pick?.sp ?? verdict.sp.h;
   const spLabel = decimalToFormat(sp, oddsFormat);
   const formatLabel = oddsFormatLabel(oddsFormat);
-  const ticket = `${verdict.matchNo} ${verdict.home} ${pickLabel} @${spLabel}（${formatLabel}） ×${amount}元`;
+  const ticketAmount = step === "success" ? recordedAmount ?? amount : amount;
+  const ticket = `${verdict.matchNo} ${verdict.home} ${pickLabel} @${spLabel}（${formatLabel}） ×${ticketAmount}元`;
 
   const submit = async (confirm = false) => {
     if (!session) {
@@ -77,13 +88,16 @@ export function BetSheet({ visible, verdict, you, onClose, onRecorded }: BetShee
         confirm,
       });
       setCreatedId(created.id);
+      setRecordedAmount(created.amount ?? amount);
+      setUndoDeadline(Date.now() + 5000);
       setStep("success");
       setSecondsLeft(5);
       haptic("success");
       onRecorded(created.id);
     } catch (e) {
       if (e instanceof ApiError && e.status === 423) {
-        const detail = (e.detail ?? {}) as { streak?: number };
+        const body = (e.detail ?? {}) as { detail?: { streak?: number }; streak?: number };
+        const detail = body.detail ?? body;
         setProtectionStreak(typeof detail.streak === "number" ? detail.streak : you?.streak ?? 0);
         setStep("protection");
         return;
@@ -179,10 +193,12 @@ export function BetSheet({ visible, verdict, you, onClose, onRecorded }: BetShee
             <Text variant="caption" color={colors.green}>三关全过 · 抽水 {(Number(verdict.rake ?? 0) * 100).toFixed(1)}%</Text>
           </View>
 
-          <Stepper value={amount} onChange={setAmount} min={10} max={100000} step={10} />
+          <Stepper value={amount} onChange={(next) => { if (!createBet.isPending) setAmount(next); }}
+                   min={10} max={100000} step={10} />
           <View style={styles.quick}>
             {[50, 100, 200, 500].map((value) => (
-              <Chip key={value} label={`¥${value}`} selected={amount === value} onPress={() => setAmount(value)} />
+              <Chip key={value} label={`¥${value}`} selected={amount === value}
+                    onPress={() => { if (!createBet.isPending) setAmount(value); }} />
             ))}
           </View>
           <Button label="复制出票文案" variant="ghost" size="sm" icon="copy-outline" onPress={copyTicket} />
@@ -196,7 +212,7 @@ export function BetSheet({ visible, verdict, you, onClose, onRecorded }: BetShee
       ) : step === "success" ? (
         <>
           <View style={styles.successBox}>
-            <Text variant="h2">{money(amount)}</Text>
+            <Text variant="h2">{money(recordedAmount ?? amount)}</Text>
             <Text variant="small" color={colors.muted}>{pickLabel} · {verdict.matchNo}</Text>
           </View>
           <Text variant="small" color={colors.ink} style={styles.note}>{copy.comfort}</Text>

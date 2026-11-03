@@ -6,7 +6,7 @@ from sqlalchemy import select
 from app.models import DailyAnchor, MatchResult, SPMatch, SPSnapshot, Verdict, VerdictRevision
 from app.modules import verdict as vz
 from app.modules.align import Aligner
-from app.modules.sealchain import build_anchor, verify_day
+from app.modules.sealchain import build_anchor, link_revision, verify_day
 from app.modules.settle import _outcome_handicap, settle_verdicts, sync_results_football_data
 from app.modules.verdict import build_verdicts
 from tests.conftest import future_kickoff, today_cn
@@ -93,6 +93,18 @@ def test_anchor_chains_across_days(db, monkeypatch):
     build_anchor(db, "2026-11-03")
     a2 = db.get(DailyAnchor, "2026-11-03")
     assert a2.prev_root == a1.root_hash  # 跨日相链
+    assert verify_day(db, "2026-11-03")["ok"]
+
+    # 已出现 11-03 锚点后，迟到的 11-02 修订绝不能重写旧锚，否则 11-03 永久断链。
+    late = VerdictRevision(verdict_id="v2026-11-02-周三003", trade_date="2026-11-02",
+                           payload={"trade_date": "2026-11-02"}, payload_hash="late" * 16)
+    db.add(late)
+    db.flush()
+    link_revision(db, late)
+    db.commit()
+    old_root = a1.root_hash
+    build_anchor(db, "2026-11-02")
+    assert db.get(DailyAnchor, "2026-11-02").root_hash == old_root
     assert verify_day(db, "2026-11-03")["ok"]
 
 

@@ -7,9 +7,12 @@
 """
 from __future__ import annotations
 
+import hashlib
 import hmac
 import html
+import ipaddress
 import os
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 
@@ -31,6 +34,7 @@ _LOGIN_FAILS: dict[str, list[float]] = {}  # IP -> 失败时间戳（防爆破�
 _LOGIN_WINDOW = 600
 _LOGIN_MAX_FAILS = 5
 _TOK_TTL = 86400
+_LOGIN_LOCK = threading.Lock()
 
 
 def _now() -> datetime:
@@ -38,18 +42,41 @@ def _now() -> datetime:
 
 
 def _password_ok(pw: str) -> bool:
-    real = os.environ.get("JQ_CONSOLE_PASSWORD") or ("dev" if get_settings().env != "prod" else "")
+    st = get_settings()
+    real = st.console_password or os.environ.get("JQ_CONSOLE_PASSWORD") or ""
+    if not real and st.env in ("dev", "test"):
+        real = "dev"
     if not real:
-        return False  # prod 未设密码 → 拒绝（ fail closed）
-    return hmac.compare_digest(pw, real)
+        return False  # 非 dev/test 未设密码 → fail closed
+    # compare_digest 对非 ASCII str 会抛 TypeError；先做等长摘要再比较。
+    a = hashlib.sha256(pw.encode("utf-8")).digest()
+    b = hashlib.sha256(real.encode("utf-8")).digest()
+    return hmac.compare_digest(a, b)
 
 
 def _ip_allowed(request: Request) -> bool:
-    whitelist = os.environ.get("JQ_CONSOLE_IP_WHITELIST", "")
+    whitelist = (get_settings().console_ip_whitelist
+                 or os.environ.get("JQ_CONSOLE_IP_WHITELIST", ""))
     if not whitelist:
         return True  # 未配置白名单 → 只靠密码
-    ips = {x.strip() for x in whitelist.split(",") if x.strip()}
-    return request.client.host in ips if request.client else False
+    host = request.client.host if request.client else ""
+    try:
+        client_ip = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    for raw in whitelist.split(","):
+        item = raw.strip()
+        if not item:
+            continue
+        try:
+            if "/" in item:
+                if client_ip in ipaddress.ip_network(item, strict=False):
+                    return True
+            elif client_ip == ipaddress.ip_address(item):
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 def require_console(request: Request) -> None:
@@ -59,7 +86,9 @@ def require_console(request: Request) -> None:
 
 
 def _authed(request: Request) -> bool:
-    tok = request.query_params.get("t") or request.cookies.get("console_t")
+    if not _ip_allowed(request):
+        return False
+    tok = request.cookies.get("console_t")
     if not tok or tok not in _SESSIONS:
         return False
     if _SESSIONS[tok] < time.time():
@@ -69,37 +98,42 @@ def _authed(request: Request) -> bool:
 
 
 def _login_locked(ip: str) -> bool:
-    now = time.time()
-    arr = [t for t in _LOGIN_FAILS.get(ip, []) if now - t < _LOGIN_WINDOW]
-    _LOGIN_FAILS[ip] = arr
-    return len(arr) >= _LOGIN_MAX_FAILS
+    with _LOGIN_LOCK:
+        now = time.time()
+        arr = [t for t in _LOGIN_FAILS.get(ip, []) if now - t < _LOGIN_WINDOW]
+        _LOGIN_FAILS[ip] = arr
+        return len(arr) >= _LOGIN_MAX_FAILS
 
 
 def _record_fail(ip: str) -> None:
-    _LOGIN_FAILS.setdefault(ip, []).append(time.time())
-    if len(_LOGIN_FAILS) > 5000:  # 防内存膨胀
-        _LOGIN_FAILS.clear()
+    with _LOGIN_LOCK:
+        _LOGIN_FAILS.setdefault(ip, []).append(time.time())
+        if len(_LOGIN_FAILS) > 5000:  # 防内存膨胀
+            # 不整体清空（会重置所有锁定）；只淘汰最老的 IP。
+            for old in list(_LOGIN_FAILS)[:1000]:
+                _LOGIN_FAILS.pop(old, None)
 
 
-def _deny() -> HTMLResponse:
-    return RedirectResponse("/console/login", status_code=302)
+def _deny() -> RedirectResponse:
+    return RedirectResponse("/console/login", status_code=303)
 
 
 def _page(title: str, body: str, tok: str = "") -> HTMLResponse:
     nav = (
         '<nav style="margin-bottom:16px;display:flex;gap:14px;font-size:13px">'
-        '<a href="/console?t={t}">日报</a>'
-        '<a href="/console/alerts?t={t}">告警</a>'
-        '<a href="/console/variants?t={t}">变体池</a>'
-        '<a href="/console/assistant?t={t}">助理</a>'
-        '<a href="/console/push?t={t}">推送</a>'
-        '<a href="/console/ops?t={t}">运维</a>'
+        '<a href="/console">日报</a>'
+        '<a href="/console/alerts">告警</a>'
+        '<a href="/console/variants">变体池</a>'
+        '<a href="/console/assistant">助理</a>'
+        '<a href="/console/push">推送</a>'
+        '<a href="/console/ops">运维</a>'
+        '<a href="/console/logout">退出</a>'
         '<span style="color:#999">解球编辑台</span></nav>'
-    ).format(t=tok)
+    )
     return HTMLResponse(
         f"<!DOCTYPE html><html lang=zh><head><meta charset=utf-8>"
         f"<meta name=viewport content='width=device-width,initial-scale=1'>"
-        f"<title>{title} · 解球编辑台</title><style>"
+        f"<title>{html.escape(title)} · 解球编辑台</title><style>"
         "body{font-family:'PingFang SC',system-ui,sans-serif;max-width:960px;margin:0 auto;padding:24px;color:#1D2026;background:#F4F3EF}"
         "table{width:100%;border-collapse:collapse;font-size:12.5px;background:#fff;border-radius:12px;overflow:hidden}"
         "th,td{padding:7px 9px;border-bottom:1px solid #E7E4DC;text-align:left}"
@@ -107,7 +141,14 @@ def _page(title: str, body: str, tok: str = "") -> HTMLResponse:
         ".kv{display:flex;gap:18px;font-size:13px;margin:8px 0}.kv b{font-family:ui-monospace,monospace}"
         ".ok{color:#0B6B4F;font-weight:600}.bad{color:#BE3A2B;font-weight:600}.warn{color:#8A5A14}"
         "form.inline{display:inline}"
-        "</style></head><body><h1>" + title + "</h1>" + nav + body + "</body></html>"
+        "</style></head><body><h1>" + html.escape(title) + "</h1>" + nav + body + "</body></html>",
+        headers={
+            "Cache-Control": "no-store",
+            "Referrer-Policy": "no-referrer",
+            "X-Frame-Options": "DENY",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'none'",
+        },
     )
 
 
@@ -130,20 +171,42 @@ def console_login(request: Request, pw: str = Form("")):
         return HTMLResponse("IP 不在白名单", status_code=403)
     ip = request.client.host if request.client else "?"
     if _login_locked(ip):
-        return HTMLResponse("尝试过多，请 10 分钟后再试", status_code=429)
+        return HTMLResponse("尝试过多，请 10 分钟后再试", status_code=429,
+                            headers={"Retry-After": str(_LOGIN_WINDOW)})
     if not _password_ok(pw):
         _record_fail(ip)
-        return _page("登录", '<p class="bad">密码错误</p>' + """
+        resp = _page("登录", '<p class="bad">密码错误</p>' + """
 <form method="post" action="/console/login" style="max-width:320px">
   <input type="password" name="pw" placeholder="控制台密码" style="width:100%;padding:9px;border:1px solid #ccc;border-radius:9px">
   <button style="margin-top:10px;width:100%;padding:9px;background:#0B6B4F;color:#fff;border:0;border-radius:9px">进入</button>
 </form>""")
+        resp.status_code = 401
+        return resp
     import secrets
+    now = time.time()
+    for old, exp in list(_SESSIONS.items()):
+        if exp < now:
+            _SESSIONS.pop(old, None)
+    if len(_SESSIONS) > 1000:  # 不无限增长；保留最近 500 个会话
+        for old in list(_SESSIONS)[:-500]:
+            _SESSIONS.pop(old, None)
     tok = secrets.token_urlsafe(24)
-    _SESSIONS[tok] = time.time() + _TOK_TTL
-    resp = RedirectResponse("/console?t=" + tok, status_code=302)
-    resp.set_cookie("console_t", tok, httponly=True, max_age=86400,
-                    samesite="strict", secure=(request.url.scheme == "https"))
+    _SESSIONS[tok] = now + _TOK_TTL
+    resp = RedirectResponse("/console", status_code=303)
+    st = get_settings()
+    resp.set_cookie("console_t", tok, httponly=True, max_age=_TOK_TTL,
+                    samesite="strict",
+                    secure=(st.console_cookie_secure or request.url.scheme == "https"))
+    return resp
+
+
+@router.get("/console/logout")
+def console_logout(request: Request):
+    tok = request.cookies.get("console_t")
+    if tok:
+        _SESSIONS.pop(tok, None)
+    resp = RedirectResponse("/console/login", status_code=303)
+    resp.delete_cookie("console_t")
     return resp
 
 
@@ -178,17 +241,17 @@ def console_daily(request: Request, db=Depends(get_db)):
 <div class="kv"><span>判决 / 修订链节</span><b>{n_verdicts} / {n_revisions}</b></div>
 <div class="kv"><span>赛果库</span><b>{n_matches}</b> 场</div>
 <div class="kv"><span>用户数</span><b>{n_users}</b></div>
-<div class="kv"><span>最新快照</span><b>{last_snap or "—"}</b></div>
+<div class="kv"><span>最新快照</span><b>{html.escape(str(last_snap or "—"))}</b></div>
 <h2>封存链</h2>
 <div class="kv"><span>状态</span><b class="{'ok' if chain['ok'] else 'bad'}">{'OK · ' + str(chain['links']) + ' 节' if chain['ok'] else 'BROKEN @' + str(chain['broken_at'])}</b></div>
-<div class="kv"><span>最新锚点</span><b>{(anchor.date + ' ' + anchor.root_hash[:16] + '…') if anchor else '—'}</b></div>
+<div class="kv"><span>最新锚点</span><b>{html.escape(anchor.date + ' ' + anchor.root_hash[:16] + '…') if anchor else '—'}</b></div>
 <h2>公开账本</h2>
 <div class="kv"><span>已推 / 已结 / 中 / 连败</span><b>{stats['promoted_total']} / {stats['settled']} / {stats['wins']} / {stats['current_losing_streak']}</b></div>
 <h2>模型最近评估</h2>
-<div class="kv"><span>{('logloss ' + str(last_eval['logloss']) + ' · acc ' + str(last_eval['accuracy'])) if last_eval else '—'}</span></div>
+<div class="kv"><span>{html.escape('logloss ' + str(last_eval['logloss']) + ' · acc ' + str(last_eval['accuracy'])) if last_eval else '—'}</span></div>
 <h2>近期判决</h2>
 <table><tr><th>编号</th><th>对阵</th><th>状态</th><th>抽水</th><th>结算</th><th>哈希</th></tr>
-{"".join(f"<tr><td>{v.match_no}</td><td>{v.home} vs {v.away}</td><td>{v.status}</td><td>{v.rake*100:.1f}%</td><td>{v.settled or '—'}</td><td>{v.payload_hash[:10]}…</td></tr>" for v in db.scalars(select(Verdict).order_by(Verdict.trade_date.desc()).limit(10)))}
+{"".join(f"<tr><td>{html.escape(str(v.match_no))}</td><td>{html.escape(str(v.home))} vs {html.escape(str(v.away))}</td><td>{html.escape(str(v.status))}</td><td>{v.rake*100:.1f}%</td><td>{html.escape(str(v.settled or '—'))}</td><td>{html.escape(str(v.payload_hash)[:10])}…</td></tr>" for v in db.scalars(select(Verdict).order_by(Verdict.trade_date.desc()).limit(10)))}
 </table>"""
     return _page("数据日报", body, tok)
 
@@ -205,11 +268,18 @@ def console_alerts(request: Request, db=Depends(get_db)):
         alerts.append(("严重", f"封存链断裂 @ 第 {chain['broken_at']} 节 —— 立即排查", "bad"))
     last_snap = db.scalar(select(SPSnapshot.captured_at).order_by(SPSnapshot.captured_at.desc()).limit(1))
     if last_snap:
-        last_dt = datetime.strptime(last_snap[:19], "%Y-%m-%dT%H:%M:%S")
-        lag_min = ((_now() + timedelta(hours=8)) - last_dt.replace(tzinfo=timezone(timedelta(hours=8)))).total_seconds() / 60
-        if lag_min > 35:
-            alerts.append(("严重" if lag_min > 90 else "警告",
-                           f"采集同步延迟 {lag_min:.0f} 分钟（阈值 35）—— 检查本机采集器/家宽出口", "bad" if lag_min > 90 else "warn"))
+        try:
+            last_dt = datetime.strptime(str(last_snap)[:19], "%Y-%m-%dT%H:%M:%S")
+            lag_min = ((_now() + timedelta(hours=8)) - last_dt.replace(
+                tzinfo=timezone(timedelta(hours=8)))).total_seconds() / 60
+            if lag_min > 35:
+                alerts.append(("严重" if lag_min > 90 else "警告",
+                               f"采集同步延迟 {lag_min:.0f} 分钟（阈值 35）—— 检查本机采集器/家宽出口",
+                               "bad" if lag_min > 90 else "warn"))
+        except ValueError:
+            alerts.append(("警告",
+                           f"快照时间格式异常：{html.escape(str(last_snap)[:32])}",
+                           "warn"))
     else:
         alerts.append(("严重", "无任何 SP 快照 —— 采集管道未运行", "bad"))
     st = get_settings()
@@ -248,7 +318,7 @@ def console_variants(request: Request, db=Depends(get_db)):
             text, tid = build_narration(v, p)
             mark = st.get(p, "")
             btns = "".join(
-                f'<form class="inline" method="post" action="/console/variants?v={v.id}&p={p}&m={m}&t={tok}">'
+                f'<form class="inline" method="post" action="/console/variants?v={html.escape(str(v.id), quote=True)}&p={p}&m={m}">'
                 f'<button style="{"font-weight:700" if mark == m else ""};cursor:pointer;border:1px solid #ccc;background:'
                 f'{"#E9F3EE" if mark == m else "#fff"};border-radius:6px;padding:2px 8px">{m}</button></form>'
                 for m in ("A", "Q", "X"))
@@ -269,7 +339,7 @@ def console_variants_mark(request: Request, v: str = "", p: str = "", m: str = "
     _require(request)
     if v and p in PERSONAS and m in ("A", "Q", "X"):
         _VARIANT_POOL.setdefault(v, {})[p] = m
-    return RedirectResponse(f"/console/variants?t={t}", status_code=302)
+    return RedirectResponse("/console/variants", status_code=303)
 
 
 # ---------- 助理运行时 ----------

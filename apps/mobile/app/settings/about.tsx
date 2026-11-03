@@ -1,4 +1,5 @@
 import Constants from "expo-constants";
+import { goBackOr } from "@/lib/navigation";
 import { StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { SettingsPage } from "@/components/SettingsPage";
@@ -19,7 +20,7 @@ export default function AboutScreen() {
   const legal = useLegalQuery(me.data?.region ?? "cn");
 
   return (
-    <SettingsPage title="关于解球" subtitle="不预测，只算账" onBack={() => router.back()}>
+    <SettingsPage title="关于解球" subtitle="不预测，只算账" onBack={() => goBackOr(router)}>
       <Card tone="green">
         <Text variant="h2">解球</Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>

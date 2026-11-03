@@ -13,14 +13,16 @@ export default function PausedScreen() {
   const router = useRouter();
   const until = useComplianceStore((s) => s.excludedUntil);
   const permanent = useComplianceStore((s) => s.excludedPermanent);
+  const hydrated = useComplianceStore((s) => s.hydrated);
   const legal = useLegalQuery();
   const now = useNow(60_000);
   const active = permanent || (until != null && until > now);
   const remainingDays = until ? Math.max(0, Math.ceil((until - now) / 86_400_000)) : 0;
 
   useEffect(() => {
-    if (!active) router.replace("/(tabs)");
-  }, [active, router]);
+    // 本机合规状态尚未读出来之前不能跳走，否则直链 /paused 会闪回首页。
+    if (hydrated && !active) router.replace("/(tabs)");
+  }, [active, hydrated, router]);
 
   return (
     <SafeAreaView style={styles.screen}>

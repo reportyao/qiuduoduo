@@ -1,4 +1,5 @@
-import { Alert, ScrollView, StyleSheet, View } from "react-native";
+import { useState } from "react";
+import { Alert, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
@@ -7,6 +8,7 @@ import {
   Button,
   Card,
   Chip,
+  ErrorState,
   Icon,
   IconButton,
   SettingsGroup,
@@ -41,6 +43,15 @@ export default function MeScreen() {
   const me = meQuery.data;
   const unread = unreadQuery.data?.unread ?? 0;
   const loggedIn = isLoggedIn(session);
+  const [refreshing, setRefreshing] = useState(false);
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([meQuery.refetch(), unreadQuery.refetch()]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const rested = Boolean(me?.streak.rested);
 
   const toggleDiscipline = async (next: boolean) => {
@@ -92,7 +103,14 @@ export default function MeScreen() {
           </View>
         }
       />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.green} />}
+      >
+        {meQuery.isError ? (
+          <ErrorState compact message="账号状态暂时取不到，先显示本机偏好。" onRetry={() => meQuery.refetch()} />
+        ) : null}
         <Card onPress={() => router.push("/settings/profile")} accessibilityLabel="编辑个人资料" style={styles.profile}>
           <Avatar source={avatarUri ? { uri: avatarUri } : meta.avatar} fallbackSource={meta.avatar} size={62} online />
           <View style={styles.profileText}>

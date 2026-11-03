@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { useRouter } from "expo-router";
 import { Field, Text } from "@/components/ui";
 import { rakeMath } from "@/features/tools/calc";
@@ -25,7 +26,7 @@ export default function RakeToolScreen() {
       title="抽水计算"
       eyebrow="价闸 · 先算入场费"
       description="输入主胜/平/客胜三项欧赔，算出官方定价抽水、真实返还率和去水后的概率。抽水是开赛前就付掉的钱。"
-      onBack={() => router.back()}
+      onBack={() => goBackOr(router)}
     >
       <Field label="主胜赔率" value={home} onChangeText={setHome} keyboardType="decimal-pad" />
       <Field label="平局赔率" value={draw} onChangeText={setDraw} keyboardType="decimal-pad" />

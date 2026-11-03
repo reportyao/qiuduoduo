@@ -1,7 +1,7 @@
 """W6 端点：认证、/me、连败保护、记忆（冲突必问）、注单、复盘、周报、聊天。"""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Path
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -40,16 +40,16 @@ def optional_user(authorization: str | None = Header(default=None),
 # ---------- 请求模型 ----------
 
 class DeviceLogin(BaseModel):
-    device_token: str | None = None
-    display_name: str | None = None
-    region: str | None = None   # cn / global（F18 双区域）
+    device_token: str | None = Field(default=None, max_length=64)
+    display_name: str | None = Field(default=None, max_length=64)
+    region: str | None = Field(default=None, max_length=8)   # cn / global（F18 双区域）
 
 
 class MePatch(BaseModel):
-    display_name: str | None = None
-    persona: str | None = None
-    odds_format: str | None = None
-    locale: str | None = None
+    display_name: str | None = Field(default=None, max_length=64)
+    persona: str | None = Field(default=None, max_length=16)
+    odds_format: str | None = Field(default=None, max_length=12)
+    locale: str | None = Field(default=None, max_length=8)
 
 
 class DisciplineBody(BaseModel):
@@ -57,13 +57,13 @@ class DisciplineBody(BaseModel):
 
 
 class MemoryBody(BaseModel):
-    value: str
-    source: str = "你说过"
+    value: str = Field(max_length=256)
+    source: str = Field(default="你说过", max_length=8)
     confirm: bool = False
 
 
 class MemoryCreate(MemoryBody):
-    key: str
+    key: str = Field(min_length=1, max_length=64)
 
 
 class PersonaBody(BaseModel):
@@ -104,14 +104,14 @@ class ComfortResponse(BaseModel):
 
 
 class BetBody(BaseModel):
-    verdict_id: str
+    verdict_id: str = Field(min_length=1, max_length=40)
     amount: float = Field(default=100.0, gt=0, le=100000,
                           description="单注金额（元）：0 < amount ≤ 100000")
     confirm: bool = False  # 连败保护触发时，加注需显式确认（尊重自主权，不静默拦截）
 
 
 class ChatBody(BaseModel):
-    text: str
+    text: str = Field(min_length=1, max_length=2000)
 
 
 # ---------- 认证 / 档案 ----------
@@ -121,15 +121,13 @@ def auth_device(body: DeviceLogin, db: Session = Depends(get_db)):
     from ..config import get_settings
     if get_settings().env == "prod" and not get_settings().allow_device_login:
         raise HTTPException(403, "设备免登录已关闭，请使用手机号/邮箱登录")
+    region = body.region or "cn"
+    if body.region is not None and body.region not in ("cn", "global"):
+        raise HTTPException(422, "region 必须是 cn / global")
     user, created = U.login_device(db, body.device_token)
     if created:
         if body.display_name:
             user.display_name = body.display_name[:64]
-        region = body.region or "cn"
-        if body.region is not None:
-            if body.region not in ("cn", "global"):
-                raise HTTPException(422, "region 必须是 cn / global")
-            region = body.region
         user.region = region
         db.commit()
     return {"user_id": user.id, "token": user.device_token, "created": created,
@@ -354,7 +352,8 @@ def bet_create(body: BetBody, user: User = Depends(current_user),
 
 
 @router.delete("/bets/{bet_id}")
-def bet_delete(bet_id: int, user: User = Depends(current_user),
+def bet_delete(bet_id: int = Path(..., ge=1, le=2**63 - 1),
+               user: User = Depends(current_user),
                db: Session = Depends(get_db)):
     """撤销记注（前端 5 秒撤销窗口）。只能删自己的注单，已结算的注单不允许删。"""
     b = db.get(Bet, bet_id)
@@ -390,7 +389,8 @@ def bets_list(user: User = Depends(current_user), db: Session = Depends(get_db))
 
 
 @router.get("/bets/{bet_id}/postmortem")
-def bet_postmortem(bet_id: int, user: User = Depends(current_user),
+def bet_postmortem(bet_id: int = Path(..., ge=1, le=2**63 - 1),
+                   user: User = Depends(current_user),
                    db: Session = Depends(get_db)):
     """注单死因回访（mapping v1.0）：死在哪关/归因 + what-if（含金额）。"""
     b = db.get(Bet, bet_id)

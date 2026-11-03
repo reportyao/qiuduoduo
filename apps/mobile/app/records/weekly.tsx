@@ -1,4 +1,5 @@
 import { Share, ScrollView, StyleSheet, View } from "react-native";
+import { goBackOr } from "@/lib/navigation";
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
@@ -23,8 +24,11 @@ export default function WeeklyScreen() {
     try {
       const card = await callApi(
         api.client.POST("/share/weekly"),
-      ) as { text: string; deep_link: string };
-      await Share.share({ message: `${card.text}\n${card.deep_link}` });
+      ) as { text: string; url: string; deep_link: string };
+      const web = card.url.startsWith("http")
+        ? card.url
+        : `${api.baseUrl.replace(/\/$/, "")}${card.url}`;
+      await Share.share({ message: `${card.text}\n${web}\n${card.deep_link}` });
     } catch (e) {
       toast.show(errorText(e), "error");
     }
@@ -35,7 +39,7 @@ export default function WeeklyScreen() {
 
   return (
     <AppScreen bottom={false}>
-      <AppHeader title="周报" showAssistant={false} onBack={() => router.back()} />
+      <AppHeader title="周报" showAssistant={false} onBack={() => goBackOr(router)} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         {query.isLoading ? (
           <Skeleton height={260} radius={20} />

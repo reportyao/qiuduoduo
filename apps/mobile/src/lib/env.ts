@@ -12,3 +12,9 @@ export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? DEV_DEFAULT;
 
 // Expo 只会在构建时内联 EXPO_PUBLIC_* 变量；不要用未加前缀的 APP_ENV。
 export const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV ?? "development";
+
+const RELEASE_BUILD = process.env.NODE_ENV === "production" || APP_ENV !== "development";
+if (RELEASE_BUILD && !API_BASE_URL.startsWith("https://")) {
+  // 发布/预发包绝不能把 10.0.2.2 或 http:// 地址带出去；启动时 fail loud。
+  throw new Error("EXPO_PUBLIC_API_BASE_URL 必须是 HTTPS（staging/production）");
+}

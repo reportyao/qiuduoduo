@@ -8,12 +8,14 @@ import * as SecureStore from "expo-secure-store";
  */
 export async function readSessionRaw(key: string): Promise<string | null> {
   if (Platform.OS !== "web") {
+    // 原生端不再回落到明文 AsyncStorage：SecureStore 失败时宁可让用户重新登录，
+    // 也不让旧账号从旧副本里“复活”。删除失败会由 writeSessionRaw 写墓碑。
     try {
-      // 成功读到 null 就是「没有会话」；只有 SecureStore 抛错才回落，
-      // 否则旧的 AsyncStorage 副本会在登出后把账号“复活”。
+      const tomb = await AsyncStorage.getItem(`${key}.tombstone`);
+      if (tomb === "1") return null;
       return await SecureStore.getItemAsync(key);
     } catch {
-      // 继续回落
+      return null;
     }
   }
   return AsyncStorage.getItem(key);
@@ -21,19 +23,28 @@ export async function readSessionRaw(key: string): Promise<string | null> {
 
 export async function writeSessionRaw(key: string, value: string | null): Promise<void> {
   if (Platform.OS !== "web") {
-    try {
-      if (value == null) {
+    if (value == null) {
+      try {
         await SecureStore.deleteItemAsync(key);
-      } else {
-        await SecureStore.setItemAsync(key, value);
+        await AsyncStorage.removeItem(`${key}.tombstone`);
+        await AsyncStorage.removeItem(key);
+        return;
+      } catch (error) {
+        // 删除失败：写墓碑，保证下次启动不会读回旧 SecureStore 值。
+        try {
+          await AsyncStorage.setItem(`${key}.tombstone`, "1");
+        } catch {
+          // 连墓碑都写不了；readSessionRaw 会因 SecureStore 错误返回 null。
+        }
+        throw error;
       }
-      // 清理可能存在的旧 AsyncStorage 副本，避免双写不一致。
-      await AsyncStorage.removeItem(key);
-      return;
-    } catch {
-      // 继续回落
     }
+    await SecureStore.setItemAsync(key, value);
+    await AsyncStorage.removeItem(`${key}.tombstone`);
+    await AsyncStorage.removeItem(key);
+    return;
   }
+  await AsyncStorage.removeItem(`${key}.tombstone`);
   if (value == null) {
     await AsyncStorage.removeItem(key);
   } else {

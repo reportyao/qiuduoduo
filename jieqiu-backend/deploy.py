@@ -16,6 +16,7 @@ HOST = os.environ.get("JQ_DEPLOY_HOST", "43.128.24.244")
 USER = os.environ.get("JQ_DEPLOY_USER", "ubuntu")
 PWD = os.environ.get("JQ_DEPLOY_PASSWORD", "")
 CONSOLE_PASSWORD = os.environ.get("JQ_CONSOLE_PASSWORD", "")
+CONSOLE_IP_WHITELIST = os.environ.get("JQ_CONSOLE_IP_WHITELIST", "")
 ROOT = "/home/ubuntu/jieqiu-backend"
 DATA = "/home/ubuntu/jieqiu-data"   # 数据与代码分离：部署清代码目录绝不清数据
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -158,10 +159,14 @@ def main() -> None:
         ("JQ_FREEZE_BASELINE", f"{DATA}/freeze_baseline.json"),
         ("JQ_JWT_SECRET", jwt_secret),
         ("JQ_CONSOLE_PASSWORD", CONSOLE_PASSWORD),
+        ("JQ_CONSOLE_IP_WHITELIST", CONSOLE_IP_WHITELIST),
+        ("JQ_AUTH_STUB", "false"),
         ("JQ_CORS_EXTRA_ORIGINS", "http://43[.]128[.]24[.]244:8899"),
     ))
     with sftp.file("/tmp/jieqiu-backend.env", "w") as f:
         f.write(env_text)
+    # 先收紧权限再 sudo install，避免 /tmp 上的短暂可读窗口。
+    sftp.chmod("/tmp/jieqiu-backend.env", 0o600)
 
     # systemd 单元
     unit = f"""[Unit]

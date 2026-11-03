@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
@@ -17,8 +17,17 @@ export default function RecordsScreen() {
   const { copy } = usePersonaContent();
   const session = useAuthStore((s) => s.session);
   const [postmortemId, setPostmortemId] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const betsQuery = useBetsQuery(Boolean(session));
   const weeklyQuery = useWeeklyQuery(Boolean(session));
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([betsQuery.refetch(), weeklyQuery.refetch()]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const bets = betsQuery.data ?? [];
   const settled = bets.filter((bet) => bet.pnl != null);
@@ -33,7 +42,11 @@ export default function RecordsScreen() {
         onAssistantPress={() => router.push("/assistant")}
         right={<Chip label={session?.mode === "jwt" ? "已登录" : "设备账户"} tone="neutral" />}
       />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.green} />}
+      >
         <View style={styles.stats}>
           <Stat label="本周注数" value={week ? String(week.bets) : "—"} sub={week ? "近 7 天 · 只记账" : "周报同步中"} />
           <Stat
@@ -54,6 +67,9 @@ export default function RecordsScreen() {
           <Button label="公开账本" variant="secondary" size="sm" onPress={() => router.push("/records/ledger")} style={styles.flex} />
         </View>
 
+        {weeklyQuery.isError ? (
+          <ErrorState compact message="周报暂时取不到，票单仍可查看。" onRetry={() => weeklyQuery.refetch()} />
+        ) : null}
         {betsQuery.isError && bets.length > 0 ? (
           <ErrorState compact message="刷新失败，先显示上次的票单。" onRetry={() => betsQuery.refetch()} />
         ) : null}

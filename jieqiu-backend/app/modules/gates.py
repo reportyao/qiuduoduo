@@ -133,11 +133,14 @@ def model_gate(p_model: tuple[float, float, float] | None,
         )
     top = max(p_model)
     pick = best_pick(p_model, sp)
+    # 放行必须针对“实际会发布的 pick”，不能只看三方向最高概率：
+    # 否则 55% 的主胜可以让 20% 的客胜高赔 pick 过关，用户看到的置信与闸门不一致。
+    pick_prob = pick["prob"]
     detail = {"shrunk": [round(x, 4) for x in p_model], "top": round(top, 4),
-              "threshold": conf_threshold, "pick": pick,
+              "pick_prob": pick_prob, "threshold": conf_threshold, "pick": pick,
               "rule": "收缩后最优方向概率 ≥ 53% 可推线（首发确认检查 W4 接入 API-Football）"}
     return GateResult(
         gate="model",
-        result="pass" if top >= conf_threshold else "fail",
+        result="pass" if pick_prob >= conf_threshold else "fail",
         detail=detail,
     )

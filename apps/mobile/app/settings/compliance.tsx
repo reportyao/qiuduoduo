@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { Alert, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SettingsPage } from "@/components/SettingsPage";
@@ -70,14 +71,20 @@ export default function ComplianceScreen() {
           text: `确认排除${label}`,
           style: "destructive",
           onPress: () => {
-            exclude(choice);
-            // 服务端通知偏好同步暂停，尽量避免排除期间仍收到推送；
-            // 失败不阻塞本机强制拦截（离线也必须能自我排除）。
-            void callApi(
-              api.client.PUT("/me/notify-settings", { body: { paused: true } }),
-            ).catch(() => {});
-            toast.show("自排除已生效", "warning");
-            router.replace("/paused");
+            void (async () => {
+              const saved = await exclude(choice);
+              if (!saved) {
+                Alert.alert("未能保存自排除", "本机存储不可用，请重试。未生效前不会离开本页。");
+                return;
+              }
+              // 服务端通知偏好同步暂停，尽量避免排除期间仍收到推送；
+              // 失败不阻塞本机强制拦截（离线也必须能自我排除）。
+              void callApi(
+                api.client.PUT("/me/notify-settings", { body: { paused: true } }),
+              ).catch(() => {});
+              toast.show("自排除已生效", "warning");
+              router.replace("/paused");
+            })();
           },
         },
       ],
@@ -85,7 +92,7 @@ export default function ComplianceScreen() {
   };
 
   return (
-    <SettingsPage title="合规中心" subtitle="永远免费，不用于营销" onBack={() => router.back()}>
+    <SettingsPage title="合规中心" subtitle="永远免费，不用于营销" onBack={() => goBackOr(router)}>
       <Card tone="green">
         <Text variant="h3">先照顾你这个人。</Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>

@@ -10,7 +10,7 @@ from sqlalchemy import select
 
 from ..models import User, Verdict
 from .postmortem import postmortem
-from .users import list_memories, user_streak
+from .users import list_memories, today_cn, user_streak
 
 # 意图关键词（优先级从上到下）
 _INTENT_RULES: list[tuple[str, tuple[str, ...]]] = [
@@ -43,7 +43,8 @@ def respond(db: Session, user: User | None, text: str) -> dict:
     if intent == "buy_tonight":
         top = db.scalars(
             select(Verdict).where(Verdict.status == "promoted",
-                                  Verdict.settled.is_(None))
+                                  Verdict.settled.is_(None),
+                                  Verdict.trade_date == today_cn())
             .order_by(Verdict.rake).limit(1)
         ).first()
         if top:
@@ -57,7 +58,9 @@ def respond(db: Session, user: User | None, text: str) -> dict:
 
     elif intent == "why_not":
         killed = db.scalars(
-            select(Verdict).where(Verdict.status == "killed").order_by(Verdict.rake.desc()).limit(1)
+            select(Verdict).where(Verdict.status == "killed",
+                                  Verdict.trade_date == today_cn())
+            .order_by(Verdict.rake.desc()).limit(1)
         ).first()
         if killed:
             card["verdict_id"] = killed.id

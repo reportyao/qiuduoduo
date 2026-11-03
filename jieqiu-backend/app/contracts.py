@@ -31,9 +31,9 @@ sp_snapshot_schema = DataFrameSchema(
         "match_id": Column(str, Check.str_length(1, 32)),
         "pool": Column(str, Check.isin(POOL_VALUES)),
         "goal_line": Column(str, Check.str_length(0, 8), nullable=True),
-        "sp_h": Column(float, Check.in_range(1.0, 1000.0)),
-        "sp_d": Column(float, Check.in_range(1.0, 1000.0)),
-        "sp_a": Column(float, Check.in_range(1.0, 1000.0)),
+        "sp_h": Column(float, Check.in_range(1.0001, 1000.0)),
+        "sp_d": Column(float, Check.in_range(1.0001, 1000.0)),
+        "sp_a": Column(float, Check.in_range(1.0001, 1000.0)),
         "captured_at": Column(
             str,
             Check.str_matches(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+08:00$"),

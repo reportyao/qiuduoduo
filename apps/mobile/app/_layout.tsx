@@ -104,6 +104,7 @@ function RouteGuard() {
   useEffect(() => {
     const isOnboarding = pathname.startsWith("/onboarding");
     const isLegal = pathname.startsWith("/legal");
+    const isHelp = pathname.startsWith("/settings/compliance");
     const isMinorPage = pathname.startsWith("/minor");
     const isPaused = pathname.startsWith("/paused");
     const isPublicLedger = pathname.startsWith("/records/ledger");
@@ -116,7 +117,7 @@ function RouteGuard() {
       router.replace("/minor");
       return;
     }
-    if (ageDecision === "adult" && excluded && !isPaused && !isLegal && !isOnboarding) {
+    if (ageDecision === "adult" && excluded && !isPaused && !isLegal && !isHelp && !isOnboarding) {
       router.replace("/paused");
     }
   }, [ageDecision, excluded, pathname, router]);

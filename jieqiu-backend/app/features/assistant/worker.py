@@ -11,7 +11,7 @@ import logging
 import time
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from ...db import SessionLocal
@@ -29,19 +29,44 @@ def _now() -> datetime:
 
 def send_pending_push(db: Session, limit: int = 50, now: datetime | None = None) -> dict:
     now = now or _now()
-    rows = db.scalars(select(Notification).where(
+    # pending 正常待发；sending 且租约过期说明上一次 worker 在发送中崩溃/重启。
+    # 两种都可被本次重新认领，否则崩溃行会永久卡在 sending。
+    claimable = and_(
         Notification.channel == "push",
-        Notification.status == "pending",
         Notification.scheduled_at <= now,
-        (Notification.lease_until.is_(None) | (Notification.lease_until < now)),
-    ).order_by(Notification.id).limit(limit)).all()
+        or_(
+            Notification.status == "pending",
+            and_(Notification.status == "sending",
+                 or_(Notification.lease_until.is_(None),
+                     Notification.lease_until < now)),
+        ),
+    )
+    rows = db.scalars(select(Notification).where(claimable)
+                      .order_by(Notification.id).limit(limit)).all()
     sent = failed = suppressed = 0
     provider = get_push_provider("jpush")
     for n in rows:
-        n.status = "sending"
-        n.lease_until = now + timedelta(seconds=60)
-        n.attempt = (n.attempt or 0) + 1
+        # 条件 UPDATE 抢占：两个 worker 同时看到同一行时只有一个 rowcount=1。
+        claimed = db.execute(
+            update(Notification)
+            .where(Notification.id == n.id, claimable)
+            .values(status="sending",
+                    lease_until=now + timedelta(seconds=60),
+                    attempt=func.coalesce(Notification.attempt, 0) + 1)
+        )
+        if (claimed.rowcount or 0) != 1:
+            db.rollback()
+            continue
         db.commit()
+        db.refresh(n)
+        if (n.attempt or 0) > 3:
+            # 连续崩溃/超时超过重试上限：不再无限占租约。
+            n.status = "failed"
+            n.last_error = n.last_error or "send lease expired too many times"
+            n.lease_until = None
+            failed += 1
+            db.commit()
+            continue
         tokens = db.scalars(select(PushToken.token).where(
             PushToken.user_id == n.user_id, PushToken.enabled.is_(True))).all()
         if not tokens:

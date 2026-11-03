@@ -34,16 +34,16 @@ function errorMessage(body: unknown, fallback: string): string {
 }
 
 export function createApiClient(config: ApiClientConfig) {
+  const timers = new Map<string, ReturnType<typeof setTimeout>>();
   const client = createClient<paths>({
     baseUrl: config.baseUrl.replace(/\/$/, ""),
   });
 
   const middleware: Middleware = {
-    async onRequest({ request }) {
+    async onRequest({ request, id }) {
       // 所有请求统一 12s 超时，避免弱网下无限等待；调用方仍可传入自己的 signal。
       const controller = new AbortController();
-      // 计时器在 fetch 结束后即使触发也只是 abort 一个已结算请求，无副作用。
-      setTimeout(() => controller.abort(), 12_000);
+      timers.set(id, setTimeout(() => controller.abort(), 12_000));
       request = new Request(request, { signal: controller.signal });
       const token = await config.getToken?.();
       if (token) {
@@ -62,7 +62,10 @@ export function createApiClient(config: ApiClientConfig) {
 
       return request;
     },
-    onResponse({ response }) {
+    onResponse({ id, response }) {
+      const timer = timers.get(id);
+      if (timer) clearTimeout(timer);
+      timers.delete(id);
       if (!response.ok && config.onError) {
         response
           .clone()
@@ -74,6 +77,12 @@ export function createApiClient(config: ApiClientConfig) {
             config.onError?.(response.status, response.statusText);
           });
       }
+      return undefined;
+    },
+    onError({ id }) {
+      const timer = timers.get(id);
+      if (timer) clearTimeout(timer);
+      timers.delete(id);
       return undefined;
     },
   };

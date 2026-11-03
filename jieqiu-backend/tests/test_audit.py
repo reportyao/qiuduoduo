@@ -195,10 +195,11 @@ def test_console_session_expiry(db, client):
     from app.routers import console as C
     C._LOGIN_FAILS.clear()
     r = client.post("/console/login", data={"pw": "dev"}, follow_redirects=False)
-    tok = r.headers["location"].split("t=")[1]
-    assert C._authed(type("R", (), {"query_params": {"t": tok}, "cookies": {}})())
+    tok = r.cookies.get("console_t")
+    assert tok
+    assert C._authed(type("R", (), {"cookies": {"console_t": tok}, "client": None})())
     C._SESSIONS[tok] = time.time() - 1  # 过期
-    r2 = client.get(f"/console?t={tok}", follow_redirects=False)
+    r2 = client.get("/console", follow_redirects=False)
     assert r2.status_code == 302
 
 
@@ -219,3 +220,18 @@ def test_memory_upsert_rejects_empty_key(db):
     from app.modules.users import upsert_memory
     with pytest.raises(ValueError):
         upsert_memory(db, u.id, "   ", "v")
+
+
+def test_auth_stub_only_allowed_in_dev_test(monkeypatch):
+    import pytest
+    from fastapi import HTTPException
+    from app.config import Settings
+    from app.routers import auth_w5
+    monkeypatch.setattr(auth_w5, "get_settings",
+                        lambda: Settings(env="dev", auth_stub=True, jwt_secret="x"))
+    auth_w5._ensure_login_ready("sms")
+    monkeypatch.setattr(auth_w5, "get_settings",
+                        lambda: Settings(env="staging", auth_stub=True, jwt_secret="x"))
+    with pytest.raises(HTTPException) as exc:
+        auth_w5._ensure_login_ready("sms")
+    assert exc.value.status_code == 503

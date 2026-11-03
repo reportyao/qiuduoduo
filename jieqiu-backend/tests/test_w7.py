@@ -157,3 +157,15 @@ def test_purge_expired_deletions(db):
     # 撤回语义不受影响：fresh 重登录 → deleted_at 清空
     login_device(db, "tok-fresh")
     assert db.get(User, fresh_user.id).deleted_at is None
+
+
+def test_share_public_html_page(db, client, monkeypatch):
+    _mini(monkeypatch)
+    _promotable(db)
+    build_verdicts(db, today_cn(), NOW)
+    vid = db.scalars(select(Verdict)).first().id
+    r = client.post(f"/share/verdict/{vid}").json()
+    page = client.get(f"/s/{r['share_id']}")
+    assert page.status_code == 200
+    assert "分享卡" in page.text and r["share_id"] in page.text
+    assert client.get("/s/nope").status_code == 404

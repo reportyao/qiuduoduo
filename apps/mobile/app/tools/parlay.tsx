@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -20,6 +21,7 @@ import { FormulaNote, ResultPanel, ResultRow } from "@/features/tools/ToolLayout
 import type { VerdictSummary } from "@/domain/types";
 import { errorText } from "@/lib/errors";
 import { currentTradeDateCn, decimalToFormat, money, oddsFormatLabel, pct, pickDirectionLabel, shiftDateCn } from "@/lib/format";
+import { useNow } from "@/lib/useNow";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 
 type Dir = "home" | "draw" | "away";
@@ -35,11 +37,23 @@ export default function ParlayToolScreen() {
   const [selection, setSelection] = useState<Selection>({});
   const [stake, setStake] = useState(100);
   const [date, setDate] = useState(currentTradeDateCn());
+  const [manualDate, setManualDate] = useState(false);
+  const now = useNow(60_000);
+  const today = currentTradeDateCn(now);
+  useEffect(() => {
+    if (!manualDate && date !== today) setDate(today);
+  }, [date, manualDate, today]);
+  const chooseDate = (next: string) => {
+    setDate(next);
+    setManualDate(next !== currentTradeDateCn());
+  };
   const streamQuery = useStreamQuery(date);
   const stream = streamQuery.data?.pages[0];
 
   const matches = useMemo(
-    () => (stream?.verdicts ?? []).filter((v) => v.sp.h > 1 && v.sp.d > 1 && v.sp.a > 1).slice(0, 12),
+    () => (stream?.verdicts ?? []).filter(
+      (v) => v.rake != null && v.sp.h > 1 && v.sp.d > 1 && v.sp.a > 1,
+    ).slice(0, 12),
     [stream],
   );
   const legs = useMemo(
@@ -47,12 +61,13 @@ export default function ParlayToolScreen() {
       Object.entries(selection)
         .map(([id, dir]) => {
           const match = matches.find((m) => m.id === id);
-          if (!match) return null;
+          // 没有抽水快照的复核场不能当 0 成本参与串关，否则返还率会被高估。
+          if (!match || match.rake == null) return null;
           return {
             match,
             dir,
             odds: match.sp[DIR_KEY[dir]],
-            rake: match.rake ?? 0,
+            rake: match.rake,
           };
         })
         .filter((leg): leg is { match: VerdictSummary; dir: Dir; odds: number; rake: number } => leg !== null),
@@ -91,7 +106,7 @@ export default function ParlayToolScreen() {
 
   return (
     <AppScreen bottom={false}>
-      <AppHeader title="串关体检" showAssistant={false} onBack={() => router.back()} />
+      <AppHeader title="串关体检" showAssistant={false} onBack={() => goBackOr(router)} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
@@ -107,7 +122,7 @@ export default function ParlayToolScreen() {
           value={date}
           onChange={(next) => {
             if (next === date) return; // 重复点当前日期不应清空已选腿
-            setDate(next);
+            chooseDate(next);
             setSelection({});
           }}
         />
@@ -124,7 +139,7 @@ export default function ParlayToolScreen() {
                 : "这一天没有可计算的场次。"}
             </Text>
             {date === currentTradeDateCn() ? (
-              <Button label="看昨天" variant="secondary" size="sm" onPress={() => setDate(shiftDateCn(currentTradeDateCn(), -1))} />
+              <Button label="看昨天" variant="secondary" size="sm" onPress={() => chooseDate(shiftDateCn(currentTradeDateCn(), -1))} />
             ) : null}
           </View>
         ) : (

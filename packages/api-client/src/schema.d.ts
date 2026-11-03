@@ -951,6 +951,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/s/{share_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Share Page
+         * @description 分享卡的公开 HTTPS 落地页；外部用户没有 App 也能查看并独立核验。
+         */
+        get: operations["share_page_s__share_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/shares/mine": {
         parameters: {
             query?: never;
@@ -1017,6 +1037,23 @@ export interface paths {
         put?: never;
         /** Console Login */
         post: operations["console_login_console_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/console/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Console Logout */
+        get: operations["console_logout_console_logout_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4170,7 +4207,9 @@ export interface operations {
             query?: {
                 persona?: string;
             };
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path: {
                 verdict_id: string;
             };
@@ -4326,6 +4365,37 @@ export interface operations {
             };
         };
     };
+    share_page_s__share_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                share_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     shares_mine_shares_mine_get: {
         parameters: {
             query?: never;
@@ -4468,6 +4538,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    console_logout_console_logout_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };

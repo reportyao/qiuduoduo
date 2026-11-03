@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -92,7 +93,7 @@ export default function AssistantScreen() {
         title={meta.name}
         subtitle="问今晚、问死因、问复盘"
         showAssistant={false}
-        onBack={() => router.back()}
+        onBack={() => goBackOr(router)}
         backLabel="关闭助理"
         right={
           messages.length > 0 ? (

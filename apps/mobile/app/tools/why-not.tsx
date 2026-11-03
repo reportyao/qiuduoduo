@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
@@ -58,7 +59,7 @@ export default function WhyNotListScreen() {
 
   return (
     <AppScreen bottom={false}>
-      <AppHeader title="为什么不推" showAssistant={false} onBack={() => router.back()} />
+      <AppHeader title="为什么不推" showAssistant={false} onBack={() => goBackOr(router)} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <Text variant="overline" color={colors.green}>死因 · 全公开</Text>
         <Text variant="display" style={styles.title}>不推，也是结论。</Text>

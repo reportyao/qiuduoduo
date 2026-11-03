@@ -4,9 +4,10 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Header, HTTPException, Path
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ...db import get_db
@@ -35,29 +36,29 @@ def _now() -> datetime:
 
 
 class WatchBody(BaseModel):
-    target_type: str = "match"
-    target_id: str
+    target_type: str = Field(default="match", max_length=8)
+    target_id: str = Field(min_length=1, max_length=64)
     events: list[str] | None = None
 
 
 class NotifyBody(BaseModel):
     channels: list[str] | None = None
     event_types: list[str] | None = None
-    quiet_start: str | None = None
-    quiet_end: str | None = None
+    quiet_start: str | None = Field(default=None, max_length=5)
+    quiet_end: str | None = Field(default=None, max_length=5)
     daily_cap: int | None = None
     paused: bool | None = None
 
 
 class PushRegister(BaseModel):
-    platform: str = "android"
-    provider: str = "jpush"
-    token: str
-    app_version: str = ""
+    platform: str = Field(default="android", max_length=8)
+    provider: str = Field(default="jpush", max_length=16)
+    token: str = Field(min_length=1, max_length=256)
+    app_version: str = Field(default="", max_length=32)
 
 
 class PushUnregister(BaseModel):
-    token: str
+    token: str = Field(min_length=1, max_length=256)
 
 
 class InboxItem(BaseModel):
@@ -181,7 +182,8 @@ def inbox_unread(user: User = Depends(current_user), db: Session = Depends(get_d
 
 
 @router.post("/me/inbox/{notification_id}/read", response_model=OkResponse)
-def mark_read(notification_id: int, user: User = Depends(current_user),
+def mark_read(notification_id: int = Path(..., ge=1, le=2**63 - 1),
+              user: User = Depends(current_user),
               db: Session = Depends(get_db)):
     n = db.get(Notification, notification_id)
     if n is None or n.user_id != user.id or n.channel != "inapp":
@@ -205,7 +207,8 @@ def read_all(user: User = Depends(current_user), db: Session = Depends(get_db)):
 
 
 @router.post("/me/inbox/{notification_id}/click", response_model=ClickResponse)
-def click(notification_id: int, user: User = Depends(current_user),
+def click(notification_id: int = Path(..., ge=1, le=2**63 - 1),
+          user: User = Depends(current_user),
           db: Session = Depends(get_db)):
     n = db.get(Notification, notification_id)
     if n is None or n.user_id != user.id:
@@ -242,12 +245,12 @@ def watch_list(user: User = Depends(current_user), db: Session = Depends(get_db)
 @router.post("/me/watch", response_model=WatchItem)
 def watch_add(body: WatchBody, user: User = Depends(current_user),
               db: Session = Depends(get_db)):
-    if body.target_type not in ("match", "team", "league"):
-        raise HTTPException(422, "target_type 必须是 match/team/league")
+    if body.target_type != "match":
+        raise HTTPException(422, "当前只支持关注比赛（team/league 事件源尚未接入）")
     tid = body.target_id.strip()
     if not tid:
         raise HTTPException(422, "target_id 不能为空")
-    if body.target_type == "match" and db.get(SPMatch, tid) is None:
+    if db.get(SPMatch, tid) is None:
         raise HTTPException(404, "比赛不存在")
     row = db.scalar(select(WatchTarget).where(
         WatchTarget.user_id == user.id, WatchTarget.target_type == body.target_type,
@@ -258,14 +261,24 @@ def watch_add(body: WatchBody, user: User = Depends(current_user),
         db.add(row)
     elif body.events is not None:
         row.events = body.events
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # 双击/重试并发创建同一关注：回滚后返回已存在行。
+        db.rollback()
+        row = db.scalar(select(WatchTarget).where(
+            WatchTarget.user_id == user.id, WatchTarget.target_type == body.target_type,
+            WatchTarget.target_id == tid))
+        if row is None:
+            raise
     db.refresh(row)
     return {"id": row.id, "target_type": row.target_type, "target_id": row.target_id,
             "events": row.events or []}
 
 
 @router.delete("/me/watch/{watch_id}", response_model=OkResponse)
-def watch_remove(watch_id: int, user: User = Depends(current_user),
+def watch_remove(watch_id: int = Path(..., ge=1, le=2**63 - 1),
+                 user: User = Depends(current_user),
                  db: Session = Depends(get_db)):
     row = db.get(WatchTarget, watch_id)
     if row is None or row.user_id != user.id:
@@ -307,7 +320,15 @@ def follow_match(match_id: str, body: FollowBody | None = None,
         db.add(row)
     elif body is not None and body.events is not None:
         row.events = body.events
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        row = db.scalar(select(WatchTarget).where(
+            WatchTarget.user_id == user.id, WatchTarget.target_type == "match",
+            WatchTarget.target_id == match_id))
+        if row is None:
+            raise
     db.refresh(row)
     return _watch_item(row, m)
 

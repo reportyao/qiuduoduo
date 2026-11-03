@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { useRouter } from "expo-router";
 import { Field, Text } from "@/components/ui";
 import { oddsMath } from "@/features/tools/calc";
@@ -18,7 +19,7 @@ export default function OddsToolScreen() {
       title="赔率换算"
       eyebrow="赔率 · 四种写法"
       description="同一个价格，欧洲盘、香港盘、印尼盘、美式盘写法不同。换错格式，账就会算错。"
-      onBack={() => router.back()}
+      onBack={() => goBackOr(router)}
     >
       <Field
         label="欧洲盘（decimal）"

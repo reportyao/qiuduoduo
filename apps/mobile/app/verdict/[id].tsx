@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { Share, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
@@ -17,6 +18,7 @@ import {
 } from "@/features/verdict/queries";
 import { buildIntelReport } from "@/domain/intel";
 import { errorText } from "@/lib/errors";
+import { api } from "@/lib/api";
 import { formatDate, pct } from "@/lib/format";
 import { colors, layout, spacing } from "@/theme/tokens";
 import { DetailHero } from "@/features/verdict/components/DetailHero";
@@ -63,7 +65,10 @@ export default function VerdictDetailScreen() {
     if (!detail || shareMutation.isPending) return;
     try {
       const card = await shareMutation.mutateAsync({ verdictId: detail.id, persona: personaId });
-      await Share.share({ message: `${card.text}\n${card.deep_link}` });
+      const web = card.url.startsWith("http")
+        ? card.url
+        : `${api.baseUrl.replace(/\/$/, "")}${card.url}`;
+      await Share.share({ message: `${card.text}\n${web}\n${card.deep_link}` });
     } catch (e) {
       toast.show(errorText(e), "error");
     }
@@ -72,7 +77,7 @@ export default function VerdictDetailScreen() {
   if (detailQuery.isLoading) {
     return (
       <AppScreen bottom={false}>
-        <AppHeader title="完整账" showAssistant={false} onBack={() => router.back()} />
+        <AppHeader title="完整账" showAssistant={false} onBack={() => goBackOr(router)} />
         <View style={styles.loading}>
           <Skeleton height={320} radius={26} />
           <Skeleton height={150} radius={20} style={{ marginTop: spacing.base }} />
@@ -85,7 +90,7 @@ export default function VerdictDetailScreen() {
   if (!detail) {
     return (
       <AppScreen bottom={false}>
-        <AppHeader title="完整账" showAssistant={false} onBack={() => router.back()} />
+        <AppHeader title="完整账" showAssistant={false} onBack={() => goBackOr(router)} />
         <View style={styles.loading}>
           <ErrorState
             message={detailQuery.isError ? errorText(detailQuery.error) : "这场判断不存在或已下线。"}
@@ -103,7 +108,7 @@ export default function VerdictDetailScreen() {
         title="完整账"
         subtitle={`${detail.home} vs ${detail.away}`}
         showAssistant={false}
-        onBack={() => router.back()}
+        onBack={() => goBackOr(router)}
       />
       <ScrollView
         showsVerticalScrollIndicator={false}

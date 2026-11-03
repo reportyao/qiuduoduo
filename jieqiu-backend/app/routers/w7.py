@@ -1,9 +1,11 @@
 """W7 端点：F20 分享（素材工厂+编号可验）、F18 市场配置、/me/export。"""
 from __future__ import annotations
 
+import html
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -34,13 +36,17 @@ def current_user(authorization: str | None = Header(default=None),
 
 @router.post("/share/verdict/{verdict_id}")
 def share_verdict_route(verdict_id: str, persona: str = "zhuanjia",
+                        authorization: str | None = Header(default=None),
                         db: Session = Depends(get_db)):
     """判决分享卡（公开）：编号 = content_hash 前 12 位，可验。"""
-    card, err = share_verdict(db, verdict_id, persona)
+    u = U.user_from_token(db, authorization)
+    if u is not None and U.is_deleted(u):
+        u = None
+    card, err = share_verdict(db, verdict_id, persona, user=u)
     if card is None:
         raise HTTPException(404, err)
     return {"share_id": card.share_id, "text": card.text,
-            "url": f"/share/{card.share_id}",
+            "url": f"/s/{card.share_id}",
             "deep_link": f"jieqiu://share/{card.share_id}"}
 
 
@@ -49,7 +55,7 @@ def share_weekly_route(user: User = Depends(current_user), db: Session = Depends
     """周报分享卡（需登录：含个人 P&L）。"""
     card, _ = share_weekly(db, user)
     return {"share_id": card.share_id, "text": card.text,
-            "url": f"/share/{card.share_id}",
+            "url": f"/s/{card.share_id}",
             "deep_link": f"jieqiu://share/{card.share_id}"}
 
 
@@ -58,7 +64,7 @@ def share_streak_route(user: User = Depends(current_user), db: Session = Depends
     """连败/保护状态分享卡（需登录）。"""
     card, _ = share_streak(db, user)
     return {"share_id": card.share_id, "text": card.text,
-            "url": f"/share/{card.share_id}",
+            "url": f"/s/{card.share_id}",
             "deep_link": f"jieqiu://share/{card.share_id}"}
 
 
@@ -83,7 +89,9 @@ def share_card(body: ShareCardBody, authorization: str | None = Header(default=N
     if body.kind == "verdict":
         if not body.verdict_id:
             raise HTTPException(422, "verdict_id 必填")
-        card, err = share_verdict(db, body.verdict_id, body.persona)
+        u = U.user_from_token(db, authorization)
+        card, err = share_verdict(db, body.verdict_id, body.persona,
+                                  user=None if (u and U.is_deleted(u)) else u)
     elif body.kind in ("weekly", "streak"):
         u = U.user_from_token(db, authorization)
         if u is None:
@@ -96,7 +104,7 @@ def share_card(body: ShareCardBody, authorization: str | None = Header(default=N
     if card is None:
         raise HTTPException(404, err or "share source not found")
     return {"share_id": card.share_id, "kind": card.kind, "text": card.text,
-            "url": f"/share/{card.share_id}",
+            "url": f"/s/{card.share_id}",
             "deep_link": f"jieqiu://share/{card.share_id}"}
 
 
@@ -107,6 +115,35 @@ def share_get(share_id: str, db: Session = Depends(get_db)):
     if card is None:
         raise HTTPException(404, "share not found")
     return verify_share(card)
+
+
+@router.get("/s/{share_id}", response_class=HTMLResponse)
+def share_page(share_id: str, db: Session = Depends(get_db)):
+    """分享卡的公开 HTTPS 落地页；外部用户没有 App 也能查看并独立核验。"""
+    card = db.get(ShareCard, share_id)
+    if card is None:
+        return HTMLResponse("<h1>分享卡不存在</h1>", status_code=404)
+    verified = verify_share(card)
+    text = html.escape(card.text or "")
+    payload = html.escape(str(verified.get("payload", {})))
+    ok = "校验通过" if verified["match"] else "校验失败（内容或编号被改过）"
+    return HTMLResponse(
+        "<!DOCTYPE html><html lang=zh><head><meta charset=utf-8>"
+        "<meta name=viewport content='width=device-width,initial-scale=1'>"
+        f"<title>解球分享卡 · {html.escape(share_id)}</title>"
+        "<style>body{font-family:system-ui,sans-serif;max-width:680px;margin:0 auto;"
+        "padding:28px;color:#1D2026;background:#F4F3EF;line-height:1.7}"
+        "h1{font-size:20px}code,pre{font-family:ui-monospace,monospace;font-size:11px;"
+        "white-space:pre-wrap;word-break:break-all;background:#fff;padding:12px;"
+        "border-radius:10px;border:1px solid #E7E4DC}a{color:#0B6B4F}</style></head><body>"
+        f"<h1>解球 · 分享卡</h1><p>{text}</p>"
+        f"<p><b>{html.escape(ok)}</b></p>"
+        f"<p>编号 <code>{html.escape(share_id)}</code> · 算法 "
+        f"{html.escape(str(verified.get('algorithm', 'sha256')))}</p>"
+        f"<pre>{payload}</pre>"
+        "<p><a href='/'>解球公开账本</a> · 数据分析结果，不构成投注建议。</p>"
+        "</body></html>"
+    )
 
 
 @router.get("/shares/mine")

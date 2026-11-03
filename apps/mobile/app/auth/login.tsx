@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -89,7 +90,7 @@ export default function LoginScreen() {
 
   return (
     <AppScreen bottom={false}>
-      <AppHeader title="登录 / 注册" showAssistant={false} onBack={() => router.back()} />
+      <AppHeader title="登录 / 注册" showAssistant={false} onBack={() => goBackOr(router)} />
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -46,7 +47,7 @@ export default function LedgerScreen() {
         title="公开账本"
         subtitle="输赢与连败都公开"
         showAssistant={false}
-        onBack={() => router.back()}
+        onBack={() => goBackOr(router)}
         right={<Chip label="可复算" tone="green" />}
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>

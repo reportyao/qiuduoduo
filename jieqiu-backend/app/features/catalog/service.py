@@ -4,12 +4,13 @@ from __future__ import annotations
 import calendar as _calendar
 from datetime import date as _date, datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ...config import get_settings
 from ...models import Event, MatchResult, SPMatch, SPSnapshot, Verdict
 from ...modules.messaging import avoid_reason
+from ...modules.timeutil import trade_date_from_kickoff
 
 CN = timezone(timedelta(hours=get_settings().tz_offset_hours))
 STATUSES = ("promoted", "screening", "killed", "unjudged")
@@ -26,8 +27,8 @@ def parse_date(value: str) -> _date:
 
 
 def date_window(d: _date) -> tuple[str, str]:
-    """竞彩日窗口：当日 00:00 至次日 04:59:59（中国时间字符串）。"""
-    return f"{d.isoformat()} 00:00:00", f"{(d + timedelta(days=1)).isoformat()} 04:59:59"
+    """竞彩日窗口：当日 05:00 至次日 04:59:59（00:00–04:59 属于前一日）。"""
+    return f"{d.isoformat()} 05:00:00", f"{(d + timedelta(days=1)).isoformat()} 04:59:59"
 
 
 def _latest_verdicts(db: Session, match_ids: list[str]) -> dict[str, Verdict]:
@@ -120,12 +121,14 @@ def true_cost(db: Session, match_id: str, pool: str | None = None) -> dict | Non
     if m is None:
         return None
     q = select(SPSnapshot).where(SPSnapshot.match_id == match_id)
+    count_q = select(func.count(SPSnapshot.id)).where(SPSnapshot.match_id == match_id)
     if pool:
         q = q.where(SPSnapshot.pool == pool)
-    snaps = db.scalars(q.order_by(SPSnapshot.id.desc())).all()
-    if not snaps:
+        count_q = count_q.where(SPSnapshot.pool == pool)
+    snap = db.scalar(q.order_by(SPSnapshot.id.desc()).limit(1))
+    if snap is None:
         return None
-    snap = snaps[0]
+    snapshot_count = db.scalar(count_q) or 0
     if min(snap.sp_h, snap.sp_d, snap.sp_a) <= 1:
         raise ValueError("SP 数据异常：赔率必须大于 1")
     inv = {"h": 1.0 / snap.sp_h, "d": 1.0 / snap.sp_d, "a": 1.0 / snap.sp_a}
@@ -138,7 +141,7 @@ def true_cost(db: Session, match_id: str, pool: str | None = None) -> dict | Non
         "match_id": m.match_id, "match_no": m.match_no, "home": m.home, "away": m.away,
         "pool": snap.pool, "goal_line": snap.goal_line or "",
         "sp": sp, "captured_at": snap.captured_at,
-        "snapshot_count": len(snaps),
+        "snapshot_count": snapshot_count,
         "implied_total": round(total, 6),
         "rake": round(total - 1.0, 6),
         "rake_pct": round((total - 1.0) * 100, 2),
@@ -234,7 +237,7 @@ def calendar_month(db: Session, month: str | None = None) -> dict:
         by_date[key] = {"date": key, "matches": 0, "verdicts": 0,
                         "promoted": 0, "screening": 0, "killed": 0}
     for m in matches:
-        key = m.kickoff[:10]
+        key = trade_date_from_kickoff(m.kickoff)
         if key in by_date:
             by_date[key]["matches"] += 1
     for v in verdicts:
@@ -250,7 +253,9 @@ def calendar_month(db: Session, month: str | None = None) -> dict:
 def sp_movements(db: Session, date: str | None = None, limit: int = 50) -> dict:
     d = parse_date(date) if date else datetime.now(CN).date()
     rows = db.scalars(
-        select(SPSnapshot).where(SPSnapshot.captured_at.like(f"{d.isoformat()}%"))
+        select(SPSnapshot).where(
+            SPSnapshot.captured_at >= d.isoformat(),
+            SPSnapshot.captured_at < (d + timedelta(days=1)).isoformat())
         .order_by(SPSnapshot.captured_at.desc(), SPSnapshot.id.desc())
         .limit(5000)).all()
     grouped: dict[tuple[str, str], list[SPSnapshot]] = {}

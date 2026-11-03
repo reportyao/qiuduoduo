@@ -78,6 +78,9 @@ def test_model_gate_thresholds():
     assert g1.result == "pass" and g1.detail["pick"]["dir"] == "主胜"
     g2 = model_gate((0.45, 0.30, 0.25), (2.0, 3.4, 4.0), 0.53)
     assert g2.result == "fail"
+    # 最高概率 55% 但实际 pick 只有 20%：不能放行
+    g2b = model_gate((0.55, 0.25, 0.20), (1.43, 5.0, 10.0), 0.53)
+    assert g2b.result == "fail" and g2b.detail["pick"]["prob"] == 0.20
     g3 = model_gate(None, (2.0, 3.4, 4.0), 0.53)
     assert g3.result == "pending_data"
 

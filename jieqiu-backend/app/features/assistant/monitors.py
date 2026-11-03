@@ -149,12 +149,14 @@ def scan_close_soon(db: Session, now_cn: datetime | None = None,
         except ValueError:
             continue
         minutes = max(1, int((ko - now).total_seconds() // 60))
+        kickoff_utc = ko.astimezone(timezone.utc).replace(tzinfo=None)
         _, created = emit_event(
             db, type="close_soon", dedupe_key=f"close:{m.match_id}:{now.strftime('%Y-%m-%d')}",
             severity=2, match_id=m.match_id,
             payload={"match_id": m.match_id, "match_no": m.match_no, "home": m.home,
                      "away": m.away, "kickoff": m.kickoff, "minutes": minutes},
             data_cutoff=now.strftime("%Y-%m-%d %H:%M:%S"),
+            expires_at=kickoff_utc,
         )
         made += int(created)
     return made

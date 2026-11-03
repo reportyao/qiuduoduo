@@ -45,12 +45,18 @@ _IP_HOURLY_LIMIT = 20
 
 # ---------------- JWT / refresh ----------------
 
+def _stub_allowed() -> bool:
+    """认证 stub 只允许显式 dev/test，绝不因为 env 拼写不同而 fail-open。"""
+    st = get_settings()
+    return bool(st.auth_stub and st.env in ("dev", "test"))
+
+
 def _secret() -> str:
     s = get_settings().jwt_secret
     if s:
         return s
-    if get_settings().env == "prod":
-        raise RuntimeError("JQ_JWT_SECRET 未配置：生产环境拒绝签发令牌")
+    if get_settings().env not in ("dev", "test"):
+        raise RuntimeError("JQ_JWT_SECRET 未配置：非开发环境拒绝签发令牌")
     return "dev-only-secret"
 
 
@@ -195,16 +201,16 @@ def send_code(db: Session, channel: str, target: str, purpose: str = "login",
         _ip_sends.setdefault(ip, []).append(now)
     _dispatch(channel, target, code)
     out = {"ok": True, "ttl": st.code_ttl_seconds}
-    if st.env != "prod" and st.auth_stub:
-        out["dev_code"] = code  # 仅非生产回显，便于联调
+    if _stub_allowed():
+        out["dev_code"] = code  # 仅 dev/test 回显，便于联调
     return out
 
 
 def _dispatch(channel: str, target: str, code: str) -> None:
-    """真实通道：SMS=腾讯云短信 / Email=Resend；未配置时生产直接抛错（fail loud）。"""
+    """真实通道：SMS=腾讯云短信 / Email=Resend；未配置时非 dev/test 直接抛错。"""
     st = get_settings()
-    if st.env == "prod" and st.auth_stub:
-        raise RuntimeError("生产环境禁止 auth_stub：请配置真实短信/邮件通道")
+    if st.auth_stub and not _stub_allowed():
+        raise RuntimeError("非 dev/test 环境禁止 auth_stub：请配置真实短信/邮件通道")
     if channel == "sms":
         if st.sms_provider == "tencent":
             # 未接入 SDK 前必须 fail loud，不能返回 200 但什么都不发。
@@ -247,7 +253,7 @@ _WECHAT_TOKEN_URL = "https://api.weixin.qq.com/sns/oauth2/access_token"
 def wechat_exchange(code: str) -> dict | None:
     """微信 code → {openid, unionid?}。stub：任意 code → 稳定假 openid。"""
     st = get_settings()
-    if st.env != "prod" and st.auth_stub:
+    if _stub_allowed():
         openid = "wx_" + hashlib.sha256(code.encode()).hexdigest()[:20]
         return {"openid": openid}
     if not (st.wechat_app_id and st.wechat_app_secret):
@@ -288,7 +294,7 @@ def verify_oauth(provider: str, id_token: str) -> dict | None:
     stub（仅非生产）：id_token = "stub:google:<sub>:<email>"
     """
     st = get_settings()
-    if st.env != "prod" and st.auth_stub and id_token.startswith("stub:"):
+    if _stub_allowed() and id_token.startswith("stub:"):
         parts = id_token.split(":")
         if len(parts) < 4 or parts[1] != provider:
             return None

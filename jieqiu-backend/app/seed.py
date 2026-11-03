@@ -13,13 +13,11 @@ import argparse
 import sys
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
-
 from .db import SessionLocal, init_db
-from .models import SPSnapshot
 from .modules.align import Aligner
 from .modules.intl_odds import sync_the_odds_api
 from .modules.ingest import import_collector_db
+from .modules.timeutil import trade_date_from_kickoff, trade_window
 from .modules.verdict import build_verdicts, promote_seal
 
 CN = timezone(timedelta(hours=8))
@@ -62,15 +60,13 @@ def main() -> int:
         n_xg, xg_note = sync_understat(now_utc)
         print(f"[xg] {xg_note}")
 
-        last = db.scalar(select(SPSnapshot.captured_at).order_by(SPSnapshot.captured_at.desc()).limit(1))
-        now_dt = (datetime.strptime(last[:19], "%Y-%m-%dT%H:%M:%S") if last
-                  else datetime.now(CN))
-        trade_date = args.date or now_dt.strftime("%Y-%m-%d")
-
-        next_day = (datetime.strptime(trade_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
-        start = max(f"{trade_date} 00:00:00", now_dt.strftime("%Y-%m-%d %H:%M:%S"))
-        end = f"{next_day} 04:59:59"
-        now_cn_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+        now_actual = datetime.now(CN)
+        # 销售日由墙钟决定（05:00 前仍算前一日）；--date 仅用于显式回填。
+        trade_date = args.date or trade_date_from_kickoff(now_actual)
+        start, end = trade_window(trade_date)
+        if not args.date:
+            start = max(start, now_actual.strftime("%Y-%m-%d %H:%M:%S"))
+        now_cn_str = now_actual.strftime("%Y-%m-%d %H:%M:%S")
 
         vs = build_verdicts(db, trade_date, now_cn_str, window_start=start, window_end=end)
         # 结算 + 当日锚点（W4）

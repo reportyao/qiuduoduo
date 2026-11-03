@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { useRouter } from "expo-router";
 import { View } from "react-native";
 import { Chip, Field, Text } from "@/components/ui";
@@ -35,7 +36,7 @@ export default function StakeToolScreen() {
       title="仓位计算"
       eyebrow="纪律 · 单注上限"
       description="先有正期望，再谈仓位。输入你的本金、估计胜率和赔率，凯利公式会给出数学上限；本工具强制最多 5% 本金。"
-      onBack={() => router.back()}
+      onBack={() => goBackOr(router)}
     >
       <Field label="本金" value={bankroll} onChangeText={setBankroll} keyboardType="number-pad" hint="单位：元" />
       <Field label="你估计的胜率" value={probability} onChangeText={setProbability} keyboardType="decimal-pad" hint="单位：%，例如 54" />

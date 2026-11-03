@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
@@ -54,7 +55,7 @@ export default function WatchScreen() {
         title="关注"
         subtitle="只推你关注的比赛"
         showAssistant={false}
-        onBack={() => router.back()}
+        onBack={() => goBackOr(router)}
       />
       <ScrollView
         showsVerticalScrollIndicator={false}

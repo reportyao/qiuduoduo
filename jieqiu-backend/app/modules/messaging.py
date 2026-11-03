@@ -100,13 +100,13 @@ def build_stream(db: Session, trade_date: str, cursor: str | None = None,
                  limit: int = 50, user=None) -> dict:
     # F7 非比赛日：当日窗口（00:00 ~ 次日 04:59）无任何场次 → 诚实空态 + 课程 + 复盘卡
     from sqlalchemy import func
-    from datetime import datetime as _dt, timedelta as _td
+    from .timeutil import trade_window
     try:
-        next_day = (_dt.strptime(trade_date, "%Y-%m-%d") + _td(days=1)).strftime("%Y-%m-%d")
-    except OverflowError:
-        next_day = trade_date  # 极端日期防御（fuzz）
+        start, end = trade_window(trade_date)
+    except ValueError:
+        start, end = f"{trade_date} 05:00:00", trade_date  # 极端日期防御
     n_today = db.scalar(select(func.count()).select_from(SPMatch).where(
-        SPMatch.kickoff >= f"{trade_date} 00:00:00", SPMatch.kickoff <= f"{next_day} 04:59:59"))
+        SPMatch.kickoff >= start, SPMatch.kickoff <= end))
     payload = rest_day_payload(trade_date) if not n_today else None
 
     if payload is not None:

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { goBackOr } from "@/lib/navigation";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
@@ -30,7 +31,7 @@ export default function WhyNotScreen() {
         title={data?.verdictKind === "pending" ? "为什么还不出" : "为什么不推"}
         subtitle={data?.league || "判决复核"}
         showAssistant={false}
-        onBack={() => router.back()}
+        onBack={() => goBackOr(router)}
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         {query.isLoading ? (
