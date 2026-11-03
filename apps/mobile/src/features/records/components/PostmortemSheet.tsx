@@ -1,7 +1,8 @@
 import { StyleSheet, View } from "react-native";
 import { useBetPostmortemQuery } from "@/features/records/queries";
 import { errorText } from "@/lib/errors";
-import { money, pct, pickDirectionLabel } from "@/lib/format";
+import { decimalToFormat, money, oddsFormatLabel, pct, pickDirectionLabel } from "@/lib/format";
+import { useOddsFormat } from "@/features/preferences/prefsStore";
 import { colors, spacing } from "@/theme/tokens";
 import { Card, ErrorState, KeyValueRow, Sheet, Skeleton, Text } from "@/components/ui";
 
@@ -14,6 +15,7 @@ export function PostmortemSheet({
 }) {
   const query = useBetPostmortemQuery(betId ?? undefined);
   const pm = query.data;
+  const oddsFormat = useOddsFormat();
 
   return (
     <Sheet
@@ -36,7 +38,13 @@ export function PostmortemSheet({
             <Text variant="h3">{pm.match}</Text>
             <Text variant="small" color={colors.muted}>
               {pm.pick?.dir
-                ? `${pickDirectionLabel(pm.pool, pm.pick.dir)} @${pm.pick.sp?.toFixed(2) ?? "--"}`
+                ? `${pickDirectionLabel(pm.pool, pm.pick.dir)} @${
+                  pm.bet?.sp != null
+                    ? `${decimalToFormat(pm.bet.sp, oddsFormat)}（${oddsFormatLabel(oddsFormat)}）`
+                    : pm.pick.sp != null
+                      ? decimalToFormat(pm.pick.sp, oddsFormat)
+                      : "--"
+                }`
                 : "未给方向"}
               {pm.settled ? ` · ${pm.settled === "win" ? "已中" : "未中"} ${pm.resultScore ?? ""}` : " · 待结算"}
             </Text>

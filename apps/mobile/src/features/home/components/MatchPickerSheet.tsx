@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
-import type { OnSaleItem, StreamResponse, VerdictSummary } from "@/domain/types";
-import { countdownText, formatTime } from "@/lib/format";
+import type { OnSaleItem, VerdictSummary } from "@/domain/types";
+import { countdownText, formatTime, tradeDateCnFromKickoff } from "@/lib/format";
 import { colors, radii, spacing } from "@/theme/tokens";
 import { Chip, Icon, Sheet, StatusDot, Text } from "@/components/ui";
 
@@ -17,12 +17,14 @@ interface Row {
   verdictId: string | null;
   status: string;
   gates: VerdictSummary["gates"] | null;
+  tradeDate: string;
 }
 
 interface MatchPickerSheetProps {
   visible: boolean;
   onClose: () => void;
-  stream: StreamResponse | null;
+  verdicts: VerdictSummary[];
+  streamDate: string;
   onsale: OnSaleItem[];
   onSelectVerdict: (id: string) => void;
   onSelectMatch: (matchId: string, date: string) => void;
@@ -31,7 +33,8 @@ interface MatchPickerSheetProps {
 export function MatchPickerSheet({
   visible,
   onClose,
-  stream,
+  verdicts,
+  streamDate,
   onsale,
   onSelectVerdict,
   onSelectMatch,
@@ -41,7 +44,7 @@ export function MatchPickerSheet({
 
   const rows = useMemo(() => {
     const byMatch = new Map<string, Row>();
-    for (const verdict of stream?.verdicts ?? []) {
+    for (const verdict of verdicts) {
       byMatch.set(verdict.matchId, {
         matchId: verdict.matchId,
         matchNo: verdict.matchNo,
@@ -52,6 +55,7 @@ export function MatchPickerSheet({
         verdictId: verdict.id,
         status: verdict.status,
         gates: verdict.gates,
+        tradeDate: streamDate,
       });
     }
     for (const match of onsale) {
@@ -63,9 +67,10 @@ export function MatchPickerSheet({
         away: match.away,
         kickoff: match.kickoff,
         close: match.saleClose,
-        verdictId: null,
+        verdictId: match.verdictId,
         status: match.status ?? "onsale",
         gates: match.gates,
+        tradeDate: tradeDateCnFromKickoff(match.kickoff),
       });
     }
     const list = Array.from(byMatch.values());
@@ -80,13 +85,13 @@ export function MatchPickerSheet({
       return true;
     });
     return filtered.sort((a, b) => a.close.localeCompare(b.close));
-  }, [filter, onsale, query, stream]);
+  }, [filter, onsale, query, streamDate, verdicts]);
 
   return (
     <Sheet
       visible={visible}
       onClose={onClose}
-      title="今日比赛"
+      title="选一场比赛"
       subtitle="点一场，先看账再决定。没把握的场次会明确标出。"
     >
       <View style={styles.search}>
@@ -121,7 +126,7 @@ export function MatchPickerSheet({
               onPress={() => {
                 onClose();
                 if (row.verdictId) onSelectVerdict(row.verdictId);
-                else onSelectMatch(row.matchId, stream?.tradeDate ?? "");
+                else onSelectMatch(row.matchId, row.tradeDate);
               }}
               accessibilityRole="button"
               accessibilityLabel={`${row.home} 对 ${row.away}`}

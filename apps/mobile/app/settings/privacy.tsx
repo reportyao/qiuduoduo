@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Alert, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -16,29 +16,31 @@ import {
   useExportQuery,
 } from "@/features/account/queries";
 import { errorText } from "@/lib/errors";
+import { useAuthStore } from "@/features/auth/authStore";
 import { colors } from "@/theme/tokens";
 
 export default function PrivacyScreen() {
   const router = useRouter();
   const toast = useToast();
-  const [exportRequested, setExportRequested] = useState(false);
   const [deleted, setDeleted] = useState(false);
-  const exportQuery = useExportQuery(exportRequested);
+  const exportQuery = useExportQuery(false);
   const deleteAccount = useDeleteAccountMutation();
-  const copiedRef = useRef(false);
 
-  useEffect(() => {
-    if (!exportQuery.data || copiedRef.current) return;
-    copiedRef.current = true;
-    void Clipboard.setStringAsync(JSON.stringify(exportQuery.data, null, 2))
-      .then(() => toast.show("JSON 已复制到剪贴板", "success"))
-      .catch(() => toast.show("复制失败，请重试", "error"));
-  }, [exportQuery.data, toast]);
+  const exportData = async () => {
+    try {
+      const result = await exportQuery.refetch();
+      if (!result.data) throw result.error ?? new Error("没有导出数据");
+      await Clipboard.setStringAsync(JSON.stringify(result.data, null, 2));
+      toast.show("JSON 已复制到剪贴板", "success");
+    } catch (e) {
+      toast.show(errorText(e), "error");
+    }
+  };
 
   const confirmDelete = () => {
     Alert.alert(
       "注销账号",
-      "进入 7 天冷静期。期间用同一设备令牌登录即自动撤回注销；期满后数据会被清除。",
+      "进入 7 天冷静期。期间用原手机号重新登录即自动撤回注销；期满后数据会被清除。",
       [
         { text: "取消", style: "cancel" },
         {
@@ -48,7 +50,11 @@ export default function PrivacyScreen() {
             try {
               const out = await deleteAccount.mutateAsync();
               setDeleted(true);
+              // 注销后后端对原账号的所有请求返回 410；必须结束本地会话，
+              // 否则 UI 仍显示已登录、每个查询都在报错。
+              await useAuthStore.getState().logout();
               toast.show(out.message, "warning");
+              router.replace("/(tabs)");
             } catch (e) {
               toast.show(errorText(e), "error");
             }
@@ -77,10 +83,7 @@ export default function PrivacyScreen() {
           title="导出数据"
           subtitle="JSON 复制到剪贴板，包含账号、注单与记忆"
           icon="download-outline"
-          onPress={() => {
-            copiedRef.current = false;
-            setExportRequested(true);
-          }}
+          onPress={exportData}
           right={
             exportQuery.isFetching ? (
               <Text variant="caption" color={colors.muted}>导出中…</Text>

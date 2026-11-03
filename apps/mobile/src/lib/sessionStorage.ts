@@ -9,8 +9,9 @@ import * as SecureStore from "expo-secure-store";
 export async function readSessionRaw(key: string): Promise<string | null> {
   if (Platform.OS !== "web") {
     try {
-      const value = await SecureStore.getItemAsync(key);
-      if (value != null) return value;
+      // 成功读到 null 就是「没有会话」；只有 SecureStore 抛错才回落，
+      // 否则旧的 AsyncStorage 副本会在登出后把账号“复活”。
+      return await SecureStore.getItemAsync(key);
     } catch {
       // 继续回落
     }
@@ -26,6 +27,8 @@ export async function writeSessionRaw(key: string, value: string | null): Promis
       } else {
         await SecureStore.setItemAsync(key, value);
       }
+      // 清理可能存在的旧 AsyncStorage 副本，避免双写不一致。
+      await AsyncStorage.removeItem(key);
       return;
     } catch {
       // 继续回落

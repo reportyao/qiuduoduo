@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
 import { Card, Text } from "@/components/ui";
-import { useDisclosureQuery, useLegalQuery } from "@/features/account/queries";
+import { useDisclosureQuery, useLegalQuery, useMeQuery } from "@/features/account/queries";
 import { colors, layout, spacing } from "@/theme/tokens";
 
 const TITLES: Record<string, string> = {
@@ -16,7 +16,8 @@ export default function LegalScreen() {
   const router = useRouter();
   const { doc } = useLocalSearchParams<{ doc?: string }>();
   const key = doc === "privacy" || doc === "ai" ? doc : "terms";
-  const legal = useLegalQuery();
+  const me = useMeQuery();
+  const legal = useLegalQuery(me.data?.region ?? "cn");
   const disclosure = useDisclosureQuery();
 
   return (

@@ -40,6 +40,11 @@ export function createApiClient(config: ApiClientConfig) {
 
   const middleware: Middleware = {
     async onRequest({ request }) {
+      // 所有请求统一 12s 超时，避免弱网下无限等待；调用方仍可传入自己的 signal。
+      const controller = new AbortController();
+      // 计时器在 fetch 结束后即使触发也只是 abort 一个已结算请求，无副作用。
+      setTimeout(() => controller.abort(), 12_000);
+      request = new Request(request, { signal: controller.signal });
       const token = await config.getToken?.();
       if (token) {
         request.headers.set("Authorization", `Bearer ${token}`);

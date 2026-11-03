@@ -11,7 +11,9 @@ import {
   useToast,
 } from "@/components/ui";
 import { useComplianceStore, type ExclusionChoice } from "@/features/compliance/complianceStore";
-import { useLegalQuery } from "@/features/account/queries";
+import { useLegalQuery, useMeQuery } from "@/features/account/queries";
+import { api } from "@/lib/api";
+import { callApi } from "@/lib/callApi";
 import { colors, spacing } from "@/theme/tokens";
 
 const QUESTIONS = [
@@ -46,7 +48,8 @@ export default function ComplianceScreen() {
   const exclude = useComplianceStore((s) => s.exclude);
   const setPgsi = useComplianceStore((s) => s.setPgsi);
   const lastScore = useComplianceStore((s) => s.lastPgsiScore);
-  const legal = useLegalQuery();
+  const me = useMeQuery();
+  const legal = useLegalQuery(me.data?.region ?? "cn");
   const [answers, setAnswers] = useState<number[]>(Array(QUESTIONS.length).fill(-1));
   const [submitted, setSubmitted] = useState(false);
   const score = useMemo(
@@ -68,6 +71,11 @@ export default function ComplianceScreen() {
           style: "destructive",
           onPress: () => {
             exclude(choice);
+            // 服务端通知偏好同步暂停，尽量避免排除期间仍收到推送；
+            // 失败不阻塞本机强制拦截（离线也必须能自我排除）。
+            void callApi(
+              api.client.PUT("/me/notify-settings", { body: { paused: true } }),
+            ).catch(() => {});
             toast.show("自排除已生效", "warning");
             router.replace("/paused");
           },

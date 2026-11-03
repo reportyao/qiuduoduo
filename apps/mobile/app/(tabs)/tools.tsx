@@ -6,7 +6,7 @@ import { Card, Chip, Icon, Text } from "@/components/ui";
 import type { IconName } from "@/components/ui";
 import { useStreamQuery } from "@/features/home/queries";
 import { usePersonaContent } from "@/features/personas/usePersona";
-import { todayCn } from "@/lib/format";
+import { currentTradeDateCn } from "@/lib/format";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 
 interface Tool {
@@ -31,7 +31,7 @@ const TOOLS: Tool[] = [
 export default function ToolsScreen() {
   const router = useRouter();
   const { copy } = usePersonaContent();
-  const streamQuery = useStreamQuery(todayCn());
+  const streamQuery = useStreamQuery(currentTradeDateCn());
   const stream = streamQuery.data?.pages[0];
   const stats = stream?.stats;
 

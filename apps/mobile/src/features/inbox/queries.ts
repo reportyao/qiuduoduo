@@ -14,6 +14,7 @@ export const inboxKeys = {
 
 export function useInboxQuery(unreadOnly = false) {
   const ready = useAuthStore((s) => s.ready);
+  const hasSession = useAuthStore((s) => Boolean(s.session));
   const userId = useAuthStore((s) => s.session?.userId ?? "anon");
   return useQuery({
     queryKey: [...inboxKeys.list, userId, unreadOnly],
@@ -26,12 +27,13 @@ export function useInboxQuery(unreadOnly = false) {
       return adaptInbox(raw) as InboxResponse;
     },
     staleTime: 15_000,
-    enabled: ready,
+    enabled: ready && hasSession,
   });
 }
 
 export function useUnreadCountQuery() {
   const ready = useAuthStore((s) => s.ready);
+  const hasSession = useAuthStore((s) => Boolean(s.session));
   const userId = useAuthStore((s) => s.session?.userId ?? "anon");
   return useQuery({
     queryKey: [...inboxKeys.unread, userId],
@@ -41,7 +43,7 @@ export function useUnreadCountQuery() {
     },
     staleTime: 30_000,
     refetchInterval: 60_000,
-    enabled: ready,
+    enabled: ready && hasSession,
   });
 }
 
@@ -83,6 +85,7 @@ export function useInboxMutations() {
 
 export function useWatchQuery() {
   const ready = useAuthStore((s) => s.ready);
+  const hasSession = useAuthStore((s) => Boolean(s.session));
   const userId = useAuthStore((s) => s.session?.userId ?? "anon");
   return useQuery({
     queryKey: [...inboxKeys.watch, userId],
@@ -91,7 +94,7 @@ export function useWatchQuery() {
       return adaptWatch(raw) as WatchItem[];
     },
     staleTime: 30_000,
-    enabled: ready,
+    enabled: ready && hasSession,
   });
 }
 
@@ -113,6 +116,7 @@ export function useRemoveWatchMutation() {
 
 export function useNotifySettingsQuery() {
   const ready = useAuthStore((s) => s.ready);
+  const hasSession = useAuthStore((s) => Boolean(s.session));
   const userId = useAuthStore((s) => s.session?.userId ?? "anon");
   return useQuery({
     queryKey: [...inboxKeys.notify, userId],
@@ -121,7 +125,7 @@ export function useNotifySettingsQuery() {
       return adaptNotify(raw) as NotifySettings;
     },
     staleTime: 30_000,
-    enabled: ready,
+    enabled: ready && hasSession,
   });
 }
 

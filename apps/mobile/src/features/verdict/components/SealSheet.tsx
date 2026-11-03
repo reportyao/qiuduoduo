@@ -10,10 +10,11 @@ import { haptic } from "@/lib/haptics";
 interface SealSheetProps {
   visible: boolean;
   verdictId: string | null;
+  sealed?: boolean;
   onClose: () => void;
 }
 
-export function SealSheet({ visible, verdictId, onClose }: SealSheetProps) {
+export function SealSheet({ visible, verdictId, sealed = true, onClose }: SealSheetProps) {
   const query = useSealQuery(verdictId ?? undefined, visible);
   const toast = useToast();
   const seal = query.data;
@@ -47,15 +48,27 @@ export function SealSheet({ visible, verdictId, onClose }: SealSheetProps) {
         <ErrorState message="封存详情暂时取不到，可能是网络问题。" onRetry={() => query.refetch()} />
       ) : seal ? (
         <>
-          <View style={[styles.verify, seal.match ? styles.verifyOk : styles.verifyBad]}>
+          <View
+            style={[
+              styles.verify,
+              !sealed ? styles.verifyPending : seal.match ? styles.verifyOk : styles.verifyBad,
+            ]}
+          >
             <Icon
-              name={seal.match ? "shield-checkmark" : "alert-circle"}
+              name={!sealed ? "time-outline" : seal.match ? "shield-checkmark" : "alert-circle"}
               size={22}
-              color={seal.match ? colors.green : colors.danger}
+              color={!sealed ? colors.amber : seal.match ? colors.green : colors.danger}
             />
             <View style={styles.flex}>
-              <Text variant="bodyStrong" color={seal.match ? colors.green : colors.danger}>
-                {seal.match ? "自检通过 · 哈希一致" : "自检失败 · 内容被改动过"}
+              <Text
+                variant="bodyStrong"
+                color={!sealed ? colors.amber : seal.match ? colors.green : colors.danger}
+              >
+                {!sealed
+                  ? "尚未封存 · 当前载荷预览"
+                  : seal.match
+                    ? "自检通过 · 哈希一致"
+                    : "自检失败 · 内容被改动过"}
               </Text>
               <Text variant="caption" color={colors.muted}>
                 {seal.algorithm} · {seal.revisionCount} 次修订
@@ -102,6 +115,7 @@ const styles = StyleSheet.create({
   },
   verifyOk: { backgroundColor: colors.greenSoft },
   verifyBad: { backgroundColor: colors.dangerSoft },
+  verifyPending: { backgroundColor: colors.amberSoft },
   kvBlock: {
     backgroundColor: colors.bgElevated,
     borderRadius: radii.md,

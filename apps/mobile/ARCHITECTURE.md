@@ -65,7 +65,7 @@ src/
 
 ### 4.2 查询
 
-- 公共数据：`stream` / `on-sale` / `ledger` / `verdict detail` 无需登录。
+- 公共数据：`on-sale` / `ledger` / `verdict detail` 无需登录；`stream` 含个人 `you` 块，queryKey 也带 userId。
 - 用户数据：`me` / `bets` / `weekly` / `inbox` / `watch` / `notify-settings` 的 queryKey 都带 `userId`，防止切换账号后串数据。
 - 所有需要登录的查询都 `enabled: authReady`；深链冷启动不会在设备身份就绪前打 401。
 - 写入后按前缀失效（如 `["bets"]`）即可匹配带 userId 的 key。
@@ -76,7 +76,7 @@ src/
 
 1. 启动读 `jieqiu.session.v1`（native SecureStore，Web/不可用时 AsyncStorage）。
 2. 无会话 → `POST /auth/device` 创建游客身份。
-3. JWT 到期前 30s 自动 `POST /auth/refresh`；刷新失败回落设备令牌。
+3. JWT 到期前 30s 自动 `POST /auth/refresh`；刷新失败不把设备令牌伪装成账号，结束会话并创建新游客，账号数据需重新登录。
 4. 手机号验证码登录会携带 `device_token`，后端把游客的注单/记忆/关注/通知合并到手机号账号（见 `merge_device_account`）。
 5. 退出登录必须生成新的游客设备令牌，不能复用已合并的旧令牌。
 

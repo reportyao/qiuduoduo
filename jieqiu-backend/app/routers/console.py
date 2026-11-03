@@ -52,6 +52,12 @@ def _ip_allowed(request: Request) -> bool:
     return request.client.host in ips if request.client else False
 
 
+def require_console(request: Request) -> None:
+    """管理接口复用控制台会话；未登录直接 401。"""
+    if not _authed(request):
+        raise HTTPException(401, "需要控制台登录")
+
+
 def _authed(request: Request) -> bool:
     tok = request.query_params.get("t") or request.cookies.get("console_t")
     if not tok or tok not in _SESSIONS:

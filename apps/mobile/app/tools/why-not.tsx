@@ -8,7 +8,7 @@ import { useStreamQuery } from "@/features/home/queries";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import type { GateKey } from "@/domain/types";
 import { errorText } from "@/lib/errors";
-import { pct, todayCn } from "@/lib/format";
+import { currentTradeDateCn, pct } from "@/lib/format";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 import { gateTone } from "@/features/verdict/components/Gates";
 
@@ -25,7 +25,7 @@ interface Row {
 export default function WhyNotListScreen() {
   const router = useRouter();
   const { copy } = usePersonaContent();
-  const query = useStreamQuery(todayCn());
+  const query = useStreamQuery(currentTradeDateCn());
   const stream = query.data?.pages[0];
 
   const rows = useMemo<Row[]>(() => {
@@ -85,7 +85,7 @@ export default function WhyNotListScreen() {
               return (
                 <Pressable
                   key={`${row.status}-${row.matchId}-${row.matchNo}`}
-                  onPress={() => router.push({ pathname: "/match/[id]", params: { id: row.matchId, date: stream?.tradeDate ?? todayCn() } })}
+                  onPress={() => router.push({ pathname: "/match/[id]", params: { id: row.matchId, date: stream?.tradeDate ?? currentTradeDateCn() } })}
                   accessibilityRole="button"
                   accessibilityLabel={`${row.home} 对 ${row.away}，${row.status === "killed" ? "已砍" : "复核中"}`}
                   style={({ pressed }) => [styles.row, pressed && styles.pressed]}

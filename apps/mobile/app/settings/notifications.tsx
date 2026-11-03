@@ -75,13 +75,13 @@ export default function NotificationsScreen() {
 
   return (
     <SettingsPage title="通知设置" subtitle="只推你关心的" onBack={() => router.back()}>
-      {query.isLoading || !draft ? (
+      {query.isError && !draft ? (
+        <ErrorState message={errorText(query.error)} onRetry={() => query.refetch()} />
+      ) : query.isLoading || !draft ? (
         <View style={{ gap: spacing.sm }}>
           <Skeleton height={120} radius={18} />
           <Skeleton height={160} radius={18} />
         </View>
-      ) : query.isError ? (
-        <ErrorState message={errorText(query.error)} onRetry={() => query.refetch()} />
       ) : (
         <>
           <Card style={styles.notice}>

@@ -43,7 +43,7 @@ export function AppHeader({
         border && styles.border,
       ]}
     >
-      <View style={styles.side}>
+      <View style={styles.side} pointerEvents="box-none">
         {onBack ? (
           <IconButton name="arrow-back" onPress={onBack} accessibilityLabel={backLabel} size={19} />
         ) : null}
@@ -71,7 +71,7 @@ export function AppHeader({
         </Pressable>
       ) : null}
 
-      <View style={[styles.side, styles.right]}>{right}</View>
+      <View style={[styles.side, styles.right]} pointerEvents="box-none">{right}</View>
     </View>
   );
 }

@@ -9,6 +9,7 @@ export type ExclusionChoice = 7 | 30 | "permanent";
 interface PersistedCompliance {
   excludedUntil: number | null;
   excludedAt: number | null;
+  excludedPermanent: boolean;
   lastPgsiScore: number | null;
   lastPgsiAt: number | null;
 }
@@ -23,6 +24,7 @@ interface ComplianceState extends PersistedCompliance {
 const DEFAULTS: PersistedCompliance = {
   excludedUntil: null,
   excludedAt: null,
+  excludedPermanent: false,
   lastPgsiScore: null,
   lastPgsiAt: null,
 };
@@ -33,6 +35,7 @@ function persist(state: ComplianceState): void {
     JSON.stringify({
       excludedUntil: state.excludedUntil,
       excludedAt: state.excludedAt,
+      excludedPermanent: state.excludedPermanent,
       lastPgsiScore: state.lastPgsiScore,
       lastPgsiAt: state.lastPgsiAt,
     }),
@@ -51,11 +54,15 @@ export const useComplianceStore = create<ComplianceState>((set, get) => ({
         set({
           excludedUntil: typeof parsed.excludedUntil === "number" ? parsed.excludedUntil : null,
           excludedAt: typeof parsed.excludedAt === "number" ? parsed.excludedAt : null,
+          excludedPermanent: Boolean(parsed.excludedPermanent),
           lastPgsiScore:
             typeof parsed.lastPgsiScore === "number" ? parsed.lastPgsiScore : null,
           lastPgsiAt: typeof parsed.lastPgsiAt === "number" ? parsed.lastPgsiAt : null,
         });
       }
+    } catch {
+      // 读取失败不能把已有的自排除静默清掉；保持默认但标记 hydrated，
+      // 服务端同步/重新进入页面时会再次校验。
     } finally {
       set({ hydrated: true });
     }
@@ -65,7 +72,11 @@ export const useComplianceStore = create<ComplianceState>((set, get) => ({
     const now = Date.now();
     const until =
       choice === "permanent" ? PERMANENT_UNTIL : now + choice * 24 * 60 * 60 * 1000;
-    set({ excludedUntil: until, excludedAt: now });
+    set({
+      excludedUntil: until,
+      excludedAt: now,
+      excludedPermanent: choice === "permanent",
+    });
     persist(get());
   },
 
@@ -85,5 +96,6 @@ export function isExcluded(until: number | null, now = Date.now()): boolean {
  */
 export function useExcluded(): boolean {
   const until = useComplianceStore((s) => s.excludedUntil);
-  return isExcluded(until);
+  const permanent = useComplianceStore((s) => s.excludedPermanent);
+  return permanent || isExcluded(until);
 }

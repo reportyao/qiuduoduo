@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from ...db import get_db
 from ...models import (Notification, NotifySettings, PushToken, SPMatch,
                       User, WatchTarget)
-from ...modules.users import user_from_token
+from ...modules.users import is_deleted, user_from_token
 
 router = APIRouter(tags=["assistant"])
 
@@ -21,6 +21,11 @@ def current_user(authorization: str | None = Header(default=None),
     u = user_from_token(db, authorization)
     if u is None:
         raise HTTPException(401, "未登录")
+    if is_deleted(u):
+        raise HTTPException(410, detail={
+            "error": "account_deleted", "cooldown_days": 7,
+            "message": "账号处于注销冷静期，暂不可用。",
+        })
     return u
 
 
@@ -312,7 +317,12 @@ def push_register(body: PushRegister, user: User = Depends(current_user),
                         app_version=body.app_version[:32])
         db.add(row)
     else:
-        row.user_id = user.id
+        if row.user_id != user.id:
+            owner = db.get(User, row.user_id)
+            if owner is not None and not is_deleted(owner):
+                raise HTTPException(409, "该推送令牌已绑定其他账号，请先解绑")
+            # 原账号已注销时允许新设备接管，避免永久占用唯一令牌。
+            row.user_id = user.id
         row.platform = body.platform
         row.enabled = True
         row.failure_count = 0

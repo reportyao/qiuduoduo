@@ -62,7 +62,7 @@ export function SealLine({
   );
   if (!onPress) return content;
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="查看封存与验证">
+    <Pressable onPress={onPress} hitSlop={8} accessibilityRole="button" accessibilityLabel="查看封存与验证">
       {content}
     </Pressable>
   );

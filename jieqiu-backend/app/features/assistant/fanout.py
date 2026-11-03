@@ -118,7 +118,12 @@ def _recipients(db: Session, event: Event) -> tuple[set[str], set[str], dict[str
         select(Bet.user_id).join(Verdict, Bet.verdict_id == Verdict.id)
         .where(Verdict.match_id == event.match_id)).all())
     users |= bet_users
-    return users, bet_users, watch_filter
+    # 注销冷静期/已删除账号不再收任何站内信或推送。
+    valid = set(db.scalars(select(User.id).where(
+        User.id.in_(list(users)), User.deleted_at.is_(None))).all()) if users else set()
+    bet_users &= valid
+    watch_filter = {uid: events for uid, events in watch_filter.items() if uid in valid}
+    return valid, bet_users, watch_filter
 
 
 def fanout_events(db: Session, limit: int = 100, now_cn: datetime | None = None) -> dict:

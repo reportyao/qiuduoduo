@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -5,15 +6,21 @@ import { Button, Card, Text } from "@/components/ui";
 import { useComplianceStore } from "@/features/compliance/complianceStore";
 import { useLegalQuery } from "@/features/account/queries";
 import { formatDate, formatTime } from "@/lib/format";
+import { useNow } from "@/lib/useNow";
 import { colors, layout, spacing } from "@/theme/tokens";
 
 export default function PausedScreen() {
   const router = useRouter();
   const until = useComplianceStore((s) => s.excludedUntil);
+  const permanent = useComplianceStore((s) => s.excludedPermanent);
   const legal = useLegalQuery();
-  const remainingDays = until
-    ? Math.max(0, Math.ceil((until - Date.now()) / 86_400_000))
-    : 0;
+  const now = useNow(60_000);
+  const active = permanent || (until != null && until > now);
+  const remainingDays = until ? Math.max(0, Math.ceil((until - now) / 86_400_000)) : 0;
+
+  useEffect(() => {
+    if (!active) router.replace("/(tabs)");
+  }, [active, router]);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -26,17 +33,23 @@ export default function PausedScreen() {
         <Text variant="overline" color={colors.amber}>自排除生效中</Text>
         <Text variant="display" center style={styles.title}>先停一停。</Text>
         <Text variant="body" color={colors.muted} center style={styles.lead}>
-          在这段时间里，解球不会给你看判断、记录，也不会推送任何赛事内容。到期前不可撤销。
+          在这段时间里，这台设备不会给你看判断与记录；已登录账号会同步暂停通知。到期前不可撤销。
         </Text>
       </View>
 
       <Card tone="amber" style={styles.card}>
-        <Text variant="caption" color={colors.amber}>结束时间</Text>
+        <Text variant="caption" color={colors.amber}>{permanent ? "期限" : "结束时间"}</Text>
         <Text variant="h2">
-          {until ? `${formatDate(new Date(until))} ${formatTime(new Date(until))}` : "—"}
+          {permanent
+            ? "永久生效"
+            : until
+              ? `${formatDate(new Date(until))} ${formatTime(new Date(until))}`
+              : "—"}
         </Text>
         <Text variant="small" color={colors.muted}>
-          还剩约 {remainingDays} 天。到期后会恢复基础功能，但不会自动恢复营销。
+          {permanent
+            ? "永久自排除不会自动恢复；当前为设备级记录，服务端人工解除流程尚未接入。"
+            : `还剩约 ${remainingDays} 天。到期后会恢复基础功能，但不会自动恢复营销。`}
         </Text>
       </Card>
 

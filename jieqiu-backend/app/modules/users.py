@@ -113,6 +113,19 @@ def replay_streak(results: list[str], threshold: int = 3) -> dict:
     return {"streak": streak, "triggered": streak >= threshold, "threshold": threshold}
 
 
+def bet_pnl(bet: Bet, verdict: Verdict) -> float | None:
+    """按注单赔率快照计算真实盈亏：赢 = 本金×(SP−1)，输 = −本金。"""
+    if not verdict.settled:
+        return None
+    if verdict.settled == "lose":
+        return round(-bet.amount, 2)
+    sp = bet.sp or (verdict.pick or {}).get("sp")
+    if isinstance(sp, (int, float)) and sp > 1:
+        return round(bet.amount * (float(sp) - 1), 2)
+    # 旧注单没有赔率快照：只能用本金兜底并保持符号正确。
+    return round(bet.amount, 2)
+
+
 def user_streak(db: Session, user: User) -> dict:
     """用户当前连败（基于其已结算注单，按判决开赛时间排序）。"""
     rows = db.execute(
@@ -124,7 +137,7 @@ def user_streak(db: Session, user: User) -> dict:
     results = [v.settled for _, v in rows]
     rep = replay_streak(results)
     active = bool(user.discipline_on and rep["triggered"])
-    pnl = sum((b.amount if v.settled == "win" else -b.amount) for b, v in rows)
+    pnl = sum((bet_pnl(b, v) or 0) for b, v in rows)
     return rep | {"active": active, "discipline_on": user.discipline_on,
                   "settled_bets": len(rows), "pnl": round(pnl, 2),
                   "rested": bool(user.rested_until and user.rested_until >= today_cn()),

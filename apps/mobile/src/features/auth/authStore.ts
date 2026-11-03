@@ -22,6 +22,8 @@ interface AuthState {
 }
 
 let refreshInFlight: Promise<string | null> | null = null;
+// 会话代际：登录/登出/切换身份时递增；旧刷新回调发现代际变化后必须丢弃结果。
+let authEpoch = 0;
 
 async function saveSession(session: AuthSession | null): Promise<void> {
   try {
@@ -117,10 +119,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   bootstrap: async () => {
     const stored = await loadSession();
     if (stored) {
+      authEpoch += 1;
       set({ session: stored });
       if (stored.mode === "jwt") {
-        // 启动时就刷新一次，避免首屏批量 401；失败则保留设备身份。
+        // 启动时就刷新一次，避免首屏批量 401；失败会转为游客身份。
         await get().getAccessToken();
+      }
+      if (!get().session) {
+        await get().loginWithDevice().catch(() => {});
       }
       set({ ready: true });
       return;
@@ -149,6 +155,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   loginWithPhone: async (phone, code) => {
+    // 让仍在飞的旧刷新失效，避免它在新会话建立后写回旧账号。
+    authEpoch += 1;
     set({ loggingIn: true, lastError: null });
     try {
       const out = await requestJson<PhoneLoginResponse>("/auth/sms/verify", {
@@ -160,18 +168,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           device_token: get().session?.deviceToken ?? null,
         }),
       });
-      const previousDevice = get().session?.deviceToken ?? null;
       const session: AuthSession = {
         accessToken: out.access_token,
         refreshToken: out.refresh_token,
         expiresAt: Date.now() + out.expires_in * 1000,
-        deviceToken: previousDevice,
+        // 登录后不再把设备令牌当账号凭证保存；刷新失败一律回到游客/登录页。
+        deviceToken: null,
         userId: out.user.user_id,
         mode: "jwt",
         displayName: out.user.display_name ?? null,
       };
       set({ session });
       await saveSession(session);
+      if (get().session !== session) {
+        await saveSession(get().session);
+      }
       return { merged: out.merged ?? {} };
     } catch (error) {
       const message = error instanceof ApiError ? error.message : "登录失败";
@@ -183,6 +194,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   loginWithDevice: async (deviceTokenOverride) => {
+    authEpoch += 1;
     const existing = get().session;
     const deviceToken = deviceTokenOverride ?? existing?.deviceToken ?? Crypto.randomUUID();
     const out = await requestJson<DeviceLoginResponse>("/auth/device", {
@@ -213,6 +225,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!session.refreshToken) return session.accessToken;
 
     if (refreshInFlight) return refreshInFlight;
+    const epoch = authEpoch;
+    const sessionAtStart = session;
     refreshInFlight = (async () => {
       try {
         const out = await requestJson<{
@@ -224,30 +238,41 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           body: JSON.stringify({ refresh_token: session.refreshToken }),
         });
         const next: AuthSession = {
-          ...session,
+          ...sessionAtStart,
           accessToken: out.access_token,
           refreshToken: out.refresh_token,
           expiresAt: Date.now() + out.expires_in * 1000,
         };
+        // 登录/登出已经把会话换代：丢弃旧刷新结果，绝不能把旧账号写回来。
+        if (authEpoch !== epoch || get().session !== sessionAtStart) {
+          return get().session?.mode === "jwt" ? get().session!.accessToken : null;
+        }
         set({ session: next });
         await saveSession(next);
+        // 存储写入期间若发生登出/换号，把最新会话再写回去，防止旧刷新覆盖。
+        if (authEpoch !== epoch) {
+          await saveSession(get().session);
+          return get().session?.mode === "jwt" ? get().session!.accessToken : null;
+        }
         return next.accessToken;
-      } catch {
-        // 刷新失败：清掉 JWT 但保留设备令牌，用户可继续匿名使用或重新登录。
-        const fallback: AuthSession | null = session.deviceToken
-          ? {
-              accessToken: session.deviceToken,
-              refreshToken: null,
-              expiresAt: null,
-              deviceToken: session.deviceToken,
-              userId: null,
-              mode: "device",
-              displayName: null,
-            }
-          : null;
-        set({ session: fallback });
-        await saveSession(fallback);
-        return fallback?.deviceToken ?? null;
+      } catch (error) {
+        if (authEpoch !== epoch || get().session !== sessionAtStart) {
+          return get().session?.mode === "jwt" ? get().session!.accessToken : null;
+        }
+        // 网络瞬断不销毁会话；明确的 401/403 才登出，避免静默保留失效令牌。
+        if (error instanceof ApiError && error.status === 0) {
+          return sessionAtStart.accessToken;
+        }
+        set({ session: null });
+        await saveSession(null);
+        // JWT 不可恢复：自动创建一个新游客，保证公开判决/查询仍可用；
+        // 需要账号数据时用户重新登录即可。
+        try {
+          await get().loginWithDevice(Crypto.randomUUID());
+          return get().session?.deviceToken ?? null;
+        } catch {
+          return null;
+        }
       } finally {
         refreshInFlight = null;
       }
@@ -256,17 +281,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    const session = get().session;
-    if (session?.refreshToken) {
-      await requestJson<{ ok: boolean }>("/auth/logout", {
-        method: "POST",
-        body: JSON.stringify({ refresh_token: session.refreshToken }),
-      }).catch(() => {});
-    }
-    // 退出后必须是新的游客身份；复用旧设备令牌会在账号合并后把用户直接登回去。
+    authEpoch += 1;
+    refreshInFlight = null;
+    const refreshToken = get().session?.refreshToken ?? null;
+    // 先本地登出，避免服务端撤销请求超时把用户卡在“退出中”。
     const deviceToken = Crypto.randomUUID();
     set({ session: null });
     await saveSession(null);
+    if (refreshToken) {
+      void requestJson<{ ok: boolean }>("/auth/logout", {
+        method: "POST",
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      }).catch(() => {});
+    }
+    // 退出后必须是新的游客身份；复用旧设备令牌会在账号合并后把用户直接登回去。
     await get().loginWithDevice(deviceToken).catch(() => {
       set({ ready: true });
     });

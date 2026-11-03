@@ -7,6 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
+from datetime import datetime, timezone
+from sqlalchemy.exc import IntegrityError
 from ..models import Bet, User, Verdict
 from ..modules import users as U
 from ..modules.chat import respond
@@ -144,7 +146,7 @@ def me_delete(user: User = Depends(current_user), db: Session = Depends(get_db))
     """注销（冷静期 7 天）：打标不删数据；同令牌登录即撤回。"""
     U.soft_delete(db, user)
     return {"deleted": True, "cooldown_days": 7,
-            "message": "进入 7 天冷静期。期间用同一设备令牌登录即自动撤回注销；期满数据将被清除。"}
+            "message": "进入 7 天冷静期。期间用原手机号登录即自动撤回注销；期满数据将被清除。"}
 
 
 # ---------- F11 连败保护 / F7 休息 ----------
@@ -211,6 +213,10 @@ def bet_create(body: BetBody, user: User = Depends(current_user),
         raise HTTPException(404, "verdict not found")
     if v.status != "promoted":
         raise HTTPException(422, "只能记已晋升（三关全过）的判决——这是产品纪律")
+    if v.settled is not None:
+        raise HTTPException(422, "这场已经结算，不能补记")
+    if v.kickoff <= datetime.now(U.CN).strftime("%Y-%m-%d %H:%M:%S"):
+        raise HTTPException(422, "这场已经停售，不能补记")
     # F11 行为面：连败保护触发时，加注前必须显式确认（先于重复检查——保护优先提醒）
     st = U.user_streak(db, user)
     if st["active"] and not body.confirm:
@@ -222,9 +228,13 @@ def bet_create(body: BetBody, user: User = Depends(current_user),
     if db.scalar(select(Bet).where(Bet.user_id == user.id, Bet.verdict_id == v.id)):
         raise HTTPException(409, "该判决已记过注")
     b = Bet(user_id=user.id, verdict_id=v.id, amount=body.amount,
-            pick_dir=(v.pick or {}).get("dir", ""))
+            sp=(v.pick or {}).get("sp"), pick_dir=(v.pick or {}).get("dir", ""))
     db.add(b)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "该判决已记过注")
     return {"id": b.id, "verdict_id": v.id, "amount": b.amount,
             "pick_dir": b.pick_dir, "streak": U.user_streak(db, user)}
 
@@ -239,6 +249,11 @@ def bet_delete(bet_id: int, user: User = Depends(current_user),
     v = db.get(Verdict, b.verdict_id)
     if v is not None and v.settled:
         raise HTTPException(409, "已结算的注单不能撤销")
+    if v is not None and v.kickoff <= datetime.now(U.CN).strftime("%Y-%m-%d %H:%M:%S"):
+        raise HTTPException(409, "已停售的注单不能撤销")
+    # 服务端也保留撤销窗口（前端 5 秒，服务端放宽到 10 秒容时钟误差）。
+    if b.created_at and (datetime.now(timezone.utc).replace(tzinfo=None) - b.created_at).total_seconds() > 10:
+        raise HTTPException(409, "撤销窗口已过")
     db.delete(b)
     db.commit()
     return {"deleted": bet_id}
@@ -254,8 +269,9 @@ def bets_list(user: User = Depends(current_user), db: Session = Depends(get_db))
         "id": b.id,
         "verdict_id": b.verdict_id, "match": f"{v.home} vs {v.away}",
         "match_no": v.match_no, "amount": b.amount, "pick_dir": b.pick_dir,
+        "pool": v.pool, "goal_line": v.goal_line, "sp": b.sp or (v.pick or {}).get("sp"),
         "status": v.status, "settled": v.settled, "result_score": v.result_score,
-        "pnl": (b.amount if v.settled == "win" else -b.amount) if v.settled else None,
+        "pnl": U.bet_pnl(b, v),
     } for b, v in rows]
 
 
@@ -271,7 +287,8 @@ def bet_postmortem(bet_id: int, user: User = Depends(current_user),
         raise HTTPException(404, "verdict not found")
     pm = postmortem(v)
     pm["bet"] = {"amount": b.amount, "pick_dir": b.pick_dir,
-                 "pnl": (b.amount if v.settled == "win" else -b.amount) if v.settled else None}
+                 "sp": b.sp or (v.pick or {}).get("sp"),
+                 "pnl": U.bet_pnl(b, v)}
     if v.settled == "lose":
         pm["whatif"] = f"若未下这注 {b.amount:.0f} 元，账户将少亏 {b.amount:.0f} 元。" \
                        "（诚实口径：赢的那几注同样真实存在，见周报。）"

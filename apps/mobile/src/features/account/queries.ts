@@ -13,6 +13,7 @@ export const accountKeys = {
 
 export function useMeQuery(enabled = true) {
   const ready = useAuthStore((s) => s.ready);
+  const hasSession = useAuthStore((s) => Boolean(s.session));
   const userId = useAuthStore((s) => s.session?.userId ?? "anon");
   return useQuery({
     queryKey: [...accountKeys.me, userId],
@@ -20,7 +21,7 @@ export function useMeQuery(enabled = true) {
       const raw = await callApi(api.client.GET("/me"));
       return adaptMe(raw) as MeProfile;
     },
-    enabled: enabled && ready,
+    enabled: enabled && ready && hasSession,
     staleTime: 20_000,
   });
 }
@@ -61,6 +62,7 @@ export function useDisciplineMutation() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: accountKeys.me });
+      void queryClient.invalidateQueries({ queryKey: ["stream"] });
     },
   });
 }

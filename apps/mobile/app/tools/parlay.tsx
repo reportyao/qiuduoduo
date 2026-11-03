@@ -19,7 +19,7 @@ import { parlayMath } from "@/features/tools/calc";
 import { FormulaNote, ResultPanel, ResultRow } from "@/features/tools/ToolLayout";
 import type { VerdictSummary } from "@/domain/types";
 import { errorText } from "@/lib/errors";
-import { dateCnOffset, decimalToFormat, money, oddsFormatLabel, pct, pickDirectionLabel, todayCn } from "@/lib/format";
+import { currentTradeDateCn, decimalToFormat, money, oddsFormatLabel, pct, pickDirectionLabel, shiftDateCn } from "@/lib/format";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 
 type Dir = "home" | "draw" | "away";
@@ -34,7 +34,7 @@ export default function ParlayToolScreen() {
   const oddsFormat = useOddsFormat();
   const [selection, setSelection] = useState<Selection>({});
   const [stake, setStake] = useState(100);
-  const [date, setDate] = useState(todayCn());
+  const [date, setDate] = useState(currentTradeDateCn());
   const streamQuery = useStreamQuery(date);
   const stream = streamQuery.data?.pages[0];
 
@@ -79,7 +79,11 @@ export default function ParlayToolScreen() {
 
   const copy = async () => {
     const text = legs
-      .map((leg) => `${leg.match.matchNo} ${leg.match.home} ${DIR_LABEL[leg.dir]} @${decimalToFormat(leg.odds, oddsFormat)}（${oddsFormatLabel(oddsFormat)}）`)
+      .map((leg) => {
+        const label = pickDirectionLabel(leg.match.pool, leg.dir);
+        const line = leg.match.goalLine ? `（${leg.match.goalLine}）` : "";
+        return `${leg.match.matchNo} ${leg.match.home} ${label}${line} @${decimalToFormat(leg.odds, oddsFormat)}（${oddsFormatLabel(oddsFormat)}）`;
+      })
       .join(" + ");
     await Clipboard.setStringAsync(`${text} ×${stake}元`);
     toast.show("组合账单已复制", "success");
@@ -102,6 +106,7 @@ export default function ParlayToolScreen() {
         <DateStrip
           value={date}
           onChange={(next) => {
+            if (next === date) return; // 重复点当前日期不应清空已选腿
             setDate(next);
             setSelection({});
           }}
@@ -114,12 +119,12 @@ export default function ParlayToolScreen() {
         ) : matches.length === 0 ? (
           <View style={styles.emptyBox}>
             <Text variant="body" color={colors.muted} style={styles.empty}>
-              {date === todayCn()
+              {date === currentTradeDateCn()
                 ? "今天还没有带赔率的场次可算。可以切到昨天看真实数据，或去「今日在售」看同步状态。"
                 : "这一天没有可计算的场次。"}
             </Text>
-            {date === todayCn() ? (
-              <Button label="看昨天" variant="secondary" size="sm" onPress={() => setDate(dateCnOffset(-1))} />
+            {date === currentTradeDateCn() ? (
+              <Button label="看昨天" variant="secondary" size="sm" onPress={() => setDate(shiftDateCn(currentTradeDateCn(), -1))} />
             ) : null}
           </View>
         ) : (
@@ -132,7 +137,7 @@ export default function ParlayToolScreen() {
                       {match.home} <Text variant="caption" color={colors.muted}>vs</Text> {match.away}
                     </Text>
                     <Text variant="caption" color={colors.muted}>
-                      {match.matchNo} · 抽水 {pct(match.rake)} · {match.status === "promoted" ? "三关全过" : "复核中"}
+                      {match.matchNo}{match.goalLine ? ` · 让球 ${match.goalLine}` : ""} · 抽水 {pct(match.rake)} · {match.status === "promoted" ? "三关全过" : "复核中"}
                     </Text>
                   </View>
                   {match.pick?.dir ? (
@@ -150,7 +155,7 @@ export default function ParlayToolScreen() {
                         onPress={() => toggle(match, dir)}
                         accessibilityRole="button"
                         accessibilityState={{ selected }}
-                        accessibilityLabel={`${match.home} 对 ${match.away}，${DIR_LABEL[dir]}，赔率 ${match.sp[DIR_KEY[dir]]}`}
+                        accessibilityLabel={`${match.home} 对 ${match.away}，${pickDirectionLabel(match.pool, dir)}，赔率 ${match.sp[DIR_KEY[dir]]}`}
                         style={({ pressed }) => [
                           styles.oddsButton,
                           selected && styles.oddsSelected,

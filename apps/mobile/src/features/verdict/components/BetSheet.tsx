@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { StyleSheet, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import type { VerdictSummary, YouState } from "@/domain/types";
@@ -29,6 +30,9 @@ export function BetSheet({ visible, verdict, you, onClose, onRecorded }: BetShee
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(5);
   const [error, setError] = useState<string | null>(null);
+  const [protectionStreak, setProtectionStreak] = useState(0);
+  const [alreadyRecorded, setAlreadyRecorded] = useState(false);
+  const queryClient = useQueryClient();
   const createBet = useCreateBetMutation();
   const deleteBet = useDeleteBetMutation();
   const rest = useRestMutation();
@@ -43,6 +47,8 @@ export function BetSheet({ visible, verdict, you, onClose, onRecorded }: BetShee
     setCreatedId(null);
     setSecondsLeft(5);
     setError(null);
+    setAlreadyRecorded(false);
+    setProtectionStreak(0);
   }, [visible]);
 
   useEffect(() => {
@@ -77,11 +83,15 @@ export function BetSheet({ visible, verdict, you, onClose, onRecorded }: BetShee
       onRecorded(created.id);
     } catch (e) {
       if (e instanceof ApiError && e.status === 423) {
+        const detail = (e.detail ?? {}) as { streak?: number };
+        setProtectionStreak(typeof detail.streak === "number" ? detail.streak : you?.streak ?? 0);
         setStep("protection");
         return;
       }
       if (e instanceof ApiError && e.status === 409) {
+        setAlreadyRecorded(true);
         setError("这注已经记过了，不用重复记。");
+        void queryClient.invalidateQueries({ queryKey: ["bets"] });
         return;
       }
       setError(errorText(e));
@@ -127,7 +137,7 @@ export function BetSheet({ visible, verdict, you, onClose, onRecorded }: BetShee
             label={createBet.isPending ? "正在入账…" : `确认记 ${money(amount)}`}
             onPress={() => submit(false)}
             loading={createBet.isPending}
-            disabled={!session}
+            disabled={!session || alreadyRecorded}
             fullWidth
           />
         ) : step === "success" ? (
@@ -145,9 +155,13 @@ export function BetSheet({ visible, verdict, you, onClose, onRecorded }: BetShee
               label="先休息，今晚不记了"
               variant="secondary"
               onPress={async () => {
-                await rest.mutateAsync(true).catch(() => {});
-                toast.show("好，今晚先到这里", "success");
-                onClose();
+                try {
+                  await rest.mutateAsync(true);
+                  toast.show("好，今晚先到这里", "success");
+                  onClose();
+                } catch (e) {
+                  toast.show(errorText(e), "error");
+                }
               }}
               fullWidth
             />
@@ -192,7 +206,7 @@ export function BetSheet({ visible, verdict, you, onClose, onRecorded }: BetShee
       ) : (
         <>
           <Text variant="body" color={colors.ink} style={styles.note}>
-            你已连败 {you?.streak ?? 0} 场。低谷加注是亏损扩大的最常见方式。
+            你已连败 {protectionStreak || you?.streak || 0} 场。低谷加注是亏损扩大的最常见方式。
           </Text>
           <Text variant="small" color={colors.muted} style={styles.note}>
             继续记仍然可以，但请确认这是你冷静后的决定；也可以先休息，明天再看。

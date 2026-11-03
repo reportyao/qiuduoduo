@@ -77,6 +77,9 @@ export function adaptBets(value: unknown): BetRecord[] {
       match: string(item.match),
       matchNo: string(item.match_no),
       amount: number(item.amount),
+      pool: string(item.pool, "had"),
+      goalLine: nullableString(item.goal_line),
+      sp: nullableNumber(item.sp),
       pickDir: string(item.pick_dir),
       status: string(item.status),
       settled: item.settled === "win" || item.settled === "lose" ? item.settled : null,
@@ -195,6 +198,7 @@ export function adaptPostmortem(value: unknown): Postmortem {
             amount: number(bet.amount),
             pickDir: string(bet.pick_dir),
             pnl: nullableNumber(bet.pnl),
+            sp: nullableNumber(bet.sp),
           }
         : undefined,
   };

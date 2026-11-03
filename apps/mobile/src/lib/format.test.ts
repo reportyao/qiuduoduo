@@ -9,6 +9,9 @@ import {
   shortHash,
   utcIso,
   weekdayCn,
+  tradeDateCnFromKickoff,
+  currentTradeDateCn,
+  shiftDateCn,
 } from "./format";
 
 describe("parseCnDateTime", () => {
@@ -47,6 +50,17 @@ describe("odds display", () => {
     expect(decimalToFormat(2.05, "hk")).toBe("1.05");
     expect(decimalToFormat(1.8, "indo")).toBe("-1.25");
     expect(decimalToFormat(2.05, "american")).toBe("+105");
+  });
+});
+
+describe("trade dates", () => {
+  it("uses the 05:00 CN trade-day boundary", () => {
+    expect(tradeDateCnFromKickoff("2026-11-04 02:00:00")).toBe("2026-11-03");
+    expect(tradeDateCnFromKickoff("2026-11-04 04:59:00")).toBe("2026-11-03");
+    expect(tradeDateCnFromKickoff("2026-11-04 05:00:00")).toBe("2026-11-04");
+    expect(currentTradeDateCn(new Date("2026-11-03T18:30:00Z").getTime())).toBe("2026-11-03");
+    expect(currentTradeDateCn(new Date("2026-11-03T21:30:00Z").getTime())).toBe("2026-11-04");
+    expect(shiftDateCn("2026-11-04", -1)).toBe("2026-11-03");
   });
 });
 

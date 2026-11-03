@@ -63,6 +63,7 @@ def test_review_checklist_aggregates(db, client, monkeypatch):
     fastapi_app.dependency_overrides[_g] = lambda: (yield SessionLocal())
     try:
         with TestClient(fastapi_app) as c:
+            c.post("/console/login", data={"pw": "dev"})
             body = c.get("/review/checklist").json()
     finally:
         fastapi_app.dependency_overrides.clear()
@@ -83,6 +84,7 @@ def test_review_checklist_aggregates(db, client, monkeypatch):
 
 def test_freeze_adopt_and_violation_detection(client, monkeypatch, tmp_path):
     monkeypatch.setenv("JQ_FREEZE_BASELINE", str(tmp_path / "fz.json"))
+    client.post("/console/login", data={"pw": "dev"})
     # 采纳基线
     r = client.post("/review/freeze/adopt").json()
     assert r["adopted"] is True and r["routes"] > 30

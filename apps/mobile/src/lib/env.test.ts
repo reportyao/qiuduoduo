@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { API_BASE_URL, APP_ENV } from "./env";
+import { devApiBaseUrl } from "./envDefaults";
 
-describe("env", () => {
-  it("has an API base URL", () => {
-    expect(API_BASE_URL).toMatch(/^https?:\/\//);
+describe("env defaults", () => {
+  it("uses the Android emulator host on Android", () => {
+    expect(devApiBaseUrl("android")).toBe("http://10.0.2.2:8100");
   });
 
-  it("reports an app environment", () => {
-    expect(APP_ENV.length).toBeGreaterThan(0);
+  it("uses localhost on iOS and other platforms", () => {
+    expect(devApiBaseUrl("ios")).toBe("http://127.0.0.1:8100");
+    expect(devApiBaseUrl("web")).toBe("http://127.0.0.1:8100");
   });
 });

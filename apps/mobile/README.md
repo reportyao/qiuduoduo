@@ -16,7 +16,9 @@ corepack pnpm start
 corepack pnpm android
 ```
 
-Android 模拟器访问宿主机后端使用 `http://10.0.2.2:8100`。
+Android 模拟器访问宿主机后端使用 `http://10.0.2.2:8100`，iOS 模拟器使用 `http://127.0.0.1:8100`（未配置 `EXPO_PUBLIC_API_BASE_URL` 时的本地兜底）。
+
+**发布包必须显式注入 `EXPO_PUBLIC_API_BASE_URL=https://...`**：Android release 默认禁止明文 HTTP，iOS ATS 也不允许任意 HTTP；不要依赖模拟器地址。
 
 ## 构建前自检
 

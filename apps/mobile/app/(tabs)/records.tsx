@@ -23,7 +23,6 @@ export default function RecordsScreen() {
   const bets = betsQuery.data ?? [];
   const settled = bets.filter((bet) => bet.pnl != null);
   const wins = settled.filter((bet) => bet.settled === "win").length;
-  const pnl = settled.reduce((sum, bet) => sum + (bet.pnl ?? 0), 0);
   const week = weeklyQuery.data?.you;
 
   return (
@@ -36,7 +35,7 @@ export default function RecordsScreen() {
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.stats}>
-          <Stat label="本周注数" value={String(week?.bets ?? bets.length)} sub="只记账，不代购" />
+          <Stat label="本周注数" value={week ? String(week.bets) : "—"} sub={week ? "近 7 天 · 只记账" : "周报同步中"} />
           <Stat
             label="已结算"
             value={`${wins} / ${settled.length}`}
@@ -44,9 +43,9 @@ export default function RecordsScreen() {
           />
           <Stat
             label="本周盈亏"
-            value={signedMoney(week?.pnl ?? pnl)}
-            sub="真实入账口径"
-            tone={(week?.pnl ?? pnl) >= 0 ? "green" : "danger"}
+            value={week ? signedMoney(week.pnl) : "—"}
+            sub={week ? "近 7 天真实盈亏" : "周报同步中"}
+            tone={!week ? "default" : week.pnl >= 0 ? "green" : "danger"}
           />
         </View>
 
@@ -55,6 +54,9 @@ export default function RecordsScreen() {
           <Button label="公开账本" variant="secondary" size="sm" onPress={() => router.push("/records/ledger")} style={styles.flex} />
         </View>
 
+        {betsQuery.isError && bets.length > 0 ? (
+          <ErrorState compact message="刷新失败，先显示上次的票单。" onRetry={() => betsQuery.refetch()} />
+        ) : null}
         <View style={styles.listHead}>
           <Text variant="h3">票单</Text>
           <Text variant="caption" color={colors.muted}>{bets.length} 注</Text>
@@ -65,7 +67,7 @@ export default function RecordsScreen() {
             <Skeleton height={70} radius={16} />
             <Skeleton height={70} radius={16} />
           </View>
-        ) : betsQuery.isError ? (
+        ) : betsQuery.isError && bets.length === 0 ? (
           <ErrorState message={errorText(betsQuery.error)} onRetry={() => betsQuery.refetch()} />
         ) : bets.length === 0 ? (
           <EmptyState
@@ -94,7 +96,8 @@ export default function RecordsScreen() {
                   <Text variant="caption" color={colors.subtle}>{bet.matchNo}</Text>
                   <Text variant="bodyStrong" numberOfLines={1}>{bet.match}</Text>
                   <Text variant="caption" color={colors.muted}>
-                    {pickDirectionLabel("had", bet.pickDir)} · {money(bet.amount)}
+                    {pickDirectionLabel(bet.pool, bet.pickDir)}
+                    {bet.goalLine ? `（${bet.goalLine}）` : ""} · {money(bet.amount)}
                   </Text>
                 </View>
                 <View style={styles.right}>

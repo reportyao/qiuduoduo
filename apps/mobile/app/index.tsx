@@ -1,5 +1,6 @@
 import { Redirect } from "expo-router";
 import { usePrefsStore } from "@/features/preferences/prefsStore";
+import { isExcluded, useComplianceStore } from "@/features/compliance/complianceStore";
 
 /**
  * 入口只做分流；真正的守卫在根布局，防止深链绕过。
@@ -9,8 +10,12 @@ import { usePrefsStore } from "@/features/preferences/prefsStore";
 export default function Index() {
   const hydrated = usePrefsStore((s) => s.hydrated);
   const ageDecision = usePrefsStore((s) => s.ageDecision);
-  if (!hydrated) return null;
+  const complianceHydrated = useComplianceStore((s) => s.hydrated);
+  const excludedUntil = useComplianceStore((s) => s.excludedUntil);
+  const excludedPermanent = useComplianceStore((s) => s.excludedPermanent);
+  if (!hydrated || !complianceHydrated) return null;
   if (ageDecision === "unknown") return <Redirect href="/onboarding" />;
   if (ageDecision === "minor") return <Redirect href="/minor" />;
+  if (excludedPermanent || isExcluded(excludedUntil)) return <Redirect href="/paused" />;
   return <Redirect href="/(tabs)" />;
 }

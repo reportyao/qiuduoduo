@@ -311,12 +311,25 @@ def test_full_user_journey(db, client, monkeypatch):
     db.commit()
     st_now = client.get("/me", headers=tok).json()["streak"]
     assert st_now["streak"] == 3 and st_now["active"]
-    # 6 保护期加注 → 423（保护优先于重复检查——新语义）→ confirm 后到重复检查 409
+    # 已结算判决不能补记（新的产品纪律）
     r = client.post("/bets", json={"verdict_id": vid, "amount": 50}, headers=tok)
+    assert r.status_code == 422
+    # 6 另造一场未停售的已推判决：保护期加注 → 423；显式确认后才可记
+    protect = Verdict(id="v-protect-1", trade_date=today_cn(), match_id="2050099",
+                      match_no="周五099", league="英超", home="甲", away="乙",
+                      kickoff=future_kickoff(today_cn()), pool="had", goal_line="",
+                      sp_h=1.9, sp_d=3.5, sp_a=4.0, rake=0.08,
+                      p_home=0.55, p_draw=0.25, p_away=0.20,
+                      status="promoted", gates={}, payload={"id": "v-protect-1"},
+                      payload_hash="f" * 64,
+                      pick={"dir": "home", "sp": 1.9, "prob": 0.55})
+    db.merge(protect)
+    db.commit()
+    r = client.post("/bets", json={"verdict_id": "v-protect-1", "amount": 50}, headers=tok)
     assert r.status_code == 423
-    r = client.post("/bets", json={"verdict_id": vid, "amount": 50, "confirm": True},
-                    headers=tok)
-    assert r.status_code == 409  # confirm 后走到重复检查（同一判决已记）
+    r = client.post("/bets", json={"verdict_id": "v-protect-1", "amount": 50,
+                                   "confirm": True}, headers=tok)
+    assert r.status_code == 200
     # 7 复盘
     pm = client.get(f"/verdicts/{vid}/postmortem").json()
     assert pm["kind"] == "promoted" and pm["attribution"]["settled"]

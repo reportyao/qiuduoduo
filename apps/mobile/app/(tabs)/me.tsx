@@ -19,7 +19,7 @@ import { usePersonaContent } from "@/features/personas/usePersona";
 import { useAuthStore, isLoggedIn } from "@/features/auth/authStore";
 import { useMeQuery, useDisciplineMutation, useRestMutation } from "@/features/account/queries";
 import { useUnreadCountQuery } from "@/features/inbox/queries";
-import { usePrefsStore } from "@/features/preferences/prefsStore";
+import { useOddsFormat, usePrefsStore } from "@/features/preferences/prefsStore";
 import { errorText } from "@/lib/errors";
 import { colors, layout, spacing } from "@/theme/tokens";
 
@@ -30,7 +30,10 @@ export default function MeScreen() {
   const session = useAuthStore((s) => s.session);
   const logout = useAuthStore((s) => s.logout);
   const setPersona = usePrefsStore((s) => s.setPersona);
+  const setOddsFormat = usePrefsStore((s) => s.setOddsFormat);
+  const setAvatarUri = usePrefsStore((s) => s.setAvatarUri);
   const avatarUri = usePrefsStore((s) => s.avatarUri);
+  const oddsFormat = useOddsFormat();
   const meQuery = useMeQuery(Boolean(session?.userId));
   const unreadQuery = useUnreadCountQuery();
   const discipline = useDisciplineMutation();
@@ -66,7 +69,10 @@ export default function MeScreen() {
         style: "destructive",
         onPress: async () => {
           await logout();
+          // 账号级偏好不能留给下一位使用同一设备的人。
           setPersona("zhuanjia");
+          setOddsFormat("decimal");
+          setAvatarUri(null);
           toast.show("已退出，回到设备账户", "info");
         },
       },
@@ -88,7 +94,7 @@ export default function MeScreen() {
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <Card onPress={() => router.push("/settings/profile")} accessibilityLabel="编辑个人资料" style={styles.profile}>
-          <Avatar source={avatarUri ? { uri: avatarUri } : meta.avatar} size={62} online />
+          <Avatar source={avatarUri ? { uri: avatarUri } : meta.avatar} fallbackSource={meta.avatar} size={62} online />
           <View style={styles.profileText}>
             <Text variant="h2">{me?.displayName || session?.displayName || "解球用户"}</Text>
             <Text variant="caption" color={colors.muted}>
@@ -165,7 +171,7 @@ export default function MeScreen() {
         <SettingsGroup title="偏好">
           <SettingsRow
             title="赔率格式"
-            value={{ decimal: "欧洲盘", hk: "香港盘", indo: "印尼盘", american: "美式盘" }[me?.oddsFormat ?? "decimal"]}
+            value={{ decimal: "欧洲盘", hk: "香港盘", indo: "印尼盘", american: "美式盘" }[oddsFormat]}
             icon="swap-horizontal-outline"
             onPress={() => router.push("/settings/preferences")}
           />

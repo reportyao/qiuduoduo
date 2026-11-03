@@ -59,6 +59,7 @@ export function useCreateBetMutation() {
       void queryClient.invalidateQueries({ queryKey: recordKeys.bets });
       void queryClient.invalidateQueries({ queryKey: recordKeys.weekly });
       void queryClient.invalidateQueries({ queryKey: ["me"] });
+      void queryClient.invalidateQueries({ queryKey: ["stream"] });
     },
   });
 }
@@ -76,6 +77,7 @@ export function useDeleteBetMutation() {
       void queryClient.invalidateQueries({ queryKey: recordKeys.bets });
       void queryClient.invalidateQueries({ queryKey: recordKeys.weekly });
       void queryClient.invalidateQueries({ queryKey: ["me"] });
+      void queryClient.invalidateQueries({ queryKey: ["stream"] });
     },
   });
 }

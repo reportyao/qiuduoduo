@@ -180,3 +180,19 @@ def test_scan_settlements_recent_utc(db):
     now_cn = datetime.now(CN)
     assert scan_settlements(db, now_cn=now_cn) == 1
     assert scan_settlements(db, now_cn=now_cn) == 0
+
+
+def test_assistant_blocks_deleted_user_and_push_token_takeover(db, client):
+    _, tok = _login(client)
+    client.delete("/me", headers=tok)
+    r = client.get("/me/inbox", headers=tok)
+    assert r.status_code == 410
+
+    a = client.post("/auth/device", json={"device_token": "push-owner-a"}).json()
+    b = client.post("/auth/device", json={"device_token": "push-owner-b"}).json()
+    r = client.post("/push/register", headers={"Authorization": "Bearer " + a["token"]},
+                    json={"platform": "android", "provider": "jpush", "token": "jpush-shared"})
+    assert r.status_code == 200, r.text
+    r = client.post("/push/register", headers={"Authorization": "Bearer " + b["token"]},
+                    json={"platform": "android", "provider": "jpush", "token": "jpush-shared"})
+    assert r.status_code == 409

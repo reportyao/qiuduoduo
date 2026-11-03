@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Image, StyleSheet, View, type ImageSourcePropType } from "react-native";
 import { colors, shadows } from "@/theme/tokens";
 
@@ -6,9 +7,25 @@ interface AvatarProps {
   size?: number;
   ring?: boolean;
   online?: boolean;
+  fallbackSource?: ImageSourcePropType;
 }
 
-export function Avatar({ source, size = 56, ring = true, online = false }: AvatarProps) {
+export function Avatar({
+  source,
+  size = 56,
+  ring = true,
+  online = false,
+  fallbackSource,
+}: AvatarProps) {
+  const [failed, setFailed] = useState(false);
+  const sourceKey =
+    typeof source === "object" && source !== null && "uri" in source
+      ? String(source.uri)
+      : String(source);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [sourceKey]);
   return (
     <View style={{ width: size, height: size }}>
       <View
@@ -22,7 +39,12 @@ export function Avatar({ source, size = 56, ring = true, online = false }: Avata
           },
         ]}
       >
-        <Image source={source} style={{ width: size - 4, height: size - 4 }} resizeMode="cover" />
+        <Image
+          source={failed && fallbackSource ? fallbackSource : source}
+          style={{ width: size - 4, height: size - 4 }}
+          resizeMode="cover"
+          onError={() => setFailed(true)}
+        />
       </View>
       {online ? (
         <View

@@ -141,11 +141,13 @@ def weekly_report(db: Session, user_id: str | None = None) -> dict:
         "killed": killed_outcomes(db),
     }
     if user_id:
-        bets = db.scalars(select(Bet).where(Bet.user_id == user_id)).all()
+        from .users import bet_pnl
+        all_bets = db.scalars(select(Bet).where(Bet.user_id == user_id)).all()
         vmap = {v.id: v for v in rows}
-        settled_bets = [(b, vmap[b.verdict_id]) for b in bets
-                        if b.verdict_id in vmap and vmap[b.verdict_id].settled]
-        pnl = sum((b.amount if v.settled == "win" else -b.amount) for b, v in settled_bets)
+        # 周报只统计近 7 天窗口内的注单，不能拿累计注数冒充“本周”。
+        bets = [b for b in all_bets if b.verdict_id in vmap]
+        settled_bets = [(b, vmap[b.verdict_id]) for b in bets if vmap[b.verdict_id].settled]
+        pnl = sum((bet_pnl(b, v) or 0) for b, v in settled_bets)
         out["you"] = {
             "bets": len(bets),
             "settled_bets": len(settled_bets),

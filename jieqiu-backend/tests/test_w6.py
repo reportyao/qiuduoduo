@@ -530,3 +530,45 @@ def test_bet_undo_delete(db, client):
     assert other["user_id"] != user.id
     r = client.delete(f"/bets/{bid2}", headers={"Authorization": "Bearer tok-other"})
     assert r.status_code == 404
+
+
+def test_bet_pnl_uses_odds_snapshot_and_blocks_settled(db, client):
+    """真实盈亏按赔率快照；已结算/已停售的判决禁止补记。"""
+    from app.modules.users import login_device, today_cn
+    user, _ = login_device(db, "tok-pnl")
+    v = Verdict(id="v-pnl-1", trade_date=today_cn(), match_id="2045801",
+                match_no="周四801", league="英超", home="甲", away="乙",
+                kickoff=future_kickoff(today_cn()), pool="had", goal_line="",
+                sp_h=2.5, sp_d=3.4, sp_a=3.1, rake=0.08,
+                p_home=0.55, p_draw=0.25, p_away=0.20,
+                status="promoted", gates={}, payload={"id": "v-pnl-1"},
+                payload_hash="d" * 64,
+                pick={"dir": "home", "sp": 2.5, "prob": 0.55},
+                settled="win", result_score="2-0")
+    db.merge(v)
+    db.add(Bet(user_id=user.id, verdict_id="v-pnl-1", amount=100,
+               sp=2.5, pick_dir="home"))
+    db.commit()
+    rows = client.get("/bets", headers={"Authorization": "Bearer tok-pnl"}).json()
+    assert rows[0]["pnl"] == 150.0
+    assert rows[0]["sp"] == 2.5
+    assert rows[0]["pool"] == "had"
+
+    # 已结算判决不能补记
+    r = client.post("/bets", json={"verdict_id": "v-pnl-1", "amount": 100},
+                    headers={"Authorization": "Bearer tok-pnl"})
+    assert r.status_code == 422
+
+    # 已停售但未结算的判决也不能补记
+    v2 = Verdict(id="v-pnl-2", trade_date=today_cn(), match_id="2045802",
+                 match_no="周四802", league="英超", home="丙", away="丁",
+                 kickoff="2026-01-01 12:00:00", pool="had", goal_line="",
+                 sp_h=1.9, sp_d=3.5, sp_a=4.0, rake=0.08,
+                 p_home=0.52, p_draw=0.26, p_away=0.22,
+                 status="promoted", gates={}, payload={"id": "v-pnl-2"},
+                 payload_hash="e" * 64, pick={"dir": "home", "sp": 1.9})
+    db.merge(v2)
+    db.commit()
+    r = client.post("/bets", json={"verdict_id": "v-pnl-2", "amount": 100},
+                    headers={"Authorization": "Bearer tok-pnl"})
+    assert r.status_code == 422

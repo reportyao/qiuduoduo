@@ -17,14 +17,16 @@ import {
 import { useRemoveWatchMutation, useWatchQuery } from "@/features/inbox/queries";
 import { useStreamQuery } from "@/features/home/queries";
 import { errorText } from "@/lib/errors";
-import { countdownText, formatDate, formatTime, todayCn } from "@/lib/format";
+import { countdownText, currentTradeDateCn, formatDate, formatTime, tradeDateCnFromKickoff } from "@/lib/format";
+import { useNow } from "@/lib/useNow";
 import { colors, layout, spacing } from "@/theme/tokens";
 
 export default function WatchScreen() {
   const router = useRouter();
   const toast = useToast();
+  const now = useNow(30_000);
   const query = useWatchQuery();
-  const streamQuery = useStreamQuery(todayCn());
+  const streamQuery = useStreamQuery(currentTradeDateCn());
   const remove = useRemoveWatchMutation();
   const watched = query.data ?? [];
   const verdictByMatch = useMemo(() => {
@@ -39,9 +41,11 @@ export default function WatchScreen() {
     const verdictId = verdictByMatch.get(matchId);
     if (verdictId) {
       router.push({ pathname: "/verdict/[id]", params: { id: verdictId } });
-    } else {
-      router.push({ pathname: "/match/[id]", params: { id: matchId, date: todayCn() } });
+      return;
     }
+    const item = watched.find((row) => row.targetId === matchId);
+    const date = item?.kickoff ? tradeDateCnFromKickoff(item.kickoff) : currentTradeDateCn();
+    router.push({ pathname: "/match/[id]", params: { id: matchId, date } });
   };
 
   return (
@@ -59,6 +63,9 @@ export default function WatchScreen() {
           <RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} tintColor={colors.green} />
         }
       >
+        {query.isError && watched.length > 0 ? (
+          <ErrorState compact message="刷新失败，先显示上次的关注。" onRetry={() => query.refetch()} />
+        ) : null}
         <Text variant="overline" color={colors.green}>关注列表</Text>
         <Text variant="h2" style={styles.title}>{watched.length} 场</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
@@ -70,7 +77,7 @@ export default function WatchScreen() {
             <Skeleton height={82} radius={18} />
             <Skeleton height={82} radius={18} />
           </View>
-        ) : query.isError ? (
+        ) : query.isError && watched.length === 0 ? (
           <ErrorState message={errorText(query.error)} onRetry={() => query.refetch()} />
         ) : watched.length === 0 ? (
           <EmptyState
@@ -98,7 +105,7 @@ export default function WatchScreen() {
                   </Text>
                   <View style={styles.chips}>
                     <Chip label="结论变化" tone="green" />
-                    <Chip label={item.kickoff ? `${countdownText(item.kickoff)}停售` : "停售提醒"} tone="neutral" />
+                    <Chip label={item.kickoff ? closeLabel(item.kickoff, now) : "停售提醒"} tone="neutral" />
                     <Chip label="终场" tone="neutral" />
                   </View>
                 </Pressable>
@@ -124,6 +131,11 @@ export default function WatchScreen() {
       </ScrollView>
     </AppScreen>
   );
+}
+
+function closeLabel(kickoff: string, now: number): string {
+  const text = countdownText(kickoff, now);
+  return text === "已停售" ? text : `${text}停售`;
 }
 
 const styles = StyleSheet.create({

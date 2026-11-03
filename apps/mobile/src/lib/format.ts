@@ -87,6 +87,37 @@ export function yesterdayCn(): string {
   return dateCnOffset(-1);
 }
 
+/**
+ * 竞彩日界：00:00–04:59 开赛的场次属于前一日销售日。
+ * 用于 watch/on-sale/inbox 深链选择正确的 trade_date。
+ */
+export function tradeDateCnFromKickoff(value: string | Date | null | undefined): string {
+  const d = value instanceof Date ? value : parseCnDateTime(value);
+  if (!d) return todayCn();
+  const p = cnParts(d);
+  let ts = Date.UTC(p.y, p.m - 1, p.d);
+  if (p.h < 5) ts -= 86_400_000;
+  const shifted = new Date(ts);
+  return `${shifted.getUTCFullYear()}-${two(shifted.getUTCMonth() + 1)}-${two(shifted.getUTCDate())}`;
+}
+
+export function shiftDateCn(date: string, days: number): string {
+  const d = parseCnDateTime(date);
+  if (!d) return date;
+  return dateCnOffsetFrom(d, days);
+}
+
+function dateCnOffsetFrom(date: Date, days: number): string {
+  const p = cnParts(date);
+  const shifted = new Date(Date.UTC(p.y, p.m - 1, p.d) + days * 86_400_000);
+  return `${shifted.getUTCFullYear()}-${two(shifted.getUTCMonth() + 1)}-${two(shifted.getUTCDate())}`;
+}
+
+/** 当前销售日（凌晨 5 点前仍算前一天）。 */
+export function currentTradeDateCn(now = Date.now()): string {
+  return tradeDateCnFromKickoff(new Date(now));
+}
+
 export function weekdayCn(value: string | Date | null | undefined): string {
   const d = value instanceof Date ? value : parseCnDateTime(value);
   if (!d) return "";

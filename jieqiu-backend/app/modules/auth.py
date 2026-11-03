@@ -206,12 +206,14 @@ def _dispatch(channel: str, target: str, code: str) -> None:
     if st.env == "prod" and st.auth_stub:
         raise RuntimeError("生产环境禁止 auth_stub：请配置真实短信/邮件通道")
     if channel == "sms":
-        if st.sms_provider == "tencent" and st.wechat_app_secret:
-            # 腾讯云短信 SDK 接入位（需 SecretId/Key/SdkAppId/模板；按官方 SDK 补齐）
-            raise RuntimeError("腾讯云短信配置不完整（v1.5 接入）")
-        return  # stub：不发真实短信
+        if st.sms_provider == "tencent":
+            # 未接入 SDK 前必须 fail loud，不能返回 200 但什么都不发。
+            raise RuntimeError("腾讯云短信通道尚未接入（需 SDKAppId/模板/密钥）")
+        return  # stub：仅非生产
     if channel == "email":
-        return  # stub：不发真实邮件
+        if st.email_provider == "resend":
+            raise RuntimeError("Resend 邮件通道尚未接入（需 RESEND_API_KEY 与域名验证）")
+        return  # stub：仅非生产
 
 
 def verify_code(db: Session, channel: str, target: str, code: str, purpose: str = "login") -> bool:
@@ -303,8 +305,17 @@ def verify_oauth(provider: str, id_token: str) -> dict | None:
         aud = st.google_client_id if provider == "google" else st.apple_client_id
         payload = pyjwt.decode(id_token, public_key, algorithms=["RS256"],
                                audience=aud or None, options={"verify_aud": bool(aud)})
+        iss = payload.get("iss") or ""
+        if provider == "google" and iss not in ("https://accounts.google.com", "accounts.google.com"):
+            return None
+        if provider == "apple" and iss != "https://appleid.apple.com":
+            return None
+        raw_verified = payload.get("email_verified")
+        # 字符串 "false" / 缺失都不能当已验证；否则可把未验证邮箱并到既有账号。
+        email_verified = raw_verified is True or (
+            isinstance(raw_verified, str) and raw_verified.lower() == "true")
         return {"sub": payload.get("sub"), "email": payload.get("email"),
-                "email_verified": bool(payload.get("email_verified", payload.get("email")))}
+                "email_verified": email_verified}
     except Exception:
         return None
 
@@ -423,7 +434,17 @@ def merge_device_account(db: Session, device_token: str | None, target: User,
         select(Memory).where(Memory.user_id == target.id))}
     for mem in db.scalars(select(Memory).where(Memory.user_id == guest.id)).all():
         if mem.key in existing_keys:
-            db.delete(mem)
+            # 「冲突必问不静默覆盖」：保留游客原话，换一个可见的 key，而不是删掉。
+            base = f"{mem.key[:52]}（登录前）"
+            candidate = base
+            index = 2
+            while candidate in existing_keys:
+                candidate = f"{base[:58]}-{index}"
+                index += 1
+            mem.key = candidate
+            mem.user_id = target.id
+            existing_keys.add(candidate)
+            moved["memories"] += 1
         else:
             mem.user_id = target.id
             existing_keys.add(mem.key)
@@ -463,14 +484,15 @@ def merge_device_account(db: Session, device_token: str | None, target: User,
             moved["tokens"] += 1
 
     # 通知偏好：目标没有才继承，避免覆盖老用户的选择。
-    if db.get(NotifySettings, target.id) is None:
-        cfg = db.get(NotifySettings, guest.id)
-        if cfg is not None:
+    cfg = db.get(NotifySettings, guest.id)
+    if cfg is not None:
+        if db.get(NotifySettings, target.id) is None:
             db.add(NotifySettings(user_id=target.id, channels=cfg.channels,
                                   event_types=cfg.event_types,
                                   quiet_start=cfg.quiet_start, quiet_end=cfg.quiet_end,
                                   daily_cap=cfg.daily_cap, paused=cfg.paused))
-            db.delete(cfg)
+        # 无论目标是否有设置，都必须清掉游客行，避免成为孤儿主键。
+        db.delete(cfg)
 
     for event in db.scalars(select(UserEvent).where(UserEvent.user_id == guest.id)).all():
         event.user_id = target.id
@@ -491,10 +513,9 @@ def merge_device_account(db: Session, device_token: str | None, target: User,
         target.discipline_on = guest.discipline_on
         target.rested_until = guest.rested_until
 
-    old_device = guest.device_token
+    # 不把游客设备令牌升级成账号的永久 Bearer 凭证：
+    # 合并后游客令牌作废，账号继续用 JWT；设备免登录只能创建新的游客身份。
     db.delete(guest)
-    db.flush()
-    target.device_token = old_device
     db.commit()
     return moved
 

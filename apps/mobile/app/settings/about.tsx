@@ -9,13 +9,14 @@ import {
   SettingsRow,
   Text,
 } from "@/components/ui";
-import { useAppVersionQuery, useLegalQuery } from "@/features/account/queries";
+import { useAppVersionQuery, useLegalQuery, useMeQuery } from "@/features/account/queries";
 import { colors, spacing } from "@/theme/tokens";
 
 export default function AboutScreen() {
   const router = useRouter();
   const version = useAppVersionQuery();
-  const legal = useLegalQuery();
+  const me = useMeQuery();
+  const legal = useLegalQuery(me.data?.region ?? "cn");
 
   return (
     <SettingsPage title="关于解球" subtitle="不预测，只算账" onBack={() => router.back()}>

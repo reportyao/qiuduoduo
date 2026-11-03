@@ -117,8 +117,16 @@ def matches_on_sale(db: Session = Depends(get_db)):
         select(SPMatch).where(SPMatch.kickoff >= now.strftime("%Y-%m-%d %H:%M:%S"),
                                SPMatch.kickoff <= end).order_by(SPMatch.kickoff)
     ).all()
-    verdicts = {v.match_id: v for v in db.scalars(
-        select(Verdict).where(Verdict.trade_date == today))}
+    # 同一场比赛可能跨竞彩日：取该 match 最新日期的判决，
+    # 避免 00:00–04:59 场次在“今天”日期下丢失 status/verdict_id。
+    match_ids = [m.match_id for m in rows]
+    latest: dict[str, Verdict] = {}
+    if match_ids:
+        for v in db.scalars(
+                select(Verdict).where(Verdict.match_id.in_(match_ids))
+                .order_by(Verdict.trade_date)):
+            latest[v.match_id] = v
+    verdicts = latest
     matches = []
     for m in rows:
         v = verdicts.get(m.match_id)
@@ -180,7 +188,11 @@ def why_not(match_id: str, date: str | None = None, db: Session = Depends(get_db
     v = db.scalar(select(Verdict).where(Verdict.match_id == match_id,
                                         Verdict.trade_date == d))
     if v is None:
-        raise HTTPException(404, "no verdict for this match/date")
+        # 深链/关注可能拿的是日历日期而不是竞彩日；回退到该场最新判决。
+        v = db.scalar(select(Verdict).where(Verdict.match_id == match_id)
+                      .order_by(Verdict.trade_date.desc()).limit(1))
+    if v is None:
+        raise HTTPException(404, "no verdict for this match")
     if v.status == "promoted":
         return {"status": "promoted", "verdict_id": v.id, "match_no": m.match_no,
                 "home": m.home, "away": m.away, "note": "三关全过，已在判决流中"}
@@ -208,7 +220,7 @@ def why_not(match_id: str, date: str | None = None, db: Session = Depends(get_db
         "model": "若 xG 强度表覆盖该对阵（或窗口数据足够），自动重评。",
     }
     runs = db.scalars(select(ModelRun).where(ModelRun.match_id == match_id,
-                                             ModelRun.run_date == d)).all()
+                                             ModelRun.run_date == v.trade_date)).all()
     return {
         "status": v.status,
         "match_no": m.match_no, "league": m.league,

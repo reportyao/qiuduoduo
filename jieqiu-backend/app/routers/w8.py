@@ -1,11 +1,12 @@
 """W8 端点：法律披露 / 提审检查单 / 冻结基线 / App 版本(OTA)。"""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from ..db import get_db
+from .console import require_console
 from ..modules.compliance import (DISCLOSURE, freeze_report, review_checklist,
                                   scan_text, write_freeze_baseline)
 
@@ -42,13 +43,14 @@ def app_version():
 
 
 @router.get("/review/checklist")
-def review_checklist_api(db: Session = Depends(get_db)):
+def review_checklist_api(request: Request, db: Session = Depends(get_db),
+                         _: None = Depends(require_console)):
     from ..main import app as fastapi_app
     return review_checklist(db, fastapi_app)
 
 
 @router.get("/review/banned-words/scan")
-def review_scan_text(text: str):
+def review_scan_text(text: str, _: None = Depends(require_console)):
     """即席扫描：给一段商店文案，返回是否可提交（提审前自检工具）。"""
     hits = scan_text(text)
     return {"ok": not hits, "hits": hits,
@@ -56,7 +58,7 @@ def review_scan_text(text: str):
 
 
 @router.post("/review/freeze/adopt")
-def freeze_adopt():
+def freeze_adopt(_: None = Depends(require_console)):
     """采纳当前路由集合为冻结基线（W8 开始时执行一次）。"""
     from ..main import app as fastapi_app
     n = write_freeze_baseline(fastapi_app)
@@ -65,6 +67,6 @@ def freeze_adopt():
 
 
 @router.get("/review/freeze")
-def freeze_status():
+def freeze_status(_: None = Depends(require_console)):
     from ..main import app as fastapi_app
     return freeze_report(fastapi_app)

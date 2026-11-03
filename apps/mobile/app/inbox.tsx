@@ -6,7 +6,8 @@ import { AppScreen } from "@/components/Screen";
 import { Button, Card, Chip, EmptyState, ErrorState, Skeleton, StatusDot, Text, useToast } from "@/components/ui";
 import { useInboxMutations, useInboxQuery } from "@/features/inbox/queries";
 import { errorText } from "@/lib/errors";
-import { relativeTime, todayCn } from "@/lib/format";
+import { currentTradeDateCn, relativeTime } from "@/lib/format";
+import { useNow } from "@/lib/useNow";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 import type { InboxItem } from "@/domain/types";
 
@@ -14,6 +15,7 @@ export default function InboxScreen() {
   const router = useRouter();
   const toast = useToast();
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const now = useNow(60_000);
   const query = useInboxQuery(unreadOnly);
   const { markRead, readAll, click } = useInboxMutations();
   const inbox = query.data;
@@ -56,6 +58,9 @@ export default function InboxScreen() {
           <RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} tintColor={colors.green} />
         }
       >
+        {query.isError && items.length > 0 ? (
+          <ErrorState compact message="刷新失败，先显示上次的收件箱。" onRetry={() => query.refetch()} />
+        ) : null}
         <View style={styles.filters}>
           <Chip label="全部" selected={!unreadOnly} onPress={() => setUnreadOnly(false)} />
           <Chip label="仅未读" selected={unreadOnly} onPress={() => setUnreadOnly(true)} />
@@ -66,7 +71,7 @@ export default function InboxScreen() {
             <Skeleton height={80} radius={16} />
             <Skeleton height={80} radius={16} />
           </View>
-        ) : query.isError ? (
+        ) : query.isError && items.length === 0 ? (
           <ErrorState message={errorText(query.error)} onRetry={() => query.refetch()} />
         ) : items.length === 0 ? (
           <EmptyState
@@ -94,7 +99,7 @@ export default function InboxScreen() {
                   <Text variant="small" color={colors.muted} style={styles.body} numberOfLines={2}>
                     {item.body}
                   </Text>
-                  <Text variant="caption" color={colors.subtle}>{relativeTime(item.createdAt)}</Text>
+                  <Text variant="caption" color={colors.subtle}>{relativeTime(item.createdAt, now)}</Text>
                 </View>
                 <Text variant="caption" color={colors.green}>查看</Text>
               </Pressable>
@@ -124,7 +129,9 @@ function routeDeepLink(
   }
   const match = link.match(/jieqiu:\/\/match\/([^/?#]+)/);
   if (match) {
-    router.push({ pathname: "/match/[id]", params: { id: match[1], date: todayCn() } });
+    const dateMatch = link.match(/[?&]date=([^&]+)/);
+    const date = dateMatch ? decodeURIComponent(dateMatch[1]) : currentTradeDateCn();
+    router.push({ pathname: "/match/[id]", params: { id: match[1], date } });
     return;
   }
   if (link.startsWith("jieqiu://today")) router.push("/(tabs)");

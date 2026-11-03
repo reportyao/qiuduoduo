@@ -325,8 +325,10 @@ def test_login_merges_device_account_data(db, client):
     assert db.scalar(select(Memory).where(Memory.key == "主队偏好")).user_id == uid
     assert db.scalar(select(WatchTarget).where(WatchTarget.target_id == "2045999")).user_id == uid
     target = db.get(User, uid)
-    assert target.device_token == "tok-merge-device"
+    assert target.device_token != "tok-merge-device"
     assert db.get(User, gid) is None
+    # 合并后旧设备令牌不能再解析到手机号账号
+    assert db.scalar(select(User).where(User.device_token == "tok-merge-device")) is None
 
     me = client.get("/me", headers={"Authorization": "Bearer " + body["access_token"]}).json()
     assert me["memories"][0]["value"] == "曼城"

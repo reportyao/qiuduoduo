@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View } from "react-native";
+import { AppState, StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BootScreen } from "@/components/BootScreen";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -11,6 +11,7 @@ import { useMeQuery } from "@/features/account/queries";
 import { useComplianceStore, isExcluded } from "@/features/compliance/complianceStore";
 import { usePrefsStore } from "@/features/preferences/prefsStore";
 import { makeQueryClient } from "@/lib/queryClient";
+import { useNow } from "@/lib/useNow";
 import { colors } from "@/theme/tokens";
 
 /**
@@ -42,6 +43,17 @@ export default function RootLayout() {
     if (!booted) return;
     void queryClient.invalidateQueries();
   }, [booted, queryClient, sessionKey]);
+
+  // 弱网首启可能没拿到设备身份；回到前台时补一次恢复，避免整场会话都 401。
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      const auth = useAuthStore.getState();
+      const task = auth.session ? auth.getAccessToken() : auth.loginWithDevice();
+      void task.then(() => queryClient.invalidateQueries()).catch(() => {});
+    });
+    return () => sub.remove();
+  }, [queryClient]);
 
   return (
     <SafeAreaProvider>
@@ -85,7 +97,9 @@ function RouteGuard() {
   const pathname = usePathname();
   const ageDecision = usePrefsStore((s) => s.ageDecision);
   const excludedUntil = useComplianceStore((s) => s.excludedUntil);
-  const excluded = isExcluded(excludedUntil);
+  const excludedPermanent = useComplianceStore((s) => s.excludedPermanent);
+  const now = useNow(30_000);
+  const excluded = excludedPermanent || isExcluded(excludedUntil, now);
 
   useEffect(() => {
     const isOnboarding = pathname.startsWith("/onboarding");
@@ -94,7 +108,7 @@ function RouteGuard() {
     const isPaused = pathname.startsWith("/paused");
     const isPublicLedger = pathname.startsWith("/records/ledger");
 
-    if (ageDecision === "unknown" && !isOnboarding) {
+    if (ageDecision === "unknown" && !isOnboarding && !isLegal) {
       router.replace("/onboarding");
       return;
     }
@@ -118,6 +132,10 @@ function ProfileSync() {
   const appliedFor = useRef<string | null>(null);
   const { data } = useMeQuery(Boolean(session?.userId));
   const isJwt = session?.mode === "jwt";
+
+  useEffect(() => {
+    if (!isJwt) appliedFor.current = null;
+  }, [isJwt]);
 
   useEffect(() => {
     if (!isJwt || !data || appliedFor.current === data.userId) return;

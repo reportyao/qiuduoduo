@@ -226,6 +226,7 @@ class Bet(Base):
     user_id: Mapped[str] = mapped_column(String(40), index=True)
     verdict_id: Mapped[str] = mapped_column(String(40), index=True)
     amount: Mapped[float] = mapped_column(Float, default=0.0)
+    sp: Mapped[float | None] = mapped_column(Float, nullable=True)  # 下注时赔率快照
     pick_dir: Mapped[str] = mapped_column(String(8), default="")  # 下注时快照
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
+import { Platform } from "react-native";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SettingsPage } from "@/components/SettingsPage";
@@ -30,9 +32,16 @@ export default function ProfileScreen() {
   }, [me?.displayName]);
 
   const chooseAvatar = async (id: PersonaId) => {
+    if (id === meta.id) return;
+    const previous = meta.id;
     setPersona(id);
     if (session?.mode === "jwt") {
-      patchMe.mutate({ persona: id });
+      try {
+        await patchMe.mutateAsync({ persona: id });
+      } catch (e) {
+        setPersona(previous);
+        toast.show(errorText(e), "error");
+      }
     }
   };
 
@@ -56,7 +65,7 @@ export default function ProfileScreen() {
       <Card style={styles.card}>
         <Text variant="overline" color={colors.green}>头像</Text>
         <View style={styles.currentRow}>
-          <Avatar source={avatarUri ? { uri: avatarUri } : meta.avatar} size={64} online />
+          <Avatar source={avatarUri ? { uri: avatarUri } : meta.avatar} fallbackSource={meta.avatar} size={64} online />
           <View style={styles.flex}>
             <Text variant="smallStrong">当前头像</Text>
             <Text variant="caption" color={colors.muted} style={styles.note}>
@@ -82,7 +91,23 @@ export default function ProfileScreen() {
                 quality: 0.8,
               });
               if (!result.canceled && result.assets[0]?.uri) {
-                setAvatarUri(result.assets[0].uri);
+                const picked = result.assets[0].uri;
+                let saved = picked;
+                if (Platform.OS !== "web" && FileSystem.documentDirectory) {
+                  try {
+                    const dir = `${FileSystem.documentDirectory}avatars/`;
+                    await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+                    const dest = `${dir}avatar-${Date.now()}.jpg`;
+                    await FileSystem.copyAsync({ from: picked, to: dest });
+                    if (avatarUri?.startsWith(dir)) {
+                      await FileSystem.deleteAsync(avatarUri, { idempotent: true });
+                    }
+                    saved = dest;
+                  } catch {
+                    // 复制失败仍可用 picker 临时 URI，但下次启动可能被系统清理。
+                  }
+                }
+                setAvatarUri(saved);
                 toast.show("头像已更新，只保存在本机", "success");
               }
             }}

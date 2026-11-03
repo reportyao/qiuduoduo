@@ -7,6 +7,7 @@ import { Card, ErrorState, Skeleton, Text, useToast } from "@/components/ui";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { useAuthStore } from "@/features/auth/authStore";
 import { useBetsQuery } from "@/features/records/queries";
+import { useMeQuery } from "@/features/account/queries";
 import { useWatchQuery } from "@/features/inbox/queries";
 import { useShareVerdictMutation } from "@/features/assistant/queries";
 import {
@@ -30,7 +31,7 @@ export default function VerdictDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
-  const { copy } = usePersonaContent();
+  const { copy, id: personaId } = usePersonaContent();
   const session = useAuthStore((s) => s.session);
   const [betOpen, setBetOpen] = useState(false);
   const [sealOpen, setSealOpen] = useState(false);
@@ -38,18 +39,30 @@ export default function VerdictDetailScreen() {
   const detailQuery = useVerdictDetailQuery(id);
   const detail = detailQuery.data;
   const betsQuery = useBetsQuery(Boolean(session));
+  const meQuery = useMeQuery(Boolean(session?.userId));
   const watchQuery = useWatchQuery();
   const postmortemQuery = useVerdictPostmortemQuery(detail?.id);
   const watchMutation = useWatchMatchMutation();
   const shareMutation = useShareVerdictMutation();
 
   const betExists = Boolean(detail && (betsQuery.data ?? []).some((bet) => bet.verdictId === detail.id));
+  const me = meQuery.data;
+  const you = me
+    ? {
+        userId: me.userId,
+        rested: me.streak.rested,
+        restedUntil: me.streak.restedUntil,
+        protectionActive: me.streak.active,
+        streak: me.streak.streak,
+        disciplineOn: me.disciplineOn,
+      }
+    : null;
   const watch = detail ? (watchQuery.data ?? []).find((item) => item.targetId === detail.matchId) : undefined;
 
   const share = async () => {
-    if (!detail) return;
+    if (!detail || shareMutation.isPending) return;
     try {
-      const card = await shareMutation.mutateAsync({ verdictId: detail.id, persona: "zhuanjia" });
+      const card = await shareMutation.mutateAsync({ verdictId: detail.id, persona: personaId });
       await Share.share({ message: `${card.text}\n${card.deep_link}` });
     } catch (e) {
       toast.show(errorText(e), "error");
@@ -69,7 +82,7 @@ export default function VerdictDetailScreen() {
     );
   }
 
-  if (detailQuery.isError || !detail) {
+  if (!detail) {
     return (
       <AppScreen bottom={false}>
         <AppHeader title="完整账" showAssistant={false} onBack={() => router.back()} />
@@ -96,6 +109,13 @@ export default function VerdictDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
+        {detailQuery.isError ? (
+          <ErrorState
+            compact
+            message="刷新失败，先显示上次的完整账。"
+            onRetry={() => detailQuery.refetch()}
+          />
+        ) : null}
         <DetailHero detail={detail} onSeal={() => setSealOpen(true)} />
         <IntelSection report={buildIntelReport(detail)} />
         <GateDetailsCard detail={detail} />
@@ -139,6 +159,7 @@ export default function VerdictDetailScreen() {
           router.push({ pathname: "/match/[id]", params: { id: detail.matchId, date: detail.tradeDate } })
         }
         onWatch={async () => {
+          if (watchMutation.isPending) return;
           try {
             await watchMutation.mutateAsync({
               targetId: detail.matchId,
@@ -156,11 +177,16 @@ export default function VerdictDetailScreen() {
       <BetSheet
         visible={betOpen}
         verdict={detail}
-        you={null}
+        you={you}
         onClose={() => setBetOpen(false)}
         onRecorded={() => void betsQuery.refetch()}
       />
-      <SealSheet visible={sealOpen} verdictId={detail.id} onClose={() => setSealOpen(false)} />
+      <SealSheet
+        visible={sealOpen}
+        verdictId={detail.id}
+        sealed={Boolean(detail.sealedAt)}
+        onClose={() => setSealOpen(false)}
+      />
     </AppScreen>
   );
 }

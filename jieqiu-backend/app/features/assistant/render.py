@@ -6,11 +6,24 @@ from ...models import Event
 STATUS_LABEL = {"promoted": "三关全过", "killed": "未过闸", "screening": "复核中"}
 
 
+def _trade_date_from_kickoff(kickoff: str) -> str:
+    """竞彩日界：00:00–04:59 开赛属于前一日销售日。"""
+    from datetime import datetime, timedelta
+    try:
+        ko = datetime.strptime(kickoff, "%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError):
+        return ""
+    if ko.hour < 5:
+        ko -= timedelta(days=1)
+    return ko.strftime("%Y-%m-%d")
+
+
 def _deeplink(event: Event, payload: dict) -> str:
     if payload.get("verdict_id"):
         return f"jieqiu://verdict/{payload['verdict_id']}"
     if event.match_id:
-        return f"jieqiu://match/{event.match_id}"
+        date = _trade_date_from_kickoff(payload.get("kickoff", ""))
+        return f"jieqiu://match/{event.match_id}" + (f"?date={date}" if date else "")
     return "jieqiu://today"
 
 

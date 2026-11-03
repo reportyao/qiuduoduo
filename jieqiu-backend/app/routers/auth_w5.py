@@ -167,6 +167,9 @@ def wechat_callback(body: WechatBody, db: Session = Depends(get_db)):
     user = A.find_user_by_identity(db, "wechat", wx["openid"])
     if user is not None:
         if user.phone_verified:
+            if user.deleted_at is not None:
+                user.deleted_at = None
+                db.commit()
             return {"needs_phone_bind": False, "user": A.public_user(user),
                     **A.tokens_for(db, user)}
         return {"needs_phone_bind": True,
@@ -268,6 +271,9 @@ def _oauth_login(db: Session, provider: str, id_token: str):
                 if bound is not None:
                     raise HTTPException(
                         409, f"该邮箱已绑定其他 {provider} 账号，请使用原方式登录")
+                if candidate.deleted_at is not None:
+                    candidate.deleted_at = None
+                    db.commit()
                 user = candidate
         if user is None:
             user = A.create_user(db, "global", email=email if info.get("email_verified") else None)

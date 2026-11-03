@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
@@ -30,7 +30,8 @@ import { VerdictCard } from "@/features/verdict/components/VerdictCard";
 import { BetSheet } from "@/features/verdict/components/BetSheet";
 import { SealSheet } from "@/features/verdict/components/SealSheet";
 import { errorText } from "@/lib/errors";
-import { dateCnOffset, relativeTime, todayCn } from "@/lib/format";
+import { currentTradeDateCn, relativeTime, shiftDateCn } from "@/lib/format";
+import { useNow } from "@/lib/useNow";
 import { colors, layout, spacing } from "@/theme/tokens";
 import type { VerdictSummary } from "@/domain/types";
 
@@ -38,11 +39,12 @@ export default function HomeScreen() {
   const router = useRouter();
   const { copy } = usePersonaContent();
   const session = useAuthStore((s) => s.session);
-  const [date, setDate] = useState(todayCn());
+  const [date, setDate] = useState(currentTradeDateCn());
   const [pickerOpen, setPickerOpen] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
   const [betTarget, setBetTarget] = useState<VerdictSummary | null>(null);
   const [sealTarget, setSealTarget] = useState<string | null>(null);
+  const [pulling, setPulling] = useState(false);
 
   const streamQuery = useStreamQuery(date);
   const onsaleQuery = useOnSaleQuery();
@@ -60,14 +62,26 @@ export default function HomeScreen() {
     [betsQuery.data],
   );
 
-  const openVerdict = (id: string) => router.push({ pathname: "/verdict/[id]", params: { id } });
-  const openWhyNot = (matchId: string) =>
-    router.push({ pathname: "/match/[id]", params: { id: matchId, date } });
+  const openVerdict = useCallback(
+    (id: string) => router.push({ pathname: "/verdict/[id]", params: { id } }),
+    [router],
+  );
+  const openWhyNot = useCallback(
+    (matchId: string) => router.push({ pathname: "/match/[id]", params: { id: matchId, date } }),
+    [date, router],
+  );
 
-  const refreshAll = () => {
-    void streamQuery.refetch();
-    void onsaleQuery.refetch();
-    void betsQuery.refetch();
+  const refreshAll = async () => {
+    setPulling(true);
+    try {
+      await Promise.all([
+        streamQuery.refetch(),
+        onsaleQuery.refetch(),
+        betsQuery.refetch(),
+      ]);
+    } finally {
+      setPulling(false);
+    }
   };
 
   return (
@@ -85,7 +99,7 @@ export default function HomeScreen() {
           contentContainerStyle={styles.content}
           refreshControl={
             <RefreshControl
-              refreshing={streamQuery.isRefetching && !streamQuery.isLoading}
+              refreshing={pulling}
               onRefresh={refreshAll}
               tintColor={colors.green}
             />
@@ -102,7 +116,7 @@ export default function HomeScreen() {
               <CardSkeleton />
               <CardSkeleton />
             </>
-          ) : streamQuery.isError ? (
+          ) : streamQuery.isError && !stream ? (
             <ErrorState message={errorText(streamQuery.error)} onRetry={() => streamQuery.refetch()} />
           ) : !stream ? (
             <EmptyState
@@ -114,13 +128,20 @@ export default function HomeScreen() {
           ) : (
             <>
               <FeedSummary stream={stream} />
+              {streamQuery.isError ? (
+                <ErrorState
+                  compact
+                  message="刷新失败，先显示上次的结论。"
+                  onRetry={() => streamQuery.refetch()}
+                />
+              ) : null}
               {stream.restDay ? (
                 <RestDayCard rest={stream.restDay} onOpenLedger={() => router.push("/records/ledger")} />
               ) : verdicts.length === 0 ? (
                 <EmptyDayCard
                   copyTitle={stream.stats.total === 0 ? copy.pendingTitle : copy.emptyTitle}
                   copyBody={stream.stats.total === 0 ? copy.pendingBody : copy.emptyBody}
-                  onYesterday={() => setDate(dateCnOffset(-1))}
+                  onYesterday={() => setDate(shiftDateCn(currentTradeDateCn(), -1))}
                   onOnSale={() => router.push("/tools/on-sale")}
                 />
               ) : (
@@ -129,10 +150,10 @@ export default function HomeScreen() {
                     key={verdict.id}
                     verdict={verdict}
                     betExists={betIds.has(verdict.id)}
-                    onOpen={() => openVerdict(verdict.id)}
-                    onBet={() => setBetTarget(verdict)}
-                    onWhyNot={() => openWhyNot(verdict.matchId)}
-                    onSeal={() => setSealTarget(verdict.id)}
+                    onOpen={openVerdict}
+                    onBet={setBetTarget}
+                    onWhyNot={openWhyNot}
+                    onSeal={setSealTarget}
                   />
                 ))
               )}
@@ -160,7 +181,8 @@ export default function HomeScreen() {
       <MatchPickerSheet
         visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        stream={stream}
+        verdicts={verdicts}
+        streamDate={stream?.tradeDate ?? date}
         onsale={onsale}
         onSelectVerdict={openVerdict}
         onSelectMatch={(matchId, tradeDate) =>
@@ -183,6 +205,7 @@ export default function HomeScreen() {
       <SealSheet
         visible={Boolean(sealTarget)}
         verdictId={sealTarget}
+        sealed={Boolean(verdicts.find((v) => v.id === sealTarget)?.sealed)}
         onClose={() => setSealTarget(null)}
       />
     </AppScreen>
@@ -190,13 +213,14 @@ export default function HomeScreen() {
 }
 
 function Metrics({ stream }: { stream: ReturnType<typeof flattenStream>["page"] | null }) {
+  const now = useNow(60_000);
   const total = stream?.stats.total ?? 0;
   return (
     <View style={styles.metrics}>
       <Text variant="captionStrong" color={colors.green}>三关 v3</Text>
       <Text variant="caption" color={colors.muted}>{total > 0 ? `${total * 3} 次核验` : "等待同步"}</Text>
       <Text variant="caption" color={colors.subtle}>
-        {stream?.generatedAt ? relativeTime(stream.generatedAt) : "实时"}
+        {stream?.generatedAt ? relativeTime(stream.generatedAt, now) : "实时"}
       </Text>
     </View>
   );

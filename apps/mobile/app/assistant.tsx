@@ -52,25 +52,31 @@ export default function AssistantScreen() {
   const { save: saveMemory } = useMemoryMutations();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [confirmedConflicts, setConfirmedConflicts] = useState<string[]>([]);
   const scrollRef = useRef<ScrollView>(null);
+  const idRef = useRef(0);
+  const nextId = (prefix: string) => {
+    idRef.current += 1;
+    return `${prefix}-${idRef.current}`;
+  };
 
   const send = (raw?: string) => {
     const text = (raw ?? input).trim();
     if (!text || chat.isPending) return;
     setInput("");
-    setMessages((prev) => [...prev, { id: `u-${Date.now()}`, role: "user", text }]);
+    setMessages((prev) => [...prev, { id: nextId("u"), role: "user", text }]);
     chat.mutate(text, {
       onSuccess: (card) => {
         setMessages((prev) => [
           ...prev,
-          { id: `a-${Date.now()}`, role: "assistant", text: card.text, card },
+          { id: nextId("a"), role: "assistant", text: card.text, card },
         ]);
       },
       onError: (e) => {
         setMessages((prev) => [
           ...prev,
           {
-            id: `e-${Date.now()}`,
+            id: nextId("e"),
             role: "assistant",
             text: errorText(e),
             error: true,
@@ -91,7 +97,10 @@ export default function AssistantScreen() {
         right={
           messages.length > 0 ? (
             <Pressable
-              onPress={() => setMessages([])}
+              onPress={() => {
+                // 请求在飞时不允许清空，否则回调会把一条回复塞回空会话。
+                if (!chat.isPending) setMessages([]);
+              }}
               accessibilityRole="button"
               accessibilityLabel="清空对话"
               hitSlop={8}
@@ -140,16 +149,26 @@ export default function AssistantScreen() {
               <AssistantBubble
                 key={message.id}
                 message={message}
+                confirmed={confirmedConflicts.includes(message.id)}
+                savingMemory={saveMemory.isPending}
                 onOpenVerdict={(id) => router.push({ pathname: "/verdict/[id]", params: { id } })}
                 onConfirmMemory={(key, value) => {
+                  if (saveMemory.isPending) return;
                   saveMemory.mutate(
                     { key, value, confirm: true },
                     {
                       onSuccess: () => {
+                        setConfirmedConflicts((prev) =>
+                          prev.includes(message.id) ? prev : [...prev, message.id],
+                        );
                         toast.show("已覆盖记忆", "success");
                         setMessages((prev) => [
                           ...prev,
-                          { id: `m-${Date.now()}`, role: "assistant", text: `已更新：${key} = ${value}。` },
+                          {
+                            id: nextId("m"),
+                            role: "assistant",
+                            text: `已更新：${key} = ${value}。`,
+                          },
                         ]);
                       },
                       onError: (e) => toast.show(errorText(e), "error"),
@@ -203,10 +222,14 @@ export default function AssistantScreen() {
 
 function AssistantBubble({
   message,
+  confirmed,
+  savingMemory,
   onOpenVerdict,
   onConfirmMemory,
 }: {
   message: ChatMessage;
+  confirmed: boolean;
+  savingMemory: boolean;
   onOpenVerdict: (id: string) => void;
   onConfirmMemory: (key: string, value: string) => void;
 }) {
@@ -245,7 +268,7 @@ function AssistantBubble({
 
         {card?.deadGate ? <Chip label={`死因：${card.deadGate}`} tone="amber" /> : null}
 
-        {card?.conflict ? (
+        {card?.conflict && !confirmed ? (
           <Card tone="amber" style={styles.conflict}>
             <Text variant="caption" color={colors.amber}>
               我记的是「{card.conflict.existing}」，你现在说是「{card.conflict.incoming}」。
@@ -254,6 +277,8 @@ function AssistantBubble({
               label="确认覆盖"
               variant="secondary"
               size="sm"
+              loading={savingMemory}
+              disabled={savingMemory}
               onPress={() => onConfirmMemory(card.conflict!.key, card.conflict!.incoming)}
             />
           </Card>

@@ -68,6 +68,9 @@ _REQUIRED_COLUMNS = {
         "chain_hash": "TEXT",
         "trade_date": "TEXT",
     },
+    "bets": {
+        "sp": "FLOAT",
+    },
     "users": {
         "odds_format": "TEXT",
         "locale": "TEXT",

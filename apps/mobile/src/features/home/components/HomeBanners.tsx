@@ -3,6 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import type { OnSaleItem, StreamResponse } from "@/domain/types";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { countdownText, formatTime, parseCnDateTime } from "@/lib/format";
+import { useNow } from "@/lib/useNow";
 import { colors, gradients, radii, spacing } from "@/theme/tokens";
 import { Icon, StatusDot, Text } from "@/components/ui";
 
@@ -48,7 +49,7 @@ export function SaleBanner({
   onPress: () => void;
 }) {
   const { copy } = usePersonaContent();
-  const now = Date.now();
+  const now = useNow(30_000);
   const upcoming = onsale
     .map((item) => ({ item, at: parseCnDateTime(item.saleClose)?.getTime() ?? 0 }))
     .filter((entry) => entry.at > now)
@@ -63,7 +64,7 @@ export function SaleBanner({
       style={({ pressed }) => [styles.saleBanner, pressed && styles.pressed]}
     >
       <Text variant="smallStrong" color={colors.amber} numberOfLines={1} style={styles.flex}>
-        {next ? `${copy.saleTitle} ${formatTime(next.saleClose)} · ${countdownText(next.saleClose)}` : "今日在售待同步"}
+        {next ? `${copy.saleTitle} ${formatTime(next.saleClose)} · ${countdownText(next.saleClose, now)}` : "今日在售待同步"}
       </Text>
       <View style={styles.saleRight}>
         <Text variant="smallStrong" color={colors.amber}>今日在售 {onsale.length} 场</Text>

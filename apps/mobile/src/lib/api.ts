@@ -11,4 +11,10 @@ export const api = createApiClient({
   getToken: () => useAuthStore.getState().getAccessToken(),
   getLocale: () => "zh-CN",
   getMarket: () => "cn",
+  onError: (status) => {
+    // 注销冷静期（410）任何页面都不该继续以原账号身份请求；统一退回游客。
+    if (status === 410) {
+      void useAuthStore.getState().logout();
+    }
+  },
 });

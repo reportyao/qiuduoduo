@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type { GateKey, VerdictSummary } from "@/domain/types";
@@ -17,10 +18,10 @@ import { SealLine } from "./Seal";
 interface VerdictCardProps {
   verdict: VerdictSummary;
   betExists?: boolean;
-  onOpen: () => void;
-  onBet?: () => void;
-  onWhyNot?: () => void;
-  onSeal?: () => void;
+  onOpen: (id: string) => void;
+  onBet?: (verdict: VerdictSummary) => void;
+  onWhyNot?: (matchId: string) => void;
+  onSeal?: (id: string) => void;
 }
 
 function statusMeta(status: string): { label: string; color: string } {
@@ -40,7 +41,7 @@ function pendingGate(verdict: VerdictSummary): GateKey | null {
  * 判决卡是产品的最小信息单元：
  * 结论/概率/抽水/三关/封存必须在一屏内可读，详细情报下沉到详情页。
  */
-export function VerdictCard({
+export const VerdictCard = memo(function VerdictCard({
   verdict,
   betExists = false,
   onOpen,
@@ -148,21 +149,21 @@ export function VerdictCard({
             <Button
               label={betExists ? copy.bought : copy.buy}
               variant="darkPrimary"
-              onPress={onBet}
+              onPress={() => onBet?.(verdict)}
               disabled={betExists}
               style={styles.action}
             />
-            <Button label={copy.detail} variant="darkGhost" onPress={onOpen} style={styles.action} />
+            <Button label={copy.detail} variant="darkGhost" onPress={() => onOpen(verdict.id)} style={styles.action} />
           </>
         ) : (
           <>
-            <Button label={copy.pendingCta} variant="secondary" onPress={onWhyNot} style={styles.action} />
-            <Button label={copy.detail} variant="primary" onPress={onOpen} style={styles.action} />
+            <Button label={copy.pendingCta} variant="secondary" onPress={() => onWhyNot?.(verdict.matchId)} style={styles.action} />
+            <Button label={copy.detail} variant="primary" onPress={() => onOpen(verdict.id)} style={styles.action} />
           </>
         )}
       </View>
 
-      <SealLine hash={verdict.hash} sealed={verdict.sealed} dark={dark} onPress={onSeal} />
+      <SealLine hash={verdict.hash} sealed={verdict.sealed} dark={dark} onPress={() => onSeal?.(verdict.id)} />
     </>
   );
 
@@ -181,7 +182,7 @@ export function VerdictCard({
 
   // 卡片本身不做点击：内部有多枚操作按钮，外层 Pressable 会造成点击冒泡/误导航。
   return <View style={[styles.lightCard, pending && styles.pendingCard]}>{body}</View>;
-}
+});
 
 const styles = StyleSheet.create({
   darkCard: {

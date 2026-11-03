@@ -1,8 +1,5 @@
 import type { ExpoConfig } from "expo/config";
 
-const apiBaseUrl =
-  process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://10.0.2.2:8100";
-
 const config: ExpoConfig = {
   name: "解球",
   slug: "jieqiu",
@@ -24,6 +21,7 @@ const config: ExpoConfig = {
     infoPlist: {
       NSAppTransportSecurity: {
         NSAllowsArbitraryLoads: false,
+        NSAllowsLocalNetworking: true,
       },
     },
   },
@@ -48,10 +46,6 @@ const config: ExpoConfig = {
   ],
   experiments: {
     typedRoutes: true,
-  },
-  extra: {
-    apiBaseUrl,
-    appEnv: process.env.EXPO_PUBLIC_APP_ENV ?? "development",
   },
 };
 

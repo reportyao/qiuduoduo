@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import type { AvoidItem, PostmortemSummary, RestDay, StreamResponse } from "@/domain/types";
-import { dateCnOffset, formatDate, formatTime } from "@/lib/format";
+import { currentTradeDateCn, formatDate, formatTime, shiftDateCn } from "@/lib/format";
 import { colors, radii, spacing } from "@/theme/tokens";
 import { Button, Card, Chip, Icon, Sheet, Text } from "@/components/ui";
 import { gateTone } from "@/features/verdict/components/Gates";
@@ -12,10 +12,11 @@ export function DateStrip({
   value: string;
   onChange: (date: string) => void;
 }) {
+  const base = currentTradeDateCn();
   const options = [
-    { date: dateCnOffset(0), label: "今天" },
-    { date: dateCnOffset(-1), label: "昨天" },
-    { date: dateCnOffset(-2), label: "前天" },
+    { date: shiftDateCn(base, 0), label: "今天" },
+    { date: shiftDateCn(base, -1), label: "昨天" },
+    { date: shiftDateCn(base, -2), label: "前天" },
   ];
   return (
     <ScrollView

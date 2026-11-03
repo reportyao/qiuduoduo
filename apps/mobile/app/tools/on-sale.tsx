@@ -18,7 +18,7 @@ import { useWatchQuery } from "@/features/inbox/queries";
 import { useWatchMatchMutation } from "@/features/verdict/queries";
 import type { OnSaleItem } from "@/domain/types";
 import { errorText } from "@/lib/errors";
-import { countdownText, formatTime, pct, todayCn } from "@/lib/format";
+import { countdownText, formatTime, pct, tradeDateCnFromKickoff } from "@/lib/format";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 
 type Filter = "all" | "single" | "promoted" | "screening";
@@ -31,6 +31,7 @@ export default function OnSaleScreen() {
   const watchMutation = useWatchMatchMutation();
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<OnSaleItem | null>(null);
+  const [pulling, setPulling] = useState(false);
 
   const rows = useMemo(() => {
     const list = query.data ?? [];
@@ -50,7 +51,7 @@ export default function OnSaleScreen() {
     if (item.verdictId) {
       router.push({ pathname: "/verdict/[id]", params: { id: item.verdictId } });
     } else if (item.status === "screening" || item.status === "killed") {
-      router.push({ pathname: "/match/[id]", params: { id: item.matchId, date: todayCn() } });
+      router.push({ pathname: "/match/[id]", params: { id: item.matchId, date: tradeDateCnFromKickoff(item.kickoff) } });
     } else {
       setSelected(item);
     }
@@ -63,7 +64,18 @@ export default function OnSaleScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} tintColor={colors.green} />
+          <RefreshControl
+            refreshing={pulling}
+            onRefresh={async () => {
+              setPulling(true);
+              try {
+                await query.refetch();
+              } finally {
+                setPulling(false);
+              }
+            }}
+            tintColor={colors.green}
+          />
         }
       >
         <Text variant="overline" color={colors.green}>在售 · 官方停售时间</Text>
@@ -150,7 +162,10 @@ export default function OnSaleScreen() {
             <Button
               label={watch ? "取消关注" : "关注这场比赛"}
               variant={watch ? "secondary" : "primary"}
+              loading={watchMutation.isPending}
+              disabled={watchMutation.isPending}
               onPress={async () => {
+                if (watchMutation.isPending) return;
                 try {
                   await watchMutation.mutateAsync({
                     targetId: selected.matchId,

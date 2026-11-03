@@ -214,6 +214,9 @@ export interface BetRecord {
   match: string;
   matchNo: string;
   amount: number;
+  pool: string;
+  goalLine: string | null;
+  sp: number | null;
   pickDir: string;
   status: VerdictStatus;
   settled: Settlement;
@@ -256,7 +259,7 @@ export interface Postmortem {
   why?: Record<string, unknown>;
   whatIf: string;
   attribution?: { settled: boolean; class: string | null; note: string };
-  bet?: { amount: number; pickDir: string; pnl: number | null };
+  bet?: { amount: number; pickDir: string; pnl: number | null; sp?: number | null };
 }
 
 export interface LedgerStats {
