@@ -7,11 +7,16 @@ from tests.conftest import future_kickoff, today_cn
 
 
 def _seed_n(db, n=3):
+    # 固定在“次日 02:00”开赛：既晚于 build_verdicts 的固定 now，又落在
+    # /matches/on-sale 的“次日 04:59 前”窗口内，避免测试随墙钟漂移（21:30 后跑会失败）。
+    from datetime import datetime, timedelta
+    from tests.conftest import CN
+    tomorrow = (datetime.now(CN) + timedelta(days=1)).strftime("%Y-%m-%d")
     for i in range(n):
         mid = f"20426{i:02d}"
         db.merge(SPMatch(match_id=mid, match_no=f"周三{i:03d}", league="英超",
                          home_raw=f"球队{i}", away_raw="对手", home=f"球队{i}", away="对手",
-                         kickoff=future_kickoff(today_cn(), 21, 30 + i), single_flag=True))
+                         kickoff=future_kickoff(tomorrow, 2, i), single_flag=True))
         # 递增抽水：1.53+i*0.1 → 深 → 排序可预期
         db.merge(SPSnapshot(match_id=mid, pool="had", goal_line="",
                             sp_h=1.50 + i * 0.1, sp_d=4.0, sp_a=6.0,

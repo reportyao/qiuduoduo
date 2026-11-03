@@ -9,6 +9,8 @@
 
 > AI 助理运行时（主动监控 / 推送 / 记忆）的差距分析与 Android MVP 排期见 `Assistant-Runtime-v1.0.md`。
 
+> 2026-11-03 后端/控制台评审：149 测试通过；follows / events / notifications / push 仍未实现，记忆仅 key/value；详见 `Assistant-Runtime-v1.0.md` §17。
+
 ---
 
 ## 0. 迭代模型

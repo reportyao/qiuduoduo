@@ -44,8 +44,8 @@
 | **情报官** | 首发、伤停、轮换、赛程密度 | TechSpec §8.7 | 设计完成；前端情报 UI 演示 | signals 表 + API-Football |
 | **复盘官** | 赛后归因、周报、CLV | PRD F12 / W6 | W6 已上线归因/周报/复盘卡 | 与推送/记忆打通 |
 | **陪看** | 实况卡、进球/红牌、走盘 | PRD §5.4 | 前端实况演示；无 live feed | 实时比分源 + 静默推送 |
-| **选比赛** | 点形象→当日全量列表→快速进入 | PRD F22 | 前端已做简化版；后端无全量 `/matches` | 全量列表 + 分类 chips |
-| **对话** | 问成本/查比赛/记事情 | PRD F15 / W6 | 后端 `/chat` + 记忆写入；前端聊天条 | 上下文个性化/记忆检索 |
+| **选比赛** | 点形象→当日全量列表→快速进入 | PRD F22 | 前端已做简化版；`/stream` 已有 verdicts/onsale，但无独立 `/matches` 分类 | 分类接口 + 前端接 onsale |
+| **对话** | 问成本/查比赛/记事情 | PRD F15 / W6 | 后端 `/chat` + 记忆写入；前端聊天条 | chat 未读 persona；上下文/记忆检索 |
 
 
 ---
@@ -55,9 +55,9 @@
 | 文档条目 | 要求 | 现状 | 结论 |
 |---|---|---|---|
 | PRD F13 记忆 | 五类；口述>推断；冲突当场问；可见可删 | `memories` 表 + `/me/memories` + 冲突 409 + 聊天写入；前端可删 | **部分完成**：缺派生记忆、五类、置信/过期 |
-| PRD F19 人设 | 三套人设、即选即换、通知中性 | `users.persona` + `PATCH /me` + 前端 `T()`/形象 sprite | **基本完成**：推送文案未接人设 |
+| PRD F19 人设 | 三套人设、即选即换、通知中性 | `users.persona` + `PATCH /me` + 前端 `T()`/形象 sprite | **部分完成**：chat 未读 persona；前端切换未回写后端；推送保持中性 |
 | PRD F21 关注 | 详情关注开关、实况卡、终场推送 | 前端 `S.follows` 本地；后端无 follows 表/接口 | **未完成** |
-| PRD F22 吉祥物选比赛 | 点大头像→分类 chips→点场次→卡入流 | 前端已做简化版（点击形象出 6/12 场列表） | **部分完成**：后端无全量 `/matches`，无分类 |
+| PRD F22 吉祥物选比赛 | 点大头像→分类 chips→点场次→卡入流 | 前端已做简化版（点击形象出 6/12 场列表） | **部分完成**：stream 有 onsale/verdicts，但无分类接口；前端 mapStream 未接 onsale |
 | PRD §5.2 推送矩阵 | 终场/结算/结论/拦截/未决；过程不推；静默时段 | 文档完整；代码无 events/notifications/push | **未完成** |
 | PRD §5.3 两级时序 | 终场 T+2min、结算 T+2h、结论 T-3h、T-30m 未决 | 无调度/推送 worker | **未完成** |
 | TechSpec 推送 | JPush CN + Expo Global；静默推送 | 仅文档；无 token/推送适配 | **未完成**，MVP 只做 Android/JPush |
@@ -368,7 +368,7 @@ GET    /me/events/stream   （SSE，可选）
 
 1. **平台范围**：TechSpec/PRD 的 Global/iOS 推送条目标注“MVP 延后”，先 Android/JPush。
 2. **F21 关注**：补后端表/API，不再只存前端。
-3. **F22 选比赛**：补全量 `/matches` 与分类 chips；当前 `/stream` 只有 top/watch。
+3. **F22 选比赛**：补独立 `/matches` 分类接口或在 stream 上扩展筛选；当前 `/stream` 已有 verdicts/onsale/avoid，但没有分类 chips，前端 mapStream 也未接 onsale。
 4. **F13 记忆**：补五类、置信、过期、派生；现有 `Memory` 只有 key/value/source。
 5. **推送矩阵**：PRD 已有，但 W5 未实现；按本文 P0 落地。
 6. **AI 分析**：TechSpec §8.8 设计完成，后端表/worker/控制台未建。
@@ -486,3 +486,55 @@ JQ_LLM_PROVIDER=glm
 
 到那时再把 `PushProvider`/`DataSourceAdapter` 抽成独立进程或 entry points，不用现在付这个成本。
 
+
+---
+
+## 17. 代码评审记录（2026-11-03）
+
+### 17.1 评审范围
+
+- 后端：`app/models.py`、`app/routers/w6.py`、`app/modules/users.py`、`app/modules/chat.py`、`app/modules/messaging.py`、`app/routers/api.py`、`app/routers/console.py`、`app/main.py`；
+- 测试：`python -m pytest -q`，**149 passed**（修复 6 个墙钟依赖后）；
+- 管理后台：`/console`、`/console/alerts`、`/console/variants`、`/console/ops`。
+
+### 17.2 已确认可用
+
+| 能力 | 证据 |
+|---|---|
+| 认证/JWT/refresh/设备令牌 | `auth.py` + `auth_w5.py`；生产 fail-loud |
+| 人设持久化 | `users.persona` + `PATCH /me`（zhuanjia/laopao/meng 校验） |
+| 记忆冲突 | `Memory` 唯一键 + `upsert_memory` 冲突 409；聊天写入 |
+| 下注/连败保护/休息/周报/归因 | W6 已上线；423 + confirm |
+| 判决/修订/封存链 | `Verdict` / `VerdictRevision` / `sealchain` |
+| 流接口 | `/stream` 返回 verdicts/watch/onsale/avoid + 缓存 |
+| 控制台登录 | 密码 + IP 白名单 + 5 次锁 10 分钟 + 会话 TTL |
+| 测试 | 149 passed（审计/契约/W2–W8） |
+
+### 17.3 评审发现
+
+| 级别 | 问题 | 影响 | 建议 |
+|---|---|---|---|
+| **P1** | `chat.respond` 没有读取 `user.persona`，聊天文案不随人设变化 | F19 只在 UI 层生效，跨端/通知不一致 | 在 `respond` 输出前加 persona 渲染层；规则意图不变 |
+| **P1** | 前端 `personaSet` / 资料保存只写 localStorage，不调用 `PATCH /me` | 换机/多端人设、昵称丢失；后端字段空转 | 登录态下同步 `PATCH /me`（persona/display_name）；头像先本地 |
+| **P1** | `Memory` 只有 key/value/source | 无法表达五类、置信、过期、派生 | 扩展 `category/confidence/expires_at/last_used_at`；迁移兼容 |
+| **P1** | 无 follows 表/API | F21 无法跨端；实时卡/终场推送无对象 | 新建 `watch_targets`（match/team/league） |
+| **P1** | 无 events/notifications/push_tokens/notify_settings | 主动推送全链路缺失 | 按本文 P0 建表 + worker |
+| **P1** | 控制台无 assistant/push/AI/memory 页 | 无法看事件、队列、到达、AI 成本 | 新增 `/console/assistant`、`/console/push`、`/console/ai` |
+| **P1** | 控制台 token 走 URL/表单 query；cookie 未设 `Secure/SameSite`；POST 无 CSRF token；变体页未转义队名 | 令牌进日志/Referer；后台被 CSRF/存储型 XSS 的风险 | 改用 HttpOnly+SameSite=Strict+Secure cookie；去掉 URL token；加 CSRF；`html.escape` |
+| **P2** | `_VARIANT_POOL` 进程内存，重启丢失 | 运营标记不可持久 | v1.5 落 `narrative_pool` 表 |
+| **P2** | `/stream` 有 `onsale`，但前端 `mapStream` 只取 verdicts/watch/avoid | 吉祥物选比赛少一类数据源 | `mapStream` 接 `onsale`；或建 `/matches` 分类接口 |
+| **P2** | `app.main` 版本字符串仍是 `0.7.0-w7` | 版本展示/排障不一致 | 升到 w8/实际版本 |
+| **P2** | 6 个测试依赖墙钟：21:55 后 `future_kickoff` 落到次日 21:55，超出竞彩日窗口 | 夜间跑测试误报 rest_day/0 场 | 已修：`future_kickoff` 回落到次日 02:00；149 passed |
+
+### 17.4 本次实际修复
+
+- `tests/conftest.py::future_kickoff`：过期时不再“同日时刻 +1 天”，改为**次日 02:00**，保证落在 `当日 00:00–次日 04:59` 的竞彩窗口内；
+- `tests/test_w2_gaps.py::_seed_n`：固定“次日 02:00”种子，避免 21:30 后漂移；
+- 结果：`149 passed`。
+
+### 17.5 结论
+
+- 现有后端/控制台**基础扎实**：认证、判决、修订、记忆冲突、下注/保护、周报/归因、封存链、限流、控制台防爆破都已可用；
+- 距离“AI 助理运行时”还差的是**行动层**（follows/events/notifications/push）和**记忆扩展**；
+- 不建议为了这些重写架构；在现有模块化单体上加 `app/assistant/` + registry 即可；
+- 控制台安全项（token/CSRF/XSS）建议在接外部运营前修掉。

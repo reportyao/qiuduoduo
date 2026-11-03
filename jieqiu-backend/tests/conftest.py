@@ -66,8 +66,14 @@ def today_cn() -> str:
 
 
 def future_kickoff(day: str, hour: int = 21, minute: int = 55) -> str:
-    """给一个比赛日 + 时间，返回 kickoff 字符串；若已过当日该时刻则用次日。"""
+    """给一个比赛日 + 时间，返回 kickoff 字符串。
+
+    若该时刻已过，回落到次日 02:00，而不是同一时刻 +1 天：
+    竞彩日窗口是「当日 00:00 ~ 次日 04:59」，次日 21:55 会落到窗口外，
+    导致 21:55 之后跑测试时 /stream 误判 rest_day（墙钟依赖）。
+    """
     d = datetime.strptime(day, "%Y-%m-%d").replace(hour=hour, minute=minute, tzinfo=CN)
     if d <= datetime.now(CN):
-        d += timedelta(days=1)
+        d = (datetime.now(CN) + timedelta(days=1)).replace(
+            hour=2, minute=0, second=0, microsecond=0)
     return d.strftime("%Y-%m-%d %H:%M:%S")
