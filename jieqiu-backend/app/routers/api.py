@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..db import get_db
 from ..models import ModelRun, SPMatch, SPSnapshot, TeamAlias, Verdict
-from ..modules.messaging import build_stream
+from ..modules.messaging import build_stream, build_stream_cached
 
 router = APIRouter()
 
@@ -71,7 +71,7 @@ def stream(date: str | None = None, cursor: str | None = None, limit: int = 50,
     user = user_from_token(db, authorization)
     if user is not None and is_deleted(user):
         user = None  # 注销冷静期 → 按匿名处理（you 块不泄露）
-    return build_stream(db, d, cursor=cursor, limit=limit, user=user)
+    return build_stream_cached(db, d, cursor=cursor, limit=limit, user=user)
 
 
 @router.get("/analysis-log")

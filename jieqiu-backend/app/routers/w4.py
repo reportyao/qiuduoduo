@@ -28,11 +28,34 @@ def _ledger_rows(db: Session, limit: int):
     ).all()
 
 
+_LEDGER_CACHE: dict[str, tuple[float, object, object]] = {}
+_LEDGER_TTL = 30.0
+
+
+def _ledger_cached(db: Session, limit: int):
+    """返回 (rows, stats)，30s 缓存；测试环境直读。"""
+    import time
+    from ..config import get_settings
+    if get_settings().env == "test":
+        rows = _ledger_rows(db, limit)
+        return rows, ledger_stats(db)
+    key = str(limit)
+    now = time.time()
+    hit = _LEDGER_CACHE.get(key)
+    if hit and now - hit[0] < _LEDGER_TTL:
+        return hit[1], hit[2]
+    rows, stats = _ledger_rows(db, limit), ledger_stats(db)
+    if len(_LEDGER_CACHE) > 50:
+        _LEDGER_CACHE.clear()
+    _LEDGER_CACHE[key] = (now, rows, stats)
+    return rows, stats
+
+
 @router.get("/api/ledger")
 def ledger_api(limit: int = 100, db: Session = Depends(get_db)):
     """公开账本 JSON（F14）：全部判决 + 结算 + 连败公开。"""
     limit = max(1, min(limit, 500))
-    rows = _ledger_rows(db, limit)
+    rows, stats = _ledger_cached(db, limit)
     ids = {v.match_id for v in rows}
     matches = {m.match_id: m for m in db.scalars(
         select(SPMatch).where(SPMatch.match_id.in_(ids)))} if ids else {}
@@ -55,14 +78,13 @@ def ledger_api(limit: int = 100, db: Session = Depends(get_db)):
             "hash": v.payload_hash,
             "seal_url": f"/verdicts/{v.id}/seal",
         })
-    return {"items": items, "stats": ledger_stats(db)}
+    return {"items": items, "stats": stats}
 
 
 @router.get("/ledger", response_class=HTMLResponse)
 def ledger_page(db: Session = Depends(get_db)):
     """公开账本 Web 页（F14）：无样式依赖、可独立核验（每行带 seal 链接）。"""
-    rows = _ledger_rows(db, 200)
-    stats = ledger_stats(db)
+    rows, stats = _ledger_cached(db, 200)
     trs = []
     for v in rows:
         settled_badge = {"win": "✓ 中", "lose": "✗ 未中"}.get(v.settled, "… 待定")

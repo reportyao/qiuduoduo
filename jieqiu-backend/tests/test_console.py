@@ -44,10 +44,10 @@ def test_rate_limit_429_real_server(monkeypatch):
             except Exception:
                 continue
         codes = []
-        for i in range(35):
+        for i in range(70):  # 新语义：匿名写 60/分/身份 → 第 61 个起 429
             req = urllib.request.Request(
-                f"http://127.0.0.1:{port}/auth/device",
-                data=json.dumps({"device_token": f"rl{i}"}).encode(),
+                f"http://127.0.0.1:{port}/auth/logout",
+                data=json.dumps({"refresh_token": f"x{i}"}).encode(),
                 headers={"Content-Type": "application/json"}, method="POST")
             try:
                 with urllib.request.urlopen(req, timeout=5) as resp:
@@ -55,7 +55,7 @@ def test_rate_limit_429_real_server(monkeypatch):
             except urllib.error.HTTPError as e:
                 codes.append(e.code)
         assert 429 in codes
-        assert codes.count(200) >= 25
+        assert codes.count(200) >= 55
     finally:
         proc.terminate()
         try:

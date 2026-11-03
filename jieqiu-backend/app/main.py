@@ -38,6 +38,35 @@ app.include_router(w8_router, tags=["w8-review"])
 app.include_router(auth_router, tags=["w5-auth"])
 
 
+def _warm_models() -> None:
+    """后台预热 DC 模型（首个 /stream 请求不再等 1–2s 拟合）。"""
+    try:
+        import threading
+
+        from .config import get_settings
+        from .db import SessionLocal
+        from .modules.align import Aligner
+        from .modules.verdict import _get_model
+        from datetime import datetime, timedelta, timezone
+
+        st = get_settings()
+        if not st.xg_data_path:
+            return
+        as_of = (datetime.now(timezone.utc).replace(tzinfo=None)
+                 + timedelta(hours=st.tz_offset_hours))
+        db = SessionLocal()
+        try:
+            _get_model(db, Aligner(db), as_of)
+        finally:
+            db.close()
+    except Exception:
+        pass
+
+
 @app.on_event("startup")
 def _startup() -> None:
     init_db()
+    from .config import get_settings
+    if get_settings().env != "test" and getattr(get_settings(), "warmup", True):
+        import threading
+        threading.Thread(target=_warm_models, daemon=True).start()

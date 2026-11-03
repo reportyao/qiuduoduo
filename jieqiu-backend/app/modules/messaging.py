@@ -201,6 +201,35 @@ def build_stream(db: Session, trade_date: str, cursor: str | None = None,
     return out
 
 
+_STREAM_CACHE: dict[str, tuple[float, dict]] = {}
+_STREAM_TTL = 15.0
+
+
+def build_stream_cached(db: Session, trade_date: str, cursor: str | None = None,
+                        limit: int = 50, user=None) -> dict:
+    """带 15s 缓存的 build_stream：公共部分缓存，you 块按用户实时附加。"""
+    import copy
+    import time
+    from ..config import get_settings
+
+    if get_settings().env == "test":  # 测试要实时数据，避免跨用例污染
+        return build_stream(db, trade_date, cursor, limit, user)
+
+    key = f"{trade_date}|{cursor}|{limit}"
+    now = time.time()
+    hit = _STREAM_CACHE.get(key)
+    if hit and now - hit[0] < _STREAM_TTL:
+        payload = copy.deepcopy(hit[1])
+    else:
+        payload = build_stream(db, trade_date, cursor, limit, None)
+        if len(_STREAM_CACHE) > 300:
+            _STREAM_CACHE.clear()
+        _STREAM_CACHE[key] = (now, copy.deepcopy(payload))
+    if user is not None:
+        _attach_you(db, payload, user)
+    return payload
+
+
 def _attach_you(db: Session, payload: dict, user) -> None:
     """登录用户的个性化块：休息状态 + 连败保护（F7/F11 行为面）。"""
     if user is None:

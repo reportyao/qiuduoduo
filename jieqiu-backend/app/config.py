@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     avoid_top_n: int = 3
     # 环境标签
     env: str = "dev"
+    warmup: bool = True              # 启动时后台预热模型/缓存
 
     # ---- W3 三道闸 ----
     # 价闸：动态阈值 = 当日候选场抽水中位数 + pad，夹在 clamp 区间
