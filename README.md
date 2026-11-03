@@ -1,6 +1,19 @@
 # 解球 Monorepo
 
-工程入口见 [AGENTS.md](./AGENTS.md)。当前结构：`jieqiu-backend/`（FastAPI 后端，过渡期目录）、`apps/mobile/`（Expo RN）、`packages/api-client/`（OpenAPI 生成 client）。下文仅描述仓库内的 SP 采集器。
+产品：不预测赢家，只算清下注真实成本的体育数据分析助手。当前生产前端是 `apps/mobile/`（Expo RN，Android 先发），生产后端仍在 `jieqiu-backend/`（FastAPI），接口契约由 `packages/api-client/` 生成。
+
+| 事实 | 当前值（2026-11-04） |
+|---|---|
+| 版本 | `0.8.0-w8+assistant` |
+| OpenAPI | 94 路径 / 107 方法 |
+| 后端测试 | 179 passed |
+| 前端测试 | 20 passed + typecheck/lint/bundle |
+| 数据库 | 目标自建 PostgreSQL 16；未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite |
+| Alembic head | `20261104_03` |
+
+工程入口见 [AGENTS.md](./AGENTS.md)，完整文档索引见 [docs/README.md](./docs/README.md)，最新全栈审查见 [docs/reviews/2026-11-04-full-stack.md](./docs/reviews/2026-11-04-full-stack.md)。
+
+当前结构：`jieqiu-backend/`（FastAPI 后端，过渡期目录）、`apps/mobile/`（Expo RN）、`packages/api-client/`（OpenAPI 生成 client）、`sp-collector/`（竞彩 SP 采集器）。下文描述仓库内的 SP 采集器。
 
 ---
 
@@ -31,5 +44,5 @@ python collector.py        # 前台
 | 限制 | 对策（W2 内定） |
 |---|---|
 | 依赖本机开机+家宽 | ① 4G 迷你主机 ② 住宅代理+云机 ③ 与常开设备共存 |
-| 5min 固定轮询 | v0.2：停售前 60min 加密至 60s |
-| 无赛果回填 | v0.2：结算后抓比分，补 settled 列 |
+| 5min 固定轮询 | 后续：停售前 60min 加密至 60s（尚未实现） |
+| 无赛果回填 | 赛果由后端 `sync_results_football_data` 回填，不由采集器写 `settled` |

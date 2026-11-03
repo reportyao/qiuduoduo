@@ -1,7 +1,15 @@
 # 解球 · AI 优先架构（v1）
 
-> 状态：已采纳（ADR-0001 / 0002 / 0003）
+> 状态：已采纳（ADR-0001 / 0002 / 0003）。**本文描述目标态，不等同于当前目录。**
 > 目标：让 AI 开发“每次只在一个小上下文里写对”，并让错误在类型、契约、测试层被立刻发现。
+
+## 0. 当前实现（2026-11-04）
+
+- 生产后端仍在 `jieqiu-backend/`，尚未迁到 `services/api/`；`services/` 只有迁移说明。
+- 生产前端在 `apps/mobile/`；`apps/web/`、`apps/admin/` 仍是规划，当前管理后台是后端同进程的 `/console`。
+- OpenAPI 94 路径 / 107 方法；后端 179 tests；Alembic head `20261104_03`。
+- Postgres 是目标生产库；未设置 `JQ_PROD_DATABASE_URL` 时生产部署仍可能是旧 SQLite 兼容模式。
+- 新增的 catalog/actions 已按 feature slice 落地；verdict/assistant 仍是混合目录，迁移未完成。
 
 ## 1. 架构原则
 
@@ -107,11 +115,11 @@ packages/api       生成的 client
 
 ## 5. 数据与契约
 
-- 生产/CI 使用自建 Postgres 16（非 Supabase）；详见 [数据库架构](./database-architecture.md)；
+- 目标生产/CI 使用自建 Postgres 16（非 Supabase）；详见 [数据库架构](./database-architecture.md)；当前旧部署仍可能使用 SQLite，切换步骤见该文；
 - Alembic 是 schema 事实源；
-- SQLite 仅允许纯单元测试或一次性工具；
+- SQLite 仅允许纯单元测试、一次性工具或尚未切换的旧部署；
 - OpenAPI 由 FastAPI 生成；后端导出 `packages/api-client/openapi.json` 快照，client 从快照离线生成；
-- 迁移先于应用启动；Alembic baseline 已覆盖当前全部表；
+- Postgres 迁移先于应用启动；Alembic head 为 `20261104_03`，baseline 覆盖 24 张表；
 - AI 输出必须通过 Pydantic / JSON Schema 校验；
 - 领域事件必须有 `dedupe_key`、`payload_hash`、`data_cutoff`。
 
@@ -134,6 +142,8 @@ packages/api       生成的 client
 | 契约 | OpenAPI diff + client 生成 | 前后端契约 |
 | 前端单测 | Vitest + RNTL | hooks / 组件 |
 | E2E | Maestro | 核心用户流程 |
+
+> 当前实际（2026-11-04）：后端 pytest 179 项仍主要跑 SQLite；未接真实 Postgres CI；前端 Vitest 20 项 + typecheck/lint + Expo Android bundle；Maestro/E2E 尚未接入。
 
 ## 8. 迁移路线
 

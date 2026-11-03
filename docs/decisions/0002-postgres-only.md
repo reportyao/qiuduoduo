@@ -2,6 +2,7 @@
 
 - 状态：已采纳
 - 日期：2026-11-03
+- 实现状态（2026-11-04）：生产目标仍是 Postgres；当前单测仍跑 SQLite，尚未接入真实 Postgres CI；未设置 `JQ_PROD_DATABASE_URL` 的旧部署仍可能使用 SQLite。
 
 ## 背景
 

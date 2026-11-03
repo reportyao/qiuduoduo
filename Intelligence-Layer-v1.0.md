@@ -3,7 +3,7 @@
 > 本文把「每场比赛的数据与分析从哪来、怎么算、怎么展示、怎么控成本」收敛成一份可落地的设计。
 > 关联：`TechSpec-v2.1.md` §8.7（情报层）、§8.8（AI 研判层）；`jieqiu-app/index.html`（v3 测试前端）；`Feature-API-Mapping-v1.0.md`。
 >
-> 状态：**设计定稿，前端交互已落地测试前端；后端 signals / ai_analyses 尚未实现，当前前端为演示数据。**
+> 状态（2026-11-04 更新）：**设计定稿**。生产移动端已有情报/证据 UI，但数据来自判决 payload 的 evidence/model 字段与本地派生，不是独立的 signals/ai_analyses/AI 研判；后端 `signals` / `ai_analyses` / API-Football 仍未实现。
 
 ---
 
@@ -313,7 +313,7 @@ ai_jobs
 
 - **MVP 只做 Android**（中国大陆 Android 为主）：前端 Expo RN Android、推送 JPush 厂商通道（华为/小米/OPPO/vivo）+ 站内信。
 - iOS / APNs、Global / FCM、Web Push 全部延后；接口保留 `platform` 字段，但 MVP 不实现 iOS 推送证书与审核。
-- 当前测试前端是 Web，仅用于 UI/交互验证；**系统级推送必须等 Android App 打包后才能验收**，站内信与 SSE 可先在 Web 验证。
+- 生产前端已迁到 `apps/mobile/`；系统级推送仍需真实 Android 包/JPush 凭证验收，站内信已在 App 内接入。
 - 后端 `push_tokens`、`notifications`、`events` 表按 Android 先建；provider 只启用 `jpush`，`apns/fcm` 留空实现。
 
 ### 10.1 正式版字体

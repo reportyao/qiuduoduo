@@ -1,5 +1,8 @@
 # Monorepo 基座 Review 记录（2026-11-04）
 
+> **历史快照**：本文记录当时的测试数/路径数/结论；最新全栈审查与当前事实见 [docs/reviews/2026-11-04-full-stack.md](2026-11-04-full-stack.md)（2026-11-04：179 tests / 94 路径）。
+
+
 范围：上一轮 AI 优先架构落地（monorepo / Expo 基座 / OpenAPI client / Alembic / assistant feature slice）的代码、配置、脚本与产物。
 
 ## 结论

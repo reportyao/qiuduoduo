@@ -6,6 +6,7 @@
 | 前提 | 一人（OPC）+ AI 代理军团；每周新功能 ≤1 个的节奏不变 |
 | 核心公式 | **AI 出产能，人出品味与合规；每个自动化必须有一个明确的人工闸门** |
 | 配套 | TechSpec v2.1 §9（AI 开发规范）扩写为本文 §2 |
+| 当前状态 | **目标蓝图，不代表已部署**。当前已有：cron/worker、`/console` 编辑台骨架、`/review/*` 冻结/扫描；n8n、Chatwoot、Listmonk、Postiz、Langfuse 等尚未接入 |
 
 ---
 

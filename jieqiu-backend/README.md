@@ -1,4 +1,4 @@
-# 解球后端 · W5 认证已上线（W8 冻结基线需随 API 变更重新采纳）
+# 解球后端 · W8 + Assistant（当前实现；W8 冻结基线需随 API 变更重新采纳）
 
 认证（方案 B·自建）：
 `/auth/sms/send|verify`（CN 手机号）· `/auth/wechat/callback|bind-phone`（微信后强制绑手机）·
@@ -8,7 +8,7 @@
 
 ---
 
-# 2026-11-04 API 补全（当前 92 路径 / 105 方法）
+# 2026-11-04 API 补全（当前 94 路径 / 107 方法）
 
 补齐 Feature-API-Mapping 中有数据支撑但未暴露的接口：`/matches`、`/verdicts/today`、
 `/matches/{id}/cost|evidence|live`、`/avoid-list`、`/water-rank`、`/calendar`、`/sp/movements`、
@@ -38,14 +38,17 @@ FastAPI 模块化单体。W2-W4：流/判决三关/封存链/账本/叙述/校�
 | `POST /share/verdict/{id}?persona=` | 判决分享卡（公开） |
 | `POST /share/weekly` / `/share/streak` | 周报卡 / 连败卡（需登录） |
 | `GET /share/{share_id}` | **编号可验**：content_hash = sha256(payload)，编号 = hash 前 12 位；篡改即暴露；幂等（同内容同编号）；深链 `jieqiu://share/{id}` |
+| `GET /s/{share_id}` | 公开 HTTPS 分享落地页；无 App 也能查看/核验 |
 | `GET /shares/mine` | 我的分享列表 |
 | `GET /me/market-profile` | **F18** 双区域配置（cn：CNY/热线/18+中文；global：USD/BeGambleAware） |
-| `GET /me/export` | 全量数据导出（JSON；设备令牌绝不导出） |
+| `GET /me/export` | 用户数据导出（JSON；设备/推送 token 原值绝不导出；通知/行为事件最多最近 1000 条） |
 | `python -m app.purge_cli` | 注销期满（7 天）清除：用户+bets/memories/shares；每日 03:00 cron |
 
 登录分流：`POST /auth/device` 带 `region: cn|global`（非法 422）。
 
-## API 全景（33 端点）· 测试 99
+## API 全景（94 路径 / 107 方法）· 测试 179
+
+W8 + assistant 的实际契约以 `packages/api-client/openapi.json` 为准；新增目录/成本/日历/哨兵/实况与兼容别名见上节。
 
 ## 运行
 
@@ -63,11 +66,15 @@ uvicorn app.main:app --port 8100
 # 密码不再写进代码；部署前导出
 export JQ_DEPLOY_PASSWORD='...'
 export JQ_CONSOLE_PASSWORD='...'
+# 可选：控制台 IP 白名单（逗号分隔，支持 CIDR）
+export JQ_CONSOLE_IP_WHITELIST='1.2.3.4'
 # 可选：切自建 Postgres（不设则继续旧 SQLite）
 export JQ_PROD_DATABASE_URL='postgresql+psycopg2://jieqiu:...@10.0.0.5:5432/jieqiu'
 
 python deploy.py   # VPS：数据代码分离；cron：同步/回测/purge/助理 worker/每周日数据保留
 ```
+
+生产认证默认 fail-closed：`deploy.py` 写入 `JQ_ENV=prod`、`JQ_AUTH_STUB=false`；未配置真实短信/邮件/OAuth 时认证端点返回 503，不会再回显 `dev_code`。控制台密码/白名单/JWT 密钥写入 `/etc/jieqiu-backend.env`（0600），unit 只引用 EnvironmentFile。
 
 ---
 
@@ -96,3 +103,10 @@ curl -s 'http://127.0.0.1:8100/health?detailed=1'
 
 部署时设置 `JQ_PROD_DATABASE_URL=postgresql+psycopg2://...`，`deploy.py` 会上传
 `alembic.ini`/`migrations/` 并在 Postgres 模式下先执行 `alembic upgrade head`。
+
+## 文档入口
+
+- 全栈深审与残余风险：[docs/reviews/2026-11-04-full-stack.md](../docs/reviews/2026-11-04-full-stack.md)
+- API 对账：[docs/reviews/2026-11-04-api-audit.md](../docs/reviews/2026-11-04-api-audit.md)
+- 数据库：[docs/database-architecture.md](../docs/database-architecture.md)
+- 前端交接：[apps/mobile/ARCHITECTURE.md](../apps/mobile/ARCHITECTURE.md)

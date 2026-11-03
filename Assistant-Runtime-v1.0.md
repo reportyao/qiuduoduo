@@ -3,7 +3,7 @@
 > 范围：主动监控、推送、用户记忆、助理交互，以及与现有文档 / 后端 / 管理后台的对照。
 > 关联：`PRD-v5.1.md` F13/F19/F21/F22 + §5.2 推送矩阵；`TechSpec-v2.1.md` §4/§5/§8；`Intelligence-Layer-v1.0.md`；`Release-plan-v1.1.md` W5/W6。
 >
-> 状态：**P0 后端/管理后台已实现（2026-11-03）**：events / notifications / watch_targets / push_tokens / notify_settings / worker / inbox / 控制台助理/推送页；**157 tests passed**。Android JPush 真实凭证、前端 inbox/关注 UI、派生记忆、AI 分析仍待接。
+> 状态：**P0 后端/管理后台/移动端已接（2026-11-04 更新）**：events / notifications / watch_targets / push_tokens / notify_settings / worker / inbox / 关注 / 通知设置 / 控制台助理/推送页；后端全量 **179 tests passed**。Android JPush 真实凭证、派生记忆、AI 分析、真实 live feed/进球提醒仍待接。完整全栈审查见 `docs/reviews/2026-11-04-full-stack.md`。
 >
 > **平台范围（2026-11-03 定）：MVP 只做 Android；iOS/APNs 与 Global/FCM 延后。**
 
@@ -30,7 +30,7 @@
 | **理解** | 三关、Dixon-Coles、情报信号 | 三关/模型/修订链已上线；情报信号设计完成未实现 | signals/AI 表未建 |
 | **记忆** | 用户偏好、约束、历史、情绪、上下文 | `users.persona`、`memories` + 冲突 409 + category/confidence/expires 字段已有 | 无派生记忆/五类推导/记忆检索 |
 | **表达** | 三套人设、文案、推送文案 | 前端 `T()` + 后端 persona + 中性推送模板已做 | chat 未读 persona；事件摘要未做 |
-| **行动** | 站内信、推送、深链、关注 | watch_targets / inbox / notify_settings / push_tokens / events / notifications + worker + JPush dryrun 已实现 | 前端 inbox/关注待接；真实 JPush 凭证未配 |
+| **行动** | 站内信、推送、深链、关注 | watch_targets / inbox / notify_settings / push_tokens / events / notifications + worker + JPush dryrun 已实现；移动端 inbox/关注/设置已接 | 真实 JPush 凭证未配 |
 | **反思** | 归因、周报、连败保护 | W6 已上线（归因/周报/保护 423） | 与监控/推送未打通 |
 
 **一句话：理解和反思已有雏形；感知、记忆、行动是短板。**
@@ -56,13 +56,13 @@
 |---|---|---|---|
 | PRD F13 记忆 | 五类；口述>推断；冲突当场问；可见可删 | `memories` + 冲突 409 + 聊天写入 + category/confidence/expires 字段 | **部分完成**：缺派生记忆/五类推导 |
 | PRD F19 人设 | 三套人设、即选即换、通知中性 | `users.persona` + `PATCH /me` + 前端 `T()`/形象 sprite | **部分完成**：chat 未读 persona；前端切换未回写后端；推送保持中性 |
-| PRD F21 关注 | 详情关注开关、实况卡、终场推送 | `watch_targets` + `/me/watch` 已实现；前端仍本地 | **部分完成**：前端待接 API |
-| PRD F22 吉祥物选比赛 | 点大头像→分类 chips→点场次→卡入流 | 前端已做简化版（点击形象出 6/12 场列表） | **部分完成**：stream 有 onsale/verdicts，但无分类接口；前端 mapStream 未接 onsale |
+| PRD F21 关注 | 详情关注开关、实况卡、终场推送 | `watch_targets` + `/me/watch`、`/matches/{id}/follow` 已实现；移动端已接 | **已完成（关注链路）**；实况实时源仍未接 |
+| PRD F22 吉祥物选比赛 | 点大头像→分类 chips→点场次→卡入流 | 后端已有 `GET /matches` 分类接口；移动端首页/在售已接 onsale | **已完成基础链路**：更细的分类 chips 仍可继续扩展 |
 | PRD §5.2 推送矩阵 | 终场/结算/结论/拦截/未决；过程不推；静默时段 | events/notifications/worker/JPush dryrun 已实现；未决/T-3h 动态触发未接 | **部分完成** |
 | PRD §5.3 两级时序 | 终场 T+2min、结算 T+2h、结论 T-3h、T-30m 未决 | close/final/settled/daily 已有；T-3h 动态/未决未接 | **部分完成** |
 | TechSpec 推送 | JPush CN + Expo Global；静默推送 | JPush provider + dryrun + push_tokens 已实现；真实凭证未配 | **部分完成**，MVP 只做 Android/JPush |
 | TechSpec §8.7/8.8 | 情报层 + AI 研判层 | 仅设计；无 signals/ai_analyses/ai_jobs | **未完成** |
-| Release W5 | 推送/实况卡/关注/连败保护 | 认证/连败保护已上线；推送/实况/关注未做 | **部分完成** |
+| Release W5 | 推送/实况卡/关注/连败保护 | 认证/连败保护/推送/关注已上线；`/matches/{id}/live` 只到赛果+SP 快照 | **部分完成**：真实 live feed/进球提醒未接 |
 | Release W6 | 归因/记忆/卡片路由/非比赛日 | 已上线 | **完成** |
 
 ---
@@ -319,7 +319,7 @@ GET    /me/events/stream   （SSE，可选）
 - JPush provider（未配置自动 dry-run）+ 深链 + token 生命周期；
 - 控制台：事件/通知队列、推送 token/状态、失败告警；
 - 只做 Android，iOS 不做；
-- **待接**：真实 JPush 凭证/厂商通道、前端 inbox/关注 UI、未决 T-30m 规则。
+- **待接**：真实 JPush 凭证/厂商通道、未决 T-30m、真实 live feed/进球提醒、派生记忆/AI 分析。前端 inbox/关注 UI 已接。
 
 ### P1（2–3 周）
 
@@ -373,9 +373,9 @@ GET    /me/events/stream   （SSE，可选）
 
 1. **平台范围**：TechSpec/PRD 的 Global/iOS 推送条目标注“MVP 延后”，先 Android/JPush。
 2. **F21 关注**：补后端表/API，不再只存前端。
-3. **F22 选比赛**：补独立 `/matches` 分类接口或在 stream 上扩展筛选；当前 `/stream` 已有 verdicts/onsale/avoid，但没有分类 chips，前端 mapStream 也未接 onsale。
+3. **F22 选比赛**：`GET /matches` 分类接口已补；更细的分类 chips/筛选仍可扩展（历史结论保留）。
 4. **F13 记忆**：补五类、置信、过期、派生；现有 `Memory` 只有 key/value/source。
-5. **推送矩阵**：PRD 已有，但 W5 未实现；按本文 P0 落地。
+5. **推送矩阵**：PRD 已有；P0 事件/扇出/worker 已落地（历史结论“W5 未实现”保留为审计上下文）。
 6. **AI 分析**：TechSpec §8.8 设计完成，后端表/worker/控制台未建。
 7. **控制台**：新增 assistant/push 页；alerts 扩展事件/推送指标。
 8. **冻结基线**：新增路由后重新 adopt，再跑 `/review/checklist`。
@@ -495,6 +495,8 @@ JQ_LLM_PROVIDER=glm
 ---
 
 ## 17. 代码评审记录（2026-11-03）
+
+> 以下是当时的实现快照，文中 `157 passed` 为 2026-11-03 数值；当前全量测试为 **179 passed**，最新全栈修复见 `docs/reviews/2026-11-04-full-stack.md`。
 
 > 本节是评审当时（P0 开发前）的记录；已修复/已实现项见 §18。
 
@@ -625,6 +627,8 @@ JQ_DAILY_BRIEF_HOUR=19 python -m app.assistant.worker --once
 | 通知 title/body/deeplink 可能超列宽 | PostgreSQL 下 insert 失败/截断 | 入队前按 128/512/256 截断 |
 | provider 异常可能拖垮 worker | 单条推送异常中断整批 | `send()` 包 try/except 转 `PushResult(False)` |
 
-**仍未修**：控制台 token 在 URL / POST 无 CSRF；`_VARIANT_POOL` 进程内存；chat persona；前端 inbox/关注 UI；真实 JPush 凭证/厂商通道；派生记忆；AI 分析层。
+**历史快照（2026-11-03）仍未修**：控制台 token 在 URL / POST 无 CSRF；`_VARIANT_POOL` 进程内存；chat persona；前端 inbox/关注 UI；真实 JPush 凭证/厂商通道；派生记忆；AI 分析层。
+
+**2026-11-04 更新**：控制台 token 已移出 URL（cookie-only + logout）；前端 inbox/关注/通知设置已接；CSRF token、`_VARIANT_POOL` 持久化、真实 JPush、派生记忆/AI 分析仍未完成。
 
 **测试**：`python -m pytest -q` → **157 passed**。

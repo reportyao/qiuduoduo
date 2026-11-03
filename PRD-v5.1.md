@@ -8,6 +8,8 @@
 | UI 基准 | jieqiu-app/index.html（三端唯一规格基准，已部署 **http://43.128.24.244:8899**） |
 | 形态 | **安卓 + iOS 原生 App（Expo 一套代码）**；Web 仅公开账本 + 下载落地页 + 免费工具；不做小程序 |
 
+> 实现说明（2026-11-04）：生产前端已从 `jieqiu-app/index.html` 迁到 `apps/mobile/`；旧 HTML 仅作设计参考，不再加功能。PRD 是产品事实源，技术实现/当前状态以 `TechSpec-v2.1.md`、`Feature-API-Mapping-v1.0.md`、`Release-plan-v1.1.md` 和 `docs/reviews/2026-11-04-full-stack.md` 为准。
+
 ---
 
 ## 1. 定位与商业

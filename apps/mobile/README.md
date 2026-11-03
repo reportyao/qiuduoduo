@@ -2,7 +2,9 @@
 
 Expo React Native + TypeScript 生产前端。MVP 只做 Android，iOS 后续开启。
 
-当前已实现：年龄门 / 首页判决流 / 完整账 / 情报与证据 / 封存验证 / 记一注与 5 秒撤销 / 助理对话 / 8 个工具 / 票单与周报 / 公开账本 / 站内信 / 关注 / 通知设置 / 合规中心 / 人设与偏好 / 手机号登录与游客数据合并。
+当前已实现：年龄门 / 首页判决流 / 完整账 / 情报与证据 / 封存验证 / 记一注与 5 秒撤销 / 助理对话 / 8 个工具 / 票单与周报 / 公开账本 / 站内信 / 关注 / 通知设置 / 合规中心 / 人设与偏好 / 手机号登录与游客数据合并 / 分享落地页 `/s/{id}`。
+
+当前验证：20 个 Vitest、typecheck、ESLint、Android Hermes bundle（约 3.6 MB）通过；真实 Android APK/iOS 原生构建仍需 EAS/本机构建环境。
 
 **交接先读 [ARCHITECTURE.md](./ARCHITECTURE.md)**：目录、路由、数据适配、会话合并、已知后端缺口都在那里。
 
@@ -18,7 +20,7 @@ corepack pnpm android
 
 Android 模拟器访问宿主机后端使用 `http://10.0.2.2:8100`，iOS 模拟器使用 `http://127.0.0.1:8100`（未配置 `EXPO_PUBLIC_API_BASE_URL` 时的本地兜底）。
 
-**发布包必须显式注入 `EXPO_PUBLIC_API_BASE_URL=https://...`**：Android release 默认禁止明文 HTTP，iOS ATS 也不允许任意 HTTP；不要依赖模拟器地址。
+**发布包必须显式注入 `EXPO_PUBLIC_API_BASE_URL=https://...`**：Android release 默认禁止明文 HTTP，iOS ATS 也不允许任意 HTTP；不要依赖模拟器地址。当前 `src/lib/env.ts` 在非 development/release 构建下会直接抛错，防止把 `10.0.2.2` 打进包。
 
 ## 构建前自检
 

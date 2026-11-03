@@ -155,7 +155,7 @@
 | 推送注册 | Android 启动 | `POST /push/register` | push_tokens | ✅ |
 | 推送解绑 | 退出登录 | `POST /push/unregister` | push_tokens | ✅ |
 | 事件/推送运维 | 管理后台 | `GET /console/assistant`、`/console/push` | events/notifications/push_tokens | ✅ |
-| 前端接 inbox/关注 | 首页/我的 | 上述接口 | — | ⏳ 待接 |
+| 前端接 inbox/关注 | 首页/我的 | 上述接口 | — | ✅ 已接（mobile） |
 | 真实 JPush 厂商通道 | Android 包 | provider | push_tokens | ⏳ 凭证 |
 
 ## 联调验收清单（每个功能的"做完了"标准）
@@ -183,7 +183,7 @@
 
 ---
 
-*Feature-API-Mapping v1.0 完 · 46 功能点 × 41 API × 20 表全覆盖*
+*Feature-API-Mapping v1.0 原始设计口径：46 功能点 × 41 API × 20 表。当前实现以 OpenAPI 快照为准（94 路径 / 107 方法）。*
 
 ---
 
@@ -202,6 +202,6 @@
 
 ## 2026-11-04 API 全量补全
 
-OpenAPI 从 72 路径补到 **92 路径**，新增：`/matches`、`/verdicts/today`、`/matches/{id}/cost|evidence|live`、`/avoid-list`、`/water-rank`、`/calendar`、`/sp/movements`、`/agents/sentinel/feed`、`/me/comfort`、`/verdicts/{id}/react`、`/share/card`，以及 `/devices`、`/push/preferences|health`、`/matches/{id}/follow`、`/memories`、`/me/persona` 兼容别名。
+OpenAPI 从 72 路径补到 **94 路径 / 107 方法**（含后续 `/s/{id}` 分享页与 `/console/logout`），新增：`/matches`、`/verdicts/today`、`/matches/{id}/cost|evidence|live`、`/avoid-list`、`/water-rank`、`/calendar`、`/sp/movements`、`/agents/sentinel/feed`、`/me/comfort`、`/verdicts/{id}/react`、`/share/card`，以及 `/devices`、`/push/preferences|health`、`/matches/{id}/follow`、`/memories`、`/me/persona` 兼容别名。
 
 仍未实现的是 v1.5/外部依赖项：串关服务端、vision OCR、合规中心服务端同步、支付/订阅、真实 live feed 与进球提醒、编辑台持久化。完整审查见 [docs/reviews/2026-11-04-api-audit.md](docs/reviews/2026-11-04-api-audit.md)。

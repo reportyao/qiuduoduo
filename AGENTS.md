@@ -2,6 +2,8 @@
 
 本文件是 AI 与人类协作开发的**仓库级上下文入口**。任何 AI/开发者在改动代码前必须先读本文件；提交前必须按 Definition of Done 自检。
 
+当前事实（2026-11-04）：生产代码仍在 `jieqiu-backend/`，OpenAPI **94 路径 / 107 方法**，后端 **179 tests**；生产数据库目标是自建 PostgreSQL 16，未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。文档索引见 [docs/README.md](./docs/README.md)。
+
 ## 1. 架构地图
 
 ```text
@@ -58,9 +60,9 @@ app/features/<feature>/
   tests/
 ```
 
-- 共享能力放 `app/core/`：DB、配置、认证、安全、事件、审计。
+- 共享能力目标放 `app/core/`：DB、配置、认证、安全、事件、审计；当前过渡期仍在 `app/modules/` 与 `app/db.py`，新代码不要继续扩大全局模块。
 - `router.py` 不写业务逻辑；`service.py` 不直接拼 SQL；`repository.py` 不做业务规则。
-- 所有接口必须有 `response_model` 和明确的 HTTPException。
+- 新增/修改接口必须有 `response_model` 和明确的 HTTPException；存量老端点仍有 dict 返回，补契约时不要一次改爆移动端。
 - 禁止在生产代码里用 `print`；用 logging。
 - 禁止裸 `except:`；必须记录错误或转换为领域异常。
 - 数据库变更使用 Alembic，不用 `create_all` 更新已有生产库。
@@ -122,3 +124,5 @@ app/features/<feature>/
 - 新代码不要加到 `jieqiu-app/index.html`；
 - 新后端代码优先进入 `app/features/<feature>`；
 - `jieqiu-backend/` 到 `services/api/` 的目录迁移将在 Alembic/Postgres 切换后执行，避免一次性大迁移。
+- W8 冻结基线不是永久常量：新增路由后必须用控制台登录调用 `POST /review/freeze/adopt` 重新采纳，否则 `/review/freeze` 会报新增违规。
+- 认证默认 fail-closed：`JQ_ENV=dev|test` 才允许 `JQ_AUTH_STUB=true`；staging/prod 必须配置真实短信/邮件/OAuth。

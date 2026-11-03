@@ -32,7 +32,7 @@ src/
   domain/                    领域模型 + 后端响应适配器
   features/                  按业务切片：queries / components / 文案
   components/                全局组件（UI 原语、Header、底栏、BootScreen）
-  lib/                       api / errors / format / sessionStorage / toast / haptics
+  lib/                       api / errors / format / sessionStorage / navigation / toast / haptics
 ```
 
 ## 3. 路由与入口
@@ -76,9 +76,11 @@ src/
 
 1. 启动读 `jieqiu.session.v1`（native SecureStore，Web/不可用时 AsyncStorage）。
 2. 无会话 → `POST /auth/device` 创建游客身份。
-3. JWT 到期前 30s 自动 `POST /auth/refresh`；刷新失败不把设备令牌伪装成账号，结束会话并创建新游客，账号数据需重新登录。
-4. 手机号验证码登录会携带 `device_token`，后端把游客的注单/记忆/关注/通知合并到手机号账号（见 `merge_device_account`）。
-5. 退出登录必须生成新的游客设备令牌，不能复用已合并的旧令牌。
+3. JWT 到期前 30s 自动 `POST /auth/refresh`；只有 401/403 才结束会话并创建新游客，5xx/429/网络错误保留会话，避免瞬时故障把账号降级成游客。
+4. 所有登录/设备登录/刷新都带 `authEpoch`；旧响应不能覆盖新会话。退出单飞并做 2 秒去重，避免多个 410 连环创建游客。
+5. 手机号验证码登录会携带 `device_token`，后端把游客的注单/记忆/关注/通知合并到手机号账号（见 `merge_device_account`）。
+6. 退出登录必须生成新的游客设备令牌，不能复用已合并的旧令牌。
+7. 原生 SecureStore 不再回落明文 AsyncStorage；删除失败会写 tombstone，避免旧账号在重启后复活。
 
 ## 5. 人设
 
@@ -106,11 +108,19 @@ src/
 
 ## 8. 已知后端缺口（前端不伪造）
 
-- 串关报告服务端、OCR/拍票、直播、订阅/支付、自排除服务端同步、PGSI 服务端保存：未接入。
-- 因此串关是**本地数学计算器**，明确标注口径；合规自排除是**本机强制拦截**；没有假按钮。
-- JPush 真实 token 注册未接；通知设置可保存服务端偏好，站内信已可用。
+- 串关报告服务端、OCR/拍票、订阅/支付、自排除/PGSI 服务端同步、真实 live feed/进球提醒：未接入。串关仍是**本地数学计算器**，合规自排除仍是**本机强制拦截**；没有假按钮。
+- 后端已提供 `/matches/{id}/live`，但只展示已同步赛果 + SP 快照，`live_feed:false`，不伪造进球时间线。
+- JPush 真实 token 注册未接；通知设置/站内信/关注已接服务端。
+- 详情/首页已有 `goBackOr` 处理深链冷启动返回；新增页面必须复用 `src/lib/navigation.ts`，不要直接 `router.back()`。
+- 服务端新目录接口（`/matches`、`/cost`、`/water-rank`、`/calendar` 等）已生成 client，页面可按需接入；当前主要页面仍使用 `/stream`/`/on-sale`。
 
-## 9. 验证命令
+## 9. 当前验证状态（2026-11-04）
+
+- 后端 179 passed；OpenAPI 94 路径 / 107 方法。
+- 前端 typecheck / ESLint / 20 Vitest passed；Android Hermes bundle 3.6 MB。
+- 自排除、401/410、刷新竞态、下注金额、05:00 日界、分享落地页已做回归。
+
+## 10. 验证命令
 
 ```bash
 cd apps/mobile
@@ -127,7 +137,7 @@ corepack pnpm exec expo install --check
 just api-client-generate   # 后端代码 → openapi.json → schema.d.ts
 ```
 
-## 10. 加页面 / 加接口的步骤
+## 11. 加页面 / 加接口的步骤
 
 1. 后端先改 OpenAPI（或至少确认响应形状），重生成 `openapi.json` 与 `schema.d.ts`。
 2. 在 `src/domain` 加领域类型与适配器，补单测（异常形状/时间/gate 兼容）。

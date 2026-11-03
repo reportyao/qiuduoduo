@@ -9,7 +9,7 @@
 
 > AI 助理运行时（主动监控 / 推送 / 记忆）的差距分析与 Android MVP 排期见 `Assistant-Runtime-v1.0.md`。
 
-> 2026-11-03 后端/控制台评审 + P0 实现：157 测试通过；events / notifications / watch_targets / push_tokens / notify_settings / inbox / worker / 控制台助理页已落地并部署腾讯云（79 路由 freeze clean）；真实 Android JPush 凭证、前端 inbox/关注、派生记忆待接；详见 `Assistant-Runtime-v1.0.md` §17/§18。
+> 2026-11-04 当前状态：后端 **179 tests**、OpenAPI **94 路径 / 107 方法**；events/notifications/watch/inbox/push/worker/控制台助理页已落地，移动端 inbox/关注/通知设置已接；随后又完成目录/成本/日历/哨兵/实况等 API 补全。W8 冻结基线需重新 `POST /review/freeze/adopt`。真实 Android JPush、支付、服务端合规同步仍待外部/后续版本。详见 `docs/reviews/2026-11-04-full-stack.md`。
 
 ---
 
@@ -109,10 +109,10 @@ W1 主体注册 ──→ W2-3 软著申请 ──→ W3-5 APP 备案 ──→ 
 | W2 | 底部四 Tab 导航 + 流 + 判决卡 + 吉祥物 sprite 接入（UI 原型已就绪）| **采集管道+对齐+判决 API（✅ 已上线：jieqiu-backend v0.2 @43.128.24.244:8100，21 测试全绿，封存哈希独立验证通过；市/模闸 pending 待 W3）** | 软著跟进 · 商店账号 |
 | W3 | 避雷/为什么不推/依据卡/停售/在售（API 全部上线：why-not · evidence · sale-schedule · on-sale 增强）| **三道闸引擎 v3 完整版（✅ 已上线：价=当日动态阈值；市=多源离散<5pp（the-odds-api 可插拔，待配 key）；模=DC v1.1 W1 同参移植+收缩纪律，保真回测 <0.95；42 测试全绿。understat/xG 源两出口暂不可达 → 模闸诚实 pending，同步器已就位待恢复）** | **APP 备案提交** |
 | W4 | 封存锚定 + 账本 + 流式生成（✅ 已上线：哈希链逐节相扣+跨日锚链，`/chain/verify` 篡改可定位；F14 公开账本 `/ledger`（HTML+JSON，连败公开）；narrate SSE 流式三人设+模板兜底；校准回测框架 `/model/evals`（五联赛 logloss 0.9902·acc 53.2%·7 校准桶）；赛果同步 +2199 场+结算引擎含让球口径；57 测试全绿）| 校准 + 回测框架（✅ 同左）| APP 备案跟进 |
-| W5 | 买了流程 + 推送 + 实况卡 + 连败保护 · **自建认证 ✅ 已上线（CN 手机号+验证码 / 微信后强制绑手机；GL Email+Google/Apple；JWT 15min + refresh 30d 轮换/复用检测；15 测试全绿；生产通道未配时 503 fail-loud）** | 影子模式 + 实时比分接入 · **SQLite→腾讯云 PG 迁移（方案 B，见 TechSpec §1.1）** | **ICP 备案** · 商户号 |
+| W5 | 买了流程 + 推送 + 实况卡 + 连败保护 · **自建认证 ✅ 已上线（CN 手机号+验证码 / 微信后强制绑手机；GL Email+Google/Apple；JWT 15min + refresh 30d 轮换/复用检测；15 测试为当周快照；生产通道未配时 503 fail-loud）**；推送/关注已接，实况只到赛果+SP 快照 | 影子模式 + 真实 live feed · **SQLite→腾讯云 PG 迁移（方案 B）** | **ICP 备案** · 商户号 |
 | W6 | 归因/记忆/卡片路由/非比赛日（✅ 已上线·两轮 review 后：F11 连败保护（回放 8 序列 100%）+ 保护期加注 423/confirm；F12 归因四类 + 流内复盘卡（跨日可见·非比赛日也挂）；F13 记忆（冲突 409 + chat 直接落地必问）；F15 意图路由 16 用例 100% + chat 记忆写入；F7 非比赛日 + /me/rest；PATCH /me 设置；DELETE /me 注销（410 冷静期 + 同令牌撤回）；/bets/{id}/postmortem；周报口径统一 CN 时区 7 天；84 测试全绿）| 归因 + what-if（✅ killed 结局对称披露·7 天口径）| ICP 跟进 |
-| W7 | 分享 + 账户双区域 + 内测回归（✅ 已上线：F20 素材工厂三卡（判决/周报/连败），分享编号=content_hash 前 12 位可验（幂等·篡改即暴露·深链 jieqiu://share/），线上双向验证通过；F18 双区域 cn/global 登录回归 + market-profile（CN 热线/CNY vs BeGambleAware/USD）；/me/export（令牌不导出）；注销期满 purge_cli + 每日 03:00 cron；99 测试全绿）| 稳定性打磨 | 商店资料准备 |
-| W8 | **功能冻结，只修不放（✅ 已冻结：/review/freeze 基线 53 路由，新增即违规）** | 监控值班（✅ /console/alerts：断链/延迟/源未配自动告警）| **提审**（✅ 代码侧就绪：禁用词扫描 CI 零命中（21 词表·反绕过）/review/checklist 聚合检查单//legal/disclosure 隐私弹窗契约 + SDK 清单/OTA /app/version/UK 包回归化/即席文案扫描工具；114 测试全绿。待外部：四证/推送/支付/崩溃率上报）|
+| W7 | 分享 + 账户双区域 + 内测回归（✅ 已上线：F20 素材工厂三卡（判决/周报/连败），分享编号=content_hash 前 12 位可验（幂等·篡改即暴露·深链 jieqiu://share/），线上双向验证通过；F18 双区域 cn/global 登录回归 + market-profile（CN 热线/CNY vs BeGambleAware/USD）；/me/export（令牌不导出）；注销期满 purge_cli + 每日 03:00 cron；当周 99 测试全绿）| 稳定性打磨 | 商店资料准备 |
+| W8 | **W8 提审基线已建立；2026-11-04 完成 API 补全（94 路径），新增路由需重新采纳 freeze 基线** | 监控值班（✅ /console/alerts：断链/延迟/源未配自动告警）| **提审**（✅ 代码侧：禁用词扫描/checklist/legal disclosure/SDK 清单/OTA/文案扫描；当前 179 测试。待外部：四证/推送/支付/崩溃率上报）|
 
 ---
 

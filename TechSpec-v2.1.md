@@ -40,7 +40,7 @@
 **为什么（4 条硬理由）**
 1. **延迟**：Supabase 节点在海外，CN 用户 API→DB 跨境往返 150–300ms；主库与 API 同机可压到 <2ms。
 2. **数据主权**：封存链/公开账本的公信力建立在「数据在国内、可独立复核」上；用户数据出境会给提审与后续合规加变量。
-3. **已有基建**：SQLAlchemy 双方言（W3 review 已适配 upsert）、deploy/备份/cron 全自动化、设备令牌认证全链路已上线——换 Supabase 反而要迁移用户体系。
+3. **已有基建**：SQLAlchemy、deploy/cron、设备令牌认证全链路已上线；备份/PITR 仍是待配置项（见 `docs/database-architecture.md`）——换 Supabase 反而要迁移用户体系。
 4. **成本**：PG 含在同机 VPS（¥60/月）；Supabase 免费档之外 $25/月起，且仍要一台 VPS 跑 API。
 
 **目标架构（S1）**
@@ -48,12 +48,12 @@
 Expo App ──HTTPS──> 腾讯云 VPS: uvicorn(api) ──localhost──> PostgreSQL 16
                                     ├─ editor_console（同进程 /console，密码+IP 白名单）
                                     ├─ cron: seed 30min / backtest 周一 / purge 每日
-                                    └─ 备份: pg_dump 每日 03:30 → 异地对象存储（保留 14 天）
+                                    └─ 备份（目标，尚未自动化）: pg_dump + WAL/PITR → 异地对象存储
 ```
 
 **迁移步骤（SQLite → PG，停机窗口 ≤15 分钟）**
 1. VPS 安装 PG 16 → 建库 `jieqiu` + 应用账号（最小权限）
-2. `alembic init` + autogenerate 基线（当前 create_all 语义转为迁移脚本）
+2. 使用已提交的 Alembic baseline（`71af760b1e99`）与后续迁移，不在生产运行 `create_all`；空库 `alembic upgrade head`，已有表先核对再 stamp
 3. 数据搬运：pgloader 或自写 sqlite→COPY 脚本；校验行数 + 抽样哈希
 4. 切流：systemd `JQ_DATABASE_URL=postgresql+psycopg://...` → restart → `/health` 计数对齐 → `/chain/verify` 全绿
 5. 回滚预案：SQLite 文件保留只读 7 天，环境变量一行切回
@@ -149,19 +149,19 @@ next-intl 等价物 `i18n-js`+ICU；三语言解耦（UI/内容/球队名）；�
 
 **原则**：OPC 阶段不建自研重管理后台；各专业工具各管一摊，**编辑台**是唯一需要自建界面的模块（它是产品灵魂）。B 端白标（v2.5）前不升级。
 
-> **W7 落地状态（2026-11-03）**：editor_console v0 已上线（`app/routers/console.py`，与 API 同进程）——
+> **W7 落地状态（2026-11-03；2026-11-04 安全更新）**：editor_console v0 已上线（`app/routers/console.py`，与 API 同进程；密码 + HttpOnly cookie + 可选 IP 白名单，token 不再进 URL）——
 > `/console/login`（密码 `JQ_CONSOLE_PASSWORD`，生产必设 + 可选 `JQ_CONSOLE_IP_WHITELIST`）·
 > `/console` 数据日报（计数/链状态/账本/模型评估/近期判决）· `/console/alerts`（断链/同步延迟/源未配/密码未设）·
 > `/console/variants`（三人设模板 + A/Q/X 精选状态机，进程内存，v1.5 换 narrative_pool 表）·
 > `/console/ops`（环境/数据源/cron 日志指引/快捷命令）。
 > 后端硬化同批上线：令牌桶限流（读 120/min、写 30/min/IP，429+Retry-After）、X-Request-ID + JSON 访问日志、
-> python-multipart 依赖补齐。105 测试全绿，git 版本控制就位。
+> python-multipart 依赖补齐。当前全量 **179 tests**，git 版本控制就位。
 
 ### 分层架构
 
 | 层 | 工具 | 管什么 | 频率 | 认证 |
 |---|---|---|---|---|
-| **统一入口页** | **editor_console**（自建单页，FastAPI+HTMX，部署同 VPS `/console`） | 变体精选/数据日报/告警/快捷运维 | 每晚 10 分钟 + 每日抽查 | **自建会话（密码 + IP 白名单，W7 已上线）** |
+| **统一入口页** | **editor_console**（自建单页，FastAPI+HTMX，部署同 VPS `/console`） | 变体精选/数据日报/告警/快捷运维 | 每晚 10 分钟 + 每日抽查 | **自建会话（密码 + HttpOnly cookie + 可选 IP 白名单，W7 已上线）** |
 | **数据库管理** | **pgAdmin / DBeaver 远程连接**（只读账号为主）+ `psql` | 全表 CRUD/SQL/备份 | 按需 | SSH 隧道 + 2FA |
 | **客服工单** | **Chatwoot**（开源 Docker 同 VPS） | 工单/申诉/消息 | 每日 15 分钟 | Chatwoot 账号 |
 | **分析/AB/旗** | **PostHog Cloud** | 埋点/漏斗/旗/回放 | 每周 | PostHog 账号 |
@@ -263,7 +263,9 @@ reconciliation(id, provider, external_id, amount NUMERIC, status, checked_at TIM
 
 ---
 
-## 6. API（v1，41 个）
+## 6. API（v1 设计清单 41 个；当前实现 94 路径 / 107 方法）
+
+> 2026-11-04 对账：本节是 v1 设计清单，不是当前完整契约。当前契约以 `packages/api-client/openapi.json` 为准；已实现目录/成本/证据/避雷/水位/日历/SP 异动/哨兵/`/me/comfort`/`/verdicts/{id}/react`/`/share/card` 等。仍未实现：parlay 服务端、vision OCR、compliance/gate/under18、billing/subscription、真实 live feed 与 goal-alert、console JSON 工单。详见 `docs/reviews/2026-11-04-api-audit.md`。
 
 **Auth/账户（9）**：`POST /auth/sms/code` · `POST /auth/login` · `POST /auth/oauth/{google,apple}` · `POST /auth/refresh|logout` · `POST /gate/verify` · `GET|PATCH /me` · `GET /me/export` · `DELETE /me` · `POST /devices`
 
@@ -273,7 +275,7 @@ reconciliation(id, provider, external_id, amount NUMERIC, status, checked_at TIM
 **用户数据（6）**：`POST|GET|DELETE /memories` · `GET /bets|/bets/{id}/postmortem` · `GET /weekly-report` · `PATCH /me/persona`（人设切换）
 
 **实时与交互补全（本次审计新增 9 个）**：`GET /matches/{id}/live`（实况卡：timeline+走盘计算）· `POST /matches/{id}/goal-alert`（进球提醒开关）· `GET /parlay/{id}/plans`（方案对比）· `POST /parlay/{id}/confirm`（拆单出票）· `POST /me/rest`（今天不看了）· `PATCH /me/discipline`（连败保护/连败关切）· `GET /analysis-log?match_id=`（分析日志弹层）· `POST /me/under18-lock`（未成年锁定）· `GET /me/comfort`（买后安抚卡内容，也可流内推）
-**编辑台（IP 白名单+JWT）**：`GET /console/variants?status=generated` · `POST /console/variants/{id}/decide` (A/X/Q) · `GET /console/daily` · `GET /console/tickets` · `GET /console/alerts`
+**编辑台（当前实现：密码 + HttpOnly cookie + 可选 IP 白名单；HTML 页面，非 JWT JSON API）**：`GET /console/variants` · `POST /console/variants`（A/X/Q，进程内）· `GET /console`（日报）· `GET /console/alerts`；`/console/daily`、`/console/tickets`、`/console/variants/{id}/decide` 仍是 v1.5 目标，未实现。
 **商业化/合规（8）**：`POST /billing/rc/webhook|wechat/notify` · `GET /subscription` · `POST /compliance/{self-exclusion,self-assessment,limits}` · `POST /push/preferences` · `GET /push/health`（权限状态）
 
 **规范**：RFC 7807；`Idempotency-Key` 全 POST；免登录白名单（cost/evidence/why-not/ledger/stream.public/gate/on-sale）；限速 chat 20/h、验证码 5/h/IP；**深链路由表随构建配置发布（§3.6）**；错误码→UI 映射：每个 problem+json 类型对应一个预置文案与重试动作，未登记类型兜底"出了点问题，正在修"。
