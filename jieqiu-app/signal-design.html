@@ -50,7 +50,11 @@ h1{font-size:20px;font-weight:700;letter-spacing:.02em}
 /* 情报行（判决卡内） */
 .sigline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:11px;padding:9px 11px;border-radius:11px;background:linear-gradient(90deg,rgba(63,174,141,.12),transparent);border:1px solid rgba(63,174,141,.25);font-size:12px}
 .sigline.hot{background:linear-gradient(90deg,rgba(217,164,65,.14),transparent);border-color:rgba(217,164,65,.38)}
-.sigline .l{display:flex;align-items:center;gap:7px}
+.sigline .l{display:flex;align-items:center;gap:7px;min-width:0;flex:1}
+.sigline .l b{white-space:nowrap}
+.sigline .subl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sigline .tag{flex:0 0 auto}
+.sigline .arrow{white-space:nowrap;flex:0 0 auto}
 .sigline .arrow{color:var(--muted);font-size:14px}
 .tag{font-size:10px;border-radius:999px;padding:1.5px 7px;white-space:nowrap}
 .tag.hot{background:rgba(217,164,65,.16);color:var(--amber)}
@@ -105,11 +109,15 @@ table.rules tr:last-child td{border-bottom:0}
 .topbar .l b{color:var(--v)}
 .topbar .r{text-align:right;line-height:1.45}
 .mascot{width:56px;height:56px;border-radius:18px;background:var(--vsoft);display:grid;place-items:center;font-size:24px;margin:0 auto}
+.sigline .l b{font-size:12.5px;font-weight:600}
+.sigline .subl{color:var(--muted);font-size:11.5px}
+.whywait{font-size:11.5px;color:var(--muted);margin-top:9px}
 </style>
 </head>
 <body>
 <h1>情报层 UI 设计图 · 三关不动，第四块「情报」</h1>
-<p class="sub">设计原则：① 判决卡只多一行摘要，不增加认知负担；② 情报明细放在详情页第 4 块；③ 所有情报标注「已定价 / 未定价 / 仅背景」；④ 信息不全 = 明确「等首发」，不硬推。</p>
+<p class="sub">设计原则：① 判决卡只多一行摘要，不增加认知负担；② 情报明细放在详情页第 4 块；③ 所有情报标注「市场未反应 / 已反映 / 仅参考」；④ 信息不全 = 明确「等首发」，不硬推。</p>
+<p class="sub" style="margin-top:10px;color:var(--v)">v2 交互优化（已落地测试前端）：① 情报行先讲事实、再讲市场状态；② 详情默认只展开第一条，其余按需展开；③ AI 卡默认折叠驱动/风险；④ 等首发卡补「为什么现在不能算」；⑤ 异动卡只在结论真的变化时出现。</p>
 <div class="legend">
   <span><i class="dot" style="background:var(--v)"></i><b>硬情报</b> 可核验 · 调整概率（有边界）</span>
   <span><i class="dot" style="background:var(--amber)"></i><b>软情报</b> 只扩区间 · 触发「等」</span>
@@ -133,11 +141,11 @@ table.rules tr:last-child td{border-bottom:0}
       <div class="gates">
         <span class="gatechip"><i>✓</i>价 9.2%</span>
         <span class="gatechip"><i>✓</i>市 2.1pp</span>
-        <span class="gatechip"><i>✓</i>模 54.2% · 首发确认</span>
+        <span class="gatechip"><i>✓</i>模 54.2% · 首发</span>
       </div>
       <div class="sigline hot">
-        <span class="l">📋 情报 4 条 · 2 硬 1 软 1 背景 <span class="tag hot">1 条未定价</span></span>
-        <span class="arrow">›</span>
+        <span class="l">📋 <b>2 名中卫缺阵</b> <span class="subl">市场还没反应</span></span><span class="tag hot">1 条未定价</span>
+        <span class="arrow">详情 ›</span>
       </div>
       <div class="btnrow">
         <button class="btn primary">买了</button>
@@ -154,7 +162,7 @@ table.rules tr:last-child td{border-bottom:0}
     <div class="tab"><span class="i">🙂</span>我的</div>
   </div>
 </div>
-<p class="cap"><b>图 1 · 判决卡（情报齐全）</b><br>三关 chips 第三枚扩展为「模 54.2% · 首发确认」。情报摘要一行：条数 + 类型 + 是否有未定价项。</p>
+<p class="cap"><b>图 1 · 判决卡（情报齐全）</b><br>三关 chips 第三枚扩展为「模 54.2% · 首发确认」。情报摘要一行：一句事实 + 市场状态 + 是否有未定价项；点整行进详情情报区。</p>
 </div>
 
 <!-- 2. 判决卡 · 等首发 -->
@@ -175,8 +183,9 @@ table.rules tr:last-child td{border-bottom:0}
       </div>
       <div class="waitbox">
         <div class="b"><span>🛡 阵容 · 2 名主力存疑</span><span class="count">19:30 官方首发</span></div>
-        <div class="b" style="margin-top:7px"><span>🔄 疲劳 · 曼城 3 天 2 赛 · 轮换不明</span><span class="count">软情报</span></div>
+        <div class="b" style="margin-top:7px"><span>⏳ 疲劳 · 曼城 3 天 2 赛 · 轮换不明</span><span class="count">软情报</span></div>
       </div>
+      <div class="whywait">为什么现在不能算？ ›</div>
       <div class="btnrow">
         <button class="btn primary">到点提醒我</button>
         <button class="btn ghost">先不看这场</button>
@@ -214,33 +223,33 @@ table.rules tr:last-child td{border-bottom:0}
       </div>
     </div>
     <div class="card">
-      <div class="eyebrow">🔎 情报 · 4 条 <span class="tag ver">2 硬</span> <span class="tag hot">1 软</span> <span class="tag gray">1 背景</span></div>
+      <div class="eyebrow">🔎 情报 · 4 条 <span class="tag ver">2 条影响概率</span> <span class="tag gray">2 条仅供参考</span></div>
 
       <div class="sig">
-        <div class="h"><span class="t">🛡 阵容 · 布莱顿</span><span class="tag hot">未定价</span></div>
+        <div class="h"><span class="t">🛡 阵容 · 布莱顿</span><span class="tag hot">市场未反应</span></div>
         <div class="d">两中卫确认缺阵（官方首发 19:30）。xGA 预计 +12%。</div>
         <div class="f"><span>来源 API-Football · 19:30</span><span class="pp up">+1.8pp</span></div>
       </div>
 
       <div class="sig">
-        <div class="h"><span class="t">🔄 疲劳 · 曼城</span><span class="tag gray">已定价</span></div>
+        <div class="h"><span class="t">⏳ 疲劳 · 曼城</span><span class="tag gray">已反映</span></div>
         <div class="d">3 天 2 赛，欧冠夹心。轮换概率 43% 已计入。</div>
         <div class="f"><span>来源 赛程库 · 自动</span><span class="pp down">−0.8pp</span></div>
       </div>
 
       <div class="sig">
-        <div class="h"><span class="t">📈 状态 · 布莱顿</span><span class="tag gray">仅背景</span></div>
+        <div class="h"><span class="t">📈 状态 · 布莱顿</span><span class="tag gray">仅参考</span></div>
         <div class="d">近 6 场 xG +12%，但只持续 4 场，未过 5 场回测门槛 → 不进模型。</div>
         <div class="f"><span>来源 Understat · 11月2日</span><span class="pp flat">0pp</span></div>
       </div>
 
       <div class="sig">
-        <div class="h"><span class="t">🎯 战意 · 双方</span><span class="tag gray">仅叙事</span></div>
+        <div class="h"><span class="t">🎯 战意 · 双方</span><span class="tag gray">不进模型</span></div>
         <div class="d">排名压力无差异，无德比/杯赛夹心。战意永不进概率，只写进反方庭。</div>
         <div class="f"><span>来源 积分榜 · 自动</span><span class="pp flat">不参与</span></div>
       </div>
 
-      <div class="secnote">未定价 = 情报公布后 30 分钟内盘口未同向移动，可能存在信息差；已定价 = 市场已反应，只提升准确率、不产生收益。情报永不替代盘口。</div>
+      <div class="secnote">市场未反应（未定价）= 情报公布后 30 分钟内盘口未同向移动，可能存在信息差；已反映（已定价）= 市场已反应，只提升准确率、不产生收益。情报永不替代盘口。</div>
     </div>
     <div class="card">
       <div class="eyebrow">封存</div>
@@ -248,7 +257,7 @@ table.rules tr:last-child td{border-bottom:0}
     </div>
   </div>
 </div>
-<p class="cap"><b>图 3 · 详情页新增第 4 块「情报」</b><br>每条：类型 · 队名 · 状态标签 · 一句话事实 · 来源+时间 · 对概率的幅度。底部一段诚实条款。</p>
+<p class="cap"><b>图 3 · 详情页新增第 4 块「情报」</b><br>实现：第一条默认展开，其余按需展开；每条：类型 · 队名 · 状态标签 · 一句话事实 · 来源+时间 · 对概率的幅度。底部一段诚实条款。</p>
 </div>
 
 <!-- 4. 为什么不推 · 信息未定 -->
@@ -301,7 +310,7 @@ table.rules tr:last-child td{border-bottom:0}
     </div>
   </div>
 </div>
-<p class="cap"><b>图 5 · 流内「情报异动」卡</b><br>只在<b>结论发生变化</b>时出现：推→不推、不推→推、概率移动 ≥2pp。不是每条情报都刷屏。</p>
+<p class="cap"><b>图 5 · 流内「情报异动」卡</b><br>只在<b>结论发生变化</b>时出现：推→不推、不推→推、概率移动 &gt;1pp、pick 变化或 AI 方向翻转。不是每条情报都刷屏。</p>
 </div>
 
 <!-- 6. 推送 + 规则表 -->
@@ -338,7 +347,7 @@ table.rules tr:last-child td{border-bottom:0}
     <div class="card">
       <div class="eyebrow">🤖 AI 深度研判 <span class="tag ver">已封存</span></div>
       <div style="font-size:15px;font-weight:600;line-height:1.6">倾向 <span style="color:var(--v)">让球主胜</span>，但把握度中等</div>
-      <div class="meta">综合 12 条情报 · 情景加权 54.6% · 与统计模型分歧 +0.4pp（已按收缩纪律计入，上限 ±3pp）</div>
+      <div class="meta">综合 4 条情报 · 情景加权 54.6% · 与统计模型分歧 +0.4pp · 仅解释，不改判决（调整上限 ±3pp）</div>
       <div style="margin-top:12px">
         <div class="prow"><span>基准 54%</span><div class="pbar"><i style="width:54%"></i></div><b>控球压制</b></div>
         <div class="prow"><span>乐观 62%</span><div class="pbar"><i style="width:62%;opacity:.7"></i></div><b>哈兰德首发</b></div>
@@ -406,6 +415,6 @@ table.rules tr:last-child td{border-bottom:0}
   <tr><td><b style="color:var(--amber)">软情报</b></td><td>轮换不明、核心存疑</td><td>不改点估计，只扩区间</td><td>区间半宽 &gt;8pp → 等（pending）</td></tr>
   <tr><td><b style="color:var(--muted)">战意/伪情报</b></td><td>士气、媒体看好、动机</td><td>0（不进模型）</td><td>只写反方庭 / 避雷理由</td></tr>
 </table>
-<p class="sub" style="margin-top:16px">交互补充：① 情报区每条可点开看原文来源；② 「未定价」标签点开解释「为什么未定价 ≠ 有收益」；③ 等首发状态到点自动重算，无需用户操作；④ 所有情报变化进修订链，公开可验。</p>
+<p class="sub" style="margin-top:16px">交互补充：① 情报区默认展开第一条，其余点开看来源与判定；② 「市场未反应」标签点开解释「为什么未定价 ≠ 有收益」；③ 等首发状态到点自动重算，无需用户操作；④ 所有情报变化进修订链，公开可验。</p>
 </body>
 </html>

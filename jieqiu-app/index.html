@@ -11,7 +11,7 @@ body{background:light-dark(#DDDAD2,#0B0D11);font-family:"PingFang SC","MiSans",s
 .num{font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums}
 #phone{width:100%;max-width:430px;height:100dvh;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden}
 @media(min-width:480px){#phone{height:min(880px,96dvh);margin:auto;border-radius:34px;border:1px solid var(--line);box-shadow:0 24px 60px rgba(0,0,0,.35)}}
-.top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;flex:0 0 auto;position:relative}
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 20px;flex:0 0 auto;position:relative;z-index:6;background:var(--bg)}
 .top .logo{font-size:16px;font-weight:700;letter-spacing:.1em}
 .hzrow{display:flex;justify-content:space-between;padding:10px 2px 0}
 .hz{display:flex;flex-direction:column;gap:3px;font-size:10.5px;line-height:1.35}
@@ -201,6 +201,78 @@ body{background:light-dark(#DDDAD2,#0B0D11);font-family:"PingFang SC","MiSans",s
 .dsec .tt{font-size:13.5px;font-weight:600}
 .dsec .db{font-size:12.5px;line-height:1.75;color:var(--muted);margin-top:5px}
 .dsec .db b{color:var(--ink)}
+
+/* ===== 情报层 v2 · UX 优化（2026-11-03） ===== */
+.sigline{display:flex;align-items:center;justify-content:space-between;gap:9px;width:100%;min-height:46px;margin-top:11px;padding:9px 11px;border-radius:12px;background:linear-gradient(90deg,var(--vsoft),transparent);border:1px solid rgba(63,174,141,.28);font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.sigline.hot{background:linear-gradient(90deg,var(--asoft),transparent);border-color:rgba(217,164,65,.38)}
+.sigline .sl{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.sigline .sl .si{font-size:15px;flex:0 0 auto}
+.sigline .sl b{font-size:12.5px;font-weight:600;white-space:nowrap}
+.sigline .sl i{font-style:normal;font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sigline .arrow{font-size:11.5px;color:var(--muted);flex:0 0 auto}
+.tag{font-size:10px;border-radius:999px;padding:1.5px 7px;white-space:nowrap;flex:0 0 auto}
+.tag.hot{background:var(--asoft);color:var(--amber)}
+.tag.ver{background:var(--vsoft);color:var(--v)}
+.tag.gray{border:1px solid var(--line);color:var(--muted)}
+.gatechip.stale{border-color:rgba(217,164,65,.4);color:var(--amber)}
+.gatechip.stale i{color:var(--amber)}
+.gatechip.bad{border-color:rgba(224,106,87,.45);color:var(--danger)}
+.gatechip.bad i{color:var(--danger)}
+.waitbox{margin-top:11px;padding:10px 12px;border:1px dashed rgba(217,164,65,.45);border-radius:12px;background:var(--asoft)}
+.waitbox .wb{display:flex;justify-content:space-between;align-items:center;gap:9px;font-size:12px;line-height:1.5}
+.waitbox .wb+.wb{margin-top:7px}
+.waitbox .count{font-family:ui-monospace,monospace;font-size:11px;color:var(--muted);white-space:nowrap}
+.whywait{margin-top:8px;font-size:11.5px;color:var(--muted)}
+.whywait summary{min-height:34px;display:flex;align-items:center;gap:4px;cursor:pointer;list-style:none}
+.whywait summary::-webkit-details-marker{display:none}
+.whywait summary::after{content:"›";transition:transform .2s}
+.whywait[open] summary::after{transform:rotate(90deg)}
+.whywait p{margin-top:4px;line-height:1.65}
+.sigitem{border-top:1px dashed var(--line)}
+.sigitem:first-of-type{border-top:0}
+.sigitem summary{display:grid;grid-template-columns:24px 1fr auto 10px;gap:9px;align-items:center;min-height:50px;padding:8px 2px;cursor:pointer;list-style:none}
+.sigitem summary::after{content:"›";color:var(--muted);font-size:14px;justify-self:end;transition:transform .2s}
+.sigitem[open] summary::after{transform:rotate(90deg)}
+.sigitem summary::-webkit-details-marker{display:none}
+.sigitem .si{font-size:15px;text-align:center}
+.sigitem .sm{min-width:0}
+.sigitem .sm b{display:block;font-size:12.5px;line-height:1.35}
+.sigitem .sm span{display:block;font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:2px}
+.sigright{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.sigright .pp{font-family:ui-monospace,monospace;font-size:12px;font-weight:600}
+.pp.up{color:var(--v)}.pp.down{color:var(--danger)}.pp.flat{color:var(--muted)}
+.sbody{padding:0 2px 11px 33px;font-size:11.5px;color:var(--muted);line-height:1.65}
+.srow{display:grid;grid-template-columns:36px 1fr;gap:7px;margin-top:4px}
+.srow>span:first-child{opacity:.75}
+.secnote{margin-top:10px;padding:9px 11px;background:var(--asoft);border-radius:10px;font-size:11px;color:var(--amber);line-height:1.65}
+.aihead{font-size:15px;font-weight:600;line-height:1.55;margin-top:2px}
+.scen{margin-top:11px}
+.scenrow{padding:7px 0;border-top:1px dashed var(--line)}
+.scenrow:first-child{border-top:0;padding-top:0}
+.scenh{display:flex;align-items:center;gap:7px;font-size:12px}
+.scenh b{font-weight:600}
+.scenh .num{margin-left:auto;font-size:12px;color:var(--ink)}
+.scenrow .pbar{margin:6px 0 4px}
+.scend{font-size:10.5px;color:var(--muted);line-height:1.5}
+.aimore{margin-top:8px;border-top:1px dashed var(--line)}
+.aimore summary{display:flex;align-items:center;gap:4px;min-height:38px;font-size:12px;color:var(--v);cursor:pointer;list-style:none}
+.aimore summary::-webkit-details-marker{display:none}
+.aimore summary::after{content:"›";transition:transform .2s}
+.aimore[open] summary::after{transform:rotate(90deg)}
+.aibody{padding:0 1px 6px}
+.aibody .li{font-size:12px;line-height:1.65;padding:3px 0 3px 16px;position:relative}
+.aibody .li::before{content:"·";position:absolute;left:4px;color:var(--muted)}
+.aibody .li.risk{color:var(--danger)}
+.aibody .grp{font-size:11px;color:var(--muted);padding:7px 0 2px}
+.evt{border-left:3px solid var(--amber)}
+.evt .et{font-size:13px;line-height:1.6;margin-top:2px}
+.flow{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12.5px}
+.flow .old{color:var(--muted);text-decoration:line-through;font-family:ui-monospace,monospace}
+.flow .new{color:var(--v);font-family:ui-monospace,monospace;font-weight:600}
+.flow .delta{font-size:11px;color:var(--amber);border:1px solid rgba(217,164,65,.4);border-radius:999px;padding:1px 7px}
+.updline{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:9px;padding:7px 10px;border-radius:9px;background:var(--asoft);font-size:11.5px;color:var(--amber);cursor:pointer}
+:focus-visible{outline:2px solid var(--v);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -253,14 +325,62 @@ const D={
     id:"v047",home:"曼城",away:"布莱顿",league:"英超",no:"周三012",close:"21:55",
     sel:"让球主胜",hc:"-1",sp:2.05,
     cost:{rake:9.2,rank:9,ev:-4.6},
-    judge:{p:52.4,band:3.0,uplift:1.8,market:51.8,fair:1.93,vs:"+0.6pp"},
-    gates:[["价","抽水 9.2%"],["市","分歧 2.1pp"],["模","阵容已确认"]],
-    dist:{win:52.4,draw:26.8,lose:20.8},
+    judge:{p:54.2,band:3.0,uplift:1.8,market:51.8,fair:1.93,vs:"+0.6pp"},
+    gates:[["价","抽水 9.2%"],["市","分歧 2.1pp"],["模","54.2% · 首发"]],
+    dist:{win:54.2,draw:25.8,lose:20.0},
     opp:"反方：曼城 3 天后有欧冠，轮换概率 43%。若德布劳内轮休 → 降为 B 级并推送更新。",
+    intel:{
+      line:"2 名中卫缺阵",sub:"市场还没反应",updated:"19:30",
+      items:[
+        {icon:"🛡",t:"阵容 · 布莱顿",lvl:"hard",status:"unpriced",pp:"+1.8",
+          fact:"两中卫确认缺阵，xGA 预计 +12%",
+          src:"API-Football · 19:30 官方首发",
+          why:"公布后 30 分钟内，竞彩 SP 未同向移动 → 市场可能还没反应。",
+          calc:"位置级模型：中卫缺阵 1.03；两人合并取上限，映射 +1.8pp。"},
+        {icon:"⏳",t:"疲劳 · 曼城",lvl:"hard",status:"priced",pp:"−0.8",
+          fact:"3 天 2 赛，欧冠夹心；轮换概率 43% 已计入",
+          src:"赛程库 · 自动",
+          why:"该信息已体现在盘口里，只提升准确率，不产生额外收益。",
+          calc:"休息 2 天 ×0.98，欧冠夹心 ×0.99；合计 −0.8pp。"},
+        {icon:"📈",t:"状态 · 布莱顿",lvl:"soft",status:"background",pp:"0",
+          fact:"近 6 场 xG +12%，但只持续 4 场，未过 5 场门槛",
+          src:"Understat · 11月2日",
+          why:"样本不足，方向对但幅度不可信 → 只扩区间，不改点估计。",
+          calc:"未过门槛，权重 0；区间半宽 +0.5pp。"},
+        {icon:"🎯",t:"战意 · 双方",lvl:"narrative",status:"narrative",pp:"—",
+          fact:"排名压力无差异，无德比/杯赛夹心",
+          src:"积分榜 · 自动",
+          why:"不可证伪，永不进概率，只写进反方庭。",
+          calc:"权重 0。"}
+      ],
+      note:"市场未反应（未定价）= 情报公布后 30 分钟内盘口未同向移动，可能存在信息差；已反映（已定价）= 市场已反应，只提升准确率、不产生收益。情报永不替代盘口。"
+    },
+    ai:{
+      headline:"倾向让球主胜，但把握度中等",
+      weighted:54.6,divergence:0.4,
+      scenarios:[
+        {tag:"基准",label:"控球压制",p:54,trigger:"布莱顿双中卫缺阵，曼城正常轮换"},
+        {tag:"乐观",label:"哈兰德首发",p:62,trigger:"哈兰德 + 德布劳内同时首发"},
+        {tag:"悲观",label:"轮换 4 人",p:41,trigger:"曼城为欧冠轮换 ≥4 人"}
+      ],
+      drivers:[
+        "布莱顿双中卫缺阵（xGA +12%，官方确认）",
+        "曼城主场 xG 2.1/场，压制型对阵",
+        "布莱顿被迫压上 → 反击空间（转化率 18%）"
+      ],
+      risks:[
+        "曼城 3 天后欧冠，轮换 43%；若 4 人轮换 → 悲观情景 41%",
+        "布莱顿定位球得分率联赛第 4（曼城防空第 11）"
+      ],
+      note:"AI 只做情景与风险，最终概率来自统计模型（±3pp 内）。本段文字与输入快照已封存上链，可复现。"
+    },
+    flow:{from:52.4,to:54.2,delta:1.8,
+      text:"布莱顿两中卫确认缺阵，曼城这场我重算过了。",
+      conclusion:"三关全过，已推。新修订已封存，可逐版回放。"},
     hashFull:"9f3ac721e5b04d18c3f9a1e77b2d60448a1c5f0e93b7d264a8e1f3c5b7d90812",
     detail:{
       layers:[
-        {n:"①",t:"一句话",body:"抽水 9.2%（今日第 9 浅），三家分歧 2.1pp，模型 52.4% —— 三关全过。",tag:"5 秒"},
+        {n:"①",t:"一句话",body:"抽水 9.2%（今日第 9 浅），三家分歧 2.1pp，模型 54.2% —— 三关全过。",tag:"5 秒"},
         {n:"②",t:"成本细算",body:"你押的「让球主胜」标价 2.05，公允值 1.93。差额 0.6pp：一半是抽水，一半是市场比模型略乐观。每 100 元期望回报 -4.6 元。",tag:"30 秒"},
         {n:"③",t:"完整证据链",body:"xG（6 轮）⊕ 伤停（首发已确认）⊕ 赛程（欧冠间隔）⊕ 主场系数。反方数据已列：轮换概率 43%。若轮换 → 自动降级并推送。",tag:"2 分钟"}
       ],
@@ -279,10 +399,10 @@ const D={
         ["三家离散度","2.1pp","阈值 5pp → 通过"]
       ],
       model:[
-        ["初始概率","50.6%","Dixon-Coles v1.1"],
+        ["初始概率","52.4%","Dixon-Coles v1.1"],
         ["信息修正","+1.8pp","布莱顿双中卫缺阵"],
         ["收缩调整","-0.0pp","与市场偏差 <8pp，不收缩"],
-        ["最终概率","52.4%","区间 49.4% ~ 55.4%"]
+        ["最终概率","54.2%","区间 51.2% ~ 57.2%"]
       ],
       evidence:[
         {tag:"已计入",t:"状态",d:"曼城近 6 轮 xG 2.1/场，布莱顿 1.4",src:"Understat · 11月1日 06:00"},
@@ -426,7 +546,8 @@ const D={
         {tag:"已核验",t:"伤疑",d:"中卫吕迪格 / 后腰卡马文加 未进今日训练名单",src:"API-Football · 17:40"},
         {tag:"仅背景",t:"轮换倾向",d:"安切洛蒂欧冠前轮换率 61%",src:"历史统计 · 教练个人参数"}
       ],
-      whatif:"20:30 官方首发公布后自动重算：过三关 → 插入今晚流 + 推送（若你开了提醒）；仍不过 → 维持不推并说明原因。距 23:00 停售约有 2.5 小时窗口。"
+      whatif:"20:30 官方首发公布后自动重算：过三关 → 插入今晚流 + 推送（若你开了提醒）；仍不过 → 维持不推并说明原因。距 23:00 停售约有 2.5 小时窗口。",
+      wait:{time:"19:30 官方首发",note:"公布后自动重算，不用你盯"}
     }
   },
   parlay:{
@@ -491,20 +612,20 @@ const D={
     ["19:02:14","终审通过 1 场 · 置信 A · 已封存"]
   ],
   personas:{
-    zhuanjia:{name:"理性专家",tag:"冷静 · 简单直接",pv:"📊",sample:"让球主胜 52.4%。市场少算了两名中卫。",
-      reason:"首发公布后重算：让球主胜 52.4%（+1.8pp）—— 市场还没跟上。",
+    zhuanjia:{name:"理性专家",tag:"冷静 · 简单直接",pv:"📊",sample:"让球主胜 54.2%。市场少算了两名中卫。",
+      reason:"首发公布后重算：让球主胜 54.2%（+1.8pp）—— 市场还没跟上。",
       attrib:"0-0，主胜没过。归因：随机波动 —— 判断没错，结果落在少数侧。这个月「判断对但没中」已有 4 次，正常。",
       care:"3 场归因都在：1 次信息不足，2 次随机波动。判断没塌，别塌心态。今晚 47 场全砍，歇着。",
       empty:"今晚没有值得买的。我查完 47 场了，一场都不推。",
       comfort:"记下了。中间不用再看了。"},
     laopao:{name:"感性老炮",tag:"兄弟 · 幽默 · 有情绪",pv:"🍺",sample:"兄弟，这价我不拦你，但账得算明白。",
-      reason:"兄弟，我盯这场盯了三天了。布莱顿两个中卫上不了，还给 2.05？首发一出我就重算了：52.4%，市场还没跟上——实属给面子。",
+      reason:"兄弟，我盯这场盯了三天了。布莱顿两个中卫上不了，还给 2.05？首发一出我就重算了：54.2%，市场还没跟上——实属给面子。",
       attrib:"0-0……兄弟这场咱认了。你眼光没毛病，就是牌不好。这种局十次里九次这样，别往心里去。",
       care:"兄弟，这周咱认了。说句掏心窝的：三场你眼光没毛病，就是牌不好。今晚没好货，跟我撤，输钱不输阵。",
       empty:"兄弟，今晚这堆比赛，说实话没一场值得咱熬夜。我全查完了——撤。",
       comfort:"记下了兄弟。中间别刷了，有结果我叫你。"},
     meng:{name:"萌妹萝莉",tag:"主人 · 小女仆 · 勤快",pv:"🌸",sample:"主人～只有 1 场过了人家的考验哦",
-      reason:"主人～人家把首发盯完啦！让球主胜 52.4%（+1.8pp），市场都还没反应过来呢～详情人家备好啦 ♡",
+      reason:"主人～人家把首发盯完啦！让球主胜 54.2%（+1.8pp），市场都还没反应过来呢～详情人家备好啦 ♡",
       attrib:"呜…0-0，主人的注没中。不过人家查过了，是随机波动，不是主人的问题啦！抱抱 (っ•́ω•̀)",
       care:"主人今天辛苦了…人家把 47 场全检查过了，一场都不能让主人上哦。所以今晚主人什么都不用做，好好休息，剩下的交给人家的说！(っ•̀ω•́)っ",
       empty:"主人～今晚 47 场全被人家砍掉了哦，一场都不能上！所以今晚主人乖乖休息，明天人家再 early 叫你 ♡",
@@ -517,7 +638,7 @@ const D={
   ]
 };
 /* ================= 状态 ================= */
-const DEF={consent:0,intro:0,persona:"zhuanjia",lang:"zh",odds:"decimal",user:null,member:0,bets:[],follows:{},askedNotif:0,rested:0,excluded:0,excludedLabel:"",minor:0,comfort:0,demoEmpty:0,prot:1,oddsFormat:0,whynotSel:0};
+const DEF={consent:0,intro:0,persona:"zhuanjia",lang:"zh",odds:"decimal",user:null,member:0,bets:[],follows:{},askedNotif:0,rested:0,excluded:0,excludedLabel:"",minor:0,comfort:0,demoEmpty:0,prot:1,oddsFormat:0,whynotSel:0,dataMode:"demo",pendingDemo:0,evtDismissed:0};
 let S=Object.assign({},DEF,JSON.parse(localStorage.getItem("jieqiu")||"{}"));
 if(!S.bets)S.bets=[];
 const save=()=>localStorage.setItem("jieqiu",JSON.stringify(S));
@@ -544,7 +665,7 @@ function render(){
   document.getElementById("view").innerHTML=v.render(c.params);
   document.getElementById("view").dataset.v=c.id;
   document.getElementById("view").scrollTop=keep?y:0;
-  document.getElementById("view").style.paddingTop=(c.id==="stream")?"88px":"6px";
+  document.getElementById("view").style.paddingTop=(c.id==="stream")?"14px":"6px";
   renderTop(root);renderTabs();
   const tb=document.getElementById("tabs");
   tb.style.display=(c.id==="gate"||c.id==="intro")?"none":"flex";
@@ -612,6 +733,7 @@ const V={};
 /* W7 review：异步拉真实数据 → 覆盖 D 常量 → 重渲染（失败重试 5 次退避；演示态明确标注） */
 function hydrateFromBackend(){
   if(API._ok)return;
+  if(S.dataMode==="demo"){API.online=false;return}
   API._tries=(API._tries||0)+1;
   API.stream().then(function(s){
     const m=API.mapStream(s);
@@ -631,10 +753,48 @@ V.gate={render:function(){return '<div style="height:100%;display:flex;flex-dire
 V.intro={render:function(){return '<div style="height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 6px"><article class="card" style="text-align:center;padding:30px 18px 24px"><div style="font-size:21px;font-weight:600;line-height:1.5">今晚 47 场，<br>我挑出 1 场。</div><p style="margin-top:12px;font-size:13.5px;line-height:1.7;color:var(--muted)">先说清楚：我不保证每场都对，<br>但每一场都赛前封存、赛后公开。</p></article><div style="display:flex;margin-top:12px"><button class="btn primary" data-act="startIntro">看今晚这场</button></div><div class="foot">不用注册，不用花钱，看完再决定</div></div>'}};
 /* 详情页闸门 detail 提取（真数据分支辅助） */
 function gates_detail(g){return {result:(g&&g.result)||"pending_data",rule:((g&&g.detail&&g.detail.rule)||"数据源未覆盖，等待中")};}
+const INTEL_TAG={unpriced:["hot","市场未反应"],priced:["gray","已反映"],background:["gray","仅参考"],narrative:["gray","不进模型"]};
+function ppClass(x){return x.indexOf("+")===0?"up":x.indexOf("−")===0?"down":"flat"}
+function signalLineHTML(){
+  const it=D.verdict.intel.items;
+  const unp=it.filter(function(x){return x.status==="unpriced"}).length;
+  return '<button type="button" class="sigline hot" data-act="goIntel" aria-label="查看情报详情"><span class="sl"><span class="si">📋</span><b>'+D.verdict.intel.line+'</b><i>'+D.verdict.intel.sub+'</i></span><span class="tag hot">'+unp+' 条未定价</span><span class="arrow">详情 ›</span></button>';
+}
+function waitBoxHTML(){
+  return '<div class="waitbox"><div class="wb"><span>🛡 阵容 · 2 名主力存疑</span><span class="count">19:30 官方首发</span></div><div class="wb"><span>⏳ 疲劳 · 3 天 2 赛 · 轮换不明</span><span class="count">软情报</span></div></div>';
+}
+function flowCardHTML(){
+  const f=D.verdict.flow;
+  return '<article class="card evt" id="evtcard"><div class="eyebrow amber">⚡ 首发公布 · 结论已更新</div><div class="et">'+f.text+'</div><div class="flow"><span class="old">'+f.from+'%</span><span>→</span><span class="new">'+f.to+'%</span><span class="delta">+'+f.delta+'pp</span></div><div class="meta">'+f.conclusion+'</div><div class="btnrow"><button class="btn" data-act="goIntel">看判断</button><button class="btn ghost" data-act="dismissEvt">知道了</button></div></article>';
+}
+function intelCardHTML(){
+  const it=D.verdict.intel.items;
+  const hard=it.filter(function(x){return x.lvl==="hard"}).length;
+  let h='<article class="card" id="intelcard"><div class="eyebrow">🔎 情报 · '+it.length+' 条 <span class="tag ver">'+hard+' 条影响概率</span><span class="tag gray">'+(it.length-hard)+' 条仅供参考</span></div><div class="meta">更新于 '+D.verdict.intel.updated+' · 按影响力排序 · 点每条看来源与判定依据</div>';
+  it.forEach(function(x,i){
+    const tg=INTEL_TAG[x.status]||INTEL_TAG.background;
+    h+='<details class="sigitem"'+(i===0?" open":"")+'><summary><span class="si">'+x.icon+'</span><span class="sm"><b>'+x.t+'</b><span>'+x.fact+'</span></span><span class="sigright"><span class="tag '+tg[0]+'">'+tg[1]+'</span><b class="pp '+ppClass(x.pp)+'">'+x.pp+'</b></span></summary><div class="sbody"><div class="srow"><span>判定</span><span>'+x.why+'</span></div><div class="srow"><span>算法</span><span>'+x.calc+'</span></div><div class="srow"><span>来源</span><span>'+x.src+'</span></div></div></details>';
+  });
+  h+='<div class="secnote">'+D.verdict.intel.note+'</div></article>';
+  return h;
+}
+function aiCardHTML(){
+  const a=D.verdict.ai;
+  let h='<article class="card" id="aicard"><div class="eyebrow">🤖 AI 深度研判 <span class="tag ver">已封存</span></div><div class="aihead">'+a.headline+'</div><div class="meta">情景加权 <b class="num" style="color:var(--ink)">'+a.weighted+'%</b> · 与统计模型分歧 <b class="num" style="color:var(--amber)">+'+a.divergence+'pp</b> · <span style="color:var(--muted)">仅解释，不改判决</span></div><div class="scen">';
+  a.scenarios.forEach(function(x){
+    const cls=x.tag==="乐观"?"ver":(x.tag==="悲观"?"hot":"gray");
+    h+='<div class="scenrow"><div class="scenh"><span class="tag '+cls+'">'+x.tag+'</span><b>'+x.label+'</b><span class="num">'+x.p+'%</span></div><div class="pbar"><i style="width:'+x.p+'%"></i></div><div class="scend">触发：'+x.trigger+'</div></div>';
+  });
+  h+='</div><details class="aimore"><summary>看 3 个驱动与 2 条风险</summary><div class="aibody"><div class="grp">关键驱动</div>'+a.drivers.map(function(x){return '<div class="li">'+x+'</div>'}).join("")+'<div class="grp">风险</div>'+a.risks.map(function(x){return '<div class="li risk">'+x+'</div>'}).join("")+'</div></details><div class="secnote">'+a.note+'</div></article>';
+  return h;
+}
 function verdictCardHTML(){
   const v=D.verdict,p=P();
   if(S.demoEmpty){
     return '<article class="card empty"><div style="display:flex;justify-content:center;margin-bottom:10px"><div class="msr mfl" style="--sx:'+PX[S.persona]+';width:130px;aspect-ratio:0.62"></div></div><div style="font-size:18px;font-weight:600">'+p.empty+'</div><div class="meta" style="margin-top:10px;line-height:1.8">47 场全被砍了：价砍 23 · 分歧砍 18 · 信息砍 6<br>这是正常的，不是故障。</div><div style="display:flex;justify-content:center;margin-top:12px"><span class="stamp">封</span></div></article><article class="card"><div class="eyebrow">📖 今日课程 · 2 分钟</div><div style="font-size:12.5px;line-height:1.6;color:var(--muted)">为什么抽水 13.4% 的场次，长期必亏？</div><div class="btnrow"><button class="btn" data-act="toast" data-m="课程演示版">看 2 分钟版</button></div></article>';
+  }
+  if(S.pendingDemo){
+    return '<article class="card" id="vcard" style="border-left:3px solid var(--amber)"><div class="eyebrow amber">⚖ 今晚 47 场 → 复核中 1 场</div><div class="match">曼城<em>vs</em>布莱顿</div><div class="meta">英超 · 周三012 · 单关 ✓ · 21:55 停售</div><div class="call" style="color:var(--amber)">… 等首发</div><div class="costline" style="background:var(--asoft)"><span>价格已过 · 抽水 9.2%</span><b style="color:var(--amber)">19:30 公布 · 自动重算</b></div><div class="judge" style="border-left-color:var(--amber)">首发未公布，轮换幅度未知。现在区间 ±9.4pp，超过 8pp 阈值——<b>信息不够，先不推</b>。19:30 公布后我重算，过了就进流。</div><div class="gates"><span class="gatechip"><i>✓</i>价 9.2%</span><span class="gatechip"><i>✓</i>市 2.1pp</span><span class="gatechip stale"><i>…</i>模 等首发</span></div>'+waitBoxHTML()+'<details class="whywait"><summary>为什么现在不能算？</summary><p>首发未定 → 轮换幅度未知 → 概率区间被撑到 ±9.4pp，超过 8pp 阈值。模型对这两个输入最敏感，硬算等于猜。</p></details><div class="btnrow"><button class="btn primary" data-act="remind">到点提醒我</button><button class="btn ghost" data-act="toast" data-m="已隐藏这场（演示）">先不看这场</button></div><div class="meta" style="text-align:center;margin-top:9px">等首发 ≠ 不推，是「还没算完」</div></article>';
   }
   const bought=S.bets.some(function(b){return b.verdictId===v.id});
   // W7 review：真数据分支（gates 三态 / 真哈希 / 真文案）
@@ -642,10 +802,10 @@ function verdictCardHTML(){
     const g=v.gates;
     const gateChips=[["价",g.price],["市",g.market],["模",g.model]].map(function(x){
       const r=x[1];
-      const cls=r==="pass"?"ok":(r==="fail"?"no":"");
+      const cls=r==="pass"?"":(r==="fail"?"bad":"stale");
       const icon=r==="pass"?"✓":(r==="fail"?"✗":"…");
       const label=r==="pass"?"过":(r==="fail"?"死":"等数据");
-      return '<div class="gline '+cls+'"><span class="gn">'+x[0]+'</span><div><b>'+label+'</b><div class="meta" style="margin-top:1px">'+(r==="pending_data"?"数据源未覆盖，诚实等待":"")+'</div></div><span class="res">'+icon+'</span></div>';
+      return '<span class="gatechip '+cls+'"><i>'+icon+'</i>'+x[0]+' '+label+'</span>';
     }).join("");
     const statusLine=v.status==="promoted"?'<div class="call" style="color:var(--v)">✓ 三关全过 · '+v.sel+'</div>':
       v.status==="killed"?'<div class="call" style="color:var(--danger)">✗ 已砍 · 不推</div>':
@@ -653,18 +813,19 @@ function verdictCardHTML(){
     return '<article class="card" id="vcard"><div class="eyebrow">⚖ 今日 '+D.stream.stats.total+' 场 → 三关 → 推 '+D.stream.stats.promoted+' 场</div><div class="match">'+v.home+'<em>vs</em>'+v.away+'</div><div class="meta">'+v.league+' · '+v.no+' · '+(v.pool==="had"?"胜平负":"让球")+' · '+v.close+' 开赛</div>'+statusLine+'<div class="costline"><span>官方 SP '+v.spFull.h.toFixed(2)+'/'+v.spFull.d.toFixed(2)+'/'+v.spFull.a.toFixed(2)+'</span><b class="num">抽水 '+v.cost.rake.toFixed(1)+'%</b></div>'+(v.pick?'<div class="judge">引擎判断：'+v.pick.dir+'（置信 '+(v.pick.prob*100).toFixed(1)+'% · EV '+v.pick.ev+'）</div>':"")+'<div class="gates">'+gateChips+'</div><div class="btnrow"><button class="btn primary" data-act="buy"'+(v.status!=="promoted"||S.excluded?" disabled":"")+'>'+(bought?"已记 ✓":L().buy)+'</button><button class="btn" data-act="go" data-v="detail">'+L().why+'</button><button class="btn" style="flex:0 0 42px" data-act="vmenu">⋯</button></div><div class="seal" data-act="hashsheet"><span style="display:inline-flex;align-items:center;gap:9px"><span class="hash">'+v.hash.slice(0,16).split("").map(function(ch){const n=parseInt(ch,16);return '<i class="'+(n%3?"l":"")+'"></i>'}).join("")+'</span><span>已封存 · <span class="num">'+v.hash.slice(0,8)+"…"+v.hash.slice(-4)+'</span></span></span><span class="stamp">封</span></div></article><div id="disreply"></div><div id="pickedzone" style="margin-top:2px"></div>';
   }
   const bought2=S.bets.some(function(b){return b.verdictId===v.id});
-  return '<article class="card" id="vcard"><div class="eyebrow">⚖ 今晚 47 场 → 砍到 1 场</div><div class="match">'+v.home+'<em>vs</em>'+v.away+'</div><div class="meta">'+v.league+' · '+v.no+' · 单关 ✓ · '+v.close+' 停售</div><div class="call">'+v.sel+'<span class="hc">让 '+v.hc+'</span></div><div class="costline"><span>官方定价抽水</span><b class="num">'+v.cost.rake+'% · 今日第 '+v.cost.rank+' 浅</b></div><div class="judge">'+p.reason+'</div><div class="gates">'+v.gates.map(function(g){return '<span class="gatechip"><i>✓</i>'+g[0]+" "+g[1]+"</span>"}).join("")+'</div><div class="btnrow"><button class="btn primary" data-act="buy"'+(S.excluded?" disabled":"")+'>'+(bought?"已记 ✓":L().buy)+'</button><button class="btn" data-act="go" data-v="detail">'+L().why+'</button><button class="btn" data-act="disagree">'+L().dis+'</button><button class="btn" style="flex:0 0 42px" data-act="vmenu">⋯</button></div><div class="seal" data-act="hashsheet"><span style="display:inline-flex;align-items:center;gap:9px"><span class="hash">'+v.hashFull.slice(0,16).split("").map(function(ch){const n=parseInt(ch,16);return '<i class="'+(n%3?"l":"")+'"></i>'}).join("")+'</span><span>已封存 21:25 · <span class="num">'+v.hashFull.slice(0,8)+"…"+v.hashFull.slice(-4)+'</span></span></span><span class="stamp">封</span></div></article><div id="disreply"></div><div id="pickedzone" style="margin-top:2px"></div>'+(S.comfort?comfortCardHTML():"");
+  return '<article class="card" id="vcard"><div class="eyebrow">⚖ 今晚 47 场 → 砍到 1 场</div><div class="match">'+v.home+'<em>vs</em>'+v.away+'</div><div class="meta">'+v.league+' · '+v.no+' · 单关 ✓ · '+v.close+' 停售</div><div class="call">'+v.sel+'<span class="hc">让 '+v.hc+'</span></div><div class="costline"><span>官方定价抽水</span><b class="num">'+v.cost.rake+'% · 今日第 '+v.cost.rank+' 浅</b></div><div class="judge">'+p.reason+'</div><div class="gates">'+v.gates.map(function(g){return '<span class="gatechip"><i>✓</i>'+g[0]+" "+g[1]+"</span>"}).join("")+'</div>'+signalLineHTML()+'<div class="btnrow"><button class="btn primary" data-act="buy"'+(S.excluded?" disabled":"")+'>'+(bought?"已记 ✓":L().buy)+'</button><button class="btn" data-act="go" data-v="detail">'+L().why+'</button><button class="btn" data-act="disagree">'+L().dis+'</button><button class="btn" style="flex:0 0 42px" data-act="vmenu">⋯</button></div><div class="seal" data-act="hashsheet"><span style="display:inline-flex;align-items:center;gap:9px"><span class="hash">'+v.hashFull.slice(0,16).split("").map(function(ch){const n=parseInt(ch,16);return '<i class="'+(n%3?"l":"")+'"></i>'}).join("")+'</span><span>已封存 21:25 · <span class="num">'+v.hashFull.slice(0,8)+"…"+v.hashFull.slice(-4)+'</span></span></span><span class="stamp">封</span></div></article><div id="disreply"></div><div id="pickedzone" style="margin-top:2px"></div>'+(S.comfort?comfortCardHTML():"");
 }
 function comfortCardHTML(){
   const p=P();
   return '<article class="card" style="border-left:3px solid var(--v)"><div style="text-align:center;padding:6px 0 2px"><div style="font-size:14.5px;font-weight:600">'+p.comfort+'</div><div class="meta" style="margin-top:6px;line-height:1.7">已封存并开始跟踪。中间不用再刷比分了。</div></div><div class="btnrow" style="margin-top:10px"><button class="btn primary" data-act="rest">'+L().rest+'</button><button class="btn" data-act="comfortOk">知道了</button></div></article>';
 }
 V.stream={render:function(){
-  if(S.minor){return '<article class="card" style="text-align:center;padding:30px 16px;margin-top:20px"><div class="stamp red" style="margin:0 auto 12px">限</div><div style="font-size:17px;font-weight:600">未成年受限模式</div><div class="meta" style="margin-top:8px;line-height:1.8">仅可查看公开账本。<br>需要帮助？</div><div class="tag a" style="margin-top:10px"></div></article><div class="btnrow" style="margin-top:14px"><button class="btn" data-act="go" data-v="ledger">查看公开账本</button></div><div class="btnrow"><button class="btn" data-act="minorReset">演示：解除限制</button></div><div class="legal">数据分析结果，不构成投注建议。未满 18 周岁禁止购买彩票。<br>帮助热线 400-000-0000</div>'}
+  if(S.minor){return '<article class="card" style="text-align:center;padding:30px 16px;margin-top:20px"><div class="stamp red" style="margin:0 auto 12px">限</div><div style="font-size:17px;font-weight:600">未成年受限模式</div><div class="meta" style="margin-top:8px;line-height:1.8">仅可查看公开账本。<br>需要帮助？</div></article><div class="btnrow" style="margin-top:14px"><button class="btn" data-act="go" data-v="ledger">查看公开账本</button></div><div class="btnrow"><button class="btn" data-act="minorReset">演示：解除限制</button></div><div class="legal">数据分析结果，不构成投注建议。未满 18 周岁禁止购买彩票。<br>帮助热线 400-000-0000</div>'}
   if(S.rested){return '<article class="card" style="text-align:center;padding:30px 16px;margin-top:20px"><div style="display:flex;justify-content:center;margin-bottom:10px"><div class="msr mfl" style="--sx:'+PX[S.persona]+';width:110px;aspect-ratio:0.62"></div></div><div style="font-size:17px;font-weight:600">今天歇了，明天见 👋</div><div class="meta" style="margin-top:8px;line-height:1.8">歇一天不是放弃，是纪律的一部分。<br>明晚 19:02，结论照常等你。</div><div class="btnrow" style="margin-top:14px"><button class="btn" data-act="unrest">反悔 · 现在看</button></div></article><div class="legal">数据分析结果，不构成投注建议。</div>'}
   if(S.excluded){return '<article class="card" style="text-align:center;padding:30px 16px;margin-top:20px"><div class="stamp red" style="margin:0 auto 12px">止</div><div style="font-size:17px;font-weight:600">你已开启自排除（'+(S.excludedLabel||"")+'）</div><div class="meta" style="margin-top:8px;line-height:1.8">期间无法查看判断与记录。<br>需要帮助？热线 400-000-0000</div></article><div class="btnrow" style="margin-top:14px"><button class="btn" data-act="unexclude">演示：解除自排除</button></div><div class="legal">数据分析结果，不构成投注建议。</div>'}
   const v=D.verdict,p=P();
   let html='';
+  if(!D._backend&&S.dataMode==="demo"){html+='<div class="strip" style="background:var(--card);color:var(--muted);border:1px solid var(--line)" data-act="dataMode"><span>● 演示数据 · 情报层新版预览</span><span>切到实时 ›</span></div>';}
   if(D._backend){
     html+='<div class="strip" style="background:var(--vsoft);color:var(--v)" data-act="toast" data-m="已连接解球引擎 · 数据实时"><span>● 实时模式 · 引擎三关已跑 <b>'+D.stream.stats.total+'</b> 场</span><span>推 <b>'+D.stream.stats.promoted+'</b> · 复核 <b>'+D.stream.stats.screening+'</b></span></div>';
   }
@@ -672,6 +833,7 @@ V.stream={render:function(){
   html+='<div class="hero" data-act="go" data-v="parlay"><span class="tt">串关体检 · 免费<span class="s2">拍下你的投注单，30 秒出报告</span></span><span class="go">去体检 →</span></div>';
   html+='<div class="time">今天 19:02</div>';
   html+=verdictCardHTML();
+  if(!D._backend&&!S.demoEmpty&&!S.pendingDemo&&!S.evtDismissed){html+='<div class="time">刚刚 · 情报更新</div>'+flowCardHTML();}
   html+='<div class="time">今天 18:40 · 盘口哨兵</div>';
   html+='<article class="card" data-act="go" data-v="livematch" style="cursor:pointer"><div class="eyebrow amber">⚡ 资金异动 · 仅提示，不构成结论</div><div style="font-size:13px;line-height:1.6">'+D.sentinel.body+'</div></article>';
   html+='<div class="time">今天 12:30</div>';
@@ -732,7 +894,8 @@ V.detail={render:function(){
   h+='<article class="card"><div class="eyebrow">价格 · 每一层的账</div>'+d.price.map(function(r){return '<div class="kv"><span>'+r[0]+"</span><b>"+r[1]+' <span style="color:var(--muted);font-size:11px">'+r[2]+"</span></b></div>"}).join("")+"</article>";
   h+='<article class="card"><div class="eyebrow">市场 · 三家口径</div>'+d.market.map(function(r){return '<div class="kv"><span>'+r[0]+"</span><b>"+r[1]+' <span style="color:var(--muted);font-size:11px">'+r[2]+"</span></b></div>"}).join("")+"</article>";
   h+='<article class="card"><div class="eyebrow">模型 · 从初始到最终</div>'+d.model.map(function(r){return '<div class="kv"><span>'+r[0]+"</span><b>"+r[1]+' <span style="color:var(--muted);font-size:11px">'+r[2]+"</span></b></div>"}).join("")+"</article>";
-  h+='<article class="card"><div class="eyebrow">证据链 · 逐条标注</div>'+d.evidence.map(function(e){return '<div class="kv"><span><span class="rt'+(e.tag==="仅背景"?" out":"")+'" style="margin-right:6px">'+e.tag+"</span>"+e.t+' — '+e.d+'</span></div><div class="meta" style="padding-left:2px">来源：'+e.src+"</div>"}).join("");
+  h+=intelCardHTML()+aiCardHTML();
+  h+='<article class="card"><div class="eyebrow">原始数据 · 逐条标注</div><div class="meta">模型实际读到的条目；上方「情报」是研判后的结论。</div>'+d.evidence.map(function(e){return '<div class="kv"><span><span class="rt'+(e.tag==="仅背景"?" out":"")+'" style="margin-right:6px">'+e.tag+"</span>"+e.t+' — '+e.d+'</span></div><div class="meta" style="padding-left:2px">来源：'+e.src+"</div>"}).join("");
   h+="</article>";
   h+='<article class="card"><div class="eyebrow">反方庭 · 强行找茬</div><div class="opp">'+v.opp+"</div></article>";
   h+='<div class="btnrow"><button class="btn" data-act="back">返回</button><button class="btn primary" data-act="buy">'+(S.bets.some(function(b){return b.verdictId===v.id})?"已记 ✓":L().buy)+"</button></div>";
@@ -772,7 +935,7 @@ V.whynot={render:function(){
   h+='<article class="card picked"><div class="eyebrow amber">🚫 死于「'+w.gate+'」· '+w.gateName+'</div><div class="match">'+w.a+'<em>vs</em>'+w.b+'</div><div class="meta">'+w.lg+' · '+w.no+' · '+w.close+' 停售</div>';
   h+='<div style="font-size:14.5px;font-weight:600;line-height:1.65;margin-top:9px">'+w.oneline+'</div>';
   h+='<div class="judge" style="border-left-color:var(--amber);margin-top:8px">'+w.grammar+'</div>';
-  h+='<div class="ssc">'+w.stat3.map(function(s){return '<div class="c'+(s[2]?" bad":"")+'"><b class="num">'+s[1]+'</b><span>'+s[0]+'</span></div>'}).join("")+'</div></article>';
+  h+='<div class="ssc">'+w.stat3.map(function(s){return '<div class="c'+(s[2]?" bad":"")+'"><b class="num">'+s[1]+'</b><span>'+s[0]+'</span></div>'}).join("")+'</div>'+(w.wait?waitBoxHTML():"")+'</article>';
   /* L2 · 三关体检 */
   h+='<article class="card"><div class="eyebrow">三关体检 · 死在哪一格</div>'+w.gates.map(function(g){
     return '<div class="gline '+(g.pass?'ok':'no')+'"><span class="gn">'+g.n+'</span><div><b>'+g.v+'</b><div class="meta" style="margin-top:1px">'+g.note+'</div></div><span class="res">'+(g.pass?'✓ 过':'✗ 死')+'</span></div>';
@@ -790,7 +953,7 @@ V.whynot={render:function(){
   /* 人设口吻 + 诚实footer */
   h+='<article class="card"><div style="display:flex;gap:10px;align-items:center"><div class="msr bust mfl" style="--sx:'+PX[S.persona]+';width:46px;height:46px;flex:0 0 auto"></div><div style="font-size:13px;line-height:1.7">'+D.whynot.pv[S.persona]+'</div></div></article>';
   h+='<div class="legal" style="text-align:left">不推 ≠ 不会赢。今晚这 3 场里大约有 1 场会朝「本可以被推」的方向走 —— 但我们算不清是哪一场。算不清的，就不碰。<br>数据分析结果，不构成投注建议。</div>';
-  h+='<div class="btnrow"><button class="btn" data-act="back">返回</button><button class="btn" data-act="go" data-v="onsale">看过了闸的场</button></div>';
+  h+='<div class="btnrow"><button class="btn" data-act="back">返回</button>'+(w.wait?'<button class="btn primary" data-act="remind">到点提醒我</button>':'<button class="btn primary" data-act="go" data-v="onsale">看过了闸的场</button>')+'</div>';
   return h;
 }};
 V.livematch={render:function(){
@@ -877,7 +1040,7 @@ function runShot(){
   const steps=["◌ 读取截图文字…","✓ 找到判断：「曼城必胜」","✓ 未发现概率表达","✓ 未发现反方证据"];
   let i=0;
   const timer=setInterval(function(){
-    if(i>=steps.length){clearInterval(timer);const r=document.getElementById("shotres");if(r)r.innerHTML='<article class="fnd"><div class="fh"><span class="no">鉴别结果</span><span class="sev hi">可信度低</span></div><div class="pl" style="margin-top:8px">① 没给概率 —— 「必胜」不可计算<br>② 没提封存 —— 中不中他都可以不认账<br>③ 没提反方 —— 只说好听的，不是分析是带货</div><div class="my" style="margin-top:8px"><b>独立判断：</b>同场官方数据：曼城让球主胜 52.4% —— 有四成多的可能不赢。任何说「必」的都不可信。</div></article>';return}
+    if(i>=steps.length){clearInterval(timer);const r=document.getElementById("shotres");if(r)r.innerHTML='<article class="fnd"><div class="fh"><span class="no">鉴别结果</span><span class="sev hi">可信度低</span></div><div class="pl" style="margin-top:8px">① 没给概率 —— 「必胜」不可计算<br>② 没提封存 —— 中不中他都可以不认账<br>③ 没提反方 —— 只说好听的，不是分析是带货</div><div class="my" style="margin-top:8px"><b>独立判断：</b>同场官方数据：曼城让球主胜 54.2% —— 仍有近四成半可能不赢。任何说「必」的都不可信。</div></article>';return}
     box.innerHTML='<div style="font-size:13px;line-height:2">'+steps.slice(0,i+1).join("<br>")+"</div>";
     i++;
   },650);
@@ -929,7 +1092,10 @@ V.me={render:function(){
   h+='<div class="set" data-act="go" data-v="compliance"><span>合规中心</span><span class="v">'+(S.excluded?"自排除中 · "+S.excludedLabel:"自排除 / 自评 / 热线")+' ›</span></div>';
   h+='</article>';
   h+='<article class="card"><div class="eyebrow">🧪 演示开关（不影响正式逻辑）</div><div class="set" data-act="demo" data-k="demoEmpty"><span>模拟「今晚全砍」空场</span><span class="v">'+(S.demoEmpty?"开":"关")+"</span></div>";
-  h+='<div class="set" data-act="demo" data-k="prot"><span>连败保护（连败 3 场自动降温）</span><span class="v">'+(S.prot?"开":"关")+"</span></div></article>";
+  h+='<div class="set" data-act="demo" data-k="prot"><span>连败保护（连败 3 场自动降温）</span><span class="v">'+(S.prot?"开":"关")+"</span></div>";
+  h+='<div class="set" data-act="dataMode"><span>数据模式</span><span class="v">'+(S.dataMode==="demo"?"演示数据 · 情报层新版":"实时后端")+" ›</span></div>";
+  h+='<div class="set" data-act="demo" data-k="pendingDemo"><span>模拟「等首发」判决卡</span><span class="v">'+(S.pendingDemo?"开":"关")+"</span></div>";
+  h+='<div class="set" data-act="demo" data-k="evtDismissed"><span>显示「情报异动」卡</span><span class="v">'+(S.evtDismissed?"关":"开")+"</span></div></article>";
   h+='<div class="legal">数据分析结果，不构成投注建议。<br>未满 18 周岁禁止购买彩票。</div>';
   return h;
 }};
@@ -1129,7 +1295,11 @@ const ACT={
   confirmBet:function(){copy("周三012 曼城 让球主胜 @2.05 ×34元\n周三015 拜仁 让球主胜(-1) @1.72 ×33元\n周三021 皇马 主胜 @1.55 ×33元")},
   scanStart:function(){runScan()},
   shotStart:function(){runShot()},
-  goTab:function(el){switchTab(el.getAttribute("data-tab"))}
+  goTab:function(el){switchTab(el.getAttribute("data-tab"))},
+  goIntel:function(){go("detail");setTimeout(function(){const el=document.getElementById("intelcard");if(el)el.scrollIntoView({block:"start",behavior:"smooth"})},80)},
+  dismissEvt:function(){S.evtDismissed=1;save();render()},
+  remind:function(){toast("好，首发公布后第一时间提醒你")},
+  dataMode:function(){S.dataMode=(S.dataMode==="demo"?"live":"demo");save();toast(S.dataMode==="demo"?"已切到演示数据":"正在连接实时数据…");setTimeout(function(){location.reload()},350)}
 };
 function sendChat(q){
   const view=document.getElementById("view");
@@ -1137,11 +1307,11 @@ function sendChat(q){
   let card;
   if(lower.indexOf("买啥")>-1||lower.indexOf("buy")>-1){
     const p=P();
-    card='<div class="usermsg">'+q+'</div><div class="aidmsg"><div class="h">'+p.name+'<span class="rt">2 秒 · 结构层直出</span></div><div class="r">'+D.verdict.sel+" 52.4% · 抽水 "+D.verdict.cost.rake+"%</div><div class=\"r\">每 100 元期望 <b>"+D.verdict.cost.ev+" 元</b></div><span class=\"more\" data-act=\"go\" data-v=\"detail\">为什么 →</span></div>";
+    card='<div class="usermsg">'+q+'</div><div class="aidmsg"><div class="h">'+p.name+'<span class="rt">2 秒 · 结构层直出</span></div><div class="r">'+D.verdict.sel+" 54.2% · 抽水 "+D.verdict.cost.rake+"%</div><div class=\"r\">每 100 元期望 <b>"+D.verdict.cost.ev+" 元</b></div><span class=\"more\" data-act=\"go\" data-v=\"detail\">为什么 →</span></div>";
   }else if(lower.indexOf("记得")>-1||lower.indexOf("memory")>-1){
     card='<div class="usermsg">'+q+'</div><div class="aidmsg"><div class="h">记忆列表<span class="rt out">'+D.memories.length+' 条</span></div>'+D.memories.map(function(m){return '<div class="r">· '+m.k+"："+m.v+"</div>"}).join("")+'<span class="more" data-act="go" data-v="privacy">管理记忆 →</span></div>';
   }else if(lower.indexOf("查")>-1||lower.indexOf("曼城")>-1){
-    card='<div class="usermsg">'+q+'</div><div class="aidmsg"><div class="h">'+D.verdict.home+'<span class="rt">1.5 秒</span></div><div class="r">'+D.verdict.sel+' 52.4%（区间 49.4%~55.4%）</div><div class="r">反方：轮换概率 43%</div><span class="more" data-act="go" data-v="detail">完整成本 →</span></div>';
+    card='<div class="usermsg">'+q+'</div><div class="aidmsg"><div class="h">'+D.verdict.home+'<span class="rt">1.5 秒</span></div><div class="r">'+D.verdict.sel+' 54.2%（区间 51.2%~57.2%）</div><div class="r">反方：轮换概率 43%</div><span class="more" data-act="go" data-v="detail">完整成本 →</span></div>';
   }else{
     card='<div class="usermsg">'+q+'</div><div class="aidmsg"><div class="h">'+P().name+'<span class="rt">兜底模板</span></div><div class="r">我主要聊今晚怎么买、为什么买、为什么不买。试试下面这些 👇</div></div><div class="chips" style="margin-bottom:10px"><button class="chip" data-act="chip" data-q="今晚买啥">今晚买啥</button><button class="chip" data-act="chip" data-q="它记得我什么">它记得我什么</button></div>';
   }

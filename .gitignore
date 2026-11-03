@@ -17,3 +17,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 node_modules/
+
+# 前端验证产物/本地备份（不入库）
+jieqiu-app/__shots/
+jieqiu-app/*.bak-*
