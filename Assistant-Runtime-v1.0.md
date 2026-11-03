@@ -88,10 +88,11 @@
 
 ```text
 watch_targets     用户关注：match / team / league + 事件偏好 + 静默时段
-events            监控事件：type/severity/match_id/payload/dedupe_key
-notifications     站内信/推送队列：user_id/event_id/channel/status/scheduled_at
-push_tokens       Android JPush registration_id / 设备信息 / enabled
+events            监控事件：version/type/severity/match_id/team_id/payload/payload_hash/data_cutoff/dedupe_key/created_at/expires_at
+notifications     站内信/推送队列：user_id/event_id/channel/status/attempt/lease_until/provider_msg_id/last_error/scheduled_at
+push_tokens       Android JPush：provider/token(unique)/app_version/last_seen/enabled/failure_count
 user_events       行为日志：view/click/buy/dismiss/search/chat
+notify_settings   事件类型/渠道/静默时段/每日上限/一键暂停
 ```
 
 `memories` 需扩展：
@@ -172,7 +173,10 @@ last_used_at  用于排序与清理
 |---|---|---|---|---|
 | P0 | 结论变化 | 新修订：概率 >1pp / pick 变 / 状态翻转 | `verdict_revisions` | 关注/下注用户 |
 | P0 | 停售提醒 | 关注/下注比赛 T-10min | SP 快照 | 一次 |
-| P1 | 结算+归因 | 下注比赛出赛果 | `settle` | 一次 |
+| P0 | 终场快讯 | 比赛终场 T+2min | live/赛果 | 该场一次 |
+| P1 | 结算+归因 | 下注比赛出赛果 T+2h | `settle` | 一次 |
+| P1 | 未决提醒 | 停售前 90min 打开过且未决定，T-30m | 行为日志 | 一次 |
+| P1 | 拦截/避雷 | 用户关注/看过的场次被砍 | `verdict` | 与结论合并 |
 | P1 | 每日简报 | 固定 19:00（可配） | 当日统计 | 每天最多 1 |
 | P2 | 首发/伤停 | 官方首发/确认缺阵 | API-Football | 关注/下注 |
 | P2 | 盘口异动 | 30min SP ≥2pp / 分歧突变 | SP/国际盘 | 关注场 |
@@ -216,11 +220,13 @@ last_used_at  用于排序与清理
 ```text
 push_tokens
   id, user_id, platform(android), provider(jpush),
-  token UNIQUE, app_version, last_seen, enabled
+  token UNIQUE(provider, token), app_version, last_seen,
+  enabled, failure_count, last_error
 
 notifications
   id, user_id, event_id, channel(inapp/push),
-  status(pending/sent/failed/opened/clicked),
+  status(pending/sending/sent/failed/opened/clicked/suppressed),
+  attempt, lease_until, provider_msg_id, last_error,
   scheduled_at, sent_at, opened_at, clicked_at,
   dedupe_key UNIQUE
 ```
@@ -313,7 +319,7 @@ GET    /me/events/stream   （SSE，可选）
 ### P1（2–3 周）
 
 - 派生记忆 + 五类 + 记忆页；
-- 人设同步到推送文案；
+- 人设仅用于站内信/详情；**推送文案保持中性（PRD F19：通知中性）**；
 - 吉祥物选比赛接入全量 `/matches`（分类 chips）；
 - 推送频控/静默/合并调优。
 
@@ -374,3 +380,109 @@ GET    /me/events/stream   （SSE，可选）
 ## 14. 一句话
 
 **Android 先跑通“事件 → 站内信/JPush → 行为 → 记忆”的闭环；iOS、向量库、微信都往后放。** 这样既像真助理，又不会把 MVP 拖成半年工程。
+
+
+---
+
+## 15. 评审修正（v1.1）
+
+| 问题 | 风险 | 修正 |
+|---|---|---|
+| **推送人设化与 PRD「通知中性」冲突** | 锁屏出现人设口吻/敏感赛事字样，合规与体验风险 | 推送模板中性；人设只用于站内信、详情、聊天；锁屏不含赔率/投注词 |
+| **P0 事件矩阵缺终场/未决/拦截** | 与 PRD §5.2/§5.3 不一致，用户等不到预期通知 | 补齐终场 T+2min、未决 T-30m、拦截/避雷；P0/P1 分清 |
+| **无 outbox / 幂等 / 租约** | worker 崩溃导致重复推送或丢推送 | `notifications` 增加 `sending/lease_until/attempt/provider_msg_id`；发送前后状态机 + 幂等 key |
+| **事件无版本/来源/截止时间** | 同一修订重复、跨日 dedupe 冲突、无法回放 | `events` 增加 `version/source/data_cutoff/payload_hash` |
+| **无 token 生命周期** | 卸载/换机/多设备导致无效推送、到达率下降 | `push_tokens` 唯一 `(provider, token)`、`failure_count`、失效清理；登录/登出绑定解绑 |
+| **无偏好中心** | 无法按事件类型/时段/渠道关闭，容易关通知 | `notify_settings`：事件类型、渠道、静默时段、每日上限、一键暂停 |
+| **文案依赖 LLM** | 幻觉数字/赔率/承诺，合规风险 | 推送用确定性模板 + payload 白名单；LLM 只做站内摘要，不写数字 |
+| **扇出无批量/索引/积压策略** | 用户量上来后 worker 慢、重复插入、队列堆积 | `(user_id,event_id,channel)` 唯一；批量 insert；索引；TTL；死信 |
+| **无到达/打开观测** | JPush 接收≠送达，无法判断质量 | 厂商回执 + 深链打开/点击 + 站内已读；按事件类型统计 |
+| **冷启动无关注用户收不到** | 新用户觉得“什么都没发生” | 每日简报 + 引导关注 1 场；无关注也能收到 1 条日报（可关） |
+| **记忆表只有 key/value/source** | 无法表达五类/置信/过期 | 扩展 `category/confidence/expires_at/last_used_at`；派生需 ≥3 次观察 |
+| **Android 细节不足** | 权限/厂商通道/冷启动深链失败 | `POST_NOTIFICATIONS`、厂商通道、token 刷新、深链冷启动路由、通道分级 |
+
+### 修正后的推送红线
+
+- 每日**主动**推送 ≤2；终场/结算是用户预期内的事务消息，单独计数但也要合并。
+- 静默 23:30–08:00（PRD）；拦截类例外仅限已关注/已下注。
+- 推送文案只用模板槽位，数字必须来自 payload；不出现“买/注/赔率/推荐/稳赚”。
+- 任何推送都可一键关闭；连续忽略自动降频。
+
+---
+
+## 16. 插件化边界：建议「模块化单体 + 扩展点」，不要做插件框架
+
+### 结论
+
+**现在不建议做通用插件系统（动态加载、第三方插件市场、独立生命周期）。**
+建议做**模块化单体 + 明确的 ports/adapters + 注册表**，把“可替换的东西”插件化，把核心业务焊死。
+
+### 应该插件化的（扩展点）
+
+| 扩展点 | 实现 | MVP |
+|---|---|---|
+| 数据源 | `DataSourceAdapter`：sporttery / the-odds-api / football-data / Understat / API-Football / Open-Meteo | 先内置，接口统一 |
+| 推送渠道 | `PushProvider`：inapp / jpush /（后续 apns/fcm/wechat） | inapp + jpush |
+| 监控规则 | `MonitorRule`：verdict_change / close / settlement / daily / lineup / odds | 4 条 |
+| LLM 提供方 | `LLMProvider`：GLM / DeepSeek / OpenAI-compatible | 1 主 + 1 备 |
+| 记忆推导 | `MemoryDeriver`：favorite_team / risk / active_hours / push_tolerance | 3–4 条 |
+| 文案渲染 | `Renderer`：事件类型 × 渠道（站内/推送），模板 + 槽位 | 模板优先 |
+
+### 不要插件化的（核心）
+
+- 三关/判决/修订/封存链；
+- 认证/权限/计费；
+- 数据库 schema 与迁移；
+- 合规扫描/禁用词；
+- 管理后台权限与审计。
+
+这些一旦允许插件改写，审计和合规会失控。
+
+### 接口形态（Python Protocol）
+
+```python
+class PushProvider(Protocol):
+    name: str
+    def send(self, token: str, msg: PushMessage) -> PushResult: ...
+
+class MonitorRule(Protocol):
+    name: str
+    def detect(self, ctx: MonitorContext) -> list[EventDraft]: ...
+
+class DataSourceAdapter(Protocol):
+    name: str
+    def fetch(self, ctx: FetchContext) -> list[RawRecord]: ...
+```
+
+注册表 + 配置启用，不做 `importlib` 扫目录：
+
+```python
+PUSH_PROVIDERS = {"inapp": InAppProvider, "jpush": JPushProvider}
+MONITORS = {"verdict_change": VerdictChangeMonitor, ...}
+```
+
+配置：
+
+```text
+JQ_PUSH_PROVIDERS=inapp,jpush
+JQ_MONITORS=verdict_change,close,settlement,daily
+JQ_LLM_PROVIDER=glm
+```
+
+### 为什么不做通用插件框架
+
+1. **当前只有一个团队、一个部署单元**，插件隔离收益低；
+2. 动态加载带来安全、版本、依赖、迁移、调试成本；
+3. 推送/监控的复杂度在**规则与投递语义**，不在“插件运行时”；
+4. 现有 `app/modules` 已经模块化，加 registry 就够；
+5. 真需要第三方扩展时，再把 registry 升级为 entry points/独立进程。
+
+### 什么时候再考虑真插件化
+
+- 有外部开发者/第三方数据源接入；
+- 多租户需要各自启用不同规则；
+- 单个适配器需要独立部署/独立扩缩容；
+- 插件需要独立权限/计费/审计。
+
+到那时再把 `PushProvider`/`DataSourceAdapter` 抽成独立进程或 entry points，不用现在付这个成本。
+
