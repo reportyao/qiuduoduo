@@ -516,9 +516,7 @@ body{font-family:"JieQiu Sans","MiSans","PingFang SC","HarmonyOS Sans SC","Noto 
 .ab-metrics b{color:var(--ink);font-weight:600;font-size:9.5px;font-variant-numeric:tabular-nums}
 .ab-metrics .mdot{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--v);margin-right:3px;vertical-align:1px;animation:pl 1.8s ease-in-out infinite}
 .ab-hint{font-size:8.5px;color:var(--muted);letter-spacing:.02em;margin-top:1px;white-space:nowrap}
-.ab-center{max-height:88px;transition:max-height .26s ease,opacity .2s ease,transform .2s ease,margin .2s ease}
-.top.compact .ab-center{max-height:0;opacity:0;transform:translateY(-12px) scale(.8);margin:0;pointer-events:none}
-.top{transition:padding .2s ease}
+.ab-center{will-change:transform}
 
 /* ===== v3.3 · 个人资料 ===== */
 .me-profile{cursor:pointer}
@@ -993,7 +991,7 @@ function render(){
   document.getElementById("view").scrollTop=keep?y:0;
   document.getElementById("view").style.paddingTop="6px";
   renderTop(root);renderTabs();
-  const tbEl=document.getElementById("topbar"); if(tbEl)tbEl.classList.toggle("compact",document.getElementById("view").scrollTop>24);
+  syncAssistantScroll();
   const tb=document.getElementById("tabs");
   tb.style.display=(c.id==="gate"||c.id==="intro")?"none":"flex";
   const cb=document.getElementById("chatbar");
@@ -1857,10 +1855,14 @@ document.addEventListener("keydown",function(e){
   }
 });
 window.addEventListener("error",function(e){window.__jqErrs=window.__jqErrs||[];window.__jqErrs.push(e.message)});
-document.getElementById("view").addEventListener("scroll",function(){
-  const t=document.getElementById("topbar");
-  if(t)t.classList.toggle("compact",this.scrollTop>24);
-});
+function syncAssistantScroll(){
+  const v=document.getElementById("view");
+  const el=document.querySelector(".ab-center");
+  if(!v||!el)return;
+  const y=Math.min(v.scrollTop,160);
+  el.style.transform="translate3d(0,"+(-y)+"px,0)";
+}
+document.getElementById("view").addEventListener("scroll",syncAssistantScroll);
 function startMetrics(){
   if(window.__metricTimer)return;
   let infer=12847,viewers=12547,fresh=12;

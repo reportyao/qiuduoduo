@@ -4,7 +4,7 @@
 |---|---|
 | 版本 | v2.1（自包含，不依赖任何历史版本文档） |
 | 日期 | 2026-11-01 |
-| 配套 | PRD v5.1 · Release-plan v1.1 · Roadmap v1.1 · OpsBlueprint v1.0 · Intelligence-Layer v1.0 |
+| 配套 | PRD v5.1 · Release-plan v1.1 · Roadmap v1.1 · OpsBlueprint v1.0 · Intelligence-Layer v1.0 · Assistant-Runtime v1.0 |
 
 > 情报层（全量事实卡 / 情报简报 / AI 研判 / 点播与配额）的完整设计见 [Intelligence-Layer-v1.0.md](Intelligence-Layer-v1.0.md)。
 
@@ -18,7 +18,7 @@
 | Web | Next.js 静态两页（公开账本+下载落地）+ 免费工具页（M2 SEO） | 仅此三处 |
 | Auth | **自建认证**（统一 JWT access 15min + refresh 30d）：CN = 手机号+短信验证码；Global = Email 验证码 + Google/Apple OAuth；设备令牌降级为「免登录态/换机迁移」辅助 · **登录/注册方式按 market profile 渲染（PRD F18）** | 弃 Supabase（见 §1.1 方案 B）；设备令牌 W6 已上线，W5 增补手机号/邮箱绑定 |
 | 订阅 | **RevenueCat**（iOS IAP+Android 支付统一层） | 省 1 周；CN 安卓走微信/支付宝直连其 SDK |
-| 推送 | CN：**JPush 聚合厂商通道**；Global：Expo Notifications（APNs/FCM）；静默推送均支持 | 厂商通道是国内安卓唯一可靠路径 |
+| 推送 | CN：**JPush 聚合厂商通道**；Global：Expo Notifications（APNs/FCM）；静默推送均支持。**MVP（2026-11）只做 Android/JPush + 站内信；iOS/APNs 与 Global/FCM 延后** | 厂商通道是国内安卓唯一可靠路径 |
 | 模型 | **penaltyblog**（DC/贝叶斯/去水/抓取，覆盖建模核心约 35%）+ **sports-betting**（回测）+ **betfairlightweight**（交易所历史流→「势」维度回放） | 经适配层隔离，业务模块不直接 import |
 | 数据校验 | **Pandera**（每表一个 DataFrameModel，ERROR/WARN 两级，CI 强制） | 防脏数据静默污染 |
 | OCR | **RapidOCR**（票面字段提取，本地亚秒）+ GLM-4V（仅推荐截图语义理解） | 拆分工，零 token 成本 |

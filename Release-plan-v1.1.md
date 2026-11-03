@@ -3,9 +3,11 @@
 | 项目 | 内容 |
 |---|---|
 | 范围 | F1–F21 全功能 + 三条并行工作流 + 迭代节奏 + 延期应对 |
-| 配套 | PRD v5.1 · TechSpec v2.1 · Roadmap v1.1 · OpsBlueprint v1.0 |
+| 配套 | PRD v5.1 · TechSpec v2.1 · Roadmap v1.1 · OpsBlueprint v1.0 · Assistant-Runtime v1.0 |
 | 地位 | **执行时间表唯一事实源**；与 Roadmap 冲突时以本文为准 |
 | v1.1 新增 | 迭代模型 · 三条并行工作流 · Definition of Done · 延期应对固定顺序 · 常态迭代 |
+
+> AI 助理运行时（主动监控 / 推送 / 记忆）的差距分析与 Android MVP 排期见 `Assistant-Runtime-v1.0.md`。
 
 ---
 
