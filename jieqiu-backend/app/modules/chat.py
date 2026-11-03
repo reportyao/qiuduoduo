@@ -42,7 +42,9 @@ def respond(db: Session, user: User | None, text: str) -> dict:
 
     if intent == "buy_tonight":
         top = db.scalars(
-            select(Verdict).where(Verdict.status == "promoted").order_by(Verdict.rake).limit(1)
+            select(Verdict).where(Verdict.status == "promoted",
+                                  Verdict.settled.is_(None))
+            .order_by(Verdict.rake).limit(1)
         ).first()
         if top:
             card["verdict_id"] = top.id

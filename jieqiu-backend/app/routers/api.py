@@ -86,7 +86,9 @@ def analysis_log(date: str | None = None, limit: int = 100, db: Session = Depend
     latest: dict[tuple[str, str], ModelRun] = {}
     for r in rows:  # 倒序遍历，首见即最新（created_at 同秒时 id 大者胜）
         latest.setdefault((r.match_id, r.gate), r)
-    matches = {m.match_id: m for m in db.scalars(select(SPMatch))}
+    mids = {mid for (mid, _g) in latest}
+    matches = {m.match_id: m for m in db.scalars(
+        select(SPMatch).where(SPMatch.match_id.in_(mids)))} if mids else {}
     entries = []
     for (match_id, gate), r in sorted(
         latest.items(), key=lambda kv: (kv[1].created_at, kv[1].id), reverse=True

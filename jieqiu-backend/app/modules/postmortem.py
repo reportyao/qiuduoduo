@@ -120,7 +120,10 @@ def killed_outcomes(db: Session, days: int = 7) -> dict:
 
 def weekly_report(db: Session, user_id: str | None = None) -> dict:
     """周报：近 7 天判决汇总 + 归因分布 + 砍场诚实披露 + 用户注单 P&L（可选）。"""
-    rows = db.scalars(select(Verdict).order_by(Verdict.trade_date.desc())).all()
+    cutoff_date = (datetime.now(CN) - timedelta(days=7)).strftime("%Y-%m-%d")
+    rows = db.scalars(
+        select(Verdict).where(Verdict.trade_date >= cutoff_date)
+        .order_by(Verdict.trade_date.desc())).all()
     recent = [v for v in rows if _within_days(v.trade_date, 7)]
     promoted = [v for v in recent if v.status == "promoted"]
     settled = [v for v in promoted if v.settled]

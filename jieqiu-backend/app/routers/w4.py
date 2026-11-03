@@ -22,10 +22,10 @@ def _esc(s) -> str:
 
 
 def _ledger_rows(db: Session, limit: int):
-    rows = db.scalars(
+    return db.scalars(
         select(Verdict).order_by(Verdict.trade_date.desc(), Verdict.kickoff)
+        .limit(limit)
     ).all()
-    return rows[:limit]
 
 
 @router.get("/api/ledger")
@@ -33,7 +33,9 @@ def ledger_api(limit: int = 100, db: Session = Depends(get_db)):
     """公开账本 JSON（F14）：全部判决 + 结算 + 连败公开。"""
     limit = max(1, min(limit, 500))
     rows = _ledger_rows(db, limit)
-    matches = {m.match_id: m for m in db.scalars(select(SPMatch))}
+    ids = {v.match_id for v in rows}
+    matches = {m.match_id: m for m in db.scalars(
+        select(SPMatch).where(SPMatch.match_id.in_(ids)))} if ids else {}
     items = []
     for v in rows:
         m = matches.get(v.match_id)

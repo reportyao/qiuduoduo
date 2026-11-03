@@ -128,14 +128,35 @@ def build_anchor(db: Session, date: str) -> DailyAnchor:
     return a
 
 
-def latest_chain_status(db: Session) -> dict:
-    """最新锚点日的链健康摘要（seed 告警 + /health 可观测用）。"""
+_CHAIN_CACHE: dict[str, tuple[float, dict]] = {}
+
+
+def latest_chain_status(db: Session, ttl_seconds: float = 60.0) -> dict:
+    """最新锚点日的链健康摘要（seed 告警 + /health 可观测用）。
+
+    TTL 缓存：/health 被秒级轮询，整链重算 O(日修订数) 不该每次打。
+    """
+    import time as _time
     a = db.scalar(select(DailyAnchor).order_by(DailyAnchor.date.desc()).limit(1))
     if a is None:
         return {"date": None, "ok": True, "links": 0, "broken_at": None, "note": "尚无锚点"}
+    # 内容指纹：id+payload_hash 全量（轻量列）→ 篡改/追加任何修订都会失效缓存
+    import hashlib as _h
+    rows = db.execute(
+        select(VerdictRevision.id, VerdictRevision.payload_hash)
+        .where(VerdictRevision.trade_date == a.date)
+        .order_by(VerdictRevision.id)).all()
+    fp = _h.sha256("|".join(f"{i}:{hh}" for i, hh in rows).encode()).hexdigest()[:16]
+    key = f"{a.date}:{a.root_hash}:{fp}"
+    cached = _CHAIN_CACHE.get(key)
+    if cached and _time.time() - cached[0] < ttl_seconds:
+        return cached[1]
     rep = verify_day(db, a.date)
-    return {"date": a.date, "ok": rep["ok"], "links": rep["links"],
-            "broken_at": rep["broken_at"], "anchor_match": rep["anchor_match"]}
+    out = {"date": a.date, "ok": rep["ok"], "links": rep["links"],
+           "broken_at": rep["broken_at"], "anchor_match": rep["anchor_match"]}
+    _CHAIN_CACHE.clear()  # 只保留最新锚点
+    _CHAIN_CACHE[key] = (_time.time(), out)
+    return out
 
 
 def verify_day(db: Session, date: str) -> dict:

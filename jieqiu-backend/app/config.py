@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     code_send_interval_seconds: int = 60   # 同目标 60 秒一次
     code_daily_limit: int = 10             # 同目标每日上限
     auth_stub: bool = True             # 非生产环境启用 stub（dev_code 回显 / 假 OAuth）
+    allow_device_login: bool = True    # 旧版 App 的免登录态；上线新客户端后可关
     sms_provider: str = "stub"         # stub | tencent
     email_provider: str = "stub"       # stub | resend
     resend_api_key: str = ""

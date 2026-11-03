@@ -48,8 +48,16 @@ def scan_text(text: str) -> list[str]:
     return [w for w in BANNED_WORDS if w in t]
 
 
+_SCAN_CACHE: dict[str, tuple[float, dict]] = {}
+
+
 def scan_dir(root: str, exts=( ".py", ".md", ".txt", ".html")) -> dict:
-    """扫描目录下源码/文案（跳过 venv/测试夹具/git）。"""
+    """扫描目录下源码/文案（跳过 venv/测试夹具/git）；结果缓存 5 分钟。"""
+    import time as _time
+    key = os.path.abspath(root)
+    cached = _SCAN_CACHE.get(key)
+    if cached and _time.time() - cached[0] < 300:
+        return cached[1]
     hits = []
     scanned = 0
     for base, dirs, files in os.walk(root):
@@ -74,7 +82,9 @@ def scan_dir(root: str, exts=( ".py", ".md", ".txt", ".html")) -> dict:
                         if w in normalize_text(line):
                             hits.append({"file": os.path.relpath(p, root),
                                          "line": i, "word": w})
-    return {"scanned_files": scanned, "hits": hits, "clean": not hits}
+    out = {"scanned_files": scanned, "hits": hits, "clean": not hits}
+    _SCAN_CACHE[key] = (_time.time(), out)
+    return out
 
 
 # ---------------- 法律披露（隐私弹窗 + SDK 清单 + 权限最小化） ----------------

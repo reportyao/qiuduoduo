@@ -160,6 +160,10 @@ def _ip_ok(ip: str | None) -> bool:
     if not ip:
         return True
     now = time.time()
+    if len(_ip_sends) > 20000:  # 回收一小时无活动的 IP
+        stale = [k for k, v in _ip_sends.items() if not v or now - v[-1] > 3600]
+        for k in stale[:10000]:
+            _ip_sends.pop(k, None)
     arr = [t for t in _ip_sends.get(ip, []) if now - t < 3600]
     _ip_sends[ip] = arr
     return len(arr) < _IP_HOURLY_LIMIT

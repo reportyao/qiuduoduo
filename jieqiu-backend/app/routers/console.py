@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hmac
 import os
+import time
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
@@ -24,7 +25,11 @@ from ..modules.settle import ledger_stats
 
 router = APIRouter()
 
-_SESSIONS: set[str] = set()  # 进程内会话（OPC 单实例；v1.5 换签名 cookie）
+_SESSIONS: dict[str, float] = {}  # tok -> 过期时间戳（进程内；v1.5 换签名 cookie）
+_LOGIN_FAILS: dict[str, list[float]] = {}  # IP -> 失败时间戳（防爆破）
+_LOGIN_WINDOW = 600
+_LOGIN_MAX_FAILS = 5
+_TOK_TTL = 86400
 
 
 def _now() -> datetime:
@@ -48,7 +53,25 @@ def _ip_allowed(request: Request) -> bool:
 
 def _authed(request: Request) -> bool:
     tok = request.query_params.get("t") or request.cookies.get("console_t")
-    return bool(tok and tok in _SESSIONS)
+    if not tok or tok not in _SESSIONS:
+        return False
+    if _SESSIONS[tok] < time.time():
+        _SESSIONS.pop(tok, None)
+        return False
+    return True
+
+
+def _login_locked(ip: str) -> bool:
+    now = time.time()
+    arr = [t for t in _LOGIN_FAILS.get(ip, []) if now - t < _LOGIN_WINDOW]
+    _LOGIN_FAILS[ip] = arr
+    return len(arr) >= _LOGIN_MAX_FAILS
+
+
+def _record_fail(ip: str) -> None:
+    _LOGIN_FAILS.setdefault(ip, []).append(time.time())
+    if len(_LOGIN_FAILS) > 5000:  # 防内存膨胀
+        _LOGIN_FAILS.clear()
 
 
 def _deny() -> HTMLResponse:
@@ -96,7 +119,11 @@ def console_login_form(request: Request):
 def console_login(request: Request, pw: str = Form("")):
     if not _ip_allowed(request):
         return HTMLResponse("IP 不在白名单", status_code=403)
+    ip = request.client.host if request.client else "?"
+    if _login_locked(ip):
+        return HTMLResponse("尝试过多，请 10 分钟后再试", status_code=429)
     if not _password_ok(pw):
+        _record_fail(ip)
         return _page("登录", '<p class="bad">密码错误</p>' + """
 <form method="post" action="/console/login" style="max-width:320px">
   <input type="password" name="pw" placeholder="控制台密码" style="width:100%;padding:9px;border:1px solid #ccc;border-radius:9px">
@@ -104,7 +131,7 @@ def console_login(request: Request, pw: str = Form("")):
 </form>""")
     import secrets
     tok = secrets.token_urlsafe(24)
-    _SESSIONS.add(tok)
+    _SESSIONS[tok] = time.time() + _TOK_TTL
     resp = RedirectResponse("/console?t=" + tok, status_code=302)
     resp.set_cookie("console_t", tok, httponly=True, max_age=86400)
     return resp
@@ -137,7 +164,7 @@ def console_daily(request: Request, db=Depends(get_db)):
 
     body = f"""
 <div class="kv"><span>比赛日</span><b>{today}</b></div>
-<div class="kv"><span>竞彩场 / SP 快照</span><b>{db.scalar(select(func.count()).select_from(Verdict)) or 0} / {n_snaps}</b></div>
+<div class="kv"><span>竞彩场 / SP 快照</span><b>{n_verdicts} / {n_snaps}</b></div>
 <div class="kv"><span>判决 / 修订链节</span><b>{n_verdicts} / {n_revisions}</b></div>
 <div class="kv"><span>赛果库</span><b>{n_matches}</b> 场</div>
 <div class="kv"><span>用户数</span><b>{n_users}</b></div>

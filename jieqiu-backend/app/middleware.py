@@ -30,6 +30,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _bucket(self, key: str, limit: int) -> float:
         now = time.time()
+        if len(self.BUCKETS) > 20000:  # 简单回收：清掉 10 分钟未活跃的桶
+            stale = [k for k, v in self.BUCKETS.items() if now - v[1] > 600]
+            for k in stale[:10000]:
+                self.BUCKETS.pop(k, None)
         b = self.BUCKETS.get(key)
         if b is None:
             self.BUCKETS[key] = [float(limit), now]

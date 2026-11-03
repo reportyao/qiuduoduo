@@ -89,22 +89,21 @@ def import_collector_db(db: Session, collector_db_path: str) -> IngestResult:
                 single_flag=bool(row.single_flag),
             )
         )
-        if home == row.home and normalize(row.home) not in aligner._map:
+        if home == row.home and not aligner.has(row.home):
             unresolved.append(row.home)
         m_up += 1
 
+    # 批量 upsert：一条语句 + executemany（1 万快照从 ~10k 次 round-trip 降到 1 次）
     s_ins = 0
-    for row in snaps_df.itertuples(index=False):
-        stmt = upsert_insert(SPSnapshot.__table__).values(
-            match_id=row.match_id,
-            pool=row.pool,
-            goal_line=row.goal_line or "",
-            sp_h=float(row.sp_h),
-            sp_d=float(row.sp_d),
-            sp_a=float(row.sp_a),
-            captured_at=row.captured_at,
-        ).on_conflict_do_nothing(index_elements=["match_id", "pool", "captured_at"])
-        res = db.execute(stmt)
+    CHUNK = 1000
+    rows = [dict(match_id=r.match_id, pool=r.pool, goal_line=r.goal_line or "",
+                 sp_h=float(r.sp_h), sp_d=float(r.sp_d), sp_a=float(r.sp_a),
+                 captured_at=r.captured_at)
+            for r in snaps_df.itertuples(index=False)]
+    for i in range(0, len(rows), CHUNK):
+        stmt = (upsert_insert(SPSnapshot.__table__)
+                .on_conflict_do_nothing(index_elements=["match_id", "pool", "captured_at"]))
+        res = db.execute(stmt, rows[i:i + CHUNK])
         s_ins += res.rowcount or 0
 
     db.commit()

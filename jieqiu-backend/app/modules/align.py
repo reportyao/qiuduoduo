@@ -218,6 +218,9 @@ class Aligner:
         for row in db.scalars(select(TeamAlias)):
             self._map[row.alias] = row.canonical
 
+    def has(self, name: str) -> bool:
+        return normalize(name) in self._map
+
     def resolve(self, name: str) -> str:
         n = normalize(name)
         if not n:

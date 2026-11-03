@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import io
+import os
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
@@ -37,10 +38,42 @@ def _seasons() -> list[str]:
     return seasons
 
 
+def _last_result_sync() -> str:
+    from ..config import get_settings
+    import tempfile
+    try:
+        return open(os.path.join(tempfile.gettempdir(), "jq_results_last_sync"), encoding="utf-8").read().strip()
+    except OSError:
+        return ""
+
+
+def _mark_result_sync() -> None:
+    import tempfile
+    try:
+        with open(os.path.join(tempfile.gettempdir(), "jq_results_last_sync"), "w", encoding="utf-8") as f:
+            f.write(datetime.now(CN).isoformat(timespec="seconds"))
+    except OSError:
+        pass
+
+
 def sync_results_football_data(db: Session, aligner: Aligner,
                                fetch=None) -> tuple[int, str]:
-    """拉取当季/上季完赛场次入库。返回 (新增条数, 说明)。失败不抛错。"""
+    """拉取当季/上季完赛场次入库。返回 (新增条数, 说明)。失败不抛错。
+
+    6 小时节流（赛果一天最多变几次；避免每 30 分钟 ×10 请求打爆数据源）。
+    """
+    from ..config import get_settings
+    last = _last_result_sync()
+    if fetch is None and last:
+        try:
+            if (datetime.now(CN) - datetime.fromisoformat(last)).total_seconds() < 6 * 3600:
+                return 0, f"节流：上次同步 {last}"
+        except ValueError:
+            pass
     seasons = _seasons()
+    # 预载现有键：避免每行一次 SELECT（2000+ 行 × 每次运行）
+    existing_keys = {(r.home, r.away, r.match_date)
+                     for r in db.scalars(select(MatchResult))}
     total = 0
     errors = []
     for code, cn_name in FD_LEAGUES.items():
@@ -69,11 +102,10 @@ def sync_results_football_data(db: Session, aligner: Aligner,
                 home_raw, away_raw = r.get("HomeTeam", ""), r.get("AwayTeam", "")
                 home = aligner.resolve(home_raw)
                 away = aligner.resolve(away_raw)
-                existing = db.scalar(select(MatchResult).where(
-                    MatchResult.home == home, MatchResult.away == away,
-                    MatchResult.match_date == euro_date))
-                if existing:
+                key = (home, away, euro_date)
+                if key in existing_keys:
                     continue
+                existing_keys.add(key)
                 db.add(MatchResult(source="football-data", league=cn_name,
                                    home_raw=home_raw, away_raw=away_raw,
                                    home=home, away=away, match_date=euro_date,
@@ -82,6 +114,8 @@ def sync_results_football_data(db: Session, aligner: Aligner,
                 db.flush()  # autoflush=False：下一季重扫时存在性检查可见
                 total += 1
     db.commit()
+    if fetch is None:
+        _mark_result_sync()
     note = f"赛果 +{total}"
     if errors:
         note += f"（失败 {len(errors)}：{';'.join(errors[:3])}）"
@@ -106,6 +140,10 @@ def settle_verdicts(db: Session, trade_date: str | None = None) -> int:
     q = select(Verdict).where(Verdict.pick.isnot(None), Verdict.settled.is_(None))
     if trade_date:
         q = q.where(Verdict.trade_date == trade_date)
+    else:
+        # 只扫近 30 天：更老的场次即便有赛果源也已过对账窗口（避免永久全表扫描）
+        cutoff = (datetime.now(CN) - timedelta(days=30)).strftime("%Y-%m-%d")
+        q = q.where(Verdict.trade_date >= cutoff)
     verdicts = db.scalars(q).all()
     n = 0
     for v in verdicts:

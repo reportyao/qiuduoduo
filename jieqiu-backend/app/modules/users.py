@@ -146,8 +146,10 @@ def upsert_memory(db: Session, user_id: str, key: str, value: str,
 
     冲突（已有不同值）且未 confirm → 不覆盖，返回 (None, "conflict")。
     """
-    key = key.strip()[:64]
+    key = key.strip()[:64].replace("/", "-")  # 防止 "/" 破坏 DELETE /me/memories/{key} 路由
     value = value.strip()[:256]
+    if not key:
+        raise ValueError("memory key 不能为空")
     m = db.scalar(select(Memory).where(Memory.user_id == user_id, Memory.key == key))
     if m is None:
         m = Memory(user_id=user_id, key=key, value=value, source=source)

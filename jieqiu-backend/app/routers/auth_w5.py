@@ -266,7 +266,10 @@ def _oauth_login(db: Session, provider: str, id_token: str):
         if user is None:
             user = A.create_user(db, "global", email=email if info.get("email_verified") else None)
             created = True
-        A.link_identity(db, user, provider, sub, f"{provider}:{sub[:8]}")
+        try:
+            A.link_identity(db, user, provider, sub, f"{provider}:{sub[:8]}")
+        except ValueError as e:
+            raise HTTPException(409, str(e))
     return {"created": created, "provider": provider,
             "user": A.public_user(user), **A.tokens_for(db, user)}
 

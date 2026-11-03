@@ -75,6 +75,9 @@ class ChatBody(BaseModel):
 
 @router.post("/auth/device")
 def auth_device(body: DeviceLogin, db: Session = Depends(get_db)):
+    from ..config import get_settings
+    if get_settings().env == "prod" and not get_settings().allow_device_login:
+        raise HTTPException(403, "设备免登录已关闭，请使用手机号/邮箱登录")
     user, created = U.login_device(db, body.device_token)
     if created:
         if body.display_name:

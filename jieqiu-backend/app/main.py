@@ -17,15 +17,18 @@ app = FastAPI(
     version="0.7.0-w7",
     description="W7: F20 分享体系 · F18 双区域 · 数据导出 · 注销清除",
 )
-# CORS：本地演示页（8777）与未来 App WebView 跨源调用（W7 review 抓到缺失）
+# W7 后端硬化：限流 + 结构化访问日志（内层）
+app.add_middleware(RateLimitMiddleware)
+# CORS 必须最后添加 → 位于最外层：限流 429 也要带 CORS 头，否则浏览器只见 CORS 错误
+import os as _os
+_extra = _os.environ.get("JQ_CORS_EXTRA_ORIGINS", "").strip()
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=r"https?://(127\.0\.0\.1|localhost)(:\d+)?",
+    allow_origin_regex=(r"https?://(127\.0\.0\.1|localhost)(:\d+)?"
+                        + (r"|" + _extra if _extra else "")),
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# W7 后端硬化：限流 + 结构化访问日志
-app.add_middleware(RateLimitMiddleware)
 app.include_router(router, tags=["v0.5"])
 app.include_router(w4_router, tags=["v0.5-w4"])
 app.include_router(w6_router, tags=["v0.5-w6"])

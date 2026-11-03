@@ -81,25 +81,38 @@ _REQUIRED_COLUMNS = {
 }
 
 
+def _existing_columns(conn, table: str) -> set[str]:
+    """方言无关的列表查询：SQLite=PRAGMA，PostgreSQL=information_schema（方案 B）。"""
+    from sqlalchemy import text
+    dialect = engine.dialect.name
+    if dialect == "sqlite":
+        rows = conn.execute(text(f"PRAGMA table_info({table})")).fetchall()
+        return {r[1] for r in rows}
+    if dialect in ("postgresql", "postgres"):
+        rows = conn.execute(text(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema = current_schema() AND table_name = :t"), {"t": table}).fetchall()
+        return {r[0] for r in rows}
+    return set()
+
+
 def _ensure_columns() -> None:
     from sqlalchemy import text
 
+    dialect = engine.dialect.name
+    bool_false, bool_type = ("0", "BOOLEAN") if dialect == "sqlite" else ("false", "BOOLEAN")
     with engine.connect() as conn:
         for table, cols in _REQUIRED_COLUMNS.items():
-            try:
-                rows = conn.execute(text(f"PRAGMA table_info({table})")).fetchall()
-            except Exception:
+            existing = _existing_columns(conn, table)
+            if not existing:
                 continue  # 表还不存在（create_all 刚建，一定含全部列）
-            if not rows:
-                continue
-            existing = {r[1] for r in rows}
             for col, typ in cols.items():
                 if col not in existing:
                     conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {typ}"))
-        # W5 认证：布尔回填 + 手机/邮箱唯一索引（NULL 允许多行）
+        # W5 认证：布尔回填 + 手机/邮箱唯一索引（NULL 允许多行；PG/SQLite 均支持部分索引）
         try:
-            conn.execute(text("UPDATE users SET phone_verified = 0 WHERE phone_verified IS NULL"))
-            conn.execute(text("UPDATE users SET email_verified = 0 WHERE email_verified IS NULL"))
+            conn.execute(text(f"UPDATE users SET phone_verified = {bool_false} WHERE phone_verified IS NULL"))
+            conn.execute(text(f"UPDATE users SET email_verified = {bool_false} WHERE email_verified IS NULL"))
         except Exception:
             pass
         for stmt in (
