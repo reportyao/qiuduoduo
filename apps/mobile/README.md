@@ -5,6 +5,7 @@ Expo React Native + TypeScript。MVP 只做 Android，iOS 后续开启。
 ## 启动
 
 ```bash
+# 先确保 packages/api-client/src/schema.d.ts 已由后端 OpenAPI 生成
 pnpm install
 cp .env.example .env
 pnpm start

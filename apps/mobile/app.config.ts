@@ -24,9 +24,6 @@ const config: ExpoConfig = {
   android: {
     package: "com.jieqiu.app",
     permissions: ["POST_NOTIFICATIONS"],
-    adaptiveIcon: {
-      backgroundColor: "#F5F4EF",
-    },
   },
   plugins: ["expo-router"],
   experiments: {
@@ -34,7 +31,7 @@ const config: ExpoConfig = {
   },
   extra: {
     apiBaseUrl,
-    appEnv: process.env.APP_ENV ?? "development",
+    appEnv: process.env.EXPO_PUBLIC_APP_ENV ?? "development",
   },
 };
 

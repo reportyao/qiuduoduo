@@ -15,6 +15,9 @@ db-down:
 db-reset:
     docker compose down -v && just db-up
 
+db-migrate:
+    cd jieqiu-backend && alembic upgrade head
+
 # ---------- 后端（过渡期仍在 jieqiu-backend） ----------
 
 api-install:
@@ -27,7 +30,7 @@ api-test:
     cd jieqiu-backend && python -m pytest -q
 
 api-openapi:
-    cd jieqiu-backend && python -c "import json; from app.main import app; print(json.dumps(app.openapi(), ensure_ascii=False))" > packages/api-client/openapi.json
+    cd jieqiu-backend && python -c "import json; from app.main import app; print(json.dumps(app.openapi(), ensure_ascii=False))" > ../packages/api-client/openapi.json
 
 # ---------- 前端 ----------
 
