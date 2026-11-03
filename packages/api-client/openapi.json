@@ -6,19 +6,635 @@
     "version": "0.8.0-w8+assistant"
   },
   "paths": {
+    "/matches": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Matches",
+        "description": "按竞彩日列比赛（F22 分类接口），带最新判决状态/抽水/三关。",
+        "operationId": "matches_matches_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "league",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "League"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verdicts/today": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Verdicts Today",
+        "description": "当日全部判决（含 promoted/screening/killed），用于首页之外的目录页。",
+        "operationId": "verdicts_today_verdicts_today_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerdictTodayResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/cost": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Match Cost",
+        "description": "真实成本：Σ(1/SP) 抽水、去水概率、公平赔率、每 100 元成本。",
+        "operationId": "match_cost_matches__match_id__cost_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "pool",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Pool"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrueCostResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/evidence": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Match Evidence",
+        "description": "比赛级判断依据：取该场最新（或指定竞彩日）判决的证据。",
+        "operationId": "match_evidence_matches__match_id__evidence_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchEvidenceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/avoid-list": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Avoid List",
+        "description": "避雷榜：被砍场次 + 首道死闸原因；与 stream.avoid 同口径。",
+        "operationId": "avoid_list_avoid_list_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvoidListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/water-rank": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Water Rank",
+        "description": "水位榜：当日抽水最浅的场次（默认 3 场）。",
+        "operationId": "water_rank_water_rank_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 3,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaterRankResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/calendar": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Calendar",
+        "description": "日历：按竞彩日统计场次/判决数，供日期切换与非比赛日判断。",
+        "operationId": "calendar_calendar_get",
+        "parameters": [
+          {
+            "name": "month",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sp/movements": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Sp Movements",
+        "description": "SP 异动：同日同场同玩法最近两次快照的赔率变化。",
+        "operationId": "sp_movements_sp_movements_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SPMovementResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agents/sentinel/feed": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Sentinel Feed",
+        "description": "盘口哨兵事件流（events 表；只读公开事件）。",
+        "operationId": "sentinel_feed_agents_sentinel_feed_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SentinelResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/live": {
+      "get": {
+        "tags": [
+          "catalog"
+        ],
+        "summary": "Match Live",
+        "description": "实况卡：当前只展示已同步赛果+SP 快照，不伪造实时进球时间线。",
+        "operationId": "match_live_matches__match_id__live_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchLiveResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "tags": [
           "v0.5"
         ],
         "summary": "Health",
+        "description": "轻量存活检查；?detailed=1 才做全表计数（大表 COUNT 不应在探针里跑）。",
         "operationId": "health_health_get",
+        "parameters": [
+          {
+            "name": "detailed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Detailed"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -138,6 +754,22 @@
                 }
               ],
               "title": "Date"
+            }
+          },
+          {
+            "name": "match_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Match Id"
             }
           },
           {
@@ -821,7 +1453,122 @@
         }
       }
     },
+    "/me/persona": {
+      "patch": {
+        "tags": [
+          "v0.5-w6"
+        ],
+        "summary": "Me Persona",
+        "description": "兼容 TechSpec 的 PATCH /me/persona；与 PATCH /me 的人设字段同一逻辑。",
+        "operationId": "me_persona_me_persona_patch",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonaBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonaResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/discipline": {
+      "patch": {
+        "tags": [
+          "v0.5-w6"
+        ],
+        "summary": "Set Discipline",
+        "operationId": "set_discipline_me_discipline_patch",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisciplineBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "tags": [
           "v0.5-w6"
@@ -972,6 +1719,56 @@
         }
       }
     },
+    "/me/comfort": {
+      "get": {
+        "tags": [
+          "v0.5-w6"
+        ],
+        "summary": "Me Comfort",
+        "description": "买后安抚卡：按最近一注的真实状态给一句话 + 下一步，不制造“稳”的暗示。",
+        "operationId": "me_comfort_me_comfort_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComfortResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/memories": {
       "get": {
         "tags": [
@@ -1002,7 +1799,125 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemoryItem"
+                  },
+                  "title": "Response Memories List Me Memories Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories": {
+      "get": {
+        "tags": [
+          "v0.5-w6"
+        ],
+        "summary": "Memories Root",
+        "description": "兼容 TechSpec 的 GET /memories（与 /me/memories 同数据）。",
+        "operationId": "memories_root_memories_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemoryItem"
+                  },
+                  "title": "Response Memories Root Memories Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "v0.5-w6"
+        ],
+        "summary": "Memory Create",
+        "description": "兼容 TechSpec 的 POST /memories：key 在 body 里。",
+        "operationId": "memory_create_memories_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoryCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryWriteResponse"
+                }
               }
             }
           },
@@ -1068,7 +1983,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryWriteResponse"
+                }
               }
             }
           },
@@ -1123,6 +2040,65 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/{key}": {
+      "delete": {
+        "tags": [
+          "v0.5-w6"
+        ],
+        "summary": "Memory Delete Root",
+        "description": "兼容 TechSpec 的 DELETE /memories/{key}。",
+        "operationId": "memory_delete_root_memories__key__delete",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Key"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryDeleteResponse"
+                }
               }
             }
           },
@@ -1499,6 +2475,74 @@
         }
       }
     },
+    "/verdicts/{verdict_id}/react": {
+      "post": {
+        "tags": [
+          "verdict-actions"
+        ],
+        "summary": "React",
+        "operationId": "react_verdicts__verdict_id__react_post",
+        "parameters": [
+          {
+            "name": "verdict_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Verdict Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReactBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReactResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/share/verdict/{verdict_id}": {
       "post": {
         "tags": [
@@ -1630,6 +2674,66 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/share/card": {
+      "post": {
+        "tags": [
+          "v0.5-w7"
+        ],
+        "summary": "Share Card",
+        "description": "兼容 TechSpec 的统一分享入口；按 kind 分发到三种素材。",
+        "operationId": "share_card_share_card_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareCardBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareCardResponse"
+                }
               }
             }
           },
@@ -1787,7 +2891,7 @@
           "v0.5-w7"
         ],
         "summary": "Me Export",
-        "description": "导出用户全部数据（JSON；不含设备令牌——安全边界）。",
+        "description": "导出用户全部数据（JSON；设备/推送令牌不导出）。",
         "operationId": "me_export_me_export_get",
         "parameters": [
           {
@@ -3188,6 +4292,140 @@
         }
       }
     },
+    "/matches/{match_id}/follow": {
+      "post": {
+        "tags": [
+          "assistant",
+          "assistant"
+        ],
+        "summary": "Follow Match",
+        "description": "F21 兼容接口：关注一场比赛（底层仍是 watch_targets）。",
+        "operationId": "follow_match_matches__match_id__follow_post",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/FollowBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchItem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "assistant",
+          "assistant"
+        ],
+        "summary": "Unfollow Match",
+        "operationId": "unfollow_match_matches__match_id__follow_delete",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/me/notify-settings": {
       "get": {
         "tags": [
@@ -3415,10 +4653,373 @@
           }
         }
       }
+    },
+    "/devices": {
+      "post": {
+        "tags": [
+          "assistant",
+          "assistant"
+        ],
+        "summary": "Devices Alias",
+        "description": "兼容 POST /devices；实现与 /push/register 完全一致。",
+        "operationId": "devices_alias_devices_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushRegister"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushRegisterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/push/preferences": {
+      "get": {
+        "tags": [
+          "assistant",
+          "assistant"
+        ],
+        "summary": "Push Preferences Get",
+        "operationId": "push_preferences_get_push_preferences_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotifyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "assistant",
+          "assistant"
+        ],
+        "summary": "Push Preferences Put",
+        "operationId": "push_preferences_put_push_preferences_put",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotifyBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotifyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "assistant",
+          "assistant"
+        ],
+        "summary": "Push Preferences Post",
+        "description": "兼容 TechSpec 的 POST /push/preferences（与 PUT 同一实现）。",
+        "operationId": "push_preferences_post_push_preferences_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotifyBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotifyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/push/health": {
+      "get": {
+        "tags": [
+          "assistant",
+          "assistant"
+        ],
+        "summary": "Push Health",
+        "description": "推送通道健康：只报告本账号 token 与全局厂商配置，不泄漏 token。",
+        "operationId": "push_health_push_health_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushHealthResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AvoidItem": {
+        "properties": {
+          "verdict_id": {
+            "type": "string",
+            "title": "Verdict Id"
+          },
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No"
+          },
+          "home": {
+            "type": "string",
+            "title": "Home"
+          },
+          "away": {
+            "type": "string",
+            "title": "Away"
+          },
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "kickoff": {
+            "type": "string",
+            "title": "Kickoff"
+          },
+          "rake": {
+            "type": "number",
+            "title": "Rake"
+          },
+          "gate": {
+            "type": "string",
+            "title": "Gate"
+          },
+          "why": {
+            "type": "string",
+            "title": "Why"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict_id",
+          "match_id",
+          "match_no",
+          "home",
+          "away",
+          "league",
+          "kickoff",
+          "rake",
+          "gate",
+          "why"
+        ],
+        "title": "AvoidItem"
+      },
+      "AvoidListResponse": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AvoidItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "count",
+          "items"
+        ],
+        "title": "AvoidListResponse"
+      },
       "BetBody": {
         "properties": {
           "verdict_id": {
@@ -3456,6 +5057,70 @@
         "type": "object",
         "title": "Body_console_login_console_login_post"
       },
+      "CalendarDay": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "matches": {
+            "type": "integer",
+            "title": "Matches"
+          },
+          "verdicts": {
+            "type": "integer",
+            "title": "Verdicts"
+          },
+          "promoted": {
+            "type": "integer",
+            "title": "Promoted"
+          },
+          "screening": {
+            "type": "integer",
+            "title": "Screening"
+          },
+          "killed": {
+            "type": "integer",
+            "title": "Killed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "matches",
+          "verdicts",
+          "promoted",
+          "screening",
+          "killed"
+        ],
+        "title": "CalendarDay"
+      },
+      "CalendarResponse": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "title": "Month"
+          },
+          "total_matches": {
+            "type": "integer",
+            "title": "Total Matches"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/CalendarDay"
+            },
+            "type": "array",
+            "title": "Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "total_matches",
+          "days"
+        ],
+        "title": "CalendarResponse"
+      },
       "ChatBody": {
         "properties": {
           "text": {
@@ -3490,6 +5155,67 @@
         },
         "type": "object",
         "title": "ClickResponse"
+      },
+      "ComfortResponse": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "bet_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bet Id"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "pnl": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pnl"
+          },
+          "next_action": {
+            "type": "string",
+            "title": "Next Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "available",
+          "kind",
+          "message",
+          "next_action"
+        ],
+        "title": "ComfortResponse"
       },
       "DeviceLogin": {
         "properties": {
@@ -3542,6 +5268,26 @@
           "enabled"
         ],
         "title": "DisciplineBody"
+      },
+      "FollowBody": {
+        "properties": {
+          "events": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "title": "FollowBody"
       },
       "HTTPValidationError": {
         "properties": {
@@ -3649,6 +5395,352 @@
         ],
         "title": "InboxResponse"
       },
+      "LiveTimelineItem": {
+        "properties": {
+          "captured_at": {
+            "type": "string",
+            "title": "Captured At"
+          },
+          "pool": {
+            "type": "string",
+            "title": "Pool"
+          },
+          "goal_line": {
+            "type": "string",
+            "title": "Goal Line"
+          },
+          "sp": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Sp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "captured_at",
+          "pool",
+          "goal_line",
+          "sp"
+        ],
+        "title": "LiveTimelineItem"
+      },
+      "MatchEvidenceResponse": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No"
+          },
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "home": {
+            "type": "string",
+            "title": "Home"
+          },
+          "away": {
+            "type": "string",
+            "title": "Away"
+          },
+          "kickoff": {
+            "type": "string",
+            "title": "Kickoff"
+          },
+          "verdict_id": {
+            "type": "string",
+            "title": "Verdict Id"
+          },
+          "verdict_status": {
+            "type": "string",
+            "title": "Verdict Status"
+          },
+          "evidence": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "data_cutoff": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Cutoff"
+          },
+          "payload_hash": {
+            "type": "string",
+            "title": "Payload Hash"
+          },
+          "sealed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sealed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id",
+          "match_no",
+          "league",
+          "home",
+          "away",
+          "kickoff",
+          "verdict_id",
+          "verdict_status",
+          "evidence",
+          "payload_hash"
+        ],
+        "title": "MatchEvidenceResponse"
+      },
+      "MatchItem": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No"
+          },
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "home": {
+            "type": "string",
+            "title": "Home"
+          },
+          "away": {
+            "type": "string",
+            "title": "Away"
+          },
+          "kickoff": {
+            "type": "string",
+            "title": "Kickoff"
+          },
+          "sale_close": {
+            "type": "string",
+            "title": "Sale Close"
+          },
+          "single": {
+            "type": "boolean",
+            "title": "Single"
+          },
+          "verdict_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "rake": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rake"
+          },
+          "gates": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gates"
+          },
+          "sp": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sp"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id",
+          "match_no",
+          "league",
+          "home",
+          "away",
+          "kickoff",
+          "sale_close",
+          "single"
+        ],
+        "title": "MatchItem"
+      },
+      "MatchListResponse": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/MatchItem"
+            },
+            "type": "array",
+            "title": "Matches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "count",
+          "matches"
+        ],
+        "title": "MatchListResponse"
+      },
+      "MatchLiveResponse": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No"
+          },
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "home": {
+            "type": "string",
+            "title": "Home"
+          },
+          "away": {
+            "type": "string",
+            "title": "Away"
+          },
+          "kickoff": {
+            "type": "string",
+            "title": "Kickoff"
+          },
+          "state": {
+            "type": "string",
+            "title": "State",
+            "description": "scheduled / awaiting_result / finished"
+          },
+          "live_feed": {
+            "type": "boolean",
+            "title": "Live Feed",
+            "description": "是否接入实时事件源；false 时不伪造进球时间线"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "result_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Source"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/LiveTimelineItem"
+            },
+            "type": "array",
+            "title": "Timeline"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id",
+          "match_no",
+          "league",
+          "home",
+          "away",
+          "kickoff",
+          "state",
+          "live_feed",
+          "timeline",
+          "note"
+        ],
+        "title": "MatchLiveResponse"
+      },
       "MePatch": {
         "properties": {
           "display_name": {
@@ -3721,6 +5813,114 @@
           "value"
         ],
         "title": "MemoryBody"
+      },
+      "MemoryCreate": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "你说过"
+          },
+          "confirm": {
+            "type": "boolean",
+            "title": "Confirm",
+            "default": false
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "key"
+        ],
+        "title": "MemoryCreate"
+      },
+      "MemoryDeleteResponse": {
+        "properties": {
+          "deleted": {
+            "type": "string",
+            "title": "Deleted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "deleted"
+        ],
+        "title": "MemoryDeleteResponse"
+      },
+      "MemoryItem": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "default": "preference"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence",
+            "default": 1.0
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "value",
+          "source"
+        ],
+        "title": "MemoryItem"
+      },
+      "MemoryWriteResponse": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "value",
+          "status"
+        ],
+        "title": "MemoryWriteResponse"
       },
       "NotifyBody": {
         "properties": {
@@ -3868,6 +6068,81 @@
         "type": "object",
         "title": "OkResponse"
       },
+      "PersonaBody": {
+        "properties": {
+          "persona": {
+            "type": "string",
+            "title": "Persona"
+          }
+        },
+        "type": "object",
+        "required": [
+          "persona"
+        ],
+        "title": "PersonaBody"
+      },
+      "PersonaResponse": {
+        "properties": {
+          "persona": {
+            "type": "string",
+            "title": "Persona"
+          }
+        },
+        "type": "object",
+        "required": [
+          "persona"
+        ],
+        "title": "PersonaResponse"
+      },
+      "PushHealthResponse": {
+        "properties": {
+          "configured": {
+            "type": "boolean",
+            "title": "Configured"
+          },
+          "dryrun": {
+            "type": "boolean",
+            "title": "Dryrun"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "enabled_tokens": {
+            "type": "integer",
+            "title": "Enabled Tokens"
+          },
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "configured",
+          "dryrun",
+          "provider",
+          "enabled_tokens",
+          "total_tokens",
+          "note"
+        ],
+        "title": "PushHealthResponse"
+      },
       "PushRegister": {
         "properties": {
           "platform": {
@@ -3927,6 +6202,90 @@
         ],
         "title": "PushUnregister"
       },
+      "ReactBody": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "amount": {
+            "type": "number",
+            "maximum": 100000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Amount",
+            "default": 100.0
+          },
+          "confirm": {
+            "type": "boolean",
+            "title": "Confirm",
+            "default": false
+          },
+          "events": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "ReactBody"
+      },
+      "ReactResponse": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "recorded": {
+            "type": "boolean",
+            "title": "Recorded"
+          },
+          "bet_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bet Id"
+          },
+          "watch_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Watch Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "recorded",
+          "message"
+        ],
+        "title": "ReactResponse"
+      },
       "ReadAllResponse": {
         "properties": {
           "ok": {
@@ -3957,6 +6316,136 @@
           "refresh_token"
         ],
         "title": "RefreshBody"
+      },
+      "SPMovementItem": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No"
+          },
+          "home": {
+            "type": "string",
+            "title": "Home"
+          },
+          "away": {
+            "type": "string",
+            "title": "Away"
+          },
+          "pool": {
+            "type": "string",
+            "title": "Pool"
+          },
+          "goal_line": {
+            "type": "string",
+            "title": "Goal Line"
+          },
+          "captured_at": {
+            "type": "string",
+            "title": "Captured At"
+          },
+          "prev_captured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prev Captured At"
+          },
+          "sp": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Sp"
+          },
+          "prev_sp": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prev Sp"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta"
+          },
+          "delta_pct": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id",
+          "match_no",
+          "home",
+          "away",
+          "pool",
+          "goal_line",
+          "captured_at",
+          "sp"
+        ],
+        "title": "SPMovementItem"
+      },
+      "SPMovementResponse": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SPMovementItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "count",
+          "items"
+        ],
+        "title": "SPMovementResponse"
       },
       "SendBody": {
         "properties": {
@@ -3990,6 +6479,290 @@
         },
         "type": "object",
         "title": "SendBody"
+      },
+      "SentinelItem": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "severity": {
+            "type": "integer",
+            "title": "Severity"
+          },
+          "match_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Id"
+          },
+          "match_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match No"
+          },
+          "home": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home"
+          },
+          "away": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Away"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "data_cutoff": {
+            "type": "string",
+            "title": "Data Cutoff"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "fanned_out": {
+            "type": "boolean",
+            "title": "Fanned Out"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "severity",
+          "payload",
+          "data_cutoff",
+          "created_at",
+          "fanned_out"
+        ],
+        "title": "SentinelItem"
+      },
+      "SentinelResponse": {
+        "properties": {
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SentinelItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "count",
+          "items"
+        ],
+        "title": "SentinelResponse"
+      },
+      "ShareCardBody": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "verdict_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict Id"
+          },
+          "persona": {
+            "type": "string",
+            "title": "Persona",
+            "default": "zhuanjia"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "ShareCardBody"
+      },
+      "ShareCardResponse": {
+        "properties": {
+          "share_id": {
+            "type": "string",
+            "title": "Share Id"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "deep_link": {
+            "type": "string",
+            "title": "Deep Link"
+          }
+        },
+        "type": "object",
+        "required": [
+          "share_id",
+          "text",
+          "url",
+          "deep_link"
+        ],
+        "title": "ShareCardResponse"
+      },
+      "TrueCostResponse": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No"
+          },
+          "home": {
+            "type": "string",
+            "title": "Home"
+          },
+          "away": {
+            "type": "string",
+            "title": "Away"
+          },
+          "pool": {
+            "type": "string",
+            "title": "Pool"
+          },
+          "goal_line": {
+            "type": "string",
+            "title": "Goal Line"
+          },
+          "sp": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Sp"
+          },
+          "captured_at": {
+            "type": "string",
+            "title": "Captured At"
+          },
+          "snapshot_count": {
+            "type": "integer",
+            "title": "Snapshot Count"
+          },
+          "implied_total": {
+            "type": "number",
+            "title": "Implied Total",
+            "description": "Σ(1/SP)，含抽水"
+          },
+          "rake": {
+            "type": "number",
+            "title": "Rake",
+            "description": "庄家抽水率 = implied_total - 1"
+          },
+          "rake_pct": {
+            "type": "number",
+            "title": "Rake Pct"
+          },
+          "fair_probs": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Fair Probs"
+          },
+          "fair_odds": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Fair Odds"
+          },
+          "ev_per_100": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Ev Per 100"
+          },
+          "cost_per_100": {
+            "type": "number",
+            "title": "Cost Per 100"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id",
+          "match_no",
+          "home",
+          "away",
+          "pool",
+          "goal_line",
+          "sp",
+          "captured_at",
+          "snapshot_count",
+          "implied_total",
+          "rake",
+          "rake_pct",
+          "fair_probs",
+          "fair_odds",
+          "ev_per_100",
+          "cost_per_100",
+          "note"
+        ],
+        "title": "TrueCostResponse"
       },
       "UnreadResponse": {
         "properties": {
@@ -4043,6 +6816,149 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VerdictCard": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No"
+          },
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "home": {
+            "type": "string",
+            "title": "Home"
+          },
+          "away": {
+            "type": "string",
+            "title": "Away"
+          },
+          "kickoff": {
+            "type": "string",
+            "title": "Kickoff"
+          },
+          "pool": {
+            "type": "string",
+            "title": "Pool"
+          },
+          "goal_line": {
+            "type": "string",
+            "title": "Goal Line"
+          },
+          "sp": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Sp"
+          },
+          "rake": {
+            "type": "number",
+            "title": "Rake"
+          },
+          "rake_threshold": {
+            "type": "number",
+            "title": "Rake Threshold"
+          },
+          "probs": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Probs"
+          },
+          "pick": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pick"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "gates": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Gates"
+          },
+          "hash": {
+            "type": "string",
+            "title": "Hash"
+          },
+          "sealed": {
+            "type": "boolean",
+            "title": "Sealed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "match_id",
+          "match_no",
+          "league",
+          "home",
+          "away",
+          "kickoff",
+          "pool",
+          "goal_line",
+          "sp",
+          "rake",
+          "rake_threshold",
+          "probs",
+          "status",
+          "gates",
+          "hash",
+          "sealed"
+        ],
+        "title": "VerdictCard"
+      },
+      "VerdictTodayResponse": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "stats": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Stats"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VerdictCard"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "stats",
+          "items"
+        ],
+        "title": "VerdictTodayResponse"
       },
       "VerifyEmailBody": {
         "properties": {
@@ -4244,6 +7160,103 @@
           "items"
         ],
         "title": "WatchListResponse"
+      },
+      "WaterRankItem": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "title": "Rank"
+          },
+          "verdict_id": {
+            "type": "string",
+            "title": "Verdict Id"
+          },
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No"
+          },
+          "home": {
+            "type": "string",
+            "title": "Home"
+          },
+          "away": {
+            "type": "string",
+            "title": "Away"
+          },
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "kickoff": {
+            "type": "string",
+            "title": "Kickoff"
+          },
+          "rake": {
+            "type": "number",
+            "title": "Rake"
+          },
+          "return_pct": {
+            "type": "number",
+            "title": "Return Pct"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "gates": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Gates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "verdict_id",
+          "match_id",
+          "match_no",
+          "home",
+          "away",
+          "league",
+          "kickoff",
+          "rake",
+          "return_pct",
+          "status",
+          "gates"
+        ],
+        "title": "WaterRankItem"
+      },
+      "WaterRankResponse": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WaterRankItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "count",
+          "items"
+        ],
+        "title": "WaterRankResponse"
       },
       "WechatBindBody": {
         "properties": {

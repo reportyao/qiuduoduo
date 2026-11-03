@@ -62,6 +62,47 @@ class MemoryBody(BaseModel):
     confirm: bool = False
 
 
+class MemoryCreate(MemoryBody):
+    key: str
+
+
+class PersonaBody(BaseModel):
+    persona: str
+
+
+class PersonaResponse(BaseModel):
+    persona: str
+
+
+class MemoryItem(BaseModel):
+    key: str
+    value: str
+    source: str
+    category: str = "preference"
+    confidence: float = 1.0
+    expires_at: str | None = None
+
+
+class MemoryWriteResponse(BaseModel):
+    key: str
+    value: str
+    status: str
+
+
+class MemoryDeleteResponse(BaseModel):
+    deleted: str
+
+
+class ComfortResponse(BaseModel):
+    available: bool
+    kind: str
+    message: str
+    bet_id: int | None = None
+    amount: float | None = None
+    pnl: float | None = None
+    next_action: str
+
+
 class BetBody(BaseModel):
     verdict_id: str
     amount: float = Field(default=100.0, gt=0, le=100000,
@@ -110,8 +151,7 @@ def me(user: User = Depends(current_user), db: Session = Depends(get_db)):
         "email": mask_email(user.email) if user.email else None,
         "streak": U.user_streak(db, user),
         "rested_until": user.rested_until,
-        "memories": [{"key": m.key, "value": m.value, "source": m.source}
-                     for m in U.list_memories(db, user.id)],
+        "memories": _memory_items(db, user),
     }
 
 
@@ -141,6 +181,17 @@ def me_patch(body: MePatch, user: User = Depends(current_user), db: Session = De
     return {"changed": changed}
 
 
+@router.patch("/me/persona", response_model=PersonaResponse)
+def me_persona(body: PersonaBody, user: User = Depends(current_user),
+               db: Session = Depends(get_db)):
+    """兼容 TechSpec 的 PATCH /me/persona；与 PATCH /me 的人设字段同一逻辑。"""
+    if body.persona not in ("zhuanjia", "laopao", "meng"):
+        raise HTTPException(422, "persona 必须是 zhuanjia / laopao / meng")
+    user.persona = body.persona
+    db.commit()
+    return {"persona": user.persona}
+
+
 @router.delete("/me")
 def me_delete(user: User = Depends(current_user), db: Session = Depends(get_db)):
     """注销（冷静期 7 天）：打标不删数据；同令牌登录即撤回。"""
@@ -152,6 +203,7 @@ def me_delete(user: User = Depends(current_user), db: Session = Depends(get_db))
 # ---------- F11 连败保护 / F7 休息 ----------
 
 @router.post("/me/discipline")
+@router.patch("/me/discipline")
 def set_discipline(body: DisciplineBody, user: User = Depends(current_user),
                    db: Session = Depends(get_db)):
     user.discipline_on = body.enabled
@@ -171,15 +223,70 @@ def me_unrest(user: User = Depends(current_user), db: Session = Depends(get_db))
     return {"rested_until": ""}
 
 
+@router.get("/me/comfort", response_model=ComfortResponse)
+def me_comfort(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """买后安抚卡：按最近一注的真实状态给一句话 + 下一步，不制造“稳”的暗示。"""
+    row = db.execute(
+        select(Bet, Verdict).join(Verdict, Bet.verdict_id == Verdict.id)
+        .where(Bet.user_id == user.id).order_by(Bet.created_at.desc()).limit(1)
+    ).first()
+    if row is None:
+        return {"available": False, "kind": "empty",
+                "message": "还没有记注。先看今天的判决，算清成本再决定。",
+                "next_action": "看判决流"}
+    b, v = row
+    pnl = U.bet_pnl(b, v)
+    if v.settled == "win":
+        return {"available": True, "kind": "settled_win",
+                "message": f"这注 {b.amount:.0f} 元已结算，按 SP 计盈利 {pnl:.2f} 元。"
+                           "一次结果不代表长期优势，继续按成本账走。",
+                "bet_id": b.id, "amount": b.amount, "pnl": pnl,
+                "next_action": "看复盘"}
+    if v.settled == "lose":
+        return {"available": True, "kind": "settled_lose",
+                "message": f"这注 {b.amount:.0f} 元已结算，亏损 {-pnl:.2f} 元。"
+                           "亏损以本金为上限，别用加注把它追回来。",
+                "bet_id": b.id, "amount": b.amount, "pnl": pnl,
+                "next_action": "看复盘或休息"}
+    return {"available": True, "kind": "pending",
+            "message": f"已记录 {b.amount:.0f} 元，赛果未出。"
+                       "无论结果如何，这注的最大损失就是本金。",
+            "bet_id": b.id, "amount": b.amount, "pnl": None,
+            "next_action": "等结算，不再加注"}
+
+
+
 # ---------- F13 记忆 ----------
 
-@router.get("/me/memories")
-def memories_list(user: User = Depends(current_user), db: Session = Depends(get_db)):
-    return [{"key": m.key, "value": m.value, "source": m.source}
+def _memory_items(db: Session, user: User) -> list[dict]:
+    return [{"key": m.key, "value": m.value, "source": m.source,
+             "category": getattr(m, "category", "preference"),
+             "confidence": getattr(m, "confidence", 1.0),
+             "expires_at": (m.expires_at.isoformat() if getattr(m, "expires_at", None)
+                            else None)}
             for m in U.list_memories(db, user.id)]
 
 
-@router.put("/me/memories/{key}")
+@router.get("/me/memories", response_model=list[MemoryItem])
+def memories_list(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    return _memory_items(db, user)
+
+
+@router.get("/memories", response_model=list[MemoryItem])
+def memories_root(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """兼容 TechSpec 的 GET /memories（与 /me/memories 同数据）。"""
+    return _memory_items(db, user)
+
+
+@router.post("/memories", response_model=MemoryWriteResponse)
+def memory_create(body: MemoryCreate, user: User = Depends(current_user),
+                  db: Session = Depends(get_db)):
+    """兼容 TechSpec 的 POST /memories：key 在 body 里。"""
+    return memory_put(body.key, MemoryBody(value=body.value, source=body.source,
+                                           confirm=body.confirm), user, db)
+
+
+@router.put("/me/memories/{key}", response_model=MemoryWriteResponse)
 def memory_put(key: str, body: MemoryBody, user: User = Depends(current_user),
                db: Session = Depends(get_db)):
     if not key.strip():
@@ -201,6 +308,13 @@ def memory_delete(key: str, user: User = Depends(current_user), db: Session = De
     if not U.delete_memory(db, user.id, key):
         raise HTTPException(404, "memory not found")
     return {"deleted": key}
+
+
+@router.delete("/memories/{key}", response_model=MemoryDeleteResponse)
+def memory_delete_root(key: str, user: User = Depends(current_user),
+                       db: Session = Depends(get_db)):
+    """兼容 TechSpec 的 DELETE /memories/{key}。"""
+    return memory_delete(key, user, db)
 
 
 # ---------- 注单（F11 行为面：保护期加注需确认） ----------
@@ -309,6 +423,10 @@ def verdict_postmortem(verdict_id: str, db: Session = Depends(get_db)):
 def weekly(authorization: str | None = Header(default=None),
            db: Session = Depends(get_db)):
     u = U.user_from_token(db, authorization)
+    if u is not None and U.is_deleted(u):
+        raise HTTPException(410, detail={
+            "error": "account_deleted", "cooldown_days": 7,
+            "message": "账号已注销（冷静期内）。同设备令牌登录即自动撤回。"})
     return weekly_report(db, u.id if u else None)
 
 

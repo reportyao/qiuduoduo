@@ -1,4 +1,4 @@
-# 解球后端 · W5 认证已上线（W8 冻结基线已重采纳 65 路由）
+# 解球后端 · W5 认证已上线（W8 冻结基线需随 API 变更重新采纳）
 
 认证（方案 B·自建）：
 `/auth/sms/send|verify`（CN 手机号）· `/auth/wechat/callback|bind-phone`（微信后强制绑手机）·
@@ -8,9 +8,22 @@
 
 ---
 
-# 解球后端 · W8（功能冻结）
+# 2026-11-04 API 补全（当前 92 路径 / 105 方法）
 
-W8 提审基建：`/review/checklist` 提审检查单（自动聚合）· `/review/banned-words/scan` 即席文案扫描 · `/legal/disclosure` 隐私+SDK+权限契约 · `/app/version` OTA · `/review/freeze` 功能冻结（53 路由基线，新增即违规）。禁用词 21 词表 + 反空格/标点/全角绕过，后端库扫描零命中。
+补齐 Feature-API-Mapping 中有数据支撑但未暴露的接口：`/matches`、`/verdicts/today`、
+`/matches/{id}/cost|evidence|live`、`/avoid-list`、`/water-rank`、`/calendar`、`/sp/movements`、
+`/agents/sentinel/feed`、`/me/comfort`、`/verdicts/{id}/react`、`/share/card`，以及
+`/devices`、`/push/preferences|health`、`/matches/{id}/follow`、`/memories`、`/me/persona` 兼容别名。
+完整对账与未实现项见 [docs/reviews/2026-11-04-api-audit.md](../docs/reviews/2026-11-04-api-audit.md)。
+
+> **W8 冻结纪律**：新增路由后需用控制台登录调用 `POST /review/freeze/adopt` 重新采纳基线，
+> 否则 `/review/freeze` 会把本次新增路由报为违规。这是预期行为，不是运行时 bug。
+
+---
+
+# 解球后端 · W8（提审基建）
+
+W8 提审基建：`/review/checklist` 提审检查单（自动聚合）· `/review/banned-words/scan` 即席文案扫描 · `/legal/disclosure` 隐私+SDK+权限契约 · `/app/version` OTA · `/review/freeze` 功能冻结（基线以最近一次 `/review/freeze/adopt` 为准，新增即违规）。禁用词 21 词表 + 反空格/标点/全角绕过，后端库扫描零命中。
 
 ---
 

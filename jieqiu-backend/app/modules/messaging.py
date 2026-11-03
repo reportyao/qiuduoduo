@@ -79,6 +79,23 @@ def _recent_postmortems(db: Session, limit: int = 3) -> list[dict]:
     } for v in settled_pm]
 
 
+def avoid_reason(v: Verdict) -> tuple[str, str]:
+    """被砍场次的首道死闸 + 人话原因；流/避雷榜/why-not 共用同一口径。"""
+    for gate in ("price", "market", "model"):
+        g = v.gates.get(gate, {})
+        if not isinstance(g, dict):
+            continue
+        if g.get("result") == "fail":
+            if gate == "price":
+                return gate, f"抽水 {v.rake*100:.1f}%，超当日阈值 {v.rake_threshold*100:.1f}%"
+            if gate == "market":
+                div = g.get("detail", {}).get("divergence")
+                return gate, (f"多源离散 {div*100:.1f}pp，超 5pp 阈值"
+                              if div is not None else "多源口径分歧超 5pp")
+            return gate, f"模型置信 {g.get('detail', {}).get('top', 0)*100:.0f}%，低于 53% 可推线"
+    return "price", "过闸失败"
+
+
 def build_stream(db: Session, trade_date: str, cursor: str | None = None,
                  limit: int = 50, user=None) -> dict:
     # F7 非比赛日：当日窗口（00:00 ~ 次日 04:59）无任何场次 → 诚实空态 + 课程 + 复盘卡
@@ -129,16 +146,7 @@ def build_stream(db: Session, trade_date: str, cursor: str | None = None,
     killed = [v for v in verdicts if v.status == "killed"]
 
     def kill_why(v: Verdict) -> tuple[str, str]:
-        for gate in ("price", "market", "model"):
-            g = v.gates.get(gate, {})
-            if g.get("result") == "fail":
-                if gate == "price":
-                    return gate, f"抽水 {v.rake*100:.1f}%，超当日阈值 {v.rake_threshold*100:.1f}%"
-                if gate == "market":
-                    div = g.get("detail", {}).get("divergence")
-                    return gate, f"多源离散 {div*100:.1f}pp，超 5pp 阈值" if div is not None else "多源口径分歧超 5pp"
-                return gate, f"模型置信 {g.get('detail', {}).get('top', 0)*100:.0f}%，低于 53% 可推线"
-        return "price", "过闸失败"
+        return avoid_reason(v)
 
     killed.sort(key=lambda v: v.rake, reverse=True)
     avoid = [

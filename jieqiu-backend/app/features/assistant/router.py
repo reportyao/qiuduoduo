@@ -1,6 +1,7 @@
 """AI 助理 API：站内信 inbox、关注、通知设置、Android 推送 token。"""
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -118,6 +119,16 @@ class NotifyResponse(BaseModel):
 
 class PushRegisterResponse(OkResponse):
     id: int
+
+
+class PushHealthResponse(BaseModel):
+    configured: bool
+    dryrun: bool
+    provider: str
+    enabled_tokens: int
+    total_tokens: int
+    last_error: str | None = None
+    note: str
 
 
 def _notify_dict(row: NotifySettings | None) -> dict:
@@ -264,6 +275,56 @@ def watch_remove(watch_id: int, user: User = Depends(current_user),
     return {"ok": True}
 
 
+class FollowBody(BaseModel):
+    events: list[str] | None = None
+
+
+def _watch_item(row: WatchTarget, match: SPMatch | None) -> dict:
+    return {
+        "id": row.id, "target_type": row.target_type, "target_id": row.target_id,
+        "events": row.events or [],
+        "match_no": match.match_no if match else None,
+        "home": match.home if match else None,
+        "away": match.away if match else None,
+        "league": match.league if match else None,
+        "kickoff": match.kickoff if match else None,
+    }
+
+
+@router.post("/matches/{match_id}/follow", response_model=WatchItem)
+def follow_match(match_id: str, body: FollowBody | None = None,
+                 user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """F21 兼容接口：关注一场比赛（底层仍是 watch_targets）。"""
+    m = db.get(SPMatch, match_id)
+    if m is None:
+        raise HTTPException(404, "比赛不存在")
+    row = db.scalar(select(WatchTarget).where(
+        WatchTarget.user_id == user.id, WatchTarget.target_type == "match",
+        WatchTarget.target_id == match_id))
+    if row is None:
+        row = WatchTarget(user_id=user.id, target_type="match", target_id=match_id,
+                          events=(body.events if body and body.events is not None else []))
+        db.add(row)
+    elif body is not None and body.events is not None:
+        row.events = body.events
+    db.commit()
+    db.refresh(row)
+    return _watch_item(row, m)
+
+
+@router.delete("/matches/{match_id}/follow", response_model=OkResponse)
+def unfollow_match(match_id: str, user: User = Depends(current_user),
+                   db: Session = Depends(get_db)):
+    row = db.scalar(select(WatchTarget).where(
+        WatchTarget.user_id == user.id, WatchTarget.target_type == "match",
+        WatchTarget.target_id == match_id))
+    if row is None:
+        raise HTTPException(404, "not following")
+    db.delete(row)
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/me/notify-settings", response_model=NotifyResponse)
 def notify_get(user: User = Depends(current_user), db: Session = Depends(get_db)):
     return _notify_dict(db.get(NotifySettings, user.id))
@@ -342,3 +403,54 @@ def push_unregister(body: PushUnregister, user: User = Depends(current_user),
         db.delete(row)
         db.commit()
     return {"ok": True}
+
+
+# ---------- 兼容别名（Feature-API-Mapping / TechSpec 旧路径） ----------
+
+@router.post("/devices", response_model=PushRegisterResponse)
+def devices_alias(body: PushRegister, user: User = Depends(current_user),
+                  db: Session = Depends(get_db)):
+    """兼容 POST /devices；实现与 /push/register 完全一致。"""
+    return push_register(body, user, db)
+
+
+@router.get("/push/preferences", response_model=NotifyResponse)
+def push_preferences_get(user: User = Depends(current_user),
+                         db: Session = Depends(get_db)):
+    return notify_get(user, db)
+
+
+@router.put("/push/preferences", response_model=NotifyResponse)
+def push_preferences_put(body: NotifyBody, user: User = Depends(current_user),
+                         db: Session = Depends(get_db)):
+    return notify_put(body, user, db)
+
+
+@router.post("/push/preferences", response_model=NotifyResponse)
+def push_preferences_post(body: NotifyBody, user: User = Depends(current_user),
+                          db: Session = Depends(get_db)):
+    """兼容 TechSpec 的 POST /push/preferences（与 PUT 同一实现）。"""
+    return notify_put(body, user, db)
+
+
+@router.get("/push/health", response_model=PushHealthResponse)
+def push_health(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """推送通道健康：只报告本账号 token 与全局厂商配置，不泄漏 token。"""
+    configured = bool(os.environ.get("JQ_JPUSH_APPKEY") and
+                      os.environ.get("JQ_JPUSH_MASTER_SECRET"))
+    dryrun = (os.environ.get("JQ_JPUSH_DRYRUN", "").strip() in ("1", "true", "yes")
+              or not configured)
+    total = db.scalar(select(func.count(PushToken.id)).where(
+        PushToken.user_id == user.id)) or 0
+    enabled = db.scalar(select(func.count(PushToken.id)).where(
+        PushToken.user_id == user.id, PushToken.enabled.is_(True))) or 0
+    last_error = db.scalar(select(PushToken.last_error).where(
+        PushToken.user_id == user.id, PushToken.last_error != "")
+        .order_by(PushToken.id.desc()).limit(1))
+    return {
+        "configured": configured, "dryrun": dryrun, "provider": "jpush",
+        "enabled_tokens": enabled, "total_tokens": total,
+        "last_error": last_error or None,
+        "note": ("MVP 仅 Android/JPush；未配置厂商密钥时 worker 为 dry-run。"
+                 "真实 token 由 Android 包注册。"),
+    }

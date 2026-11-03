@@ -197,3 +197,11 @@
 | 今日在售直达完整账 | 在售列表点击 | `GET /matches/on-sale` 返回 verdict_id | ✅ |
 | 不推页直达完整账 | promoted 状态 | `GET /matches/{id}/why-not` 返回 verdict_id | ✅ |
 | 通知/隐私文案 | 合规中心/法律页 | `GET /legal/text` 的真实热线（12356） | ✅ 已去掉 400 占位 |
+
+---
+
+## 2026-11-04 API 全量补全
+
+OpenAPI 从 72 路径补到 **92 路径**，新增：`/matches`、`/verdicts/today`、`/matches/{id}/cost|evidence|live`、`/avoid-list`、`/water-rank`、`/calendar`、`/sp/movements`、`/agents/sentinel/feed`、`/me/comfort`、`/verdicts/{id}/react`、`/share/card`，以及 `/devices`、`/push/preferences|health`、`/matches/{id}/follow`、`/memories`、`/me/persona` 兼容别名。
+
+仍未实现的是 v1.5/外部依赖项：串关服务端、vision OCR、合规中心服务端同步、支付/订阅、真实 live feed 与进球提醒、编辑台持久化。完整审查见 [docs/reviews/2026-11-04-api-audit.md](docs/reviews/2026-11-04-api-audit.md)。

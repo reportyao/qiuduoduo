@@ -82,14 +82,22 @@ def stream(date: str | None = None, cursor: str | None = None, limit: int = 50,
 
 
 @router.get("/analysis-log")
-def analysis_log(date: str | None = None, limit: int = 100, db: Session = Depends(get_db)):
+def analysis_log(date: str | None = None, match_id: str | None = None,
+                 limit: int = 100, db: Session = Depends(get_db)):
     """引擎分析日志（UI「引擎状态」弹层）：当日各场各闸最新一次结果，按时间倒序。"""
     d = date or cn_now().strftime("%Y-%m-%d")
+    try:
+        parsed = datetime.strptime(d, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(422, "date must be YYYY-MM-DD")
+    if parsed.year > 2100:
+        raise HTTPException(422, "date 超出支持范围")
+    limit = max(1, min(limit, 500))
     from ..models import ModelRun
-    rows = db.scalars(
-        select(ModelRun).where(ModelRun.run_date == d)
-        .order_by(ModelRun.created_at.desc(), ModelRun.id.desc())
-    ).all()
+    q = select(ModelRun).where(ModelRun.run_date == d)
+    if match_id:
+        q = q.where(ModelRun.match_id == match_id)
+    rows = db.scalars(q.order_by(ModelRun.created_at.desc(), ModelRun.id.desc())).all()
     latest: dict[tuple[str, str], ModelRun] = {}
     for r in rows:  # 倒序遍历，首见即最新（created_at 同秒时 id 大者胜）
         latest.setdefault((r.match_id, r.gate), r)
