@@ -12,6 +12,7 @@ from tests.conftest import today_cn
 def _reset_limits():
     A._last_send.clear()
     A._daily_count.clear()
+    A._ip_sends.clear()
 
 
 def _send_and_verify(client, channel: str, target: str, purpose="login"):
@@ -210,3 +211,77 @@ def test_auth_providers_by_region(client):
     assert [p["id"] for p in cn["providers"]] == ["phone", "wechat"]
     assert [p["id"] for p in gl["providers"]] == ["email", "google", "apple"]
     assert cn["providers"][0]["primary"] is True and gl["providers"][0]["primary"] is True
+
+
+# ---------- 二轮 review 回归 ----------
+
+def test_ip_send_limit_blocks_sms_bombing(db, client):
+    """同一 IP 对 21 个不同号码发码 → 第 21 个 429（防短信轰炸）。"""
+    A._last_send.clear(); A._daily_count.clear(); A._ip_sends.clear()
+    ok = 0
+    limited = 0
+    for i in range(21):
+        r = client.post("/auth/sms/send", json={"phone": f"1390000{i:04d}"})
+        if r.status_code == 200:
+            ok += 1
+        elif r.status_code == 429:
+            limited += 1
+            break
+    assert ok <= A._IP_HOURLY_LIMIT and limited == 1
+
+
+def test_login_restores_soft_deleted_account(db, client):
+    """手机号登录 = 撤回注销（与设备登录同语义）。"""
+    _reset_limits()
+    from app.modules.users import soft_delete
+    r = _send_and_verify(client, "sms", "13100131000").json()
+    uid = r["user"]["user_id"]
+    u = db.get(User, uid)
+    soft_delete(db, u)
+    assert db.get(User, uid).deleted_at is not None
+    r2 = _send_and_verify(client, "sms", "13100131000").json()
+    assert r2["user"]["user_id"] == uid
+    me = client.get("/me", headers={"Authorization": "Bearer " + r2["access_token"]})
+    assert me.status_code == 200  # 410 已解除
+    assert db.get(User, uid).deleted_at is None
+
+
+def test_purge_removes_auth_identities_and_tokens(db):
+    """注销期满清除必须带走手机号/邮箱/第三方标识与刷新令牌（隐私）。"""
+    from datetime import datetime, timedelta, timezone
+    from app.models import AuthIdentity, RefreshToken
+    from app.modules.users import purge_expired_deletions
+    u, _ = A.get_or_create_by_phone(db, "13000130000")
+    A.issue_refresh(db, u)
+    u.deleted_at = datetime.now(timezone.utc) - timedelta(days=8)
+    db.commit()
+    assert db.scalars(select(AuthIdentity).where(AuthIdentity.user_id == u.id)).all()
+    counts = purge_expired_deletions(db, days=7)
+    assert counts["purged_users"] == 1
+    assert counts["removed_identities"] >= 1 and counts["removed_tokens"] >= 1
+    assert db.scalars(select(AuthIdentity).where(AuthIdentity.user_id == u.id)).all() == []
+    assert db.get(User, u.id) is None
+
+
+def test_export_includes_auth_fields(db, client):
+    _reset_limits()
+    r = _send_and_verify(client, "sms", "13000131000").json()
+    ex = client.get("/me/export", headers={"Authorization": "Bearer " + r["access_token"]}).json()
+    assert ex["user"]["phone"] == "13000131000"
+    assert ex["user"]["phone_verified"] is True
+    assert any(i["provider"] == "phone" for i in ex["auth_identities"])
+
+
+def test_unique_phone_index_enforced(db):
+    """数据库层唯一约束：同号二次插入必须失败（并发注册的最后防线）。"""
+    from sqlalchemy.exc import IntegrityError
+    import uuid as _uuid
+    A.get_or_create_by_phone(db, "13000132000")
+    dup = User(id=_uuid.uuid4().hex, device_token=_uuid.uuid4().hex,
+               region="cn", phone="13000132000")
+    db.add(dup)
+    try:
+        db.commit()
+        assert False, "唯一索引未生效"
+    except IntegrityError:
+        db.rollback()

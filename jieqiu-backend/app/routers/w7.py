@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Bet, Memory, ShareCard, User
+from ..models import AuthIdentity, Bet, Memory, ShareCard, User
 from ..modules import users as U
 from ..modules.share import (market_profile, share_streak, share_verdict,
                              share_weekly, verify_share)
@@ -105,8 +105,18 @@ def me_export(user: User = Depends(current_user), db: Session = Depends(get_db))
             "odds_format": user.odds_format,
             "discipline_on": user.discipline_on,
             "rested_until": user.rested_until,
+            "phone": user.phone,          # 本人数据导出：完整号码
+            "email": user.email,
+            "phone_verified": bool(user.phone_verified),
+            "email_verified": bool(user.email_verified),
             "created_at": user.created_at.isoformat(),
         },
+        "auth_identities": [
+            {"provider": i.provider, "identifier": i.provider_uid,
+             "masked": i.identifier_masked,
+             "created_at": i.created_at.isoformat()}
+            for i in db.scalars(select(AuthIdentity).where(AuthIdentity.user_id == user.id))
+        ],
         "bets": [{"verdict_id": b.verdict_id, "amount": b.amount,
                   "pick_dir": b.pick_dir, "created_at": b.created_at.isoformat()}
                  for b in bets],

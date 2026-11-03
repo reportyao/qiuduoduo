@@ -15,9 +15,7 @@
 """
 from __future__ import annotations
 
-import time
-
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -30,17 +28,28 @@ from ..modules import auth as A
 router = APIRouter()
 
 
-def _ensure_login_ready() -> None:
-    """生产 fail-loud：密钥或真实验证通道任一缺失 → 503，绝不静默降级。"""
+def _ensure_login_ready(kind: str = "jwt") -> None:
+    """生产 fail-loud：按端点类型校验所需配置，缺任一 → 503，绝不静默降级。
+
+    kind: jwt | sms | email | wechat | google | apple
+    """
     st = get_settings()
-    if st.env == "prod":
-        if not st.jwt_secret:
-            raise HTTPException(503, "认证服务未配置：JQ_JWT_SECRET 缺失")
-        if st.auth_stub:
-            raise HTTPException(503, "认证服务未配置：生产禁止 auth_stub（会伪造验证码）")
-        if st.sms_provider == "stub" or st.email_provider == "stub":
-            raise HTTPException(
-                503, "认证通道未接入：请配置真实短信（JQ_SMS_PROVIDER=tencent）与邮件（JQ_EMAIL_PROVIDER=resend）")
+    if st.env != "prod":
+        return
+    if not st.jwt_secret:
+        raise HTTPException(503, "认证服务未配置：JQ_JWT_SECRET 缺失")
+    if st.auth_stub:
+        raise HTTPException(503, "认证服务未配置：生产禁止 auth_stub（会伪造验证码）")
+    if kind == "sms" and st.sms_provider == "stub":
+        raise HTTPException(503, "短信通道未接入：JQ_SMS_PROVIDER=tencent + 短信密钥/模板")
+    if kind == "email" and st.email_provider == "stub":
+        raise HTTPException(503, "邮件通道未接入：JQ_EMAIL_PROVIDER=resend + JQ_RESEND_API_KEY")
+    if kind == "wechat" and not (st.wechat_app_id and st.wechat_app_secret):
+        raise HTTPException(503, "微信登录未接入：JQ_WECHAT_APP_ID / JQ_WECHAT_SECRET")
+    if kind == "google" and not st.google_client_id:
+        raise HTTPException(503, "Google 登录未接入：JQ_GOOGLE_CLIENT_ID")
+    if kind == "apple" and not st.apple_client_id:
+        raise HTTPException(503, "Apple 登录未接入：JQ_APPLE_CLIENT_ID")
 
 
 class SendBody(BaseModel):
@@ -81,12 +90,16 @@ class RefreshBody(BaseModel):
 # ---------- 发送验证码 ----------
 
 @router.post("/auth/sms/send")
-def sms_send(body: SendBody, db: Session = Depends(get_db)):
-    _ensure_login_ready()
+def sms_send(body: SendBody, request: Request, db: Session = Depends(get_db)):
+    _ensure_login_ready("sms")
     phone = (body.phone or "").strip()
     if not A.PHONE_RE.match(phone):
         raise HTTPException(422, "手机号格式不正确（中国大陆 11 位）")
-    r = A.send_code(db, "sms", phone, body.purpose)
+    try:
+        r = A.send_code(db, "sms", phone, body.purpose,
+                        ip=request.client.host if request.client else None)
+    except RuntimeError as e:
+        raise HTTPException(503, f"短信通道不可用：{e}")
     if not r["ok"]:
         raise HTTPException(429, detail={"error": "too_many_requests",
                                          "retry_after": r.get("retry_after", 60)})
@@ -94,12 +107,16 @@ def sms_send(body: SendBody, db: Session = Depends(get_db)):
 
 
 @router.post("/auth/email/send")
-def email_send(body: SendBody, db: Session = Depends(get_db)):
-    _ensure_login_ready()
+def email_send(body: SendBody, request: Request, db: Session = Depends(get_db)):
+    _ensure_login_ready("email")
     email = (body.email or "").strip().lower()
     if not A.EMAIL_RE.match(email):
         raise HTTPException(422, "邮箱格式不正确")
-    r = A.send_code(db, "email", email, body.purpose)
+    try:
+        r = A.send_code(db, "email", email, body.purpose,
+                        ip=request.client.host if request.client else None)
+    except RuntimeError as e:
+        raise HTTPException(503, f"邮件通道不可用：{e}")
     if not r["ok"]:
         raise HTTPException(429, detail={"error": "too_many_requests",
                                          "retry_after": r.get("retry_after", 60)})
@@ -110,7 +127,7 @@ def email_send(body: SendBody, db: Session = Depends(get_db)):
 
 @router.post("/auth/sms/verify")
 def sms_verify(body: VerifySmsBody, db: Session = Depends(get_db)):
-    _ensure_login_ready()
+    _ensure_login_ready("sms")
     phone = body.phone.strip()
     if not A.PHONE_RE.match(phone):
         raise HTTPException(422, "手机号格式不正确")
@@ -123,7 +140,7 @@ def sms_verify(body: VerifySmsBody, db: Session = Depends(get_db)):
 
 @router.post("/auth/email/verify")
 def email_verify(body: VerifyEmailBody, db: Session = Depends(get_db)):
-    _ensure_login_ready()
+    _ensure_login_ready("email")
     email = body.email.strip().lower()
     if not A.EMAIL_RE.match(email):
         raise HTTPException(422, "邮箱格式不正确")
@@ -137,7 +154,7 @@ def email_verify(body: VerifyEmailBody, db: Session = Depends(get_db)):
 
 @router.post("/auth/wechat/callback")
 def wechat_callback(body: WechatBody, db: Session = Depends(get_db)):
-    _ensure_login_ready()
+    _ensure_login_ready("wechat")
     wx = A.wechat_exchange(body.code)
     if not wx:
         raise HTTPException(401, "微信授权失败")
@@ -175,7 +192,7 @@ def _read_bind_token(token: str) -> str | None:
 
 @router.post("/auth/wechat/bind-phone")
 def wechat_bind_phone(body: WechatBindBody, db: Session = Depends(get_db)):
-    _ensure_login_ready()
+    _ensure_login_ready("sms")
     openid = _read_bind_token(body.bind_token)
     if not openid:
         raise HTTPException(401, "绑定凭证无效或已过期，请重新微信授权")
@@ -194,13 +211,17 @@ def wechat_bind_phone(body: WechatBindBody, db: Session = Depends(get_db)):
 
 
 @router.post("/auth/wechat/bind-phone/send")
-def wechat_bind_send(body: SendBody, db: Session = Depends(get_db)):
+def wechat_bind_send(body: SendBody, request: Request, db: Session = Depends(get_db)):
     """微信绑定流程专用的验证码发送（purpose=wechat_bind）。"""
-    _ensure_login_ready()
+    _ensure_login_ready("sms")
     phone = (body.phone or "").strip()
     if not A.PHONE_RE.match(phone):
         raise HTTPException(422, "手机号格式不正确")
-    r = A.send_code(db, "sms", phone, "wechat_bind")
+    try:
+        r = A.send_code(db, "sms", phone, "wechat_bind",
+                        ip=request.client.host if request.client else None)
+    except RuntimeError as e:
+        raise HTTPException(503, f"短信通道不可用：{e}")
     if not r["ok"]:
         raise HTTPException(429, detail={"error": "too_many_requests",
                                          "retry_after": r.get("retry_after", 60)})
@@ -220,13 +241,16 @@ def oauth_apple(body: OAuthBody, db: Session = Depends(get_db)):
 
 
 def _oauth_login(db: Session, provider: str, id_token: str):
-    _ensure_login_ready()
+    _ensure_login_ready(provider)
     info = A.verify_oauth(provider, id_token)
     if not info or not info.get("sub"):
         raise HTTPException(401, "第三方登录校验失败")
     sub = info["sub"]
     user = A.find_user_by_identity(db, provider, sub)
     created = False
+    if user is not None and user.deleted_at is not None:
+        user.deleted_at = None  # 登录 = 撤回注销
+        db.commit()
     if user is None:
         email = (info.get("email") or "").lower() or None
         # 同邮箱已注册 → 合并到既有用户（仅当邮箱已验证；该用户未绑同 provider 其他账号）
@@ -251,7 +275,7 @@ def _oauth_login(db: Session, provider: str, id_token: str):
 
 @router.post("/auth/refresh")
 def refresh(body: RefreshBody, db: Session = Depends(get_db)):
-    _ensure_login_ready()
+    _ensure_login_ready("jwt")
     out = A.rotate_refresh(db, body.refresh_token)
     if not out:
         raise HTTPException(401, "刷新令牌无效（可能已复用，整个会话族已撤销）")

@@ -9,7 +9,6 @@
 """
 from __future__ import annotations
 
-import base64
 import hashlib
 import hmac
 import json
@@ -38,6 +37,8 @@ EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 _last_send: dict[str, float] = {}
 _daily_count: dict[str, int] = {}
 _daily_key: str = ""
+_ip_sends: dict[str, list[float]] = {}   # 单 IP 每小时上限（防短信轰炸）
+_IP_HOURLY_LIMIT = 20
 
 
 # ---------------- JWT / refresh ----------------
@@ -86,27 +87,39 @@ def issue_refresh(db: Session, user: User, family_id: str | None = None) -> str:
 
 
 def rotate_refresh(db: Session, raw: str) -> dict | None:
-    """轮换刷新令牌。复用已撤销令牌 → 撤销整个 family（盗用应对）。"""
+    """轮换刷新令牌。复用已撤销令牌 → 撤销整个 family（盗用应对）。
+
+    原子化：UPDATE ... WHERE revoked=0 抢占；rowcount=0 视为并发复用。
+    """
+    from sqlalchemy import update as _update
     row = db.scalar(select(RefreshToken).where(RefreshToken.token_hash == _hash_refresh(raw)))
     if row is None:
         return None
     if row.revoked:
-        # 复用检测：整个 family 视为已泄露
-        for r in db.scalars(select(RefreshToken).where(RefreshToken.family_id == row.family_id)):
-            r.revoked = True
-        db.commit()
+        _revoke_family(db, row.family_id)  # 复用检测：整个 family 视为已泄露
         return None
     if row.expires_at < _now():
         return None
     user = db.get(User, row.user_id)
     if user is None or user.deleted_at is not None:
         return None
-    row.revoked = True
+    res = db.execute(_update(RefreshToken)
+                     .where(RefreshToken.id == row.id, RefreshToken.revoked.is_(False))
+                     .values(revoked=True))
     db.commit()
+    if (res.rowcount or 0) == 0:
+        _revoke_family(db, row.family_id)  # 并发下已被使用 → 视为复用
+        return None
     access, ttl = issue_access(user)
     new_raw = issue_refresh(db, user, family_id=row.family_id)
     return {"access_token": access, "refresh_token": new_raw,
             "expires_in": ttl, "token_type": "bearer"}
+
+
+def _revoke_family(db: Session, family_id: str) -> None:
+    for r in db.scalars(select(RefreshToken).where(RefreshToken.family_id == family_id)):
+        r.revoked = True
+    db.commit()
 
 
 def revoke_refresh(db: Session, raw: str) -> None:
@@ -143,8 +156,18 @@ def _daily_ok(target: str) -> bool:
     return _daily_count.get(target, 0) < get_settings().code_daily_limit
 
 
-def send_code(db: Session, channel: str, target: str, purpose: str = "login") -> dict:
-    """生成并发送验证码。返回 {ok, ttl, dev_code?}。限流：60s / 10 条每日。"""
+def _ip_ok(ip: str | None) -> bool:
+    if not ip:
+        return True
+    now = time.time()
+    arr = [t for t in _ip_sends.get(ip, []) if now - t < 3600]
+    _ip_sends[ip] = arr
+    return len(arr) < _IP_HOURLY_LIMIT
+
+
+def send_code(db: Session, channel: str, target: str, purpose: str = "login",
+              ip: str | None = None) -> dict:
+    """生成并发送验证码。限流：同目标 60s / 10 条每日；同 IP 20 条/小时。"""
     st = get_settings()
     key = f"{channel}:{target}"
     now = time.time()
@@ -152,6 +175,8 @@ def send_code(db: Session, channel: str, target: str, purpose: str = "login") ->
         return {"ok": False, "retry_after": int(st.code_send_interval_seconds - (now - _last_send.get(key, 0)))}
     if not _daily_ok(key):
         return {"ok": False, "retry_after": 3600}
+    if not _ip_ok(ip):
+        return {"ok": False, "retry_after": 3600, "reason": "ip_limit"}
     code = f"{secrets.randbelow(1000000):06d}"
     db.add(VerificationCode(
         channel=channel, target_hash=_target_hash(channel, target),
@@ -160,6 +185,8 @@ def send_code(db: Session, channel: str, target: str, purpose: str = "login") ->
     db.commit()
     _last_send[key] = now
     _daily_count[key] = _daily_count.get(key, 0) + 1
+    if ip:
+        _ip_sends.setdefault(ip, []).append(now)
     _dispatch(channel, target, code)
     out = {"ok": True, "ttl": st.code_ttl_seconds}
     if st.env != "prod" and st.auth_stub:
@@ -325,8 +352,14 @@ def create_user(db: Session, region: str, phone: str | None = None,
 def get_or_create_by_phone(db: Session, phone: str) -> tuple[User, bool]:
     u = db.scalar(select(User).where(User.phone == phone))
     if u:
+        changed = False
         if not u.phone_verified:
             u.phone_verified = True
+            changed = True
+        if u.deleted_at is not None:
+            u.deleted_at = None  # 登录 = 撤回注销（与设备登录同语义）
+            changed = True
+        if changed:
             db.commit()
         return u, False
     u = create_user(db, "cn", phone=phone)
@@ -338,8 +371,14 @@ def get_or_create_by_email(db: Session, email: str) -> tuple[User, bool]:
     email = email.lower()
     u = db.scalar(select(User).where(User.email == email))
     if u:
+        changed = False
         if not u.email_verified:
             u.email_verified = True
+            changed = True
+        if u.deleted_at is not None:
+            u.deleted_at = None
+            changed = True
+        if changed:
             db.commit()
         return u, False
     u = create_user(db, "global", email=email)

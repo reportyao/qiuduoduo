@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 
-from app.db import Base, engine, get_db  # noqa: E402
+from app.db import Base, engine, get_db, init_db  # noqa: E402
 from app.main import app  # noqa: E402
 
 CN = timezone(timedelta(hours=8))
@@ -38,7 +38,7 @@ def db():
     except OSError:
         pass
     Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
+    init_db()  # create_all + 列迁移 + W5 唯一索引
     s = TestingSession()
     try:
         yield s

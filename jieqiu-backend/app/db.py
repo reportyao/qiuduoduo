@@ -96,4 +96,18 @@ def _ensure_columns() -> None:
             for col, typ in cols.items():
                 if col not in existing:
                     conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {typ}"))
+        # W5 认证：布尔回填 + 手机/邮箱唯一索引（NULL 允许多行）
+        try:
+            conn.execute(text("UPDATE users SET phone_verified = 0 WHERE phone_verified IS NULL"))
+            conn.execute(text("UPDATE users SET email_verified = 0 WHERE email_verified IS NULL"))
+        except Exception:
+            pass
+        for stmt in (
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_users_phone ON users(phone) WHERE phone IS NOT NULL",
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email ON users(email) WHERE email IS NOT NULL",
+        ):
+            try:
+                conn.execute(text(stmt))
+            except Exception:
+                pass
         conn.commit()
