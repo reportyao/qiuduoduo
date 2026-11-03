@@ -3,11 +3,11 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from app.assistant.events import emit_event
-from app.assistant.fanout import fanout_events
-from app.assistant.monitors import (scan_close_soon, scan_daily_brief,
+from app.features.assistant.events import emit_event
+from app.features.assistant.fanout import fanout_events
+from app.features.assistant.monitors import (scan_close_soon, scan_daily_brief,
                                     scan_verdict_changes)
-from app.assistant.worker import send_pending_push
+from app.features.assistant.worker import send_pending_push
 from app.models import (Notification, PushToken, SPMatch, User, Verdict,
                         VerdictRevision, WatchTarget)
 from tests.conftest import CN, future_kickoff, today_cn
@@ -171,7 +171,7 @@ def test_purge_removes_assistant_data(db):
 
 def test_scan_settlements_recent_utc(db):
     from datetime import datetime, timezone
-    from app.assistant.monitors import scan_settlements
+    from app.features.assistant.monitors import scan_settlements
     v = _verdict(db, vid="v-test-settle", mid="990001")
     v.settled = "win"
     v.settled_at = datetime.now(timezone.utc)

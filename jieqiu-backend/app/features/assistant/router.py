@@ -8,10 +8,10 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ..db import get_db
-from ..models import (Notification, NotifySettings, PushToken, SPMatch,
+from ...db import get_db
+from ...models import (Notification, NotifySettings, PushToken, SPMatch,
                       User, WatchTarget)
-from ..modules.users import user_from_token
+from ...modules.users import user_from_token
 
 router = APIRouter(tags=["assistant"])
 

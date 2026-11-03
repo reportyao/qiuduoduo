@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: jieqiu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: jieqiu
+      POSTGRES_USER: jieqiu
+      POSTGRES_PASSWORD: jieqiu_dev_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jieqiu -d jieqiu"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres_data:

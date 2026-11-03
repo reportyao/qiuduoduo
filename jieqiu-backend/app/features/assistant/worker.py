@@ -1,8 +1,8 @@
 """助理 worker：生成事件 → 扇出 → 发推送。
 
 用法：
-  python -m app.assistant.worker --once
-  python -m app.assistant.worker --loop --interval 60
+  python -m app.features.assistant.worker --once
+  python -m app.features.assistant.worker --loop --interval 60
 """
 from __future__ import annotations
 
@@ -14,8 +14,8 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..db import SessionLocal
-from ..models import Notification, PushToken
+from ...db import SessionLocal
+from ...models import Notification, PushToken
 from .fanout import fanout_events
 from .monitors import run_monitors
 from .providers import PushMessage, PushResult, get_push_provider

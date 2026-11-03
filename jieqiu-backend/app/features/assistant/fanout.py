@@ -12,8 +12,8 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ..config import get_settings
-from ..models import (Bet, Event, Notification, NotifySettings, PushToken,
+from ...config import get_settings
+from ...models import (Bet, Event, Notification, NotifySettings, PushToken,
                       User, Verdict, WatchTarget)
 from .render import render_notification
 

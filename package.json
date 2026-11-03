@@ -1,0 +1,14 @@
+{
+  "name": "jieqiu-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "api:test": "just api-test",
+    "api:openapi": "just api-openapi",
+    "mobile:start": "just mobile-start",
+    "mobile:android": "just mobile-android",
+    "mobile:test": "just mobile-test",
+    "client:generate": "just api-client-generate"
+  }
+}

@@ -1,7 +1,7 @@
 """通知文案：站内信可以详细，系统推送保持中性（PRD F19）。"""
 from __future__ import annotations
 
-from ..models import Event
+from ...models import Event
 
 STATUS_LABEL = {"promoted": "三关全过", "killed": "未过闸", "screening": "复核中"}
 

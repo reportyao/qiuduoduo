@@ -23,3 +23,7 @@ jieqiu-app/__shots/
 jieqiu-app/*.bak-*
 
 jieqiu-backend/assistant.log
+.expo/
+dist/
+.turbo/
+*.tsbuildinfo

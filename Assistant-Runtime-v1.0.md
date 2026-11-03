@@ -577,6 +577,16 @@ JQ_LLM_PROVIDER=glm
 - 前端实时模式：`/stream` 12 场，吉祥物选比赛 12 行；
 - 前端 persona/display_name 在 JWT 登录态下同步 `PATCH /me`；prod 设备登录关闭时不会触发（符合安全策略）。
 
+### Monorepo 重构启动（2026-11-04）
+
+- 新增 `AGENTS.md`、`docs/architecture.md`、ADR-0001/0002/0003、`justfile`、`docker-compose.yml`；
+- assistant 已迁移为后端 feature slice：`app/features/assistant/`，旧 `app/assistant` 移除；
+- 新增 `apps/mobile`：Expo RN + TypeScript + Expo Router + TanStack Query 基座；
+- 新增 `packages/api-client`：OpenAPI 生成契约占位与运行时 client；
+- 新增 Alembic scaffold 与 Postgres Compose；
+- 全量测试 `157 passed`；
+- 下一步：Alembic baseline、`services/api/` 目录迁移、mobile 核心页面接入真实接口。
+
 ### 仍需 P1/P2
 
 - 前端接 `/me/inbox`、`/me/watch`、`/me/notify-settings` 的 **UI**（persona/display_name 同步已接）；

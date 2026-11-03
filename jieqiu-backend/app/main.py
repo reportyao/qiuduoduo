@@ -11,7 +11,7 @@ from .routers.w7 import router as w7_router
 from .routers.console import router as console_router
 from .routers.w8 import router as w8_router
 from .routers.auth_w5 import router as auth_router
-from .routers.assistant import router as assistant_router
+from .features.assistant.router import router as assistant_router
 
 app = FastAPI(
     title="解球 API",

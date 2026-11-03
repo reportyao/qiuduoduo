@@ -10,8 +10,8 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ..config import get_settings
-from ..models import (AssistantState, Event, MatchResult, SPMatch, Verdict,
+from ...config import get_settings
+from ...models import (AssistantState, Event, MatchResult, SPMatch, Verdict,
                       VerdictRevision)
 from .events import emit_event
 
