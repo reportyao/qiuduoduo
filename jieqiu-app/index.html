@@ -89,11 +89,11 @@ body{background:light-dark(#DDDAD2,#0B0D11);font-family:"PingFang SC","MiSans",s
 .chip.on{background:var(--v);border-color:var(--v);color:light-dark(#fff,#0D1512);font-weight:600}
 #backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:40;display:none}
 #backdrop.show{display:block;animation:fd .2s}
-#sheet{position:absolute;left:0;right:0;bottom:76px;z-index:41;background:var(--card);border-radius:22px 22px 0 0;padding:10px 16px 16px;transform:translateY(105%);transition:transform .28s cubic-bezier(.32,.72,.3,1);max-height:75%;overflow-y:auto}
-#sheet.show{transform:translateY(0)}
+#sheet{position:absolute;left:0;right:0;bottom:76px;z-index:41;background:var(--card);border-radius:22px 22px 0 0;padding:10px 16px 16px;transform:translateY(105%);transition:transform .28s cubic-bezier(.32,.72,.3,1),visibility .28s;max-height:75%;overflow-y:auto;visibility:hidden;pointer-events:none}
+#sheet.show{transform:translateY(0);visibility:visible;pointer-events:auto}
 .handle{width:36px;height:4px;border-radius:999px;background:var(--line);margin:0 auto 10px}
 @keyframes fd{from{opacity:0}to{opacity:1}}
-#toast{position:absolute;left:50%;bottom:130px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:13px;opacity:0;transition:.25s;z-index:60;white-space:nowrap;max-width:90%}
+#toast{position:absolute;left:50%;bottom:130px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:13px;opacity:0;transition:.25s;z-index:60;white-space:nowrap;max-width:90%;pointer-events:none}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.err{background:var(--danger);color:#fff}
 .usermsg{max-width:80%;background:var(--vsoft);border-radius:14px 14px 3px 14px;padding:8px 12px;font-size:13px;margin:10px 0 0 auto;width:fit-content}
@@ -230,11 +230,11 @@ body{background:light-dark(#DDDAD2,#0B0D11);font-family:"PingFang SC","MiSans",s
 .whywait p{margin-top:4px;line-height:1.65}
 .sigitem{border-top:1px dashed var(--line)}
 .sigitem:first-of-type{border-top:0}
-.sigitem summary{display:grid;grid-template-columns:24px 1fr auto 10px;gap:9px;align-items:center;min-height:50px;padding:8px 2px;cursor:pointer;list-style:none}
+.sigitem summary{display:grid;grid-template-columns:26px 1fr auto 10px;gap:9px;align-items:center;min-height:50px;padding:8px 2px;cursor:pointer;list-style:none}
 .sigitem summary::after{content:"›";color:var(--muted);font-size:14px;justify-self:end;transition:transform .2s}
 .sigitem[open] summary::after{transform:rotate(90deg)}
 .sigitem summary::-webkit-details-marker{display:none}
-.sigitem .si{font-size:15px;text-align:center}
+.sigitem .si{width:26px;height:26px;border-radius:8px;background:var(--bg);color:var(--muted);display:grid;place-items:center;font-size:11px;font-weight:600}
 .sigitem .sm{min-width:0}
 .sigitem .sm b{display:block;font-size:12.5px;line-height:1.35}
 .sigitem .sm span{display:block;font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:2px}
@@ -273,6 +273,206 @@ body{background:light-dark(#DDDAD2,#0B0D11);font-family:"PingFang SC","MiSans",s
 .updline{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:9px;padding:7px 10px;border-radius:9px;background:var(--asoft);font-size:11.5px;color:var(--amber);cursor:pointer}
 :focus-visible{outline:2px solid var(--v);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ================= v3 · AI 助理视觉系统（2026-11-03） ================= */
+:root{
+  color-scheme:light dark;
+  --bg:light-dark(#F5F4EF,#0A0E0B);--card:light-dark(#FFFFFF,#141A16);
+  --ink:light-dark(#15211B,#ECF0EB);--muted:light-dark(#6B756F,#9AA69F);
+  --line:light-dark(#E9E7E0,#252C27);--v:light-dark(#0E6B4F,#6FCBA9);
+  --vsoft:light-dark(#EAF3EE,#16261F);--danger:light-dark(#A8443A,#E06A57);
+  --dsoft:light-dark(#F7E9E6,#2E1E1A);--amber:light-dark(#A66A18,#D9A441);
+  --asoft:light-dark(#F7EFE1,#2B2418);--pink:light-dark(#A8443A,#E06A57);
+  --shadow:0 1px 2px rgba(16,32,24,.04),0 14px 36px rgba(16,32,24,.06);
+  --shadow-sm:0 1px 2px rgba(16,32,24,.05);
+  --ink-on-dark:#F3F6F2;--muted-on-dark:#A6B5AD;
+}
+body{background:light-dark(#EEECE6,#070A08);font-family:"Inter","SF Pro Text","PingFang SC","MiSans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+#phone{background:var(--bg)}
+#view{padding:0 18px 28px}
+.top{background:var(--bg);padding:14px 18px 10px;z-index:7}
+.appbar{display:flex;align-items:center;justify-content:space-between;width:100%;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.orb{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 30% 26%,#B9EBD8,#2E9B77 52%,#0B4B38);box-shadow:0 0 0 4px rgba(20,120,90,.07),0 5px 14px rgba(20,120,90,.16);position:relative;flex:0 0 auto}
+.orb::after{content:"";position:absolute;inset:6px;border-radius:50%;background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.95),rgba(255,255,255,0) 62%)}
+.brand b{display:block;font-size:15.5px;font-weight:650;letter-spacing:.01em;line-height:1.15}
+.brand span{display:block;font-size:10px;color:var(--muted);letter-spacing:.06em;margin-top:3px}
+.appbar-right{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--muted)}
+.statusdot{width:5px;height:5px;border-radius:50%;background:var(--v);box-shadow:0 0 0 3px rgba(20,120,90,.1)}
+.envbadge{border:1px solid var(--line);border-radius:999px;padding:3px 7px;font-size:9.5px;color:var(--muted);background:transparent;cursor:pointer;letter-spacing:.02em}
+.iconbtn{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);display:grid;place-items:center;font:inherit;font-size:16px;cursor:pointer}
+.iconbtn.back{font-size:15px}
+.ttl{font-size:15.5px;font-weight:600;letter-spacing:-.01em}
+.greet{padding:10px 1px 2px}
+.greet-kicker{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--muted);letter-spacing:.04em}
+.greet h1{font-size:27px;line-height:1.24;font-weight:650;letter-spacing:-.035em;margin-top:10px;max-width:340px}
+.greet p{font-size:12.5px;line-height:1.7;color:var(--muted);margin-top:8px;max-width:330px}
+.greet-meta{display:flex;gap:16px;margin-top:13px;font-size:11px;color:var(--muted);cursor:pointer}
+.greet-meta b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.greet-meta .go{color:var(--v)}
+.answer{position:relative;margin-top:16px;padding:19px 18px 16px;border-radius:26px;background:linear-gradient(155deg,#122B22 0%,#0A1813 72%);color:var(--ink-on-dark);box-shadow:0 20px 44px rgba(8,24,18,.20);overflow:hidden}
+.answer::before{content:"";position:absolute;right:-70px;top:-90px;width:230px;height:230px;border-radius:50%;background:radial-gradient(circle,rgba(111,203,169,.20),transparent 68%);pointer-events:none}
+.answer-top{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.08em;color:rgba(243,246,242,.52);text-transform:uppercase}
+.answer-kicker{display:inline-flex;align-items:center;gap:6px;color:#9FE3C8}
+.answer-kicker::before{content:"";width:5px;height:5px;border-radius:50%;background:#6FCBA9;box-shadow:0 0 8px rgba(111,203,169,.8)}
+.answer-match{font-size:24px;font-weight:600;letter-spacing:-.025em;margin-top:13px;line-height:1.25;display:flex;align-items:center;flex-wrap:wrap;gap:7px}
+.answer-match em{font-style:normal;font-size:11px;color:rgba(243,246,242,.45);font-weight:400;letter-spacing:.04em}
+.answer-meta{font-size:11px;color:rgba(243,246,242,.5);margin-top:4px}
+.answer-pick{display:flex;justify-content:space-between;align-items:flex-end;margin-top:17px;gap:12px}
+.answer-pick .plabel{font-size:10.5px;color:rgba(243,246,242,.48);letter-spacing:.04em;margin-bottom:4px}
+.answer-pick .pv{font-size:28px;font-weight:600;letter-spacing:-.03em;line-height:1.1}
+.answer-pick .pc{font-size:10.5px;border:1px solid rgba(243,246,242,.18);border-radius:7px;padding:2px 6px;color:rgba(243,246,242,.62);vertical-align:middle;margin-left:7px;font-weight:400}
+.answer-prob{text-align:right;flex:0 0 auto}
+.answer-prob b{font-size:31px;font-weight:600;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.answer-prob span{display:block;font-size:10px;color:rgba(243,246,242,.48);margin-top:5px;letter-spacing:.04em}
+.answer-prob em{font-style:normal;font-size:15px;font-weight:500;margin-left:2px;color:rgba(243,246,242,.55)}
+.answer-cost{display:flex;justify-content:space-between;align-items:baseline;margin-top:13px;padding-top:12px;border-top:1px solid rgba(243,246,242,.10);font-size:11px;color:rgba(243,246,242,.52)}
+.answer-cost b{color:#9FE3C8;font-weight:600;font-variant-numeric:tabular-nums}
+.answer-why{font-size:12.5px;line-height:1.68;color:rgba(243,246,242,.76);margin-top:9px}
+.answer-why b{color:#fff;font-weight:600}
+.stepper{display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:14px;border-top:1px solid rgba(243,246,242,.10);border-bottom:1px solid rgba(243,246,242,.10);padding:9px 0}
+.step{padding:0 10px;border-left:1px solid rgba(243,246,242,.10);position:relative}
+.step:first-child{border-left:0;padding-left:0}
+.step span{display:block;font-size:9.5px;color:rgba(243,246,242,.42);letter-spacing:.08em}
+.step b{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:500;color:rgba(243,246,242,.9);margin-top:3px;font-variant-numeric:tabular-nums}
+.step i{position:static;font-style:normal;font-size:9.5px;color:#9FE3C8;margin-left:2px}
+.step.pending b{color:#E8B86A}.step.pending i{color:#E8B86A}
+.answer-actions{display:flex;gap:8px;margin-top:15px}
+.answer-actions .btn{height:43px;border-radius:14px;font-size:13px;flex:1}
+.answer-actions .btn.primary{background:#EAF6F0;border-color:#EAF6F0;color:#0B2A20;font-weight:600}
+.answer-actions .btn.ghost{background:transparent;border-color:rgba(243,246,242,.18);color:rgba(243,246,242,.78)}
+.answer-foot{display:flex;justify-content:space-between;align-items:center;margin-top:13px;font-size:9.5px;color:rgba(243,246,242,.38);letter-spacing:.02em}
+.answer-foot .stamp{width:25px;height:25px;border:1px solid rgba(159,227,200,.45);border-radius:8px;color:#9FE3C8;display:grid;place-items:center;font-size:9.5px;transform:rotate(-6deg)}
+.answer-foot .hash i{background:rgba(243,246,242,.14)}.answer-foot .hash i.l{background:#6FCBA9}
+.wait-card{margin-top:16px;padding:18px;border-radius:24px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow)}
+.wait-top{display:flex;justify-content:space-between;font-size:10px;color:var(--amber);letter-spacing:.06em}
+.wait-match{font-size:23px;font-weight:600;letter-spacing:-.02em;margin-top:12px}
+.wait-meta{font-size:11px;color:var(--muted);margin-top:4px}
+.wait-call{font-size:27px;font-weight:600;letter-spacing:-.03em;color:var(--amber);margin-top:16px}
+.wait-cost{display:flex;justify-content:space-between;margin-top:12px;padding:11px 12px;border-radius:12px;background:var(--asoft);font-size:11.5px}
+.wait-cost b{color:var(--amber)}
+.wait-why{font-size:12.5px;line-height:1.7;color:var(--ink);margin-top:12px}
+.wait-why b{color:var(--amber)}
+.wait-reasons{margin-top:12px;border-top:1px solid var(--line)}
+.wait-reason{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:11.5px}
+.wait-reason span:last-child{color:var(--muted);white-space:nowrap}
+.wait-actions{display:flex;gap:8px;margin-top:14px}
+.wait-actions .btn{height:42px;border-radius:13px}
+.intel-strip{display:flex;align-items:center;gap:11px;width:100%;margin-top:12px;padding:13px 14px;border-radius:18px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow-sm);font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.intel-orb{width:30px;height:30px;border-radius:50%;background:var(--vsoft);color:var(--v);display:grid;place-items:center;flex:0 0 auto}
+.intel-orb svg{width:15px;height:15px}
+.intel-text{flex:1;min-width:0}
+.intel-text b{display:block;font-size:12.5px;font-weight:600}
+.intel-text span{display:block;font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.intel-strip .chev{color:var(--muted);font-size:15px}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;margin:24px 2px 8px}
+.section-head h2{font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+.section-head span{font-size:10.5px;color:var(--muted)}
+.quiet-list{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow-sm)}
+.quiet-row{display:flex;align-items:center;gap:11px;width:100%;padding:12px 14px;border:0;border-top:1px solid var(--line);background:transparent;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.quiet-row:first-child{border-top:0}
+.quiet-dot{width:5px;height:5px;border-radius:50%;background:var(--danger);flex:0 0 auto}
+.quiet-dot.amber{background:var(--amber)}
+.quiet-main{flex:1;min-width:0}
+.quiet-main b{display:block;font-size:12.5px;font-weight:500}
+.quiet-main span{display:block;font-size:10.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.quiet-tag{font-size:9.5px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:2px 5px;flex:0 0 auto}
+.evt{margin-top:12px;padding:15px 16px;border-radius:18px;background:var(--card);border:1px solid var(--line);border-left:2px solid var(--amber);box-shadow:var(--shadow-sm)}
+.evt .eyebrow{font-size:11px;color:var(--amber);margin-bottom:6px;letter-spacing:.04em}
+.evt .et{font-size:12.5px;line-height:1.6;color:var(--ink)}
+.flow{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px}
+.flow .old{color:var(--muted);text-decoration:line-through;font-variant-numeric:tabular-nums}
+.flow .new{color:var(--v);font-weight:600;font-variant-numeric:tabular-nums}
+.flow .delta{font-size:9.5px;color:var(--amber);border:1px solid var(--asoft);background:var(--asoft);border-radius:999px;padding:1px 6px}
+.evt .meta{font-size:10.5px}.evt .btnrow{margin-top:10px}.evt .btn{height:34px;font-size:11.5px;border-radius:10px}
+.recap{display:flex;gap:11px;align-items:flex-start;margin-top:10px;padding:14px 15px;border-radius:18px;background:var(--card);border:1px solid var(--line)}
+.recap .avatar{width:30px;height:30px;border-radius:50%;background:var(--vsoft);display:grid;place-items:center;flex:0 0 auto;font-size:12px;color:var(--v)}
+.recap p{font-size:12px;line-height:1.7;color:var(--muted);margin:0}
+.recap b{color:var(--ink);font-weight:600}
+#chatbar{padding:9px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:light-dark(rgba(245,244,239,.9),rgba(10,14,11,.9));backdrop-filter:blur(18px)}
+#chatbar.show{display:block}
+.chatbox{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 6px 6px 14px;box-shadow:var(--shadow-sm)}
+.chatspark{width:22px;height:22px;border-radius:50%;background:var(--vsoft);color:var(--v);display:grid;place-items:center;flex:0 0 auto}
+.chatspark svg{width:13px;height:13px}
+#chatbar .ib{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:13px;color:var(--ink);height:34px;padding:0}
+#chatbar .ib::placeholder{color:var(--muted)}
+.sendbtn{width:36px;height:36px;border-radius:50%;border:0;background:var(--v);color:light-dark(#fff,#082017);display:grid;place-items:center;font:inherit;font-size:17px;cursor:pointer;flex:0 0 auto}
+#tabs{padding:8px 8px calc(9px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:light-dark(rgba(255,255,255,.88),rgba(12,16,13,.9));backdrop-filter:blur(18px)}
+.tab{padding:3px 0 1px;gap:4px;font-size:9.5px;letter-spacing:.02em;color:var(--muted);position:relative}
+.tab .ti{width:22px;height:22px;display:grid;place-items:center;font-size:0}
+.tab .ti svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tab.on{color:var(--ink);font-weight:600}
+.tab.on .ti{color:var(--v)}
+.tab.on::after{content:"";position:absolute;bottom:-2px;width:4px;height:4px;border-radius:50%;background:var(--v)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-top:12px;box-shadow:var(--shadow-sm)}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.02em;margin-bottom:10px}
+.meta{font-size:11.5px;line-height:1.6}
+.match{font-size:22px;font-weight:600;letter-spacing:-.02em}
+.call{font-size:24px;font-weight:600;letter-spacing:-.02em}
+.costline{background:var(--vsoft);border-radius:12px;padding:10px 12px;font-size:12px}
+.judge{border:0;border-left:2px solid var(--v);border-radius:0;padding:2px 0 2px 12px;font-size:12.5px;line-height:1.7;background:transparent;margin-top:12px}
+.gates{gap:7px}.gatechip{font-size:10.5px;border-radius:7px;padding:4px 8px;color:var(--muted)}
+.btn{border-radius:13px;height:42px;font-size:13px}
+.btn.primary{background:var(--v);border-color:var(--v);color:light-dark(#fff,#082017)}
+.btn.mini{height:30px;border-radius:9px;font-size:11px}
+.seal{border-top:1px solid var(--line);font-size:10px;padding-top:12px}
+.arow{border-top:1px solid var(--line);font-size:12.5px;padding:11px 1px}
+.strip{border-radius:14px;padding:11px 13px;font-size:11.5px}
+.hero{border-radius:16px;padding:14px 16px}
+.kv{font-size:12px;padding:7px 1px;border-top:1px solid var(--line)}
+.kv:first-child{border-top:0}
+.opp{background:var(--asoft);border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.65}
+.chip{border-radius:999px;padding:7px 12px;font-size:11.5px;background:var(--card)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.sysp{border-radius:16px;padding:12px 14px;font-size:12px;box-shadow:var(--shadow-sm)}
+.usermsg{background:var(--vsoft);border-radius:16px 16px 4px 16px;font-size:12.5px}
+.aidmsg{border-radius:4px 16px 16px 16px;font-size:12px;box-shadow:var(--shadow-sm)}
+.rt{font-size:9.5px;padding:2px 7px}
+.foot{font-size:9.5px;line-height:1.8}
+.legal{font-size:9.5px;border-radius:10px;padding:9px 11px;line-height:1.7}
+.set{font-size:13px;padding:13px 2px;border-top:1px solid var(--line)}
+.divider{border-top:1px solid var(--line)}
+.diag,.warn{border-radius:12px;font-size:12px}
+.fnd{border-radius:16px;padding:14px}
+.ssc .c{border-radius:12px;padding:10px 6px}
+.pcell{border-top:1px solid var(--line);padding:13px 2px;font-size:12.5px}
+.pcell:first-child{border-top:0}.pcell .pv{border-radius:11px;width:44px;height:44px}
+.dash .d{border-radius:16px;padding:14px}
+.sale{border-top:1px solid var(--line);font-size:12px}
+.leg{border-top:1px solid var(--line);font-size:12.5px}
+.tl li{font-size:12px}.dsec .db{font-size:12px}
+.gline{font-size:12px;padding:9px 2px;border-top:1px solid var(--line)}
+.picked{border-left:2px solid var(--amber)}
+.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.tool{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:15px 14px;border-radius:18px;border:1px solid var(--line);background:var(--card);font:inherit;color:var(--ink);text-align:left;cursor:pointer;box-shadow:var(--shadow-sm)}
+.tool-ico{width:34px;height:34px;border-radius:11px;background:var(--vsoft);color:var(--v);display:grid;place-items:center}
+.tool-ico svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tool b{font-size:12.5px;font-weight:600}
+.tool span{font-size:10.5px;color:var(--muted);line-height:1.5}
+.detail-hero{margin-top:12px;padding:18px;border-radius:22px;background:linear-gradient(155deg,#122B22,#0A1813);color:var(--ink-on-dark);box-shadow:var(--shadow)}
+.detail-hero .k{font-size:10px;color:#9FE3C8;letter-spacing:.06em}
+.detail-hero .m{font-size:22px;font-weight:600;margin-top:10px;letter-spacing:-.02em}
+.detail-hero .meta{color:rgba(243,246,242,.5)}
+.detail-hero .p{display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px}
+.detail-hero .p b{font-size:26px;font-weight:600}
+.detail-hero .p span{font-size:11px;color:rgba(243,246,242,.55)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.why-summary{display:flex;justify-content:space-between;gap:8px;margin:6px 2px 0;font-size:10.5px;color:var(--muted)}
+.why-summary b{color:var(--ink);font-weight:600}
+.why-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+.why-tab{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);font:inherit;color:var(--muted);cursor:pointer;text-align:left}
+.why-tab b{font-size:12px;font-weight:600;color:var(--ink)}
+.why-tab span{font-size:9.5px;letter-spacing:.06em}
+.why-tab.on{border-color:var(--v);background:var(--vsoft)}
+.why-tab.on b{color:var(--v)}
+.why-hero{margin-top:12px;padding:18px;border-radius:22px;background:var(--card);border:1px solid var(--line);border-left:2px solid var(--amber);box-shadow:var(--shadow)}
+.why-hero .k{font-size:10px;color:var(--amber);letter-spacing:.05em}
+.why-hero .m{font-size:23px;font-weight:600;letter-spacing:-.02em;margin-top:10px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.why-hero .meta{font-size:11px;color:var(--muted);margin-top:3px}
+.why-hero .one{font-size:14.5px;line-height:1.7;font-weight:600;margin-top:12px}
+.why-hero .quote{font-size:12px;line-height:1.7;color:var(--muted);margin-top:10px;padding-left:11px;border-left:2px solid var(--line)}
+.why-hero .ssc{margin-top:14px}
+.step.bad b,.step.bad i{color:#F19A8C}
 </style>
 </head>
 <body>
@@ -280,14 +480,17 @@ body{background:light-dark(#DDDAD2,#0B0D11);font-family:"PingFang SC","MiSans",s
   <div class="top" id="topbar" style="display:none"></div>
   <div id="view"></div>
   <div id="chatbar">
-    <input class="ib" id="cbar" placeholder="问问它 · 今晚买啥">
-    <button class="rd" data-act="camera">📷</button>
+    <div class="chatbox">
+      <span class="chatspark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z"/></svg></span>
+      <input class="ib" id="cbar" placeholder="继续问解球…" aria-label="向解球提问">
+      <button class="sendbtn" data-act="send" aria-label="发送">↑</button>
+    </div>
   </div>
   <nav id="tabs" style="display:none">
-    <button class="tab on" data-tab="home"><span class="ti">⚡</span><span class="tl">首页</span></button>
-    <button class="tab" data-tab="tools"><span class="ti">🧰</span><span class="tl">工具</span></button>
-    <button class="tab" data-tab="records"><span class="ti">📒</span><span class="tl">记录</span></button>
-    <button class="tab" data-tab="me"><span class="ti">🙂</span><span class="tl">我的</span></button>
+    <button class="tab on" data-tab="home"><span class="ti"><svg viewBox="0 0 24 24"><path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9.5z"/></svg></span><span class="tl">首页</span></button>
+    <button class="tab" data-tab="tools"><span class="ti"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg></span><span class="tl">工具</span></button>
+    <button class="tab" data-tab="records"><span class="ti"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h9"/><circle cx="3.2" cy="7" r=".7" fill="currentColor" stroke="none"/><circle cx="3.2" cy="12" r=".7" fill="currentColor" stroke="none"/><circle cx="3.2" cy="17" r=".7" fill="currentColor" stroke="none"/></svg></span><span class="tl">记录</span></button>
+    <button class="tab" data-tab="me"><span class="ti"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19c.7-3.2 3.2-5 6.5-5s5.8 1.8 6.5 5"/></svg></span><span class="tl">我的</span></button>
   </nav>
   <div id="backdrop"></div>
   <div id="sheet"></div>
@@ -332,22 +535,22 @@ const D={
     intel:{
       line:"2 名中卫缺阵",sub:"市场还没反应",updated:"19:30",
       items:[
-        {icon:"🛡",t:"阵容 · 布莱顿",lvl:"hard",status:"unpriced",pp:"+1.8",
+        {icon:"阵",t:"阵容 · 布莱顿",lvl:"hard",status:"unpriced",pp:"+1.8",
           fact:"两中卫确认缺阵，xGA 预计 +12%",
           src:"API-Football · 19:30 官方首发",
           why:"公布后 30 分钟内，竞彩 SP 未同向移动 → 市场可能还没反应。",
           calc:"位置级模型：中卫缺阵 1.03；两人合并取上限，映射 +1.8pp。"},
-        {icon:"⏳",t:"疲劳 · 曼城",lvl:"hard",status:"priced",pp:"−0.8",
+        {icon:"疲",t:"疲劳 · 曼城",lvl:"hard",status:"priced",pp:"−0.8",
           fact:"3 天 2 赛，欧冠夹心；轮换概率 43% 已计入",
           src:"赛程库 · 自动",
           why:"该信息已体现在盘口里，只提升准确率，不产生额外收益。",
           calc:"休息 2 天 ×0.98，欧冠夹心 ×0.99；合计 −0.8pp。"},
-        {icon:"📈",t:"状态 · 布莱顿",lvl:"soft",status:"background",pp:"0",
+        {icon:"态",t:"状态 · 布莱顿",lvl:"soft",status:"background",pp:"0",
           fact:"近 6 场 xG +12%，但只持续 4 场，未过 5 场门槛",
           src:"Understat · 11月2日",
           why:"样本不足，方向对但幅度不可信 → 只扩区间，不改点估计。",
           calc:"未过门槛，权重 0；区间半宽 +0.5pp。"},
-        {icon:"🎯",t:"战意 · 双方",lvl:"narrative",status:"narrative",pp:"—",
+        {icon:"意",t:"战意 · 双方",lvl:"narrative",status:"narrative",pp:"—",
           fact:"排名压力无差异，无德比/杯赛夹心",
           src:"积分榜 · 自动",
           why:"不可证伪，永不进概率，只写进反方庭。",
@@ -645,8 +848,8 @@ const save=()=>localStorage.setItem("jieqiu",JSON.stringify(S));
 const vib=p=>{try{if(navigator.vibrate)navigator.vibrate(p)}catch(e){}};
 const PX={zhuanjia:"0%",laopao:"50%",meng:"100%"};
 const P=()=>D.personas[S.persona]||D.personas.zhuanjia;
-const LB={zh:{tabs:["首页","工具","记录","我的"],buy:"买了",why:"为什么",dis:"不同意",rest:"今天不看了",ph:"问问它 · 今晚买啥"},
-          en:{tabs:["Home","Tools","Records","Me"],buy:"Back it",why:"Why",dis:"Disagree",rest:"Done for today",ph:"Ask me · tonight's pick"}};
+const LB={zh:{tabs:["首页","工具","记录","我的"],buy:"记一注",why:"为什么",dis:"不同意",rest:"今天不看了",ph:"问问它 · 今晚买啥"},
+          en:{tabs:["Home","Tools","Records","Me"],buy:"Log it",why:"Why",dis:"Disagree",rest:"Done for today",ph:"Ask me · tonight's pick"}};
 const L=()=>LB[S.lang]||LB.zh;
 /* ================= 路由 ================= */
 const TABS={home:"stream",tools:"tools",records:"records",me:"me"};
@@ -679,17 +882,16 @@ function render(){
 function renderTop(root){
   const c=cur(),t=document.getElementById("topbar");
   if(["gate","intro"].includes(c.id)){t.style.display="none";return}
-  t.style.display="flex";
+  t.style.display="flex";t.style.gridTemplateColumns="";
   const titles={tools:"工具箱",records:"我的记录",me:"我的",detail:"结论详情",onsale:"今日在售",whynot:"为什么不推",livematch:"比赛实况",water:"水位榜",scan:"拍票记账",shot:"截图鉴别",parlay:"串关体检",pscan:"票面识别",preport:"体检报告",pplans:"替代方案",pconfirm:"出票确认",persona:"助理人设",compliance:"合规中心",subscription:"会员",privacy:"数据与隐私",ledger:"公开账本",weekly:"周报",login:"登录 / 注册",prefs:"偏好"};
+  const total=(D.stream&&D.stream.stats?D.stream.stats.total:D.sale.count);
+  const env=(S.dataMode==="demo")?'<span class="envbadge" data-act="dataMode">演示</span>':'<span class="envbadge" data-act="dataMode">实时</span>';
   if(c.id==="stream"){
-    t.style.display="grid";t.style.gridTemplateColumns="1fr 96px 1fr";t.style.alignItems="center";
-    t.innerHTML='<div class="hz l" data-act="log"><span class="l1"><i class="dot"></i>引擎 v2.3</span><span class="l2">推理 <b class="cnt" id="infcnt">1,842</b> 次</span><span class="l2">4 源在线 · 12s 前</span></div><div id="topmid" style="width:96px"></div><div class="hz r"><span class="l1" id="ticker" data-act="go" data-v="ledger" style="cursor:pointer">47 场已复核 · 可验</span><span class="l2"><b>12,547</b> 人正在看球</span></div>';
-    const mc=document.getElementById("topmid");
-    mc.innerHTML='<div class="mh mfl" data-act="mascot" style="position:absolute;left:50%;top:-16px;transform:translateX(-50%);z-index:5;cursor:pointer"><div class="msr bust" style="--sx:'+PX[S.persona]+';width:76px;height:76px"></div></div><div style="position:absolute;left:0;right:0;top:66px;text-align:center;font-size:11px;font-weight:600">'+D.personas[S.persona].name.replace(/ ·.*/,"")+'</div>';
+    t.innerHTML='<div class="appbar"><div class="brand" data-act="mascot"><span class="orb"></span><div><b>解球</b><span>AI 竞彩分析助理</span></div></div><div class="appbar-right">'+env+'<button class="iconbtn" data-act="go" data-v="me" aria-label="我的">⋯</button></div></div>';
   }else if(root){
-    t.innerHTML='<div class="ttl">'+(titles[c.id]||"")+'</div>';
+    t.innerHTML='<div class="appbar"><div class="brand"><span class="orb"></span><div><b>'+(titles[c.id]||"")+'</b><span>解球 · AI 助理</span></div></div><div class="appbar-right">'+env+'</div></div>';
   }else{
-    t.innerHTML='<div class="ttl" data-act="back" style="cursor:pointer">← '+(titles[c.id]||"解球")+'</div>'+(c.params&&c.params.rt?'<span class="rt">'+c.params.rt+"</span>":"");
+    t.innerHTML='<div class="appbar"><button class="iconbtn back" data-act="back" aria-label="返回">←</button><div class="brand"><div><b>'+(titles[c.id]||"解球")+'</b><span>解球</span></div></div><div class="appbar-right">'+(c.params&&c.params.rt?'<span class="rt">'+c.params.rt+'</span>':'')+'</div></div>';
   }
 }
 function renderTabs(){
@@ -757,11 +959,10 @@ const INTEL_TAG={unpriced:["hot","市场未反应"],priced:["gray","已反映"],
 function ppClass(x){return x.indexOf("+")===0?"up":x.indexOf("−")===0?"down":"flat"}
 function signalLineHTML(){
   const it=D.verdict.intel.items;
-  const unp=it.filter(function(x){return x.status==="unpriced"}).length;
-  return '<button type="button" class="sigline hot" data-act="goIntel" aria-label="查看情报详情"><span class="sl"><span class="si">📋</span><b>'+D.verdict.intel.line+'</b><i>'+D.verdict.intel.sub+'</i></span><span class="tag hot">'+unp+' 条未定价</span><span class="arrow">详情 ›</span></button>';
+  return '<button type="button" class="intel-strip" data-act="goIntel" aria-label="查看情报详情"><span class="intel-orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z"/></svg></span><span class="intel-text"><b>AI 研判已生成</b><span>'+D.verdict.intel.line+' · '+D.verdict.intel.sub+' · '+it.length+' 条情报</span></span><span class="chev">›</span></button>';
 }
 function waitBoxHTML(){
-  return '<div class="waitbox"><div class="wb"><span>🛡 阵容 · 2 名主力存疑</span><span class="count">19:30 官方首发</span></div><div class="wb"><span>⏳ 疲劳 · 3 天 2 赛 · 轮换不明</span><span class="count">软情报</span></div></div>';
+  return '<div class="waitbox"><div class="wb"><span>阵容 · 2 名主力存疑</span><span class="count">19:30 官方首发</span></div><div class="wb"><span>疲劳 · 3 天 2 赛 · 轮换不明</span><span class="count">软情报</span></div></div>';
 }
 function flowCardHTML(){
   const f=D.verdict.flow;
@@ -770,7 +971,7 @@ function flowCardHTML(){
 function intelCardHTML(){
   const it=D.verdict.intel.items;
   const hard=it.filter(function(x){return x.lvl==="hard"}).length;
-  let h='<article class="card" id="intelcard"><div class="eyebrow">🔎 情报 · '+it.length+' 条 <span class="tag ver">'+hard+' 条影响概率</span><span class="tag gray">'+(it.length-hard)+' 条仅供参考</span></div><div class="meta">更新于 '+D.verdict.intel.updated+' · 按影响力排序 · 点每条看来源与判定依据</div>';
+  let h='<article class="card" id="intelcard"><div class="eyebrow">情报 <span style="color:var(--muted);font-weight:400;margin-left:4px">'+it.length+' 条</span></div><div class="meta">'+hard+' 条影响概率 · '+(it.length-hard)+' 条仅供参考 · 更新于 '+D.verdict.intel.updated+' · 点开看来源与判定</div>';
   it.forEach(function(x,i){
     const tg=INTEL_TAG[x.status]||INTEL_TAG.background;
     h+='<details class="sigitem"'+(i===0?" open":"")+'><summary><span class="si">'+x.icon+'</span><span class="sm"><b>'+x.t+'</b><span>'+x.fact+'</span></span><span class="sigright"><span class="tag '+tg[0]+'">'+tg[1]+'</span><b class="pp '+ppClass(x.pp)+'">'+x.pp+'</b></span></summary><div class="sbody"><div class="srow"><span>判定</span><span>'+x.why+'</span></div><div class="srow"><span>算法</span><span>'+x.calc+'</span></div><div class="srow"><span>来源</span><span>'+x.src+'</span></div></div></details>';
@@ -780,7 +981,7 @@ function intelCardHTML(){
 }
 function aiCardHTML(){
   const a=D.verdict.ai;
-  let h='<article class="card" id="aicard"><div class="eyebrow">🤖 AI 深度研判 <span class="tag ver">已封存</span></div><div class="aihead">'+a.headline+'</div><div class="meta">情景加权 <b class="num" style="color:var(--ink)">'+a.weighted+'%</b> · 与统计模型分歧 <b class="num" style="color:var(--amber)">+'+a.divergence+'pp</b> · <span style="color:var(--muted)">仅解释，不改判决</span></div><div class="scen">';
+  let h='<article class="card" id="aicard"><div class="eyebrow">AI 深度研判 <span class="tag ver">已封存</span></div><div class="aihead">'+a.headline+'</div><div class="meta">情景加权 <b class="num" style="color:var(--ink)">'+a.weighted+'%</b> · 与统计模型分歧 <b class="num" style="color:var(--amber)">+'+a.divergence+'pp</b> · <span style="color:var(--muted)">仅解释，不改判决</span></div><div class="scen">';
   a.scenarios.forEach(function(x){
     const cls=x.tag==="乐观"?"ver":(x.tag==="悲观"?"hot":"gray");
     h+='<div class="scenrow"><div class="scenh"><span class="tag '+cls+'">'+x.tag+'</span><b>'+x.label+'</b><span class="num">'+x.p+'%</span></div><div class="pbar"><i style="width:'+x.p+'%"></i></div><div class="scend">触发：'+x.trigger+'</div></div>';
@@ -788,71 +989,100 @@ function aiCardHTML(){
   h+='</div><details class="aimore"><summary>看 3 个驱动与 2 条风险</summary><div class="aibody"><div class="grp">关键驱动</div>'+a.drivers.map(function(x){return '<div class="li">'+x+'</div>'}).join("")+'<div class="grp">风险</div>'+a.risks.map(function(x){return '<div class="li risk">'+x+'</div>'}).join("")+'</div></details><div class="secnote">'+a.note+'</div></article>';
   return h;
 }
+function hashDots(h){
+  return '<span class="hash">'+String(h||"").slice(0,12).split("").map(function(ch){const n=parseInt(ch,16);return '<i class="'+(n%3?"l":"")+'"></i>'}).join("")+'</span>';
+}
+function stepperHTML(gates){
+  return gates.map(function(g){
+    const val=String(g[1]).split(" · ")[0];
+    return '<div class="step pass"><span>'+g[0]+'</span><b>'+val+'<i>✓</i></b></div>';
+  }).join("");
+}
+function stepperReal(g){
+  return [["价",g.price],["市",g.market],["模",g.model]].map(function(x){
+    const r=x[1],pass=r==="pass",fail=r==="fail";
+    return '<div class="step '+(pass?"pass":(fail?"bad":"pending"))+'"><span>'+x[0]+'</span><b>'+(pass?"过":fail?"死":"等")+'<i>'+(pass?"✓":fail?"✗":"…")+'</i></b></div>';
+  }).join("");
+}
+function answerCardHTML(v,real,bought){
+  const prob=real?(v.pick?(v.pick.prob*100).toFixed(1):"—"):Number(v.judge.p).toFixed(1);
+  const sel=real?(v.pick?v.pick.dir:v.sel):v.sel;
+  const hc=v.hc?'<span class="pc">让 '+v.hc+'</span>':"";
+  const why=real?(v.pick?'引擎判断：'+v.pick.dir+'（置信 '+(v.pick.prob*100).toFixed(1)+'% · EV '+v.pick.ev+'）':""):P().reason;
+  const costRight=real?('抽水 '+Number(v.cost.rake).toFixed(1)+'%'):(v.cost.rake+'% · 今日第 '+v.cost.rank+' 浅');
+  const hash=real?(v.hash||""):v.hashFull;
+  const steps=real?stepperReal(v.gates):stepperHTML(v.gates);
+  return '<article class="answer" id="vcard"><div class="answer-top"><span class="answer-kicker">今晚唯一</span><span>'+v.no+' · '+v.close+' 停售</span></div><div class="answer-match">'+v.home+'<em>vs</em>'+v.away+'</div><div class="answer-meta">'+v.league+' · 单关 · '+(real?(v.status==="promoted"?"三关全过":"复核中"):"三关全过")+'</div><div class="answer-pick"><div><div class="plabel">选择</div><div class="pv">'+sel+hc+'</div></div><div class="answer-prob"><b>'+prob+'<em>%</em></b><span>模型置信</span></div></div><div class="answer-cost"><span>官方定价抽水</span><b>'+costRight+'</b></div><div class="answer-why">'+why+'</div><div class="stepper">'+steps+'</div><div class="answer-actions"><button class="btn primary" data-act="buy">'+(bought?"已记 ✓":L().buy)+'</button><button class="btn ghost" data-act="go" data-v="detail">看完整账</button></div><div class="answer-foot"><span style="display:inline-flex;align-items:center;gap:8px">'+hashDots(hash)+'<span>已封存 · '+String(hash).slice(0,8)+'…'+String(hash).slice(-4)+'</span></span><span class="stamp">封</span></div></article>';
+}
+function realScreenCard(v){
+  const killed=v.status==="killed",color=killed?"var(--danger)":"var(--amber)",label=killed?"已砍":"复核中";
+  const rows=[["价",v.gates.price],["市",v.gates.market],["模",v.gates.model]].map(function(x){
+    const r=x[1];
+    return '<div class="wait-reason"><span>'+x[0]+' · '+(r==="pass"?"过":r==="fail"?"死":"等数据")+'</span><span>'+(r==="pending_data"?"源未覆盖":"—")+'</span></div>';
+  }).join("");
+  const meta=[v.league,(v.pool==="had"?"胜平负":"让球")].filter(Boolean).join(" · ");
+  return '<article class="wait-card" id="vcard"><div class="wait-top" style="color:'+color+'"><span>'+label+'</span><span>'+v.no+' · '+v.close+'</span></div><div class="wait-match">'+v.home+' vs '+v.away+'</div><div class="wait-meta">'+meta+'</div><div class="wait-call" style="color:'+color+'">… '+label+'</div><div class="wait-cost"><span>官方 SP '+v.spFull.h.toFixed(2)+' / '+v.spFull.d.toFixed(2)+' / '+v.spFull.a.toFixed(2)+'</span><b style="color:'+color+'">抽水 '+Number(v.cost.rake).toFixed(1)+'%</b></div><div class="wait-reasons">'+rows+'</div><div class="wait-actions"><button class="btn primary" data-act="go" data-v="detail">看数据</button><button class="btn" data-act="dataMode">切到演示</button></div></article>';
+}
 function verdictCardHTML(){
   const v=D.verdict,p=P();
   if(S.demoEmpty){
-    return '<article class="card empty"><div style="display:flex;justify-content:center;margin-bottom:10px"><div class="msr mfl" style="--sx:'+PX[S.persona]+';width:130px;aspect-ratio:0.62"></div></div><div style="font-size:18px;font-weight:600">'+p.empty+'</div><div class="meta" style="margin-top:10px;line-height:1.8">47 场全被砍了：价砍 23 · 分歧砍 18 · 信息砍 6<br>这是正常的，不是故障。</div><div style="display:flex;justify-content:center;margin-top:12px"><span class="stamp">封</span></div></article><article class="card"><div class="eyebrow">📖 今日课程 · 2 分钟</div><div style="font-size:12.5px;line-height:1.6;color:var(--muted)">为什么抽水 13.4% 的场次，长期必亏？</div><div class="btnrow"><button class="btn" data-act="toast" data-m="课程演示版">看 2 分钟版</button></div></article>';
+    return '<article class="wait-card" id="vcard"><div class="wait-top"><span>今晚</span><span>47 场已复核</span></div><div class="wait-call" style="color:var(--ink);font-size:24px">0 场值得留。</div><div class="wait-why">'+p.empty+'</div><div class="wait-cost"><span>价砍 23 · 市砍 18 · 模砍 6</span><b>正常</b></div></article>';
   }
   if(S.pendingDemo){
-    return '<article class="card" id="vcard" style="border-left:3px solid var(--amber)"><div class="eyebrow amber">⚖ 今晚 47 场 → 复核中 1 场</div><div class="match">曼城<em>vs</em>布莱顿</div><div class="meta">英超 · 周三012 · 单关 ✓ · 21:55 停售</div><div class="call" style="color:var(--amber)">… 等首发</div><div class="costline" style="background:var(--asoft)"><span>价格已过 · 抽水 9.2%</span><b style="color:var(--amber)">19:30 公布 · 自动重算</b></div><div class="judge" style="border-left-color:var(--amber)">首发未公布，轮换幅度未知。现在区间 ±9.4pp，超过 8pp 阈值——<b>信息不够，先不推</b>。19:30 公布后我重算，过了就进流。</div><div class="gates"><span class="gatechip"><i>✓</i>价 9.2%</span><span class="gatechip"><i>✓</i>市 2.1pp</span><span class="gatechip stale"><i>…</i>模 等首发</span></div>'+waitBoxHTML()+'<details class="whywait"><summary>为什么现在不能算？</summary><p>首发未定 → 轮换幅度未知 → 概率区间被撑到 ±9.4pp，超过 8pp 阈值。模型对这两个输入最敏感，硬算等于猜。</p></details><div class="btnrow"><button class="btn primary" data-act="remind">到点提醒我</button><button class="btn ghost" data-act="toast" data-m="已隐藏这场（演示）">先不看这场</button></div><div class="meta" style="text-align:center;margin-top:9px">等首发 ≠ 不推，是「还没算完」</div></article>';
+    return '<article class="wait-card" id="vcard"><div class="wait-top"><span>复核中</span><span>周三012 · 21:55 停售</span></div><div class="wait-match">曼城 vs 布莱顿</div><div class="wait-meta">英超 · 单关</div><div class="wait-call">… 等首发</div><div class="wait-cost"><span>价格已过 · 抽水 9.2%</span><b>19:30 公布</b></div><div class="wait-why">首发未公布，轮换幅度未知。现在区间 ±9.4pp，超过 8pp 阈值——<b>信息不够，先不推。</b></div><div class="wait-reasons"><div class="wait-reason"><span>阵容 · 2 名主力存疑</span><span>19:30 官方首发</span></div><div class="wait-reason"><span>疲劳 · 3 天 2 赛</span><span>软情报</span></div></div><details class="whywait"><summary>为什么现在不能算？</summary><p>首发未定 → 轮换幅度未知 → 概率区间被撑到 ±9.4pp，超过 8pp 阈值。模型对这两个输入最敏感，硬算等于猜。</p></details><div class="wait-actions"><button class="btn primary" data-act="remind">到点提醒我</button><button class="btn" data-act="toast" data-m="已隐藏这场（演示）">先不看这场</button></div></article>';
   }
   const bought=S.bets.some(function(b){return b.verdictId===v.id});
-  // W7 review：真数据分支（gates 三态 / 真哈希 / 真文案）
   if(v.real){
-    const g=v.gates;
-    const gateChips=[["价",g.price],["市",g.market],["模",g.model]].map(function(x){
-      const r=x[1];
-      const cls=r==="pass"?"":(r==="fail"?"bad":"stale");
-      const icon=r==="pass"?"✓":(r==="fail"?"✗":"…");
-      const label=r==="pass"?"过":(r==="fail"?"死":"等数据");
-      return '<span class="gatechip '+cls+'"><i>'+icon+'</i>'+x[0]+' '+label+'</span>';
-    }).join("");
-    const statusLine=v.status==="promoted"?'<div class="call" style="color:var(--v)">✓ 三关全过 · '+v.sel+'</div>':
-      v.status==="killed"?'<div class="call" style="color:var(--danger)">✗ 已砍 · 不推</div>':
-      '<div class="call" style="color:var(--amber)">… 复核中</div>';
-    return '<article class="card" id="vcard"><div class="eyebrow">⚖ 今日 '+D.stream.stats.total+' 场 → 三关 → 推 '+D.stream.stats.promoted+' 场</div><div class="match">'+v.home+'<em>vs</em>'+v.away+'</div><div class="meta">'+v.league+' · '+v.no+' · '+(v.pool==="had"?"胜平负":"让球")+' · '+v.close+' 开赛</div>'+statusLine+'<div class="costline"><span>官方 SP '+v.spFull.h.toFixed(2)+'/'+v.spFull.d.toFixed(2)+'/'+v.spFull.a.toFixed(2)+'</span><b class="num">抽水 '+v.cost.rake.toFixed(1)+'%</b></div>'+(v.pick?'<div class="judge">引擎判断：'+v.pick.dir+'（置信 '+(v.pick.prob*100).toFixed(1)+'% · EV '+v.pick.ev+'）</div>':"")+'<div class="gates">'+gateChips+'</div><div class="btnrow"><button class="btn primary" data-act="buy"'+(v.status!=="promoted"||S.excluded?" disabled":"")+'>'+(bought?"已记 ✓":L().buy)+'</button><button class="btn" data-act="go" data-v="detail">'+L().why+'</button><button class="btn" style="flex:0 0 42px" data-act="vmenu">⋯</button></div><div class="seal" data-act="hashsheet"><span style="display:inline-flex;align-items:center;gap:9px"><span class="hash">'+v.hash.slice(0,16).split("").map(function(ch){const n=parseInt(ch,16);return '<i class="'+(n%3?"l":"")+'"></i>'}).join("")+'</span><span>已封存 · <span class="num">'+v.hash.slice(0,8)+"…"+v.hash.slice(-4)+'</span></span></span><span class="stamp">封</span></div></article><div id="disreply"></div><div id="pickedzone" style="margin-top:2px"></div>';
+    if(v.status==="promoted"&&v.pick)return answerCardHTML(v,true,bought);
+    return realScreenCard(v);
   }
-  const bought2=S.bets.some(function(b){return b.verdictId===v.id});
-  return '<article class="card" id="vcard"><div class="eyebrow">⚖ 今晚 47 场 → 砍到 1 场</div><div class="match">'+v.home+'<em>vs</em>'+v.away+'</div><div class="meta">'+v.league+' · '+v.no+' · 单关 ✓ · '+v.close+' 停售</div><div class="call">'+v.sel+'<span class="hc">让 '+v.hc+'</span></div><div class="costline"><span>官方定价抽水</span><b class="num">'+v.cost.rake+'% · 今日第 '+v.cost.rank+' 浅</b></div><div class="judge">'+p.reason+'</div><div class="gates">'+v.gates.map(function(g){return '<span class="gatechip"><i>✓</i>'+g[0]+" "+g[1]+"</span>"}).join("")+'</div>'+signalLineHTML()+'<div class="btnrow"><button class="btn primary" data-act="buy"'+(S.excluded?" disabled":"")+'>'+(bought?"已记 ✓":L().buy)+'</button><button class="btn" data-act="go" data-v="detail">'+L().why+'</button><button class="btn" data-act="disagree">'+L().dis+'</button><button class="btn" style="flex:0 0 42px" data-act="vmenu">⋯</button></div><div class="seal" data-act="hashsheet"><span style="display:inline-flex;align-items:center;gap:9px"><span class="hash">'+v.hashFull.slice(0,16).split("").map(function(ch){const n=parseInt(ch,16);return '<i class="'+(n%3?"l":"")+'"></i>'}).join("")+'</span><span>已封存 21:25 · <span class="num">'+v.hashFull.slice(0,8)+"…"+v.hashFull.slice(-4)+'</span></span></span><span class="stamp">封</span></div></article><div id="disreply"></div><div id="pickedzone" style="margin-top:2px"></div>'+(S.comfort?comfortCardHTML():"");
+  return answerCardHTML(v,false,bought);
 }
 function comfortCardHTML(){
   const p=P();
-  return '<article class="card" style="border-left:3px solid var(--v)"><div style="text-align:center;padding:6px 0 2px"><div style="font-size:14.5px;font-weight:600">'+p.comfort+'</div><div class="meta" style="margin-top:6px;line-height:1.7">已封存并开始跟踪。中间不用再刷比分了。</div></div><div class="btnrow" style="margin-top:10px"><button class="btn primary" data-act="rest">'+L().rest+'</button><button class="btn" data-act="comfortOk">知道了</button></div></article>';
+  return '<div class="recap"><span class="avatar">◉</span><p><b>'+p.comfort+'</b><br>已封存并开始跟踪。中间不用再刷比分了。</p></div><div class="btnrow"><button class="btn primary" data-act="rest">'+L().rest+'</button><button class="btn" data-act="comfortOk">知道了</button></div>';
 }
 V.stream={render:function(){
-  if(S.minor){return '<article class="card" style="text-align:center;padding:30px 16px;margin-top:20px"><div class="stamp red" style="margin:0 auto 12px">限</div><div style="font-size:17px;font-weight:600">未成年受限模式</div><div class="meta" style="margin-top:8px;line-height:1.8">仅可查看公开账本。<br>需要帮助？</div></article><div class="btnrow" style="margin-top:14px"><button class="btn" data-act="go" data-v="ledger">查看公开账本</button></div><div class="btnrow"><button class="btn" data-act="minorReset">演示：解除限制</button></div><div class="legal">数据分析结果，不构成投注建议。未满 18 周岁禁止购买彩票。<br>帮助热线 400-000-0000</div>'}
-  if(S.rested){return '<article class="card" style="text-align:center;padding:30px 16px;margin-top:20px"><div style="display:flex;justify-content:center;margin-bottom:10px"><div class="msr mfl" style="--sx:'+PX[S.persona]+';width:110px;aspect-ratio:0.62"></div></div><div style="font-size:17px;font-weight:600">今天歇了，明天见 👋</div><div class="meta" style="margin-top:8px;line-height:1.8">歇一天不是放弃，是纪律的一部分。<br>明晚 19:02，结论照常等你。</div><div class="btnrow" style="margin-top:14px"><button class="btn" data-act="unrest">反悔 · 现在看</button></div></article><div class="legal">数据分析结果，不构成投注建议。</div>'}
-  if(S.excluded){return '<article class="card" style="text-align:center;padding:30px 16px;margin-top:20px"><div class="stamp red" style="margin:0 auto 12px">止</div><div style="font-size:17px;font-weight:600">你已开启自排除（'+(S.excludedLabel||"")+'）</div><div class="meta" style="margin-top:8px;line-height:1.8">期间无法查看判断与记录。<br>需要帮助？热线 400-000-0000</div></article><div class="btnrow" style="margin-top:14px"><button class="btn" data-act="unexclude">演示：解除自排除</button></div><div class="legal">数据分析结果，不构成投注建议。</div>'}
+  if(S.minor){return '<div class="wait-card" style="text-align:center"><div class="wait-top" style="justify-content:center">未成年受限</div><div class="wait-call" style="color:var(--ink);font-size:22px">只看公开账本</div><div class="wait-why">未满 18 周岁不能查看判断与记录。需要帮助请联系监护人。</div><div class="wait-actions"><button class="btn primary" data-act="go" data-v="ledger">查看公开账本</button></div></div><div class="legal">数据分析结果，不构成投注建议。未满 18 周岁禁止购买彩票。<br>帮助热线 400-000-0000</div>'}
+  if(S.rested){return '<div class="wait-card" style="text-align:center"><div class="wait-top" style="justify-content:center">今天歇了</div><div class="wait-call" style="color:var(--ink);font-size:23px">明天见。</div><div class="wait-why">歇一天不是放弃，是纪律的一部分。明晚 19:02，结论照常等你。</div><div class="wait-actions"><button class="btn" data-act="unrest">反悔 · 现在看</button></div></div><div class="legal">数据分析结果，不构成投注建议。</div>'}
+  if(S.excluded){return '<div class="wait-card" style="text-align:center"><div class="wait-top" style="justify-content:center;color:var(--danger)">自排除生效中</div><div class="wait-call" style="color:var(--ink);font-size:22px">先停一停。</div><div class="wait-why">你已开启自排除（'+(S.excludedLabel||"")+'）。期间无法查看判断与记录。<br>需要帮助？热线 400-000-0000</div><div class="wait-actions"><button class="btn" data-act="unexclude">演示：解除自排除</button></div></div><div class="legal">数据分析结果，不构成投注建议。</div>'}
   const v=D.verdict,p=P();
-  let html='';
-  if(!D._backend&&S.dataMode==="demo"){html+='<div class="strip" style="background:var(--card);color:var(--muted);border:1px solid var(--line)" data-act="dataMode"><span>● 演示数据 · 情报层新版预览</span><span>切到实时 ›</span></div>';}
-  if(D._backend){
-    html+='<div class="strip" style="background:var(--vsoft);color:var(--v)" data-act="toast" data-m="已连接解球引擎 · 数据实时"><span>● 实时模式 · 引擎三关已跑 <b>'+D.stream.stats.total+'</b> 场</span><span>推 <b>'+D.stream.stats.promoted+'</b> · 复核 <b>'+D.stream.stats.screening+'</b></span></div>';
-  }
-  html+='<div class="strip" data-act="go" data-v="onsale"><span>最近停售 <b class="num">'+D.sale.closeLabel+'</b> · <b class="num">'+D.sale.closeIn+'</b></span><span>今日在售 <b>'+D.sale.count+'</b> 场 ›</span></div>';
-  html+='<div class="hero" data-act="go" data-v="parlay"><span class="tt">串关体检 · 免费<span class="s2">拍下你的投注单，30 秒出报告</span></span><span class="go">去体检 →</span></div>';
-  html+='<div class="time">今天 19:02</div>';
+  const stats=(D.stream&&D.stream.stats)?D.stream.stats:null;
+  const total=stats?stats.total:D.sale.count;
+  const promoted=stats?stats.promoted:(S.demoEmpty?0:1);
+  const isEmpty=!!S.demoEmpty,isPending=!!S.pendingDemo;
+  const kicker=D._backend?('实时 · 引擎已跑 '+total+' 场'):('今晚 · 19:02 更新 · '+total+' 场已复核');
+  const h1=isEmpty?'47 场，我一场都没留。':(isPending?'47 场，1 场还没算完。':(promoted>0?(total+' 场，我只留了 '+promoted+' 场。'):(total+' 场，今天一场都没留。')));
+  const noPush=promoted===0;
+  const sub=isEmpty?'不是每场都值得看。价格、分歧、信息，三关把今天的场都挡回去了。':(isPending?'首发还没公布，价格和分歧已经过了。等名单出来，我再算一次。':(noPush?'价格过了，但市场和模型数据还没覆盖。我不硬推，等数据齐了再算。':'价格、分歧、信息，三关都过，才值得你多看一眼。'));
+  let html='<div class="greet"><div class="greet-kicker"><span class="statusdot"></span>'+kicker+'</div><h1>'+h1+'</h1><p>'+sub+'</p><div class="greet-meta" data-act="go" data-v="onsale"><span>最近停售 <b>'+D.sale.closeLabel+'</b></span><span class="go">今日在售 '+D.sale.count+' 场 ›</span></div></div>';
   html+=verdictCardHTML();
-  if(!D._backend&&!S.demoEmpty&&!S.pendingDemo&&!S.evtDismissed){html+='<div class="time">刚刚 · 情报更新</div>'+flowCardHTML();}
-  html+='<div class="time">今天 18:40 · 盘口哨兵</div>';
-  html+='<article class="card" data-act="go" data-v="livematch" style="cursor:pointer"><div class="eyebrow amber">⚡ 资金异动 · 仅提示，不构成结论</div><div style="font-size:13px;line-height:1.6">'+D.sentinel.body+'</div></article>';
-  html+='<div class="time">今天 12:30</div>';
-  html+='<article class="card"><div class="eyebrow">这 3 场别碰'+(D._backend?" · 引擎真实死因":"")+'</div>'+D.avoid.map(function(a,i){return '<div class="arow" data-act="whynot" data-i="'+i+'"><span class="adot"></span><div><b>'+a.a+" vs "+a.b+'</b><br><span>'+a.why+"</span></div></div>"}).join("")+"</article>";
-  html+='<div class="time">'+(D._backend&&D.postmortems.length?"最近结算 · 归因":"昨天 22:15 · 复盘")+'</div>';
-  if(D._backend&&D.postmortems.length){
+  if(!isEmpty&&!isPending&&!D._backend)html+=signalLineHTML();
+  if(!D._backend&&!isEmpty&&!isPending&&!S.evtDismissed)html+=flowCardHTML();
+  const avoid=D.avoid||[];
+  if(avoid.length){
+    html+='<div class="section-head"><h2>今天不碰</h2><span>'+avoid.length+' 场值得说</span></div><div class="quiet-list">';
+    avoid.forEach(function(a,i){
+      const act=D._backend?' data-act="go" data-v="onsale"':' data-act="whynot" data-i="'+i+'"';
+      const why=String(a.why||"");
+      const tag=(why.indexOf("抽水")>-1||why.indexOf("水太深")>-1)?"价":(why.indexOf("分歧")>-1?"市":"模");
+      html+='<button class="quiet-row"'+act+'><span class="quiet-dot'+(tag!=="价"?" amber":"")+'"></span><span class="quiet-main"><b>'+a.a+' vs '+a.b+'</b><span>'+why+'</span></span><span class="quiet-tag">'+tag+'</span></button>';
+    });
+    html+='</div>';
+  }
+  html+='<div class="section-head"><h2>昨天 · 复盘</h2><span>只解释，不找借口</span></div>';
+  if(D._backend&&D.postmortems&&D.postmortems.length){
     html+=D.postmortems.map(function(pm){
-      const badge=pm.settled==="win"?'<span class="rt">✓ 中 '+pm.result_score+'</span>':'<span class="rt out">✗ 未中 '+pm.result_score+'</span>';
-      return '<article class="card" style="display:flex;gap:11px;align-items:center"><div class="msr bust mfl" style="--sx:'+PX[S.persona]+';width:52px;height:52px;flex:0 0 auto"></div><div style="flex:1"><p style="font-size:13px;line-height:1.65;margin:0">'+pm.match+' · '+badge+'<br>'+pm.note+'</p></div></article>';
+      const badge=pm.settled==="win"?'<b>中了</b>':'<b>没中</b>';
+      return '<div class="recap"><span class="avatar">◉</span><p>'+pm.match+' · '+badge+' '+pm.result_score+'<br>'+pm.note+'</p></div>';
     }).join("");
+  }else if(D._backend){
+    html+='<div class="recap"><span class="avatar">◉</span><p>最近还没有可归因的结算。等第一批赛果出来，这里只讲事实。</p></div>';
   }else{
-    html+='<article class="card" style="display:flex;gap:11px;align-items:center"><div class="msr bust mfl" style="--sx:'+PX[S.persona]+';width:52px;height:52px;flex:0 0 auto"></div><div style="flex:1"><p style="font-size:13px;line-height:1.65;margin:0">'+p.attrib+'</p></div></article>';
+    html+='<div class="recap"><span class="avatar">◉</span><p>'+p.attrib+'</p></div>';
   }
-  if(S.user){
-    html+='<div class="usermsg">曼城这场怎么样</div><div class="aidmsg"><div class="h">成本问答<span class="rt">对话内完成</span></div><div class="r">抽水 <b>'+D.verdict.cost.rake+"%</b> · 今日第 "+D.verdict.cost.rank+' 浅</div><div class="r">每 100 元期望回报 <b>'+D.verdict.cost.ev+' 元</b></div><span class="more" data-act="go" data-v="detail">查看完整成本 →</span></div>';
-  }
-  html+='<div class="hint" style="margin-top:10px;font-size:12px;color:var(--muted)">你可以这样说，或直接打字：</div>';
-  html+='<div class="chips"><button class="chip" data-act="chip" data-q="今晚买啥">今晚买啥</button><button class="chip" data-act="chip" data-q="查：曼城">查：曼城</button><button class="chip" data-act="chip" data-q="它记得我什么">它记得我什么</button></div>';
-  html+='<div class="foot">解球引擎 v2.3 · 全部结论赛前封存可验<br>数据分析结果，不构成投注建议</div>';
+  html+='<div class="section-head"><h2>继续问</h2><span>AI 助理</span></div><div class="chips"><button class="chip" data-act="chip" data-q="今晚买啥">今晚买啥</button><button class="chip" data-act="chip" data-q="查：曼城">查：曼城</button><button class="chip" data-act="chip" data-q="它记得我什么">它记得我什么</button></div>';
+  html+='<div class="foot">解球 · 每一场都算清楚成本<br>数据分析结果，不构成投注建议</div>';
   return html;
 }};
 V.detail={render:function(){
@@ -878,14 +1108,14 @@ V.detail={render:function(){
       evh='<article class="card"><div class="eyebrow">证据链 · 逐条标注</div>'+evList.map(function(e){return '<div class="kv"><span><span class="rt'+(e.tag==="仅背景"?" out":"")+'" style="margin-right:6px">'+e.tag+"</span>"+e.t+' — '+e.d+'</span></div><div class="meta">来源：'+e.src+"</div>"}).join("")+"</article>";
     }
     const beRow=(be&&be.home)?'<div class="kv"><span>打平所需胜率（主胜）</span><b class="num">'+(be.home*100).toFixed(1)+'%</b></div>':'<div class="kv"><span>打平所需胜率（主胜）</span><b>…</b></div>';
-    return '<article class="card"><div class="eyebrow">⚖ '+d.home+" vs "+d.away+' · '+d.sel+" "+d.hc+'</div><div class="meta">'+d.league+' · '+d.no+' · '+d.close+' 开赛 · 状态 '+d.status+'</div><div class="costline"><span>官方 SP</span><b class="num">'+d.spFull.h.toFixed(2)+" / "+d.spFull.d.toFixed(2)+" / "+d.spFull.a.toFixed(2)+'</b></div><div class="costline"><span>抽水</span><b class="num">'+d.cost.rake.toFixed(1)+'%（阈值 '+(d.rakeThreshold*100).toFixed(1)+'%）</b></div></article>'+
+    return '<article class="detail-hero"><div class="k">'+(d.status==="promoted"?"已推 · 三关全过":d.status==="killed"?"已砍":"复核中")+'</div><div class="m">'+d.home+' <span style="color:rgba(243,246,242,.4);font-size:11px;font-weight:400">vs</span> '+d.away+'</div><div class="meta">'+d.league+' · '+d.no+' · '+d.close+' 开赛 · 状态 '+d.status+'</div><div class="p"><div><div style="font-size:9.5px;color:rgba(243,246,242,.45);margin-bottom:3px">官方 SP</div><div style="font-size:17px;font-weight:600;font-variant-numeric:tabular-nums">'+d.spFull.h.toFixed(2)+" / "+d.spFull.d.toFixed(2)+" / "+d.spFull.a.toFixed(2)+'</div></div><div style="text-align:right"><b style="font-size:26px;font-weight:600;font-variant-numeric:tabular-nums">'+d.cost.rake.toFixed(1)+'<span style="font-size:13px;font-weight:500;color:rgba(243,246,242,.55)">%</span></b><div style="font-size:9.5px;color:rgba(243,246,242,.4);margin-top:3px">抽水 · 阈值 '+(d.rakeThreshold*100).toFixed(1)+'%</div></div></div></article>'+
     '<article class="card"><div class="eyebrow">三关明细</div>'+gateRows+'</article>'+
     '<article class="card"><div class="eyebrow">概率与打平线</div><div class="kv"><span>去水后 H/D/A</span><b>'+(d.probs.home*100).toFixed(1)+"% / "+(d.probs.draw*100).toFixed(1)+"% / "+(d.probs.away*100).toFixed(1)+'%</b></div>'+beRow+(d.pick?'<div class="kv"><span>引擎 pick</span><b class="g">'+d.pick.dir+" @"+d.pick.sp+" · EV "+d.pick.ev+"</b></div>":"")+"</article>"+evh+
     '<div class="btnrow"><button class="btn" data-act="back">返回</button><button class="btn primary" data-act="buy"'+(d.status!=="promoted"?" disabled":"")+'>'+(S.bets.some(function(b){return b.verdictId===d.id})?"已记 ✓":L().buy)+"</button></div>"+
     '<div class="legal">数据分析结果，不构成投注建议</div>';
   }
   const d=v.detail;
-  let h='<article class="card"><div class="eyebrow">⚖ '+v.home+" vs "+v.away+' · '+v.sel+" "+v.hc+'</div><div class="gates">'+v.gates.map(function(g){return '<span class="gatechip"><i>✓</i>'+g[0]+" "+g[1]+"</span>"}).join("")+"</div></article>";
+  let h='<article class="detail-hero"><div class="k">已推 · 三关全过</div><div class="m">'+v.home+' <span style="color:rgba(243,246,242,.4);font-size:11px;font-weight:400">vs</span> '+v.away+'</div><div class="meta">'+v.league+' · '+v.no+' · '+v.close+' 开赛</div><div class="p"><div><div style="font-size:9.5px;color:rgba(243,246,242,.45);margin-bottom:3px">选择</div><div style="font-size:20px;font-weight:600">'+v.sel+'<span style="font-size:10px;border:1px solid rgba(243,246,242,.18);border-radius:7px;padding:2px 6px;color:rgba(243,246,242,.62);margin-left:7px;font-weight:400">让 '+v.hc+'</span></div></div><div style="text-align:right"><b style="font-size:26px;font-weight:600;font-variant-numeric:tabular-nums">'+v.judge.p.toFixed(1)+'<span style="font-size:13px;font-weight:500;color:rgba(243,246,242,.55)">%</span></b><div style="font-size:9.5px;color:rgba(243,246,242,.4);margin-top:3px">模型置信</div></div></div><div class="stepper" style="margin-top:14px">'+stepperHTML(v.gates)+'</div></article>';
   h+='<article class="card"><div class="eyebrow">三层披露 · 按需往下读</div>';
   d.layers.forEach(function(ly){
     h+='<div style="padding:9px 2px;border-top:1px dashed var(--line)"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:13.5px">'+ly.n+" "+ly.t+'</b><span class="rt">'+ly.tag+'</span></div><div class="meta" style="margin-top:4px;line-height:1.7">'+ly.body+"</div></div>";
@@ -929,13 +1159,13 @@ V.whynot={render:function(){
   const sel=Math.min(Math.max(S.whynotSel||0,0),2);
   const w=D.whynot[keys[sel]];
   const st=D.whynot.stats;
-  let h='<div class="strip" style="margin-top:6px"><span>今日 '+st.total+' 场 · <b>'+st.byGate.join(" · ")+'</b></span><span>推 <b>'+st.pushed+'</b> 场</span></div>';
-  h+='<div class="chips">'+keys.map(function(k,i){const m=D.whynot[k];return '<button class="chip'+(i===sel?" on":"")+'" data-act="whynotSel" data-i="'+i+'">'+m.no+" "+m.a+" vs "+m.b+'</button>'}).join("")+'</div>';
+  let h='<div class="why-summary"><span>今日 <b>'+st.total+'</b> 场</span><span>'+st.byGate.join(" · ")+'</span><span>推 <b>'+st.pushed+'</b> 场</span></div>';
+  h+='<div class="why-switch">'+keys.map(function(k,i){const m=D.whynot[k];return '<button class="why-tab'+(i===sel?" on":"")+'" data-act="whynotSel" data-i="'+i+'"><b>'+m.a+'</b><span>死于'+m.gate+'</span></button>'}).join("")+'</div>';
   /* L1 · 总结层：5 秒看完 */
-  h+='<article class="card picked"><div class="eyebrow amber">🚫 死于「'+w.gate+'」· '+w.gateName+'</div><div class="match">'+w.a+'<em>vs</em>'+w.b+'</div><div class="meta">'+w.lg+' · '+w.no+' · '+w.close+' 停售</div>';
-  h+='<div style="font-size:14.5px;font-weight:600;line-height:1.65;margin-top:9px">'+w.oneline+'</div>';
-  h+='<div class="judge" style="border-left-color:var(--amber);margin-top:8px">'+w.grammar+'</div>';
-  h+='<div class="ssc">'+w.stat3.map(function(s){return '<div class="c'+(s[2]?" bad":"")+'"><b class="num">'+s[1]+'</b><span>'+s[0]+'</span></div>'}).join("")+'</div>'+(w.wait?waitBoxHTML():"")+'</article>';
+  h+='<article class="why-hero"><div class="k">死于「'+w.gate+'」· '+w.gateName+'</div><div class="m">'+w.a+' <span style="color:var(--muted);font-size:11px;font-weight:400">vs</span> '+w.b+'</div><div class="meta">'+w.lg+' · '+w.no+' · '+w.close+' 停售</div>';
+  h+='<div class="one">'+w.oneline+'</div>';
+  h+='<div class="quote">'+w.grammar+'</div>';
+  h+='<div class="ssc">'+w.stat3.map(function(s){return '<div class="c'+(s[2]?" bad":"")+'"><b class="num">'+s[1]+'</b><span>'+s[0]+'</span></div>'}).join("")+'</div></article>';
   /* L2 · 三关体检 */
   h+='<article class="card"><div class="eyebrow">三关体检 · 死在哪一格</div>'+w.gates.map(function(g){
     return '<div class="gline '+(g.pass?'ok':'no')+'"><span class="gn">'+g.n+'</span><div><b>'+g.v+'</b><div class="meta" style="margin-top:1px">'+g.note+'</div></div><span class="res">'+(g.pass?'✓ 过':'✗ 死')+'</span></div>';
@@ -1048,7 +1278,7 @@ function runShot(){
 V.records={render:function(){
   let h='<div class="dash"><div class="d" data-act="go" data-v="weekly" style="cursor:pointer"><b>'+D.weekly.res+"</b><span>本周 · 看周报 ›</span></div><div class=\"d\"><b>"+D.weekly.cut+"</b><span>已帮你砍掉的坏场</span></div></div>";
   h+='<article class="card"><div class="eyebrow">我的票单 · '+S.bets.length+" 注</div>";
-  if(!S.bets.length)h+='<div class="meta">还没有入账的注。买了之后点「买了」自动记账。</div>';
+  if(!S.bets.length)h+='<div class="meta">还没有入账的注。看到结论后点「记一注」，自动记账。</div>';
   S.bets.forEach(function(b){
     const cls=b.r==="win"?"ok":b.r==="lose"?"bad":"na";
     const tag=b.r==="win"?"✓ 中":b.r==="lose"?"✗ 未中":"… 待赛";
@@ -1091,7 +1321,7 @@ V.me={render:function(){
   h+='<div class="set" data-act="go" data-v="privacy"><span>数据与记忆管理</span><span class="v">'+D.memories.length+' 条 · 可删 ›</span></div>';
   h+='<div class="set" data-act="go" data-v="compliance"><span>合规中心</span><span class="v">'+(S.excluded?"自排除中 · "+S.excludedLabel:"自排除 / 自评 / 热线")+' ›</span></div>';
   h+='</article>';
-  h+='<article class="card"><div class="eyebrow">🧪 演示开关（不影响正式逻辑）</div><div class="set" data-act="demo" data-k="demoEmpty"><span>模拟「今晚全砍」空场</span><span class="v">'+(S.demoEmpty?"开":"关")+"</span></div>";
+  h+='<article class="card"><div class="eyebrow">演示与调试</div><div class="set" data-act="demo" data-k="demoEmpty"><span>模拟「今晚全砍」空场</span><span class="v">'+(S.demoEmpty?"开":"关")+"</span></div>";
   h+='<div class="set" data-act="demo" data-k="prot"><span>连败保护（连败 3 场自动降温）</span><span class="v">'+(S.prot?"开":"关")+"</span></div>";
   h+='<div class="set" data-act="dataMode"><span>数据模式</span><span class="v">'+(S.dataMode==="demo"?"演示数据 · 情报层新版":"实时后端")+" ›</span></div>";
   h+='<div class="set" data-act="demo" data-k="pendingDemo"><span>模拟「等首发」判决卡</span><span class="v">'+(S.pendingDemo?"开":"关")+"</span></div>";
@@ -1154,17 +1384,26 @@ V.prefs={render:function(){
   h+='<div class="btnrow"><button class="btn" data-act="back">完成</button></div>';
   return h;
 }};
+const TOOL_ICONS={
+  ticket:'<svg viewBox="0 0 24 24"><path d="M5 6h14v4a2 2 0 0 0 0 4v4H5v-4a2 2 0 0 0 0-4V6z"/><path d="M12 6v12"/></svg>',
+  scan:'<svg viewBox="0 0 24 24"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3"/><circle cx="12" cy="12" r="3"/></svg>',
+  image:'<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M4 16l5-5 4 4 2-2 5 5"/></svg>',
+  drop:'<svg viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>',
+  ban:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M7 7l10 10"/></svg>',
+  list:'<svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4.5" cy="6" r=".8" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r=".8" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r=".8" fill="currentColor" stroke="none"/></svg>'
+};
 V.tools={render:function(){
-  let h='<div class="grid">';
-  h+='<div class="tile" data-act="go" data-v="parlay"><span class="ti">🧾</span><span class="tt">串关体检</span><span class="ts">拍票 → 30 秒报告</span></div>';
-  h+='<div class="tile" data-act="go" data-v="scan"><span class="ti">🎟️</span><span class="tt">拍票记账</span><span class="ts">本地 OCR · 自动入账</span></div>';
-  h+='<div class="tile" data-act="go" data-v="shot"><span class="ti">🖼️</span><span class="tt">截图鉴别</span><span class="ts">三问验真</span></div>';
-  h+='<div class="tile" data-act="go" data-v="water"><span class="ti">💧</span><span class="tt">水位榜</span><span class="ts">抽水最浅 3 场</span></div>';
-  h+='<div class="tile" data-act="go" data-v="whynot"><span class="ti">🚫</span><span class="tt">为什么不推</span><span class="ts">死在哪关 · 全透明</span></div>';
-  h+='<div class="tile" data-act="go" data-v="onsale"><span class="ti">📋</span><span class="tt">今日在售</span><span class="ts">'+D.sale.count+' 场 · 实时</span></div>';
-  h+="</div>";
-  h+='<article class="card"><div class="eyebrow">最近哨兵</div><div class="arow" data-act="go" data-v="livematch"><span class="adot"></span><div><b>'+D.sentinel.body.split("；")[0]+'</b><br><span>18:40 · 点看实况</span></div></div></article>';
-  h+='<div class="foot">更多工具随版本开放 · 路线图见公开文档</div>';
+  let h='<div class="greet" style="padding-top:8px"><div class="greet-kicker"><span class="statusdot"></span>工具</div><h1 style="font-size:24px">把账算清楚。</h1><p>拍票、比价、体检、复盘。每个工具都只回答一个问题：这笔钱花得值不值。</p></div>';
+  h+='<div class="tool-grid">';
+  h+='<button class="tool" data-act="go" data-v="parlay"><span class="tool-ico">'+TOOL_ICONS.ticket+'</span><b>串关体检</b><span>拍票 → 30 秒报告</span></button>';
+  h+='<button class="tool" data-act="go" data-v="scan"><span class="tool-ico">'+TOOL_ICONS.scan+'</span><b>拍票记账</b><span>本地 OCR · 自动入账</span></button>';
+  h+='<button class="tool" data-act="go" data-v="shot"><span class="tool-ico">'+TOOL_ICONS.image+'</span><b>截图鉴别</b><span>三问验真</span></button>';
+  h+='<button class="tool" data-act="go" data-v="water"><span class="tool-ico">'+TOOL_ICONS.drop+'</span><b>水位榜</b><span>抽水最浅的场</span></button>';
+  h+='<button class="tool" data-act="go" data-v="whynot"><span class="tool-ico">'+TOOL_ICONS.ban+'</span><b>为什么不推</b><span>死在哪关 · 全透明</span></button>';
+  h+='<button class="tool" data-act="go" data-v="onsale"><span class="tool-ico">'+TOOL_ICONS.list+'</span><b>今日在售</b><span>'+D.sale.count+' 场 · 实时</span></button>';
+  h+='</div>';
+  h+='<div class="section-head"><h2>最近哨兵</h2><span>盘口异动</span></div><div class="quiet-list"><button class="quiet-row" data-act="go" data-v="livematch"><span class="quiet-dot amber"></span><span class="quiet-main"><b>'+D.sentinel.body.split("；")[0]+'</b><span>18:40 · 点看实况</span></span><span class="quiet-tag">哨兵</span></button></div>';
+  h+='<div class="foot">更多工具随版本开放 · 数据分析结果，不构成投注建议</div>';
   return h;
 }};
 /* ================= 交互 ================= */
@@ -1295,6 +1534,7 @@ const ACT={
   confirmBet:function(){copy("周三012 曼城 让球主胜 @2.05 ×34元\n周三015 拜仁 让球主胜(-1) @1.72 ×33元\n周三021 皇马 主胜 @1.55 ×33元")},
   scanStart:function(){runScan()},
   shotStart:function(){runShot()},
+  send:function(){const el=document.getElementById("cbar");if(!el)return;const v=el.value.trim();if(v){el.value="";sendChat(v)}},
   goTab:function(el){switchTab(el.getAttribute("data-tab"))},
   goIntel:function(){go("detail");setTimeout(function(){const el=document.getElementById("intelcard");if(el)el.scrollIntoView({block:"start",behavior:"smooth"})},80)},
   dismissEvt:function(){S.evtDismissed=1;save();render()},

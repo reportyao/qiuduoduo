@@ -112,12 +112,22 @@ table.rules tr:last-child td{border-bottom:0}
 .sigline .l b{font-size:12.5px;font-weight:600}
 .sigline .subl{color:var(--muted);font-size:11.5px}
 .whywait{font-size:11.5px;color:var(--muted);margin-top:9px}
+
+/* v3 视觉对齐：测试前端已改为暖白 / 深绿 / 线性图标 */
+:root{color-scheme:light;--bg:#F5F4EF;--bg2:#EEECE6;--card:#FFFFFF;--ink:#15211B;--muted:#6B756F;--line:#E9E7E0;--v:#0E6B4F;--vsoft:#EAF3EE;--danger:#A8443A;--dsoft:#F7E9E6;--amber:#A66A18;--asoft:#F7EFE1;--pink:#A8443A}
+body{background:#EEECE6;color:var(--ink)}
+.frame{box-shadow:0 20px 50px rgba(16,32,24,.10)}
+h1,.match,.call{letter-spacing:-.02em}
+.v3note{margin-top:12px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:12px;line-height:1.65;color:var(--muted);max-width:760px}
+.v3note b{color:var(--ink)}
+.v3note a{color:var(--v);text-decoration:none}
 </style>
 </head>
 <body>
-<h1>情报层 UI 设计图 · 三关不动，第四块「情报」</h1>
+<h1>情报层 UI 设计图 v3 · 三关不动，第四块「情报」</h1>
+<div class="v3note"><b>v3 视觉已落地测试前端</b>：暖白底、深墨绿、线性图标、助理式首页。本图保留交互结构，颜色与排版以 <a href="http://43.128.24.244:8899/" target="_blank" rel="noopener">腾讯云测试前端</a> 为准。</div>
 <p class="sub">设计原则：① 判决卡只多一行摘要，不增加认知负担；② 情报明细放在详情页第 4 块；③ 所有情报标注「市场未反应 / 已反映 / 仅参考」；④ 信息不全 = 明确「等首发」，不硬推。</p>
-<p class="sub" style="margin-top:10px;color:var(--v)">v2 交互优化（已落地测试前端）：① 情报行先讲事实、再讲市场状态；② 详情默认只展开第一条，其余按需展开；③ AI 卡默认折叠驱动/风险；④ 等首发卡补「为什么现在不能算」；⑤ 异动卡只在结论真的变化时出现。</p>
+<p class="sub" style="margin-top:10px;color:var(--v)">v2/v3 交互优化（已落地测试前端）：① 情报行先讲事实、再讲市场状态；② 详情默认只展开第一条，其余按需展开；③ AI 卡默认折叠驱动/风险；④ 等首发卡补「为什么现在不能算」；⑤ 异动卡只在结论真的变化时出现。</p>
 <div class="legend">
   <span><i class="dot" style="background:var(--v)"></i><b>硬情报</b> 可核验 · 调整概率（有边界）</span>
   <span><i class="dot" style="background:var(--amber)"></i><b>软情报</b> 只扩区间 · 触发「等」</span>
@@ -148,8 +158,8 @@ table.rules tr:last-child td{border-bottom:0}
         <span class="arrow">详情 ›</span>
       </div>
       <div class="btnrow">
-        <button class="btn primary">买了</button>
-        <button class="btn">为什么</button>
+        <button class="btn primary">记一注</button>
+        <button class="btn">看完整账</button>
         <button class="btn" style="flex:0 0 42px">⋯</button>
       </div>
     </div>

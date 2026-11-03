@@ -4,7 +4,9 @@
 |---|---|
 | 版本 | v2.1（自包含，不依赖任何历史版本文档） |
 | 日期 | 2026-11-01 |
-| 配套 | PRD v5.1 · Release-plan v1.1 · Roadmap v1.1 · OpsBlueprint v1.0 |
+| 配套 | PRD v5.1 · Release-plan v1.1 · Roadmap v1.1 · OpsBlueprint v1.0 · Intelligence-Layer v1.0 |
+
+> 情报层（全量事实卡 / 情报简报 / AI 研判 / 点播与配额）的完整设计见 [Intelligence-Layer-v1.0.md](Intelligence-Layer-v1.0.md)。
 
 ---
 
