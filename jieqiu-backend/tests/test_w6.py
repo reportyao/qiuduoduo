@@ -85,11 +85,12 @@ def test_user_streak_e2e_and_protection_in_stream(db, client, monkeypatch):
     import urllib.request
     from urllib.parse import quote
     user, _ = login_device(db, "tok-streak")
-    # 今晚这场用未来 kickoff（进构建窗口）
+    # 今晚这场用未来 kickoff（进构建窗口）；国际盘必须用同一个 ko，避免墙钟漂移
+    ko3_str = future_kickoff(today_cn(), 22, 30)
     for i, (mid, no, ko) in enumerate([
             ("2045001", "周一001", "2026-11-01 21:00:00"),
             ("2045002", "周二001", "2026-11-02 21:00:00"),
-            ("2045003", "周三001", future_kickoff(today_cn(), 22, 30))]):
+            ("2045003", "周三001", ko3_str)]):
         db.merge(SPMatch(match_id=mid, match_no=no, league="英超",
                          home_raw="霸主", away_raw="弱旅", home="霸主", away="弱旅",
                          kickoff=ko, single_flag=True))
@@ -102,7 +103,7 @@ def test_user_streak_e2e_and_protection_in_stream(db, client, monkeypatch):
                          match_date="2026-11-01", goals_home=0, goals_away=1,
                          retrieved_at="2026-11-02T10:00:00+08:00"))
     # 国际盘（2045003 市闸过 → 可晋升）
-    ko3 = datetime.strptime("2026-11-03 22:30:00", "%Y-%m-%d %H:%M:%S")
+    ko3 = datetime.strptime(ko3_str, "%Y-%m-%d %H:%M:%S")
     db.merge(IntlOdds(source="pinnacle", sport="soccer_epl", league="EPL",
                       home_raw="DOM", away_raw="WEAK", home="霸主", away="弱旅",
                       kickoff_utc=(ko3 - timedelta(hours=11)).strftime("%Y-%m-%dT%H:%M:%S+00:00"),

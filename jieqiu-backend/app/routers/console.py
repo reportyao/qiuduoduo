@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import hmac
+import html
 import os
 import time
 from datetime import datetime, timedelta, timezone
@@ -18,8 +19,8 @@ from sqlalchemy import func, select
 
 from ..config import get_settings
 from ..db import get_db
-from ..models import (DailyAnchor, MatchResult, ModelEval, SPSnapshot, User,
-                      Verdict, VerdictRevision)
+from ..models import (DailyAnchor, Event, MatchResult, ModelEval, Notification,
+                      PushToken, SPSnapshot, User, Verdict, VerdictRevision)
 from ..modules.sealchain import latest_chain_status
 from ..modules.settle import ledger_stats
 
@@ -84,6 +85,8 @@ def _page(title: str, body: str, tok: str = "") -> HTMLResponse:
         '<a href="/console?t={t}">日报</a>'
         '<a href="/console/alerts?t={t}">告警</a>'
         '<a href="/console/variants?t={t}">变体池</a>'
+        '<a href="/console/assistant?t={t}">助理</a>'
+        '<a href="/console/push?t={t}">推送</a>'
         '<a href="/console/ops?t={t}">运维</a>'
         '<span style="color:#999">解球编辑台</span></nav>'
     ).format(t=tok)
@@ -259,6 +262,66 @@ def console_variants_mark(request: Request, v: str = "", p: str = "", m: str = "
     if v and p in PERSONAS and m in ("A", "Q", "X"):
         _VARIANT_POOL.setdefault(v, {})[p] = m
     return RedirectResponse(f"/console/variants?t={t}", status_code=302)
+
+
+# ---------- 助理运行时 ----------
+
+@router.get("/console/assistant", response_class=HTMLResponse)
+def console_assistant(request: Request, db=Depends(get_db)):
+    _require(request)
+    tok = request.query_params.get("t") or request.cookies.get("console_t") or ""
+    ecounts = db.execute(select(Event.type, func.count(Event.id)).group_by(Event.type)).all()
+    ncounts = db.execute(select(Notification.channel, Notification.status,
+                                func.count(Notification.id))
+                         .group_by(Notification.channel, Notification.status)).all()
+    events = db.scalars(select(Event).order_by(Event.id.desc()).limit(20)).all()
+    notifs = db.scalars(select(Notification).order_by(Notification.id.desc()).limit(20)).all()
+    ec = "".join(f"<span class='kv'><b>{html.escape(str(t))}</b> {n}</span>" for t, n in ecounts)
+    nc = "".join(f"<span class='kv'><b>{html.escape(str(c))}/{html.escape(str(s))}</b> {n}</span>" for c, s, n in ncounts)
+    erows = "".join(
+        f"<tr><td>{e.id}</td><td>{html.escape(e.type)}</td><td>{e.severity}</td>"
+        f"<td>{html.escape(str(e.match_id or ''))}</td>"
+        f"<td>{html.escape(str(e.created_at)[:19])}</td>"
+        f"<td>{'✓' if e.fanout_at else '…'}</td></tr>" for e in events)
+    nrows = "".join(
+        f"<tr><td>{n.id}</td><td>{html.escape(n.channel)}</td><td>{html.escape(n.status)}</td>"
+        f"<td>{html.escape(n.title)}</td><td>{html.escape(n.last_error)}</td>"
+        f"<td>{html.escape(str(n.created_at)[:19])}</td></tr>" for n in notifs)
+    body = (f"<div>{ec}</div><div style='margin-top:8px'>{nc}</div>"
+            "<h2>最近事件</h2><table><tr><th>ID</th><th>类型</th><th>级别</th><th>比赛</th><th>时间</th><th>扇出</th></tr>"
+            + erows + "</table><h2>最近通知</h2>"
+            "<table><tr><th>ID</th><th>渠道</th><th>状态</th><th>标题</th><th>错误</th><th>时间</th></tr>"
+            + nrows + "</table>")
+    return _page("助理运行时", body, tok)
+
+
+@router.get("/console/push", response_class=HTMLResponse)
+def console_push(request: Request, db=Depends(get_db)):
+    _require(request)
+    tok = request.query_params.get("t") or request.cookies.get("console_t") or ""
+    tokens = db.scalars(select(PushToken).order_by(PushToken.id.desc()).limit(20)).all()
+    counts = db.execute(select(Notification.status, func.count(Notification.id))
+                        .where(Notification.channel == "push")
+                        .group_by(Notification.status)).all()
+    total_tokens = db.scalar(select(func.count(PushToken.id))) or 0
+    enabled_tokens = db.scalar(select(func.count(PushToken.id)).where(
+        PushToken.enabled.is_(True))) or 0
+    configured = bool(os.environ.get("JQ_JPUSH_APPKEY") and
+                      os.environ.get("JQ_JPUSH_MASTER_SECRET"))
+    dryrun = (os.environ.get("JQ_JPUSH_DRYRUN", "").strip() in ("1", "true", "yes")
+              or not configured)
+    rows = "".join(
+        f"<tr><td>{t.id}</td><td>{html.escape(t.platform)}</td><td>{html.escape(t.provider)}</td>"
+        f"<td>{'✓' if t.enabled else '×'}</td><td>{t.failure_count}</td>"
+        f"<td>{html.escape(t.last_error)}</td><td>{html.escape(str(t.last_seen)[:19])}</td></tr>"
+        for t in tokens)
+    stats = "".join(f"<span class='kv'><b>{html.escape(str(s))}</b> {n}</span>" for s, n in counts)
+    body = (f"<div class='kv'><span>JPush</span><b>{'dry-run/未配置' if dryrun else '已配置'}</b></div>"
+            f"<div class='kv'><span>设备 token</span><b>{enabled_tokens}/{total_tokens} 启用</b></div>"
+            f"<div style='margin-top:8px'>{stats}</div>"
+            "<h2>设备 Token</h2><table><tr><th>ID</th><th>平台</th><th>Provider</th><th>启用</th><th>失败</th><th>错误</th><th>最近</th></tr>"
+            + rows + "</table>")
+    return _page("推送", body, tok)
 
 
 # ---------- 快捷运维 ----------

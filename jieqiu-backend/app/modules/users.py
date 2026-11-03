@@ -56,17 +56,24 @@ def purge_expired_deletions(db: Session, days: int = 7) -> dict:
     由每日 cron 调用（python -m app.purge_cli）。
     """
     from ..models import (AuthIdentity as AI, Bet as B, Memory as M,
-                          RefreshToken as RT, ShareCard as S)
+                          Notification as N, NotifySettings as NS,
+                          PushToken as PT, RefreshToken as RT, ShareCard as S,
+                          UserEvent as UE, WatchTarget as WT)
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     expired = db.scalars(
         select(User).where(User.deleted_at.isnot(None), User.deleted_at <= cutoff)
     ).all()
     counts = {"purged_users": 0, "removed_bets": 0, "removed_memories": 0,
-              "removed_shares": 0, "removed_identities": 0, "removed_tokens": 0}
+              "removed_shares": 0, "removed_identities": 0, "removed_tokens": 0,
+              "removed_notifications": 0, "removed_watches": 0,
+              "removed_push_tokens": 0, "removed_user_events": 0,
+              "removed_notify_settings": 0}
     for u in expired:
         for table, key in ((B, "removed_bets"), (M, "removed_memories"),
                            (S, "removed_shares"), (AI, "removed_identities"),
-                           (RT, "removed_tokens")):
+                           (RT, "removed_tokens"), (N, "removed_notifications"),
+                           (WT, "removed_watches"), (PT, "removed_push_tokens"),
+                           (UE, "removed_user_events"), (NS, "removed_notify_settings")):
             rows = db.scalars(select(table).where(table.user_id == u.id)).all()
             for row in rows:
                 db.delete(row)

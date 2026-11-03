@@ -8,6 +8,8 @@
 
 > 情报层（全量事实卡 / 情报简报 / AI 研判 / 点播与配额）的完整设计见 [Intelligence-Layer-v1.0.md](Intelligence-Layer-v1.0.md)。
 
+> AI 助理运行时（监控/推送/记忆）P0 已实现：events / notifications / watch_targets / push_tokens / notify_settings / inbox / worker / 控制台助理页；详见 [Assistant-Runtime-v1.0.md](Assistant-Runtime-v1.0.md) §18。
+
 ---
 
 ## 1. 选型定稿

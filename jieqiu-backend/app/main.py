@@ -11,6 +11,7 @@ from .routers.w7 import router as w7_router
 from .routers.console import router as console_router
 from .routers.w8 import router as w8_router
 from .routers.auth_w5 import router as auth_router
+from .routers.assistant import router as assistant_router
 
 app = FastAPI(
     title="解球 API",
@@ -36,6 +37,7 @@ app.include_router(w7_router, tags=["v0.5-w7"])
 app.include_router(console_router, tags=["editor-console"])
 app.include_router(w8_router, tags=["w8-review"])
 app.include_router(auth_router, tags=["w5-auth"])
+app.include_router(assistant_router, tags=["assistant"])
 
 
 def _warm_models() -> None:

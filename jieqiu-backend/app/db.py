@@ -78,6 +78,12 @@ _REQUIRED_COLUMNS = {
         "email_verified": "BOOLEAN",
         "deleted_at": "TIMESTAMP",
     },
+    "memories": {
+        "category": "VARCHAR(16) DEFAULT 'preference'",
+        "confidence": "FLOAT DEFAULT 1.0",
+        "expires_at": "TIMESTAMP",
+        "last_used_at": "TIMESTAMP",
+    },
 }
 
 

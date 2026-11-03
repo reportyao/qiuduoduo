@@ -141,6 +141,23 @@
 
 ---
 
+## AI 助理运行时（P0，2026-11-03）
+
+| 功能 | 前端动作 | 后端接口 | 表 | 状态 |
+|---|---|---|---|---|
+| 站内信列表 | 红点/消息中心 | `GET /me/inbox` | notifications | ✅ |
+| 未读数 | 顶部红点 | `GET /me/inbox/unread-count` | notifications | ✅ |
+| 标记已读 | 点开一条 | `POST /me/inbox/{id}/read` | notifications | ✅ |
+| 全部已读 | 消息中心 | `POST /me/inbox/read-all` | notifications | ✅ |
+| 点击深链 | 点开通知 | `POST /me/inbox/{id}/click` | notifications | ✅ |
+| 关注比赛 | 关注开关 | `GET/POST /me/watch`、`DELETE /me/watch/{id}` | watch_targets | ✅ |
+| 通知设置 | 设置页 | `GET/PUT /me/notify-settings` | notify_settings | ✅ |
+| 推送注册 | Android 启动 | `POST /push/register` | push_tokens | ✅ |
+| 推送解绑 | 退出登录 | `POST /push/unregister` | push_tokens | ✅ |
+| 事件/推送运维 | 管理后台 | `GET /console/assistant`、`/console/push` | events/notifications/push_tokens | ✅ |
+| 前端接 inbox/关注 | 首页/我的 | 上述接口 | — | ⏳ 待接 |
+| 真实 JPush 厂商通道 | Android 包 | provider | push_tokens | ⏳ 凭证 |
+
 ## 联调验收清单（每个功能的"做完了"标准）
 
 | 检查项 | 说明 |

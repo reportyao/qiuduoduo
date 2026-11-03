@@ -3,7 +3,7 @@
 > 范围：主动监控、推送、用户记忆、助理交互，以及与现有文档 / 后端 / 管理后台的对照。
 > 关联：`PRD-v5.1.md` F13/F19/F21/F22 + §5.2 推送矩阵；`TechSpec-v2.1.md` §4/§5/§8；`Intelligence-Layer-v1.0.md`；`Release-plan-v1.1.md` W5/W6。
 >
-> 状态：设计与差距分析。现有后端已具备判决/修订/记忆/下注/聊天/周报/控制台；监控、推送、收件箱、派生记忆、AI 分析尚未实现。
+> 状态：**P0 后端/管理后台已实现（2026-11-03）**：events / notifications / watch_targets / push_tokens / notify_settings / worker / inbox / 控制台助理/推送页；**156 tests passed**。Android JPush 真实凭证、前端 inbox/关注 UI、派生记忆、AI 分析仍待接。
 >
 > **平台范围（2026-11-03 定）：MVP 只做 Android；iOS/APNs 与 Global/FCM 延后。**
 
@@ -26,11 +26,11 @@
 
 | 能力 | 说明 | 当前状态 | 差距 |
 |---|---|---|---|
-| **感知** | 监控比赛、盘口、阵容、赛程、赛果 | 判决/修订/结算/SP 已有；阵容/伤停未接 | 无 events 表、无监控 worker |
+| **感知** | 监控比赛、盘口、阵容、赛程、赛果 | 判决/修订/结算/SP + events/monitor worker 已实现；阵容/伤停未接 | 盘口异动/阵容规则待接 |
 | **理解** | 三关、Dixon-Coles、情报信号 | 三关/模型/修订链已上线；情报信号设计完成未实现 | signals/AI 表未建 |
-| **记忆** | 用户偏好、约束、历史、情绪、上下文 | `users.persona`、`memories` 表 + 冲突 409 + 聊天写入已有 | 无派生记忆、无五类、无置信/过期 |
-| **表达** | 三套人设、文案、推送文案 | 前端 `T()` 已做；后端 `users.persona` 已持久化 | 推送文案/事件摘要未做 |
-| **行动** | 站内信、推送、深链、关注 | 前端本地 follows/通知软请求；后端无 follow/notification/push | 全链路缺失 |
+| **记忆** | 用户偏好、约束、历史、情绪、上下文 | `users.persona`、`memories` + 冲突 409 + category/confidence/expires 字段已有 | 无派生记忆/五类推导/记忆检索 |
+| **表达** | 三套人设、文案、推送文案 | 前端 `T()` + 后端 persona + 中性推送模板已做 | chat 未读 persona；事件摘要未做 |
+| **行动** | 站内信、推送、深链、关注 | watch_targets / inbox / notify_settings / push_tokens / events / notifications + worker + JPush dryrun 已实现 | 前端 inbox/关注待接；真实 JPush 凭证未配 |
 | **反思** | 归因、周报、连败保护 | W6 已上线（归因/周报/保护 423） | 与监控/推送未打通 |
 
 **一句话：理解和反思已有雏形；感知、记忆、行动是短板。**
@@ -39,12 +39,12 @@
 
 | 分身 | 职责 | 文档 | 现状 | 缺口 |
 |---|---|---|---|---|
-| **盘口哨兵** | 盯 SP 异动、抽水变化、多源分歧 | PRD F15 / §5.2 | 前端“资金异动”演示卡；后端无监控 | events + 阈值 + 推送 |
+| **盘口哨兵** | 盯 SP 异动、抽水变化、多源分歧 | PRD F15 / §5.2 | events/worker 已实现；SP 异动规则未接 | odds monitor + 阈值 |
 | **纪律管家** | 连败保护、休息日、自排除、预算提醒 | PRD F11/F14 | 后端 discipline/rest/423 保护已上线；前端有入口 | 主动提醒/推送未接 |
 | **情报官** | 首发、伤停、轮换、赛程密度 | TechSpec §8.7 | 设计完成；前端情报 UI 演示 | signals 表 + API-Football |
-| **复盘官** | 赛后归因、周报、CLV | PRD F12 / W6 | W6 已上线归因/周报/复盘卡 | 与推送/记忆打通 |
+| **复盘官** | 赛后归因、周报、CLV | PRD F12 / W6 | W6 已上线；settled 事件已接 | 推送/记忆打通 |
 | **陪看** | 实况卡、进球/红牌、走盘 | PRD §5.4 | 前端实况演示；无 live feed | 实时比分源 + 静默推送 |
-| **选比赛** | 点形象→当日全量列表→快速进入 | PRD F22 | 前端已做简化版；`/stream` 已有 verdicts/onsale，但无独立 `/matches` 分类 | 分类接口 + 前端接 onsale |
+| **选比赛** | 点形象→当日全量列表→快速进入 | PRD F22 | 前端简化版；stream 有 verdicts/onsale；后端无分类接口 | 分类接口 + 前端接 onsale |
 | **对话** | 问成本/查比赛/记事情 | PRD F15 / W6 | 后端 `/chat` + 记忆写入；前端聊天条 | chat 未读 persona；上下文/记忆检索 |
 
 
@@ -54,13 +54,13 @@
 
 | 文档条目 | 要求 | 现状 | 结论 |
 |---|---|---|---|
-| PRD F13 记忆 | 五类；口述>推断；冲突当场问；可见可删 | `memories` 表 + `/me/memories` + 冲突 409 + 聊天写入；前端可删 | **部分完成**：缺派生记忆、五类、置信/过期 |
+| PRD F13 记忆 | 五类；口述>推断；冲突当场问；可见可删 | `memories` + 冲突 409 + 聊天写入 + category/confidence/expires 字段 | **部分完成**：缺派生记忆/五类推导 |
 | PRD F19 人设 | 三套人设、即选即换、通知中性 | `users.persona` + `PATCH /me` + 前端 `T()`/形象 sprite | **部分完成**：chat 未读 persona；前端切换未回写后端；推送保持中性 |
-| PRD F21 关注 | 详情关注开关、实况卡、终场推送 | 前端 `S.follows` 本地；后端无 follows 表/接口 | **未完成** |
+| PRD F21 关注 | 详情关注开关、实况卡、终场推送 | `watch_targets` + `/me/watch` 已实现；前端仍本地 | **部分完成**：前端待接 API |
 | PRD F22 吉祥物选比赛 | 点大头像→分类 chips→点场次→卡入流 | 前端已做简化版（点击形象出 6/12 场列表） | **部分完成**：stream 有 onsale/verdicts，但无分类接口；前端 mapStream 未接 onsale |
-| PRD §5.2 推送矩阵 | 终场/结算/结论/拦截/未决；过程不推；静默时段 | 文档完整；代码无 events/notifications/push | **未完成** |
-| PRD §5.3 两级时序 | 终场 T+2min、结算 T+2h、结论 T-3h、T-30m 未决 | 无调度/推送 worker | **未完成** |
-| TechSpec 推送 | JPush CN + Expo Global；静默推送 | 仅文档；无 token/推送适配 | **未完成**，MVP 只做 Android/JPush |
+| PRD §5.2 推送矩阵 | 终场/结算/结论/拦截/未决；过程不推；静默时段 | events/notifications/worker/JPush dryrun 已实现；未决/T-3h 动态触发未接 | **部分完成** |
+| PRD §5.3 两级时序 | 终场 T+2min、结算 T+2h、结论 T-3h、T-30m 未决 | close/final/settled/daily 已有；T-3h 动态/未决未接 | **部分完成** |
+| TechSpec 推送 | JPush CN + Expo Global；静默推送 | JPush provider + dryrun + push_tokens 已实现；真实凭证未配 | **部分完成**，MVP 只做 Android/JPush |
 | TechSpec §8.7/8.8 | 情报层 + AI 研判层 | 仅设计；无 signals/ai_analyses/ai_jobs | **未完成** |
 | Release W5 | 推送/实况卡/关注/连败保护 | 认证/连败保护已上线；推送/实况/关注未做 | **部分完成** |
 | Release W6 | 归因/记忆/卡片路由/非比赛日 | 已上线 | **完成** |
@@ -84,7 +84,7 @@
 | `w4` SSE narration | `routers/w4.py` | 站内事件流可复用 SSE 模式 |
 | 认证/JWT/设备令牌 | `auth.py` / `auth_w5.py` | 推送 token 绑定用户 |
 
-### 缺失、必须新建
+### P0 已建（2026-11-03）
 
 ```text
 watch_targets     用户关注：match / team / league + 事件偏好 + 静默时段
@@ -93,9 +93,10 @@ notifications     站内信/推送队列：user_id/event_id/channel/status/attem
 push_tokens       Android JPush：provider/token(unique)/app_version/last_seen/enabled/failure_count
 user_events       行为日志：view/click/buy/dismiss/search/chat
 notify_settings   事件类型/渠道/静默时段/每日上限/一键暂停
+assistant_state   worker 游标：last_revision_id
 ```
 
-`memories` 需扩展：
+`memories` 已扩展（旧数据默认 preference/1.0）：
 
 ```text
 category      preference / constraint / history / emotion / context
@@ -116,16 +117,16 @@ last_used_at  用于排序与清理
 
 ## 4. 与管理后台的对照
 
-现有控制台页面：`/console`（日报）、`/console/alerts`（断链/延迟/源未配）、`/console/variants`（文案变体）、`/console/ops`（运维）。
+现有控制台页面：`/console`（日报）、`/console/alerts`（断链/延迟/源未配）、`/console/variants`（文案变体）、`/console/ops`（运维）、`/console/assistant`（事件/通知）、`/console/push`（token/送达）。
 
 缺口：
 
 | 页面 | 需要展示 | 优先级 |
 |---|---|---|
-| `/console/assistant` | 事件流、监控规则命中、通知队列、推送到达/打开/点击、失败重试 | P0 |
-| `/console/ai` | AI 分析列表、状态、分歧、成本、失败率、人工复核 | P1 |
-| `/console/memory` | 记忆写入统计、冲突/删除/投诉、异常推断 | P1 |
-| `/console/push` | 设备 token、厂商通道、静默/频控、退订 | P0 |
+| `/console/assistant` | 事件流、通知队列、扇出状态（✅ 已实现） | P0 |
+| `/console/ai` | AI 分析列表、状态、分歧、成本、失败率、人工复核（未实现） | P1 |
+| `/console/memory` | 记忆写入统计、冲突/删除/投诉、异常推断（未实现） | P1 |
+| `/console/push` | 设备 token、推送状态、dry-run/配置状态（✅ 已实现） | P0 |
 | `/console/alerts` 扩展 | 事件延迟、推送失败率、队列积压、LLM 失败率 | P0 |
 
 控制台仍只做“异常复核 + 运维”，不做全量人工审核；AI/推送自动发布为主。
@@ -270,7 +271,10 @@ notifications
 
 ```http
 GET    /me/inbox?unread=1
+GET    /me/inbox/unread-count
 POST   /me/inbox/{id}/read
+POST   /me/inbox/read-all
+POST   /me/inbox/{id}/click
 GET    /me/watch
 POST   /me/watch          {target_type, target_id, events}
 DELETE /me/watch/{id}
@@ -284,7 +288,7 @@ DELETE /me/memories/{key}  （已有）
 GET    /me/events/stream   （SSE，可选）
 ```
 
-内部 worker 直接读写 DB，不暴露公网。
+以上除 `/me/events/stream`（未实现）与 `/me/memories`（已有）外均已落地；worker 直接读写 DB，不暴露公网。
 
 ---
 
@@ -307,14 +311,15 @@ GET    /me/events/stream   （SSE，可选）
 
 ## 11. 分期
 
-### P0（Android MVP，4–6 周）
+### P0（Android MVP，4–6 周）· ✅ 后端/控制台已实现（2026-11-03）
 
-- 表：events / notifications / watch_targets / push_tokens / user_events；
-- 4 类监控：结论变化、停售、结算、每日简报；
+- 表：events / notifications / watch_targets / push_tokens / user_events / notify_settings / assistant_state；
+- 监控：结论变化、停售、终场、结算、每日简报；
 - 站内信 + 红点 + 关注管理 + 通知设置；
-- JPush Android + 厂商通道 + 深链；
-- 控制台：事件/推送队列/失败告警；
-- 只做 Android，iOS 不做。
+- JPush provider（未配置自动 dry-run）+ 深链 + token 生命周期；
+- 控制台：事件/通知队列、推送 token/状态、失败告警；
+- 只做 Android，iOS 不做；
+- **待接**：真实 JPush 凭证/厂商通道、前端 inbox/关注 UI、未决 T-30m 规则。
 
 ### P1（2–3 周）
 
@@ -494,7 +499,7 @@ JQ_LLM_PROVIDER=glm
 ### 17.1 评审范围
 
 - 后端：`app/models.py`、`app/routers/w6.py`、`app/modules/users.py`、`app/modules/chat.py`、`app/modules/messaging.py`、`app/routers/api.py`、`app/routers/console.py`、`app/main.py`；
-- 测试：`python -m pytest -q`，**149 passed**（修复 6 个墙钟依赖后）；
+- 测试：`python -m pytest -q`，**156 passed**（修复 6 个墙钟依赖后）；
 - 管理后台：`/console`、`/console/alerts`、`/console/variants`、`/console/ops`。
 
 ### 17.2 已确认可用
@@ -508,7 +513,7 @@ JQ_LLM_PROVIDER=glm
 | 判决/修订/封存链 | `Verdict` / `VerdictRevision` / `sealchain` |
 | 流接口 | `/stream` 返回 verdicts/watch/onsale/avoid + 缓存 |
 | 控制台登录 | 密码 + IP 白名单 + 5 次锁 10 分钟 + 会话 TTL |
-| 测试 | 149 passed（审计/契约/W2–W8） |
+| 测试 | 156 passed（审计/契约/W2–W8 + assistant 7） |
 
 ### 17.3 评审发现
 
@@ -524,13 +529,13 @@ JQ_LLM_PROVIDER=glm
 | **P2** | `_VARIANT_POOL` 进程内存，重启丢失 | 运营标记不可持久 | v1.5 落 `narrative_pool` 表 |
 | **P2** | `/stream` 有 `onsale`，但前端 `mapStream` 只取 verdicts/watch/avoid | 吉祥物选比赛少一类数据源 | `mapStream` 接 `onsale`；或建 `/matches` 分类接口 |
 | **P2** | `app.main` 版本字符串仍是 `0.7.0-w7` | 版本展示/排障不一致 | 升到 w8/实际版本 |
-| **P2** | 6 个测试依赖墙钟：21:55 后 `future_kickoff` 落到次日 21:55，超出竞彩日窗口 | 夜间跑测试误报 rest_day/0 场 | 已修：`future_kickoff` 回落到次日 02:00；149 passed |
+| **P2** | 6 个测试依赖墙钟：21:55 后 `future_kickoff` 落到次日 21:55，超出竞彩日窗口 | 夜间跑测试误报 rest_day/0 场 | 已修：`future_kickoff` 回落到次日 02:00；156 passed |
 
 ### 17.4 本次实际修复
 
 - `tests/conftest.py::future_kickoff`：过期时不再“同日时刻 +1 天”，改为**次日 02:00**，保证落在 `当日 00:00–次日 04:59` 的竞彩窗口内；
 - `tests/test_w2_gaps.py::_seed_n`：固定“次日 02:00”种子，避免 21:30 后漂移；
-- 结果：`149 passed`。
+- 结果：`156 passed`（新增 assistant 7 项；原 149 项全保留）。
 
 ### 17.5 结论
 
@@ -538,3 +543,47 @@ JQ_LLM_PROVIDER=glm
 - 距离“AI 助理运行时”还差的是**行动层**（follows/events/notifications/push）和**记忆扩展**；
 - 不建议为了这些重写架构；在现有模块化单体上加 `app/assistant/` + registry 即可；
 - 控制台安全项（token/CSRF/XSS）建议在接外部运营前修掉。
+
+
+---
+
+## 18. P0 实现记录（2026-11-03）
+
+### 已落地
+
+| 层 | 内容 |
+|---|---|
+| 表 | `events` / `notifications` / `watch_targets` / `push_tokens` / `notify_settings` / `user_events` / `assistant_state`；`memories` 增 `category/confidence/expires_at/last_used_at` |
+| 事件 | `app/assistant/events.py`：payload hash + `dedupe_key` + 幂等写入 |
+| 监控 | `app/assistant/monitors.py`：结论变化、停售、终场、结算、每日简报；`last_revision_id` 游标 |
+| 扇出 | `app/assistant/fanout.py`：关注/下注关系、静默时段、每日上限、站内信/推送分渠道、唯一约束幂等 |
+| 推送 | `app/assistant/providers.py`：`PushProvider` + JPush；未配 `JQ_JPUSH_APPKEY/SECRET` 自动 dry-run |
+| Worker | `app/assistant/worker.py`：`--once` / `--loop`；租约、重试、失败计数、token 失效 |
+| API | `/me/inbox`、`/me/inbox/unread-count`、`/read`、`/read-all`、`/click`、`/me/watch`、`/me/notify-settings`、`/push/register`、`/push/unregister` |
+| 控制台 | `/console/assistant`、`/console/push`；导航已接 |
+| 部署 | `deploy.py` 增加每分钟 assistant worker cron（`JQ_DAILY_BRIEF_HOUR=19`） |
+| 隐私 | `purge_expired_deletions` 覆盖 notifications/watch/push/user_events/notify_settings |
+| 测试 | `156 passed`（新增 7 项：监控幂等、扇出、inbox、push dry-run、静默/上限、iOS 拒绝、控制台页、删除清理） |
+
+### 仍需 P1/P2
+
+- 前端接 `/me/inbox`、`/me/watch`、`/me/notify-settings`（当前仍本地）；
+- 真实 JPush AppKey/Master Secret + Android 厂商通道 + 深链冷启动；
+- `chat.respond` 读取 persona；前端 `PATCH /me` 同步人设/昵称；
+- 派生记忆（favorite/risk/active_hours/push_tolerance）与五类展示；
+- 未决 T-30m、T-3h 动态触发、盘口异动/阵容监控；
+- `/console/ai`、`/console/memory`；
+- 控制台 token/CSRF/XSS 加固与 freeze baseline 重新 adopt。
+
+### 运行
+
+```bash
+# 单次（cron 用法）
+python -m app.assistant.worker --once
+
+# 常驻
+python -m app.assistant.worker --loop --interval 60
+
+# 本地/预发：JPush 未配置时自动 dry-run，不需要真凭证
+JQ_DAILY_BRIEF_HOUR=19 python -m app.assistant.worker --once
+```

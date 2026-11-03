@@ -241,8 +241,128 @@ class Memory(Base):
     key: Mapped[str] = mapped_column(String(64))
     value: Mapped[str] = mapped_column(String(256))
     source: Mapped[str] = mapped_column(String(8), default="你说过")  # 自动 / 你说过
+    # v1.1 记忆五类扩展（P1）：派生记忆带分类/置信/过期；旧数据默认 preference/1.0
+    category: Mapped[str] = mapped_column(String(16), default="preference")
+    confidence: Mapped[float] = mapped_column(Float, default=1.0)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class AssistantState(Base):
+    """助理 worker 游标（避免每次全表扫描 revisions）。"""
+
+    __tablename__ = "assistant_state"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(String(256), default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class WatchTarget(Base):
+    """用户关注：比赛 / 球队 / 联赛（F21）。target_id 对比赛是 match_id。"""
+
+    __tablename__ = "watch_targets"
+    __table_args__ = (UniqueConstraint("user_id", "target_type", "target_id", name="uq_watch_target"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    target_type: Mapped[str] = mapped_column(String(8), default="match")  # match/team/league
+    target_id: Mapped[str] = mapped_column(String(64), index=True)
+    events: Mapped[list] = mapped_column(JSON, default=list)  # 事件类型白名单；空=全部
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class Event(Base):
+    """监控事件：一场比赛/一次修订只生成一次，再扇出给用户。"""
+
+    __tablename__ = "events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    type: Mapped[str] = mapped_column(String(32), index=True)
+    severity: Mapped[int] = mapped_column(Integer, default=1)  # 2=P0, 1=P1, 0=digest
+    match_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    team_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    payload_hash: Mapped[str] = mapped_column(String(64), default="")
+    data_cutoff: Mapped[str] = mapped_column(String(32), default="")
+    dedupe_key: Mapped[str] = mapped_column(String(160), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    fanout_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+
+
+class Notification(Base):
+    """站内信 / 推送队列；同 user+event+channel 唯一，保证幂等。"""
+
+    __tablename__ = "notifications"
+    __table_args__ = (UniqueConstraint("user_id", "event_id", "channel", name="uq_user_event_channel"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    event_id: Mapped[int] = mapped_column(Integer, index=True)
+    channel: Mapped[str] = mapped_column(String(8), default="inapp")  # inapp/push
+    status: Mapped[str] = mapped_column(String(12), default="pending", index=True)
+    title: Mapped[str] = mapped_column(String(128), default="")
+    body: Mapped[str] = mapped_column(String(512), default="")
+    deeplink: Mapped[str] = mapped_column(String(256), default="")
+    attempt: Mapped[int] = mapped_column(Integer, default=0)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    provider_msg_id: Mapped[str] = mapped_column(String(128), default="")
+    last_error: Mapped[str] = mapped_column(String(512), default="")
+    scheduled_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    clicked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class PushToken(Base):
+    """Android JPush registration_id（MVP 只做 Android；iOS 预留 platform）。"""
+
+    __tablename__ = "push_tokens"
+    __table_args__ = (UniqueConstraint("provider", "token", name="uq_push_provider_token"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    platform: Mapped[str] = mapped_column(String(8), default="android")
+    provider: Mapped[str] = mapped_column(String(16), default="jpush")
+    token: Mapped[str] = mapped_column(String(256))
+    app_version: Mapped[str] = mapped_column(String(32), default="")
+    last_seen: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    failure_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str] = mapped_column(String(256), default="")
+
+
+class NotifySettings(Base):
+    """通知偏好：渠道/事件/静默/每日上限/一键暂停。"""
+
+    __tablename__ = "notify_settings"
+
+    user_id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    channels: Mapped[list] = mapped_column(JSON, default=lambda: ["inapp", "push"])
+    event_types: Mapped[list] = mapped_column(JSON, default=list)  # 空=默认全开
+    quiet_start: Mapped[str] = mapped_column(String(5), default="23:30")
+    quiet_end: Mapped[str] = mapped_column(String(5), default="08:00")
+    daily_cap: Mapped[int] = mapped_column(Integer, default=2)
+    paused: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class UserEvent(Base):
+    """用户行为日志：查看/点击/下注/忽略/搜索/聊天；记忆推导与推送耐受度用。"""
+
+    __tablename__ = "user_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    kind: Mapped[str] = mapped_column(String(24), index=True)
+    target_id: Mapped[str] = mapped_column(String(64), default="")
+    metadata_json: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
 
 
 class ShareCard(Base):

@@ -112,7 +112,10 @@ WantedBy=multi-user.target
             f"venv/bin/python -m app.backtest_cli weekly >> {ROOT}/backtest.log 2>&1\n"
             # 每日 03:00 注销期满清除（7 天冷静期）
             f"0 3 * * * cd {ROOT} && {envs} "
-            f"venv/bin/python -m app.purge_cli >> {ROOT}/purge.log 2>&1\n")
+            f"venv/bin/python -m app.purge_cli >> {ROOT}/purge.log 2>&1\n"
+            # 助理 worker：每分钟事件/扇出/推送（Android JPush；未配置则 dry-run）
+            f"* * * * * cd {ROOT} && {envs} JQ_DAILY_BRIEF_HOUR=19 "
+            f"venv/bin/python -m app.assistant.worker --once >> {ROOT}/assistant.log 2>&1\n")
     run(ssh, f'echo "{cron.strip()}" > /tmp/jqcron && crontab -l 2>/dev/null | grep -v jieqiu-backend | cat - /tmp/jqcron | crontab - && echo cron-ok')
 
     # 上传当前采集器数据并跑一次种子
