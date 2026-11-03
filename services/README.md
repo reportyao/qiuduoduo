@@ -11,6 +11,8 @@
 3. 保留 deploy/worker/cron 配置；
 4. 旧目录保留一个 release 周期后删除。
 
+数据库架构与索引/保留/备份方案见 [docs/database-architecture.md](../docs/database-architecture.md)。
+
 切换 Postgres 时注意：应用启动会 `create_all`，所以必须先跑 `python -m alembic upgrade head` 再启动 API；已在用的库用 `alembic stamp head` 纳管，禁止直接对已有表跑 baseline。
 
 禁止在迁移完成前同时维护两套后端代码。

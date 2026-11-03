@@ -7,14 +7,16 @@
 """
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (JSON, Boolean, DateTime, Float, Index, Integer, String,
+                        Text, UniqueConstraint, text)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
 
 
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    """naive UTC：所有 DateTime 列统一存无时区 UTC，避免 Postgres 会话时区改写。"""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class SPMatch(Base):
@@ -66,6 +68,11 @@ class Verdict(Base):
     """判决：一场比赛过闸结果的封存记录。状态机 screening → promoted / killed。"""
 
     __tablename__ = "verdicts"
+    __table_args__ = (
+        Index("ix_verdicts_trade_status_rake", "trade_date", "rake", "status"),
+        Index("ix_verdicts_match_trade", "match_id", "trade_date"),
+        Index("ix_verdicts_status_settled_kickoff", "status", "settled", "kickoff"),
+    )
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)  # v{trade_date}-{match_no}
     trade_date: Mapped[str] = mapped_column(String(10), index=True)  # CN 日期 YYYY-MM-DD
@@ -133,7 +140,10 @@ class VerdictRevision(Base):
     """
 
     __tablename__ = "verdict_revisions"
-    __table_args__ = (UniqueConstraint("verdict_id", "payload_hash", name="uq_revision"),)
+    __table_args__ = (
+        UniqueConstraint("verdict_id", "payload_hash", name="uq_revision"),
+        Index("ix_verdict_revisions_verdict_created", "verdict_id", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     verdict_id: Mapped[str] = mapped_column(String(40), index=True)
@@ -196,6 +206,14 @@ class User(Base):
     """用户（自建认证：设备令牌为免登录态；W5 增补手机号/邮箱绑定 + JWT refresh）。"""
 
     __tablename__ = "users"
+    __table_args__ = (
+        # Postgres 部分唯一索引：NULL 可多行；SQLite 上退化为普通唯一索引（NULL 仍可多行）。
+        Index("uq_users_phone", "phone", unique=True,
+              postgresql_where=text("phone IS NOT NULL")),
+        Index("uq_users_email", "email", unique=True,
+              postgresql_where=text("email IS NOT NULL")),
+        Index("ix_users_deleted_at", "deleted_at"),
+    )
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)
     device_token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
@@ -220,7 +238,10 @@ class Bet(Base):
     """用户记注（W6 最小切片；W5 完整买了流程在此扩展）。"""
 
     __tablename__ = "bets"
-    __table_args__ = (UniqueConstraint("user_id", "verdict_id", name="uq_user_verdict_bet"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "verdict_id", name="uq_user_verdict_bet"),
+        Index("ix_bets_user_created", "user_id", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(40), index=True)
@@ -265,7 +286,10 @@ class WatchTarget(Base):
     """用户关注：比赛 / 球队 / 联赛（F21）。target_id 对比赛是 match_id。"""
 
     __tablename__ = "watch_targets"
-    __table_args__ = (UniqueConstraint("user_id", "target_type", "target_id", name="uq_watch_target"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "target_type", "target_id", name="uq_watch_target"),
+        Index("ix_watch_targets_type_target", "target_type", "target_id"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(40), index=True)
@@ -279,6 +303,10 @@ class Event(Base):
     """监控事件：一场比赛/一次修订只生成一次，再扇出给用户。"""
 
     __tablename__ = "events"
+    __table_args__ = (
+        Index("ix_events_pending", "fanout_at", "id"),
+        Index("ix_events_type_created", "type", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     version: Mapped[int] = mapped_column(Integer, default=1)
@@ -299,7 +327,12 @@ class Notification(Base):
     """站内信 / 推送队列；同 user+event+channel 唯一，保证幂等。"""
 
     __tablename__ = "notifications"
-    __table_args__ = (UniqueConstraint("user_id", "event_id", "channel", name="uq_user_event_channel"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "event_id", "channel", name="uq_user_event_channel"),
+        Index("ix_notifications_user_channel_opened", "user_id", "channel", "opened_at"),
+        Index("ix_notifications_status_scheduled", "status", "scheduled_at"),
+        Index("ix_notifications_created_at", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(40), index=True)
@@ -357,6 +390,9 @@ class UserEvent(Base):
     """用户行为日志：查看/点击/下注/忽略/搜索/聊天；记忆推导与推送耐受度用。"""
 
     __tablename__ = "user_events"
+    __table_args__ = (
+        Index("ix_user_events_user_created", "user_id", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(40), index=True)
@@ -385,6 +421,10 @@ class ModelRun(Base):
     """模型/闸门运行日志：为什么砍、为什么留，可审计（F6 gate：死因与闸门日志 100% 一致）。"""
 
     __tablename__ = "model_runs"
+    __table_args__ = (
+        Index("ix_model_runs_match_date_gate", "match_id", "run_date", "gate"),
+        Index("ix_model_runs_created_at", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     match_id: Mapped[str] = mapped_column(String(32), index=True)
@@ -415,6 +455,11 @@ class VerificationCode(Base):
     """短信/邮箱验证码（6 位，HMAC 存储，5 分钟有效，5 次尝试，单次消费）。"""
 
     __tablename__ = "verification_codes"
+    __table_args__ = (
+        Index("ix_verification_codes_target_purpose_expires",
+              "target_hash", "purpose", "expires_at"),
+        Index("ix_verification_codes_created_at", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     channel: Mapped[str] = mapped_column(String(8))                    # sms / email
@@ -431,6 +476,10 @@ class RefreshToken(Base):
     """刷新令牌（不透明随机串，哈希入库；轮换 + 复用检测 → 撤销整个 family）。"""
 
     __tablename__ = "refresh_tokens"
+    __table_args__ = (
+        Index("ix_refresh_tokens_user_revoked", "user_id", "revoked"),
+        Index("ix_refresh_tokens_expires_at", "expires_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(40), index=True)

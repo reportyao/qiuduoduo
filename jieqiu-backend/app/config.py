@@ -7,6 +7,19 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # sqlite:///./jieqiu.db（开发/当前）或 postgresql+psycopg://user:pass@host/db（腾讯云 PG 生产，方案 B）
     database_url: str = "sqlite:///./jieqiu.db"
+    # 生产 Postgres 连接池/超时（SQLite 忽略这些参数）
+    db_pool_size: int = 10
+    db_max_overflow: int = 20
+    db_pool_timeout_seconds: int = 30
+    db_pool_recycle_seconds: int = 1800
+    db_statement_timeout_ms: int = 15000
+    db_lock_timeout_ms: int = 5000
+    # 数据保留（天）：CLI app.db_maint 默认 dry-run，--apply 才真正删除
+    event_retention_days: int = 90
+    notification_retention_days: int = 180
+    model_run_retention_days: int = 365
+    user_event_retention_days: int = 180
+    verification_code_retention_days: int = 7
     # 时区：竞彩全部按中国标准时间
     tz_offset_hours: int = 8
     # 流里避雷展示条数

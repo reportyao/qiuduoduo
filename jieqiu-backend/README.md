@@ -49,3 +49,31 @@ uvicorn app.main:app --port 8100
 ```bash
 python deploy.py   # VPS：数据代码分离；三 cron（30min 同步 / 周一回测 / 每日 purge）
 ```
+
+---
+
+## 数据库（自建 PostgreSQL，非 Supabase）
+
+生产目标：腾讯云 CVM 上自建 PostgreSQL 16；SQLite 只用于单元测试/一次性工具。
+完整架构、索引、连接池、备份、容量与切换步骤见
+[docs/database-architecture.md](../docs/database-architecture.md)。
+
+```bash
+# 本地 Postgres（端口 5433）
+docker compose up -d postgres
+
+# 迁移（空库）
+cd jieqiu-backend
+python -m alembic upgrade head
+python -m alembic check
+
+# 保留策略：默认 dry-run，--apply 才删
+python -m app.db_maint --json
+JQ_DB_STATEMENT_TIMEOUT_MS=0 python -m app.db_maint --apply --json
+
+# 健康检查：默认轻量；?detailed=1 才做全表计数
+curl -s 'http://127.0.0.1:8100/health?detailed=1'
+```
+
+部署时设置 `JQ_PROD_DATABASE_URL=postgresql+psycopg2://...`，`deploy.py` 会上传
+`alembic.ini`/`migrations/` 并在 Postgres 模式下先执行 `alembic upgrade head`。

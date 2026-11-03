@@ -13,11 +13,27 @@ class Base(DeclarativeBase):
 
 def make_engine(url: str | None = None):
     url = url or get_settings().database_url
+    settings = get_settings()
     kwargs = {"pool_pre_ping": True}
     if url.startswith("sqlite"):
         from sqlalchemy.pool import NullPool
         kwargs["poolclass"] = NullPool  # 线程安全：SQLite 连接不复用跨线程（W6 深审查）
         kwargs["connect_args"] = {"check_same_thread": False}
+    elif url.startswith(("postgresql", "postgres")):
+        # 同步 SQLAlchemy + psycopg2：显式连接池参数，避免默认池在高并发下耗尽。
+        kwargs.update(
+            pool_size=settings.db_pool_size,
+            max_overflow=settings.db_max_overflow,
+            pool_timeout=settings.db_pool_timeout_seconds,
+            pool_recycle=settings.db_pool_recycle_seconds,
+            connect_args={
+                "application_name": "jieqiu-api",
+                "options": (
+                    f"-c statement_timeout={settings.db_statement_timeout_ms} "
+                    f"-c lock_timeout={settings.db_lock_timeout_ms}"
+                ),
+            },
+        )
     eng = create_engine(url, **kwargs)
     if url.startswith("sqlite"):
         from sqlalchemy import event
@@ -40,6 +56,10 @@ def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:
         yield db
+    except Exception:
+        # 任何未处理异常都先回滚，避免连接带着失败事务回到池里。
+        db.rollback()
+        raise
     finally:
         db.close()
 

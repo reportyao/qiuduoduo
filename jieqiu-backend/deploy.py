@@ -16,6 +16,8 @@ HOST, USER, PWD = "43.128.24.244", "ubuntu", "lingjiu123@"
 ROOT = "/home/ubuntu/jieqiu-backend"
 DATA = "/home/ubuntu/jieqiu-data"   # 数据与代码分离：部署清代码目录绝不清数据
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
+# 默认仍是 SQLite 兼容旧部署；设置 JQ_PROD_DATABASE_URL 后切自建 Postgres。
+PROD_DB_URL = os.environ.get("JQ_PROD_DATABASE_URL", f"sqlite:////{DATA}/jieqiu.db")
 
 
 def run(ssh: paramiko.SSHClient, cmd: str, timeout: int = 600) -> tuple[int, str]:
@@ -29,7 +31,7 @@ def run(ssh: paramiko.SSHClient, cmd: str, timeout: int = 600) -> tuple[int, str
 def make_tar() -> bytes:
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
-        for rel in ("app", "requirements.txt", "README.md"):
+        for rel in ("app", "requirements.txt", "README.md", "alembic.ini", "migrations"):
             full = os.path.join(APP_DIR, rel)
             tar.add(full, arcname=f"jieqiu-backend/{rel}")
         # DC 模型底座（xG 历史数据）随包上传
@@ -67,6 +69,13 @@ def main() -> None:
     print("[4/6] deps:", out.strip().splitlines()[-1])
     assert "deps-ok" in out
 
+    # Postgres 使用 Alembic 管理 schema；SQLite 旧库继续走启动期 create_all 兼容。
+    if PROD_DB_URL.startswith(("postgresql", "postgres")):
+        code, out = run(ssh, f"cd {ROOT} && JQ_DATABASE_URL={PROD_DB_URL} "
+                             f"venv/bin/alembic upgrade head 2>&1 | tail -4")
+        print("[4b/6] alembic:", out.strip())
+        assert code == 0, "Alembic 迁移失败，已停止部署"
+
     # JWT 密钥：首次部署生成并固定（幂等：已有 unit 中保留）
     import secrets as _secrets
     code, out = run(ssh, "grep -o 'JQ_JWT_SECRET=[a-f0-9]*' /etc/systemd/system/jieqiu-backend.service 2>/dev/null | head -1")
@@ -84,7 +93,7 @@ After=network.target
 
 [Service]
 WorkingDirectory={ROOT}
-Environment=JQ_DATABASE_URL=sqlite:////{DATA}/jieqiu.db
+Environment=JQ_DATABASE_URL={PROD_DB_URL}
 Environment=JQ_ENV=prod
 Environment=JQ_XG_DATA_PATH={ROOT}/xg_matches.csv
 Environment=JQ_XG_EXTRA_DIR={DATA}/xg_dumps
@@ -104,7 +113,7 @@ WantedBy=multi-user.target
     code, out = run(ssh, f"echo '{PWD}' | sudo -S mv /tmp/jieqiu-backend.service /etc/systemd/system/jieqiu-backend.service && echo unit-ok")
     assert "unit-ok" in out, out
     # 同步 cron：每 30 分钟读采集器 SFTP 推送来的 DB 并重建判决（env 与 systemd 一致；DB 在 DATA）
-    envs = (f"JQ_DATABASE_URL=sqlite:////{DATA}/jieqiu.db "
+    envs = (f"JQ_DATABASE_URL={PROD_DB_URL} JQ_DB_STATEMENT_TIMEOUT_MS=0 "
             f"JQ_XG_DATA_PATH={ROOT}/xg_matches.csv JQ_XG_EXTRA_DIR={DATA}/xg_dumps")
     cron = (f"*/30 * * * * cd {ROOT} && {envs} "
             f"venv/bin/python -m app.seed /home/ubuntu/jieqiu-sp/sp_data.db >> {ROOT}/sync.log 2>&1\n"
@@ -121,7 +130,7 @@ WantedBy=multi-user.target
 
     # 上传当前采集器数据并跑一次种子
     sftp.put(os.path.join(APP_DIR, "..", "sp-collector", "sp_data.db"), "/tmp/sp_data.db")
-    code, out = run(ssh, f"cd {ROOT} && JQ_DATABASE_URL=sqlite:////{DATA}/jieqiu.db "
+    code, out = run(ssh, f"cd {ROOT} && JQ_DATABASE_URL={PROD_DB_URL} JQ_DB_STATEMENT_TIMEOUT_MS=0 "
                          f"JQ_XG_DATA_PATH={ROOT}/xg_matches.csv JQ_XG_EXTRA_DIR={DATA}/xg_dumps "
                          f"venv/bin/python -m app.seed /tmp/sp_data.db 2>&1 | tail -3")
     print("[5/6] seed on server:\n", out.strip())

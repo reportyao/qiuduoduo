@@ -22,7 +22,13 @@ def cn_now() -> datetime:
 
 
 @router.get("/health")
-def health(db: Session = Depends(get_db)):
+def health(detailed: bool = False, db: Session = Depends(get_db)):
+    """轻量存活检查；?detailed=1 才做全表计数（大表 COUNT 不应在探针里跑）。"""
+    import time
+    started = time.perf_counter()
+    db.scalar(select(1))
+    db_latency_ms = round((time.perf_counter() - started) * 1000, 2)
+    backend = db.bind.dialect.name if db.bind is not None else "unknown"
     # 数据同步延迟（F17 gate：同步延迟 <5min 达标率 99% 的观测基础）
     last_snap = db.scalar(select(SPSnapshot.captured_at).order_by(SPSnapshot.captured_at.desc()).limit(1))
     sync_lag_seconds = None
@@ -45,12 +51,13 @@ def health(db: Session = Depends(get_db)):
             "sporttery": last_snap or None,
             "the_odds_api": "configured" if get_settings().odds_api_key else "not_configured",
         },
-        "counts": {
+        "db": {"backend": backend, "latency_ms": db_latency_ms},
+        **({"counts": {
             "sp_matches": db.scalar(select(func.count()).select_from(SPMatch)) or 0,
             "sp_snapshots": db.scalar(select(func.count()).select_from(SPSnapshot)) or 0,
             "team_aliases": db.scalar(select(func.count()).select_from(TeamAlias)) or 0,
             "verdicts": db.scalar(select(func.count()).select_from(Verdict)) or 0,
-        },
+        }} if detailed else {}),
     }
 
 

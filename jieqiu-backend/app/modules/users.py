@@ -40,7 +40,7 @@ def login_device(db: Session, token: str | None) -> tuple[User, bool]:
 
 def soft_delete(db: Session, user: User) -> None:
     """注销（7 天冷静期）：打标不删数据；同令牌登录即撤回。"""
-    user.deleted_at = datetime.now(timezone.utc)
+    user.deleted_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
 
 
@@ -59,7 +59,7 @@ def purge_expired_deletions(db: Session, days: int = 7) -> dict:
                           Notification as N, NotifySettings as NS,
                           PushToken as PT, RefreshToken as RT, ShareCard as S,
                           UserEvent as UE, WatchTarget as WT)
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
     expired = db.scalars(
         select(User).where(User.deleted_at.isnot(None), User.deleted_at <= cutoff)
     ).all()
