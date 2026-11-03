@@ -23,7 +23,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..models import AuthIdentity, RefreshToken, User, VerificationCode
+from ..models import (AuthIdentity, Bet, Memory, Notification, NotifySettings,
+                      PushToken, RefreshToken, ShareCard, User, UserEvent,
+                      VerificationCode, WatchTarget)
 
 def _now() -> datetime:
     """naive UTC（SQLite 往返剥 tz，比较必须同形）。"""
@@ -388,6 +390,113 @@ def get_or_create_by_email(db: Session, email: str) -> tuple[User, bool]:
     u = create_user(db, "global", email=email)
     link_identity(db, u, "email", email, mask_email(email))
     return u, True
+
+
+def merge_device_account(db: Session, device_token: str | None, target: User,
+                         new_user: bool = False) -> dict:
+    """把纯设备账户的注单/记忆/关注/通知合并到手机号/邮箱账户。
+
+    安全边界：
+    - 只合并「没有手机号/邮箱」的设备账户；带账号的用户绝不并进来；
+    - 设备令牌本身就是该账户的持有凭证，登录请求里的 token 即授权；
+    - 重复注单/关注/通知按目标账户优先，不制造唯一键冲突。
+    """
+    if not device_token:
+        return {}
+    guest = db.scalar(select(User).where(User.device_token == device_token))
+    if guest is None or guest.id == target.id or guest.phone or guest.email:
+        return {}
+
+    moved = {"bets": 0, "memories": 0, "watches": 0, "notifications": 0, "tokens": 0}
+
+    existing_verdicts = {b.verdict_id for b in db.scalars(
+        select(Bet).where(Bet.user_id == target.id))}
+    for bet in db.scalars(select(Bet).where(Bet.user_id == guest.id)).all():
+        if bet.verdict_id in existing_verdicts:
+            db.delete(bet)
+        else:
+            bet.user_id = target.id
+            existing_verdicts.add(bet.verdict_id)
+            moved["bets"] += 1
+
+    existing_keys = {m.key for m in db.scalars(
+        select(Memory).where(Memory.user_id == target.id))}
+    for mem in db.scalars(select(Memory).where(Memory.user_id == guest.id)).all():
+        if mem.key in existing_keys:
+            db.delete(mem)
+        else:
+            mem.user_id = target.id
+            existing_keys.add(mem.key)
+            moved["memories"] += 1
+
+    existing_watch = {(w.target_type, w.target_id) for w in db.scalars(
+        select(WatchTarget).where(WatchTarget.user_id == target.id))}
+    for watch in db.scalars(select(WatchTarget).where(WatchTarget.user_id == guest.id)).all():
+        key = (watch.target_type, watch.target_id)
+        if key in existing_watch:
+            db.delete(watch)
+        else:
+            watch.user_id = target.id
+            existing_watch.add(key)
+            moved["watches"] += 1
+
+    existing_notifications = {(n.event_id, n.channel) for n in db.scalars(
+        select(Notification).where(Notification.user_id == target.id))}
+    for note in db.scalars(select(Notification).where(Notification.user_id == guest.id)).all():
+        key = (note.event_id, note.channel)
+        if key in existing_notifications:
+            db.delete(note)
+        else:
+            note.user_id = target.id
+            existing_notifications.add(key)
+            moved["notifications"] += 1
+
+    existing_tokens = {(t.provider, t.token) for t in db.scalars(
+        select(PushToken).where(PushToken.user_id == target.id))}
+    for token in db.scalars(select(PushToken).where(PushToken.user_id == guest.id)).all():
+        key = (token.provider, token.token)
+        if key in existing_tokens:
+            db.delete(token)
+        else:
+            token.user_id = target.id
+            existing_tokens.add(key)
+            moved["tokens"] += 1
+
+    # 通知偏好：目标没有才继承，避免覆盖老用户的选择。
+    if db.get(NotifySettings, target.id) is None:
+        cfg = db.get(NotifySettings, guest.id)
+        if cfg is not None:
+            db.add(NotifySettings(user_id=target.id, channels=cfg.channels,
+                                  event_types=cfg.event_types,
+                                  quiet_start=cfg.quiet_start, quiet_end=cfg.quiet_end,
+                                  daily_cap=cfg.daily_cap, paused=cfg.paused))
+            db.delete(cfg)
+
+    for event in db.scalars(select(UserEvent).where(UserEvent.user_id == guest.id)).all():
+        event.user_id = target.id
+    for card in db.scalars(select(ShareCard).where(ShareCard.user_id == guest.id)).all():
+        card.user_id = target.id
+    for refresh in db.scalars(select(RefreshToken).where(RefreshToken.user_id == guest.id)).all():
+        refresh.user_id = target.id
+
+    # 新账号继承游客的昵称/人设/赔率偏好；老账号以服务端为准。
+    if new_user:
+        if guest.display_name and not target.display_name:
+            target.display_name = guest.display_name
+        if guest.persona and guest.persona != "zhuanjia":
+            target.persona = guest.persona
+        target.odds_format = guest.odds_format
+        target.locale = guest.locale
+        target.region = guest.region
+        target.discipline_on = guest.discipline_on
+        target.rested_until = guest.rested_until
+
+    old_device = guest.device_token
+    db.delete(guest)
+    db.flush()
+    target.device_token = old_device
+    db.commit()
+    return moved
 
 
 def public_user(u: User) -> dict:

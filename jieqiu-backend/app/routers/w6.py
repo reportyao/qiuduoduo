@@ -95,10 +95,17 @@ def auth_device(body: DeviceLogin, db: Session = Depends(get_db)):
 
 @router.get("/me")
 def me(user: User = Depends(current_user), db: Session = Depends(get_db)):
+    from ..modules.auth import mask_email, mask_phone
     return {
         "user_id": user.id,
         "display_name": user.display_name,
         "persona": user.persona,
+        "odds_format": user.odds_format,
+        "locale": user.locale,
+        "region": user.region,
+        "discipline_on": user.discipline_on,
+        "phone": mask_phone(user.phone) if user.phone else None,
+        "email": mask_email(user.email) if user.email else None,
         "streak": U.user_streak(db, user),
         "rested_until": user.rested_until,
         "memories": [{"key": m.key, "value": m.value, "source": m.source}
@@ -220,6 +227,21 @@ def bet_create(body: BetBody, user: User = Depends(current_user),
     db.commit()
     return {"id": b.id, "verdict_id": v.id, "amount": b.amount,
             "pick_dir": b.pick_dir, "streak": U.user_streak(db, user)}
+
+
+@router.delete("/bets/{bet_id}")
+def bet_delete(bet_id: int, user: User = Depends(current_user),
+               db: Session = Depends(get_db)):
+    """撤销记注（前端 5 秒撤销窗口）。只能删自己的注单，已结算的注单不允许删。"""
+    b = db.get(Bet, bet_id)
+    if b is None or b.user_id != user.id:
+        raise HTTPException(404, "bet not found")
+    v = db.get(Verdict, b.verdict_id)
+    if v is not None and v.settled:
+        raise HTTPException(409, "已结算的注单不能撤销")
+    db.delete(b)
+    db.commit()
+    return {"deleted": bet_id}
 
 
 @router.get("/bets")

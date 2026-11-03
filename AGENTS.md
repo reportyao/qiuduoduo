@@ -6,7 +6,7 @@
 
 ```text
 apps/
-  mobile/        Expo React Native + TypeScript（Android 先发，iOS 后补）
+  mobile/        Expo React Native + TypeScript（Android 先发，iOS 后补；交接见 apps/mobile/ARCHITECTURE.md）
   web/           Next.js 落地页 / 公开账本 / 分享页（规划中）
   admin/         管理后台（规划中；当前旧控制台在 jieqiu-backend/app/routers/console.py）
 packages/

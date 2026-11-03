@@ -455,6 +455,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/bets/{bet_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Bet Delete
+         * @description 撤销记注（前端 5 秒撤销窗口）。只能删自己的注单，已结算的注单不允许删。
+         */
+        delete: operations["bet_delete_bets__bet_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bets/{bet_id}/postmortem": {
         parameters: {
             query?: never;
@@ -1537,6 +1557,8 @@ export interface components {
             email: string;
             /** Code */
             code: string;
+            /** Device Token */
+            device_token?: string | null;
         };
         /** VerifySmsBody */
         VerifySmsBody: {
@@ -1549,6 +1571,8 @@ export interface components {
              * @default login
              */
             purpose: string;
+            /** Device Token */
+            device_token?: string | null;
         };
         /** WatchBody */
         WatchBody: {
@@ -1572,6 +1596,16 @@ export interface components {
             target_id: string;
             /** Events */
             events: string[];
+            /** Match No */
+            match_no?: string | null;
+            /** Home */
+            home?: string | null;
+            /** Away */
+            away?: string | null;
+            /** League */
+            league?: string | null;
+            /** Kickoff */
+            kickoff?: string | null;
         };
         /** WatchListResponse */
         WatchListResponse: {
@@ -2413,6 +2447,39 @@ export interface operations {
                 "application/json": components["schemas"]["BetBody"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bet_delete_bets__bet_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                bet_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

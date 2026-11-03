@@ -33,7 +33,7 @@ def app_version():
     """OTA/最低版本判定（App 启动时调用）。"""
     from ..config import get_settings
     return {
-        "api": "0.8.0-w8",
+        "api": "0.8.0-w8+assistant",
         "min_app_version": "0.5.0",
         "force_update_below": "0.5.0",
         "store_url": {"cn": "https://appgallery.huawei.com/", "global": "https://apps.apple.com/"},

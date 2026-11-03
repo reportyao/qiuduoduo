@@ -62,11 +62,13 @@ class VerifySmsBody(BaseModel):
     phone: str
     code: str = Field(min_length=4, max_length=8)
     purpose: str = "login"
+    device_token: str | None = None  # 游客设备账户：登录时合并注单/记忆/关注
 
 
 class VerifyEmailBody(BaseModel):
     email: str
     code: str = Field(min_length=4, max_length=8)
+    device_token: str | None = None
 
 
 class WechatBody(BaseModel):
@@ -135,7 +137,9 @@ def sms_verify(body: VerifySmsBody, db: Session = Depends(get_db)):
         raise HTTPException(401, "验证码错误或已过期")
     user, created = A.get_or_create_by_phone(db, phone)
     A.link_identity(db, user, "phone", phone, A.mask_phone(phone))
-    return {"created": created, "user": A.public_user(user), **A.tokens_for(db, user)}
+    merged = A.merge_device_account(db, body.device_token, user, new_user=created)
+    return {"created": created, "user": A.public_user(user),
+            "merged": merged, **A.tokens_for(db, user)}
 
 
 @router.post("/auth/email/verify")
@@ -147,7 +151,9 @@ def email_verify(body: VerifyEmailBody, db: Session = Depends(get_db)):
     if not A.verify_code(db, "email", email, body.code, "login"):
         raise HTTPException(401, "验证码错误或已过期")
     user, created = A.get_or_create_by_email(db, email)
-    return {"created": created, "user": A.public_user(user), **A.tokens_for(db, user)}
+    merged = A.merge_device_account(db, body.device_token, user, new_user=created)
+    return {"created": created, "user": A.public_user(user),
+            "merged": merged, **A.tokens_for(db, user)}
 
 
 # ---------- 微信（CN）：登录后必须绑手机 ----------

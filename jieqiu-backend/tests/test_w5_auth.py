@@ -285,3 +285,48 @@ def test_unique_phone_index_enforced(db):
         assert False, "唯一索引未生效"
     except IntegrityError:
         db.rollback()
+
+
+def test_login_merges_device_account_data(db, client):
+    """游客先记注/记忆/关注，再手机号登录：数据必须跟到新账号，不能凭空丢失。"""
+    from app.models import Bet, Memory, Verdict, WatchTarget
+    from tests.conftest import future_kickoff
+
+    guest = client.post("/auth/device", json={"device_token": "tok-merge-device"}).json()
+    gid = guest["user_id"]
+    db.merge(Verdict(id="v-merge-1", trade_date=today_cn(), match_id="2045999",
+                     match_no="周四099", league="英超", home="甲", away="乙",
+                     kickoff=future_kickoff(today_cn()), pool="had", goal_line="",
+                     sp_h=1.8, sp_d=3.5, sp_a=4.2, rake=0.08,
+                     p_home=0.55, p_draw=0.25, p_away=0.20,
+                     status="promoted", gates={}, payload={"id": "v-merge-1"},
+                     payload_hash="c" * 64, pick={"dir": "home"}))
+    db.add(Bet(user_id=gid, verdict_id="v-merge-1", amount=88, pick_dir="home"))
+    db.add(Memory(user_id=gid, key="主队偏好", value="曼城", source="你说过"))
+    db.add(WatchTarget(user_id=gid, target_type="match", target_id="2045999"))
+    db.commit()
+
+    _reset_limits()
+    send = client.post("/auth/sms/send", json={"phone": "13700137000"})
+    code = send.json()["dev_code"]
+    r = client.post("/auth/sms/verify", json={
+        "phone": "13700137000", "code": code,
+        "device_token": "tok-merge-device",
+    })
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["created"] is True
+    assert body["merged"]["bets"] == 1
+    assert body["merged"]["memories"] == 1
+    assert body["merged"]["watches"] == 1
+    uid = body["user"]["user_id"]
+
+    assert db.scalar(select(Bet).where(Bet.verdict_id == "v-merge-1")).user_id == uid
+    assert db.scalar(select(Memory).where(Memory.key == "主队偏好")).user_id == uid
+    assert db.scalar(select(WatchTarget).where(WatchTarget.target_id == "2045999")).user_id == uid
+    target = db.get(User, uid)
+    assert target.device_token == "tok-merge-device"
+    assert db.get(User, gid) is None
+
+    me = client.get("/me", headers={"Authorization": "Bearer " + body["access_token"]}).json()
+    assert me["memories"][0]["value"] == "曼城"

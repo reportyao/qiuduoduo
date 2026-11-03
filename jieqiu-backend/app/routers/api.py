@@ -129,6 +129,7 @@ def matches_on_sale(db: Session = Depends(get_db)):
             "rake": v.rake if v else None,
             "gates": {k: g["result"] for k, g in v.gates.items()} if v else None,
             "status": v.status if v else None,
+            "verdict_id": v.id if v else None,
         })
     return {"date": today, "count": len(rows), "matches": matches}
 
@@ -181,7 +182,7 @@ def why_not(match_id: str, date: str | None = None, db: Session = Depends(get_db
     if v is None:
         raise HTTPException(404, "no verdict for this match/date")
     if v.status == "promoted":
-        return {"status": "promoted", "match_no": m.match_no,
+        return {"status": "promoted", "verdict_id": v.id, "match_no": m.match_no,
                 "home": m.home, "away": m.away, "note": "三关全过，已在判决流中"}
 
     order = ["price", "market", "model"]

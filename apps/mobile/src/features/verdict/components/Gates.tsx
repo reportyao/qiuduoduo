@@ -1,0 +1,136 @@
+import { StyleSheet, View } from "react-native";
+import type { GateDetail, GateKey, GateResult } from "@/domain/types";
+import { colors, radii, spacing } from "@/theme/tokens";
+import { pct } from "@/lib/format";
+import { Text } from "@/components/ui";
+
+export function gateTone(result: GateResult | undefined): {
+  color: string;
+  soft: string;
+  label: string;
+  short: string;
+} {
+  switch (result) {
+    case "pass":
+      return { color: colors.green, soft: colors.greenSoft, label: "已通过", short: "✓" };
+    case "fail":
+      return { color: colors.danger, soft: colors.dangerSoft, label: "未通过", short: "×" };
+    case "pending_data":
+      return { color: colors.amber, soft: colors.amberSoft, label: "等数据", short: "…" };
+    default:
+      return { color: colors.muted, soft: colors.bgElevated, label: "待定", short: "·" };
+  }
+}
+
+const GATE_LABEL: Record<GateKey, string> = { price: "价", market: "市", model: "模" };
+
+export function GateStrip({
+  gates,
+  dark = false,
+  values,
+}: {
+  gates: Partial<Record<GateKey, GateResult>>;
+  dark?: boolean;
+  values?: Partial<Record<GateKey, string>>;
+}) {
+  return (
+    <View style={[styles.strip, dark && styles.stripDark]}>
+      {(["price", "market", "model"] as GateKey[]).map((key, index) => {
+        const tone = gateTone(gates[key]);
+        return (
+          <View key={key} style={[styles.cell, index < 2 && (dark ? styles.cellDark : styles.cellLine)]}>
+            <View style={styles.cellHead}>
+              <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>
+                {GATE_LABEL[key]}
+              </Text>
+              <Text variant="captionStrong" color={dark ? tone.soft : tone.color}>
+                {tone.label}
+              </Text>
+            </View>
+            <Text variant="smallStrong" color={dark ? colors.inkInverse : colors.ink}>
+              {values?.[key] ?? (key === "price" ? "抽水" : key === "market" ? "多源" : "置信")}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function humanizeReason(reason: string): string {
+  if (reason.includes("the-odds-api") || reason.includes("国际盘源不足")) {
+    return "国际盘还没覆盖这场，等数据源接入后会自动重评。";
+  }
+  if (reason.includes("xG") || reason.includes("队名未入")) {
+    return "模型还没有这场的足够数据，暂不参与判断。";
+  }
+  return reason;
+}
+
+function detailText(gate: GateKey, detail: Record<string, unknown>): string {
+  if (gate === "price") {
+    const rake = typeof detail.rake === "number" ? detail.rake : null;
+    const threshold = typeof detail.threshold === "number" ? detail.threshold : null;
+    return `${rake != null ? pct(rake) : "待同步"} / 阈值 ${threshold != null ? pct(threshold) : "待同步"}`;
+  }
+  if (gate === "market") {
+    const sources = Array.isArray(detail.sources) ? detail.sources.join("、") : "单源";
+    return typeof detail.reason === "string" ? humanizeReason(detail.reason) : `来源：${sources}`;
+  }
+  return typeof detail.reason === "string" ? humanizeReason(detail.reason) : "模型数据未覆盖";
+}
+
+export function GateDetailRow({
+  gate,
+  entry,
+  last = false,
+}: {
+  gate: GateKey;
+  entry?: GateDetail;
+  last?: boolean;
+}) {
+  const tone = gateTone(entry?.result);
+  return (
+    <View style={[styles.row, !last && styles.rowLine]}>
+      <View style={[styles.badge, { backgroundColor: tone.soft }]}>
+        <Text variant="captionStrong" color={tone.color}>{GATE_LABEL[gate]}</Text>
+      </View>
+      <View style={styles.rowText}>
+        <View style={styles.rowTitle}>
+          <Text variant="bodyStrong">{GATE_LABEL[gate]}闸</Text>
+          <Text variant="captionStrong" color={tone.color}>{tone.label}</Text>
+        </View>
+        <Text variant="caption" color={colors.muted} style={styles.rowDetail}>
+          {detailText(gate, entry?.detail ?? {})}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  strip: {
+    flexDirection: "row",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.line,
+    paddingVertical: spacing.base,
+  },
+  stripDark: { borderColor: "rgba(255,255,255,0.12)" },
+  cell: { flex: 1, gap: 3, paddingHorizontal: spacing.md },
+  cellLine: { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: colors.line },
+  cellDark: { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: "rgba(255,255,255,0.10)" },
+  cellHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 4 },
+  row: { flexDirection: "row", gap: spacing.base, paddingVertical: spacing.base },
+  rowLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
+  badge: {
+    width: 34,
+    height: 34,
+    borderRadius: radii.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowText: { flex: 1, gap: 3 },
+  rowTitle: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  rowDetail: { lineHeight: 17 },
+});

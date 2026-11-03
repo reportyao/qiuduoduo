@@ -1241,6 +1241,63 @@
         }
       }
     },
+    "/bets/{bet_id}": {
+      "delete": {
+        "tags": [
+          "v0.5-w6"
+        ],
+        "summary": "Bet Delete",
+        "description": "撤销记注（前端 5 秒撤销窗口）。只能删自己的注单，已结算的注单不允许删。",
+        "operationId": "bet_delete_bets__bet_id__delete",
+        "parameters": [
+          {
+            "name": "bet_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Bet Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/bets/{bet_id}/postmortem": {
       "get": {
         "tags": [
@@ -3998,6 +4055,17 @@
             "maxLength": 8,
             "minLength": 4,
             "title": "Code"
+          },
+          "device_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Token"
           }
         },
         "type": "object",
@@ -4023,6 +4091,17 @@
             "type": "string",
             "title": "Purpose",
             "default": "login"
+          },
+          "device_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Token"
           }
         },
         "type": "object",
@@ -4084,6 +4163,61 @@
             },
             "type": "array",
             "title": "Events"
+          },
+          "match_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match No"
+          },
+          "home": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Home"
+          },
+          "away": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Away"
+          },
+          "league": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "League"
+          },
+          "kickoff": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kickoff"
           }
         },
         "type": "object",

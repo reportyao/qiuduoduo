@@ -1,32 +1,175 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useRouter } from "expo-router";
+import { AppHeader } from "@/components/AppHeader";
+import { AppScreen } from "@/components/Screen";
+import { Button, Card, Chip, EmptyState, ErrorState, Skeleton, Text } from "@/components/ui";
+import { usePersonaContent } from "@/features/personas/usePersona";
+import { useAuthStore } from "@/features/auth/authStore";
+import { useBetsQuery, useWeeklyQuery } from "@/features/records/queries";
+import { PostmortemSheet } from "@/features/records/components/PostmortemSheet";
+import { errorText } from "@/lib/errors";
+import { money, pct, pickDirectionLabel, signedMoney } from "@/lib/format";
+import { colors, layout, radii, spacing } from "@/theme/tokens";
 
 export default function RecordsScreen() {
+  const router = useRouter();
+  const { copy } = usePersonaContent();
+  const session = useAuthStore((s) => s.session);
+  const [postmortemId, setPostmortemId] = useState<number | null>(null);
+  const betsQuery = useBetsQuery(Boolean(session));
+  const weeklyQuery = useWeeklyQuery(Boolean(session));
+
+  const bets = betsQuery.data ?? [];
+  const settled = bets.filter((bet) => bet.pnl != null);
+  const wins = settled.filter((bet) => bet.settled === "win").length;
+  const pnl = settled.reduce((sum, bet) => sum + (bet.pnl ?? 0), 0);
+  const week = weeklyQuery.data?.you;
+
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>记录</Text>
-      <Text style={styles.body}>
-        票单、周报、归因与公开账本将在移动端逐项迁移。
+    <AppScreen bottom={false}>
+      <AppHeader
+        title="我的记录"
+        subtitle="解球 · AI 助理"
+        onAssistantPress={() => router.push("/assistant")}
+        right={<Chip label={session?.mode === "jwt" ? "已登录" : "设备账户"} tone="neutral" />}
+      />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <View style={styles.stats}>
+          <Stat label="本周注数" value={String(week?.bets ?? bets.length)} sub="只记账，不代购" />
+          <Stat
+            label="已结算"
+            value={`${wins} / ${settled.length}`}
+            sub={settled.length > 0 ? `命中 ${pct(wins / settled.length, 0)}` : "等待赛果"}
+          />
+          <Stat
+            label="本周盈亏"
+            value={signedMoney(week?.pnl ?? pnl)}
+            sub="真实入账口径"
+            tone={(week?.pnl ?? pnl) >= 0 ? "green" : "danger"}
+          />
+        </View>
+
+        <View style={styles.actions}>
+          <Button label="周报" variant="secondary" size="sm" onPress={() => router.push("/records/weekly")} style={styles.flex} />
+          <Button label="公开账本" variant="secondary" size="sm" onPress={() => router.push("/records/ledger")} style={styles.flex} />
+        </View>
+
+        <View style={styles.listHead}>
+          <Text variant="h3">票单</Text>
+          <Text variant="caption" color={colors.muted}>{bets.length} 注</Text>
+        </View>
+
+        {betsQuery.isLoading ? (
+          <View style={{ gap: spacing.sm }}>
+            <Skeleton height={70} radius={16} />
+            <Skeleton height={70} radius={16} />
+          </View>
+        ) : betsQuery.isError ? (
+          <ErrorState message={errorText(betsQuery.error)} onRetry={() => betsQuery.refetch()} />
+        ) : bets.length === 0 ? (
+          <EmptyState
+            title="还没有记过注"
+            body="在首页三关全过的卡片上点「记一注」，这里就会出现你的真实记录。解球只记账，不代购。"
+            actionLabel="看今日结论"
+            onAction={() => router.push("/(tabs)")}
+            secondaryLabel="看公开账本"
+            onSecondary={() => router.push("/records/ledger")}
+          />
+        ) : (
+          <Card padded={false}>
+            {bets.map((bet, index) => (
+              <Pressable
+                key={bet.id}
+                onPress={() => setPostmortemId(bet.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`${bet.match} 复盘`}
+                style={({ pressed }) => [
+                  styles.row,
+                  index < bets.length - 1 && styles.rowLine,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={styles.flex}>
+                  <Text variant="caption" color={colors.subtle}>{bet.matchNo}</Text>
+                  <Text variant="bodyStrong" numberOfLines={1}>{bet.match}</Text>
+                  <Text variant="caption" color={colors.muted}>
+                    {pickDirectionLabel("had", bet.pickDir)} · {money(bet.amount)}
+                  </Text>
+                </View>
+                <View style={styles.right}>
+                  <Chip
+                    label={bet.settled === "win" ? "✓ 中" : bet.settled === "lose" ? "× 未中" : "待结算"}
+                    tone={bet.settled === "win" ? "green" : bet.settled === "lose" ? "danger" : "neutral"}
+                  />
+                  <Text
+                    variant="smallStrong"
+                    color={bet.pnl == null ? colors.muted : bet.pnl >= 0 ? colors.green : colors.danger}
+                  >
+                    {bet.pnl == null ? "—" : signedMoney(bet.pnl)}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </Card>
+        )}
+
+        <Text variant="caption" color={colors.subtle} center style={styles.footer}>{copy.footer}</Text>
+      </ScrollView>
+
+      <PostmortemSheet betId={postmortemId} onClose={() => setPostmortemId(null)} />
+    </AppScreen>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  sub,
+  tone = "default",
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  tone?: "default" | "green" | "danger";
+}) {
+  return (
+    <View style={styles.stat}>
+      <Text variant="caption" color={colors.muted}>{label}</Text>
+      <Text variant="h2" color={tone === "green" ? colors.green : tone === "danger" ? colors.danger : colors.ink}>
+        {value}
       </Text>
+      <Text variant="caption" color={colors.subtle}>{sub}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.md, paddingBottom: spacing.x7 },
+  stats: { flexDirection: "row", gap: spacing.sm },
+  stat: {
     flex: 1,
-    backgroundColor: "#F5F4EF",
-    paddingHorizontal: 18,
-    paddingTop: 18,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.base,
+    minHeight: 92,
+    gap: 2,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: "#15211B",
+  actions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.base },
+  flex: { flex: 1 },
+  listHead: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginTop: spacing.x4, marginBottom: spacing.sm },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.base,
+    padding: spacing.base,
+    paddingHorizontal: spacing.xl,
+    minHeight: 74,
   },
-  body: {
-    marginTop: 10,
-    fontSize: 13,
-    lineHeight: 20,
-    color: "#6B756F",
-  },
+  rowLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
+  pressed: { backgroundColor: colors.bgElevated },
+  right: { alignItems: "flex-end", gap: 4 },
+  footer: { marginTop: spacing.x4, lineHeight: 18 },
 });

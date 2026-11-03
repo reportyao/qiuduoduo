@@ -40,7 +40,7 @@ MARKET_PROFILES = {
         "data_source": "竞彩官方（sporttery）SP · Pinnacle/Betfair/亚盘 对照",
         "currency": "CNY",
         "odds_format_default": "decimal",
-        "helpline": "帮助热线 400-000-0000",
+        "helpline": "全国心理援助热线 12356",
         "compliance": "数据分析结果，不构成投注建议。未满 18 周岁禁止购买彩票。",
         "min_age": 18,
     },

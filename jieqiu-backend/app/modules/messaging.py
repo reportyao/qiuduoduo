@@ -143,6 +143,7 @@ def build_stream(db: Session, trade_date: str, cursor: str | None = None,
     killed.sort(key=lambda v: v.rake, reverse=True)
     avoid = [
         {
+            "match_id": v.match_id,
             "match_no": v.match_no,
             "home": v.home,
             "away": v.away,

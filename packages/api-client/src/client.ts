@@ -6,7 +6,7 @@ export type ApiClient = ReturnType<typeof createApiClient>;
 
 export interface ApiClientConfig {
   baseUrl: string;
-  getToken?: () => string | null;
+  getToken?: () => string | null | Promise<string | null>;
   getLocale?: () => string | null;
   getMarket?: () => string | null;
   onError?: (status: number, message: string) => void;
@@ -39,8 +39,8 @@ export function createApiClient(config: ApiClientConfig) {
   });
 
   const middleware: Middleware = {
-    onRequest({ request }) {
-      const token = config.getToken?.();
+    async onRequest({ request }) {
+      const token = await config.getToken?.();
       if (token) {
         request.headers.set("Authorization", `Bearer ${token}`);
       }

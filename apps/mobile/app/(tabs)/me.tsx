@@ -1,32 +1,253 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
+import { useRouter } from "expo-router";
+import { AppHeader } from "@/components/AppHeader";
+import { AppScreen } from "@/components/Screen";
+import {
+  Avatar,
+  Button,
+  Card,
+  Chip,
+  Icon,
+  IconButton,
+  SettingsGroup,
+  SettingsRow,
+  Text,
+  Toggle,
+  useToast,
+} from "@/components/ui";
+import { usePersonaContent } from "@/features/personas/usePersona";
+import { useAuthStore, isLoggedIn } from "@/features/auth/authStore";
+import { useMeQuery, useDisciplineMutation, useRestMutation } from "@/features/account/queries";
+import { useUnreadCountQuery } from "@/features/inbox/queries";
+import { usePrefsStore } from "@/features/preferences/prefsStore";
+import { errorText } from "@/lib/errors";
+import { colors, layout, spacing } from "@/theme/tokens";
 
 export default function MeScreen() {
+  const router = useRouter();
+  const toast = useToast();
+  const { meta, copy } = usePersonaContent();
+  const session = useAuthStore((s) => s.session);
+  const logout = useAuthStore((s) => s.logout);
+  const setPersona = usePrefsStore((s) => s.setPersona);
+  const avatarUri = usePrefsStore((s) => s.avatarUri);
+  const meQuery = useMeQuery(Boolean(session?.userId));
+  const unreadQuery = useUnreadCountQuery();
+  const discipline = useDisciplineMutation();
+  const rest = useRestMutation();
+  const me = meQuery.data;
+  const unread = unreadQuery.data?.unread ?? 0;
+  const loggedIn = isLoggedIn(session);
+  const rested = Boolean(me?.streak.rested);
+
+  const toggleDiscipline = async (next: boolean) => {
+    try {
+      await discipline.mutateAsync(next);
+      toast.show(next ? "连败保护已开启" : "连败保护已关闭", "success");
+    } catch (e) {
+      toast.show(errorText(e), "error");
+    }
+  };
+
+  const toggleRest = async (next: boolean) => {
+    try {
+      await rest.mutateAsync(next);
+      toast.show(next ? "好，今晚先到这里" : "已恢复，今晚可以继续看", "success");
+    } catch (e) {
+      toast.show(errorText(e), "error");
+    }
+  };
+
+  const confirmLogout = () => {
+    Alert.alert("退出登录", "退出后会回到设备账户，手机号登录的数据不会丢失。", [
+      { text: "取消", style: "cancel" },
+      {
+        text: "退出",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+          setPersona("zhuanjia");
+          toast.show("已退出，回到设备账户", "info");
+        },
+      },
+    ]);
+  };
+
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>我的</Text>
-      <Text style={styles.body}>
-        登录、助理风格、通知设置、隐私与数据将在移动端逐项迁移。
-      </Text>
-    </View>
+    <AppScreen bottom={false}>
+      <AppHeader
+        title="我的"
+        subtitle="解球 · AI 助理"
+        onAssistantPress={() => router.push("/assistant")}
+        right={
+          <View>
+            <IconButton name="mail-outline" onPress={() => router.push("/inbox")} accessibilityLabel="站内信" size={18} />
+            {unread > 0 ? <View style={styles.unreadDot} /> : null}
+          </View>
+        }
+      />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <Card onPress={() => router.push("/settings/profile")} accessibilityLabel="编辑个人资料" style={styles.profile}>
+          <Avatar source={avatarUri ? { uri: avatarUri } : meta.avatar} size={62} online />
+          <View style={styles.profileText}>
+            <Text variant="h2">{me?.displayName || session?.displayName || "解球用户"}</Text>
+            <Text variant="caption" color={colors.muted}>
+              {loggedIn ? me?.phone ?? me?.email ?? "手机号已绑定" : "设备账户 · 绑定手机可跨设备"}
+            </Text>
+            <View style={styles.badges}>
+              <Chip label={meta.name} tone="green" />
+              {me?.streak.active ? <Chip label={`连败 ${me.streak.streak}`} tone="danger" /> : null}
+              {rested ? <Chip label="休息中" tone="amber" /> : null}
+            </View>
+          </View>
+          <Icon name="chevron-forward" size={16} color={colors.subtle} />
+        </Card>
+
+        <View style={styles.quick}>
+          <Quick label="收件箱" value={unread > 0 ? String(unread) : "无"} icon="mail-outline" onPress={() => router.push("/inbox")} />
+          <Quick label="关注" value="比赛" icon="heart-outline" onPress={() => router.push("/watch")} />
+          <Quick label="通知" value="设置" icon="notifications-outline" onPress={() => router.push("/settings/notifications")} />
+        </View>
+
+        <SettingsGroup title="助理">
+          <SettingsRow
+            title="助理风格"
+            subtitle="同一组数字，不同说话方式"
+            value={meta.name}
+            icon="sparkles-outline"
+            onPress={() => router.push("/settings/persona")}
+          />
+          <SettingsRow
+            title="它记得你什么"
+            subtitle={`${me?.memories.length ?? 0} 条记忆，可见可删`}
+            icon="bookmark-outline"
+            onPress={() => router.push("/settings/memories")}
+            last
+          />
+        </SettingsGroup>
+
+        <SettingsGroup title="纪律">
+          <SettingsRow
+            title="连败保护"
+            subtitle="连输 3 场后，加注前必须二次确认"
+            right={
+              <Toggle
+                value={me?.disciplineOn ?? true}
+                onChange={toggleDiscipline}
+                label="连败保护"
+                disabled={!session || discipline.isPending}
+              />
+            }
+            icon="shield-checkmark-outline"
+          />
+          <SettingsRow
+            title={rested ? "今天休息中" : "今天不看了"}
+            subtitle={rested ? "明晚结论照常等你" : "随时可以停，反悔也能恢复"}
+            right={
+              <Toggle
+                value={rested}
+                onChange={toggleRest}
+                label="休息模式"
+                disabled={!session || rest.isPending}
+              />
+            }
+            icon="moon-outline"
+          />
+          <SettingsRow
+            title="合规中心"
+            subtitle="自排除、自评、求助热线"
+            icon="medkit-outline"
+            onPress={() => router.push("/settings/compliance")}
+            last
+          />
+        </SettingsGroup>
+
+        <SettingsGroup title="偏好">
+          <SettingsRow
+            title="赔率格式"
+            value={{ decimal: "欧洲盘", hk: "香港盘", indo: "印尼盘", american: "美式盘" }[me?.oddsFormat ?? "decimal"]}
+            icon="swap-horizontal-outline"
+            onPress={() => router.push("/settings/preferences")}
+          />
+          <SettingsRow
+            title="通知设置"
+            subtitle="渠道、静默时段、每日上限"
+            icon="notifications-outline"
+            onPress={() => router.push("/settings/notifications")}
+          />
+          <SettingsRow
+            title="隐私与数据"
+            subtitle="导出、注销、数据说明"
+            icon="lock-closed-outline"
+            onPress={() => router.push("/settings/privacy")}
+          />
+          <SettingsRow
+            title="关于解球"
+            subtitle="版本、法律文本、数据来源"
+            icon="information-circle-outline"
+            onPress={() => router.push("/settings/about")}
+            last
+          />
+        </SettingsGroup>
+
+        <View style={styles.accountActions}>
+          {loggedIn ? (
+            <Button label="退出登录" variant="secondary" onPress={confirmLogout} fullWidth />
+          ) : (
+            <Button label="手机号登录 / 注册" onPress={() => router.push("/auth/login")} fullWidth />
+          )}
+          <Text variant="caption" color={colors.subtle} center style={styles.footer}>{copy.footer}</Text>
+        </View>
+      </ScrollView>
+    </AppScreen>
+  );
+}
+
+function Quick({
+  label,
+  value,
+  icon,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  icon: React.ComponentProps<typeof Icon>["name"];
+  onPress: () => void;
+}) {
+  return (
+    <Card onPress={onPress} accessibilityLabel={label} style={styles.quickCard}>
+      <Icon name={icon} size={18} color={colors.green} />
+      <Text variant="smallStrong">{label}</Text>
+      <Text variant="caption" color={colors.muted}>{value}</Text>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.sm, paddingBottom: spacing.x7, gap: spacing.base },
+  profile: { flexDirection: "row", alignItems: "center", gap: spacing.base, padding: spacing.base },
+  profileText: { flex: 1, gap: 3 },
+  badges: { flexDirection: "row", gap: spacing.xs, flexWrap: "wrap", marginTop: 2 },
+  unreadDot: {
+    position: "absolute",
+    right: 7,
+    top: 7,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.danger,
+    borderWidth: 1,
+    borderColor: colors.bg,
+  },
+  quick: { flexDirection: "row", gap: spacing.sm },
+  quickCard: {
     flex: 1,
-    backgroundColor: "#F5F4EF",
-    paddingHorizontal: 18,
-    paddingTop: 18,
+    padding: spacing.base,
+    minHeight: 84,
+    gap: 3,
+    alignItems: "flex-start",
+    justifyContent: "center",
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: "#15211B",
-  },
-  body: {
-    marginTop: 10,
-    fontSize: 13,
-    lineHeight: 20,
-    color: "#6B756F",
-  },
+  accountActions: { marginTop: spacing.sm, gap: spacing.base },
+  footer: { lineHeight: 18, paddingHorizontal: spacing.base },
 });

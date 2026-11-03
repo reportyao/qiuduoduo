@@ -184,3 +184,16 @@
 ---
 
 *Feature-API-Mapping v1.0 完 · 46 功能点 × 41 API × 20 表全覆盖*
+
+---
+
+## 2026-11-04 生产前端落地补充
+
+| 功能 | 前端动作 | 后端接口 | 状态 |
+|---|---|---|---|
+| 5 秒撤销记注 | 记一注成功后可撤销 | `DELETE /bets/{bet_id}` | ✅ 已实现（仅本人未结算注单） |
+| 游客数据合并 | 手机号登录时携带 device_token | `POST /auth/sms/verify`、`/auth/email/verify` | ✅ 合并注单/记忆/关注/通知/推送 token |
+| 关注列表显示比赛 | 关注页 | `GET /me/watch` 返回 match_no/home/away/kickoff | ✅ |
+| 今日在售直达完整账 | 在售列表点击 | `GET /matches/on-sale` 返回 verdict_id | ✅ |
+| 不推页直达完整账 | promoted 状态 | `GET /matches/{id}/why-not` 返回 verdict_id | ✅ |
+| 通知/隐私文案 | 合规中心/法律页 | `GET /legal/text` 的真实热线（12356） | ✅ 已去掉 400 占位 |

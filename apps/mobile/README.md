@@ -1,6 +1,10 @@
 # 解球 Mobile
 
-Expo React Native + TypeScript。MVP 只做 Android，iOS 后续开启。
+Expo React Native + TypeScript 生产前端。MVP 只做 Android，iOS 后续开启。
+
+当前已实现：年龄门 / 首页判决流 / 完整账 / 情报与证据 / 封存验证 / 记一注与 5 秒撤销 / 助理对话 / 8 个工具 / 票单与周报 / 公开账本 / 站内信 / 关注 / 通知设置 / 合规中心 / 人设与偏好 / 手机号登录与游客数据合并。
+
+**交接先读 [ARCHITECTURE.md](./ARCHITECTURE.md)**：目录、路由、数据适配、会话合并、已知后端缺口都在那里。
 
 ## 启动
 
@@ -31,13 +35,17 @@ corepack pnpm exec expo export --platform android --output-dir .export-check --c
 
 ```text
 app/                  Expo Router 路由薄壳
-src/features/         业务切片
-src/lib/              env/api/query 基础设施
+src/features/         业务切片（queries/components/文案）
+src/domain/           领域模型 + API 响应适配器
+src/components/       全局 UI 原语 / Header / 自定义底栏
+src/lib/              env/api/query/storage/format 基础设施
+src/theme/            设计令牌
 ```
 
 ## 约定
 
 - 页面不写业务逻辑；
-- 接口类型来自 `@jieqiu/api-client`；
-- 文案后续迁入 `packages/i18n`；
+- 接口类型来自 `@jieqiu/api-client`，响应经 `src/domain/*Adapters.ts` 降级；
+- 用户数据 queryKey 必须带 userId；登录相关查询必须等 authReady；
+- 文案走人设/常量，不在组件里散落；
 - 组件不直接访问数据库或后端 URL。

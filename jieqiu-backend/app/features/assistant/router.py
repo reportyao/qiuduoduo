@@ -91,6 +91,11 @@ class WatchItem(BaseModel):
     target_type: str
     target_id: str
     events: list[str]
+    match_no: str | None = None
+    home: str | None = None
+    away: str | None = None
+    league: str | None = None
+    kickoff: str | None = None
 
 
 class WatchListResponse(BaseModel):
@@ -200,9 +205,22 @@ def click(notification_id: int, user: User = Depends(current_user),
 def watch_list(user: User = Depends(current_user), db: Session = Depends(get_db)):
     rows = db.scalars(select(WatchTarget).where(WatchTarget.user_id == user.id)
                       .order_by(WatchTarget.id.desc())).all()
-    return {"items": [{"id": w.id, "target_type": w.target_type,
-                       "target_id": w.target_id, "events": w.events or []}
-                      for w in rows]}
+    match_ids = [w.target_id for w in rows if w.target_type == "match"]
+    matches = {m.match_id: m for m in db.scalars(
+        select(SPMatch).where(SPMatch.match_id.in_(match_ids)))} if match_ids else {}
+    items = []
+    for w in rows:
+        m = matches.get(w.target_id)
+        items.append({
+            "id": w.id, "target_type": w.target_type, "target_id": w.target_id,
+            "events": w.events or [],
+            "match_no": m.match_no if m else None,
+            "home": m.home if m else None,
+            "away": m.away if m else None,
+            "league": m.league if m else None,
+            "kickoff": m.kickoff if m else None,
+        })
+    return {"items": items}
 
 
 @router.post("/me/watch", response_model=WatchItem)

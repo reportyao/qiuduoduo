@@ -45,7 +45,7 @@ def test_legal_disclosure_contract(client):
 def test_legal_text_both_regions(client):
     cn = client.get("/legal/text", params={"region": "cn"}).json()
     gl = client.get("/legal/text", params={"region": "global"}).json()
-    assert "400-000-0000" in cn["helpline"] and cn["min_age"] == 18
+    assert "12356" in cn["helpline"] and cn["min_age"] == 18
     assert "begambleaware" in gl["helpline"].lower() and gl["min_age"] == 18
 
 

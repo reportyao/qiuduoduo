@@ -500,3 +500,33 @@ def test_killed_outcomes_seven_day_window(db):
     ko = killed_outcomes(db, days=7)
     assert ko["killed_total"] == 0  # 老数据不入 7 天口径
     assert ko["avoided_loss_cny"] == 0
+
+
+def test_bet_undo_delete(db, client):
+    """前端 5 秒撤销：只能删自己的未结算注单，重复删 404。"""
+    user, _ = login_device(db, "tok-undo")
+    v = Verdict(id="v-undo-1", trade_date=today_cn(), match_id="2045099",
+                match_no="周四099", league="英超", home="甲", away="乙",
+                kickoff=future_kickoff(today_cn()), pool="had", goal_line="",
+                sp_h=1.8, sp_d=3.5, sp_a=4.2, rake=0.08,
+                p_home=0.55, p_draw=0.25, p_away=0.20,
+                status="promoted", gates={}, payload={"id": "v-undo-1"},
+                payload_hash="b" * 64, pick={"dir": "主胜", "prob": 0.58, "sp": 1.8})
+    db.merge(v)
+    db.commit()
+    tok = {"Authorization": "Bearer tok-undo"}
+    r = client.post("/bets", json={"verdict_id": "v-undo-1", "amount": 100}, headers=tok)
+    assert r.status_code == 200, r.text
+    bid = r.json()["id"]
+    r = client.delete(f"/bets/{bid}", headers=tok)
+    assert r.status_code == 200 and r.json()["deleted"] == bid
+    assert db.get(Bet, bid) is None
+    assert client.delete(f"/bets/{bid}", headers=tok).status_code == 404
+
+    # 别人的注单不可删
+    r = client.post("/bets", json={"verdict_id": "v-undo-1", "amount": 50}, headers=tok)
+    bid2 = r.json()["id"]
+    other = client.post("/auth/device", json={"device_token": "tok-other"}).json()
+    assert other["user_id"] != user.id
+    r = client.delete(f"/bets/{bid2}", headers={"Authorization": "Bearer tok-other"})
+    assert r.status_code == 404

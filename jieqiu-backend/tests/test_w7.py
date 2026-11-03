@@ -111,7 +111,7 @@ def test_two_region_login_regression(db, client):
     # profile 差异
     pc = client.get("/me/market-profile", headers={"Authorization": "Bearer tok-cn"}).json()
     pg = client.get("/me/market-profile", headers={"Authorization": "Bearer tok-global"}).json()
-    assert "400-000-0000" in pc["helpline"] and "未满 18" in pc["compliance"]
+    assert "12356" in pc["helpline"] and "未满 18" in pc["compliance"]
     assert "begambleaware" in pg["helpline"].lower() and "18+" in pg["compliance"]
     assert pc["currency"] == "CNY" and pg["currency"] == "USD"
 
