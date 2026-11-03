@@ -78,6 +78,12 @@ h1{font-size:20px;font-weight:700;letter-spacing:.02em}
 .flow .old{color:var(--muted);text-decoration:line-through;font-family:ui-monospace,monospace}
 .flow .new{color:var(--v);font-family:ui-monospace,monospace;font-weight:600}
 .flow .delta{font-size:11px;color:var(--amber);border:1px solid rgba(217,164,65,.4);border-radius:999px;padding:1px 7px}
+/* 情景条 */
+.prow{display:grid;grid-template-columns:64px 1fr auto;gap:9px;align-items:center;font-size:12px;padding:4.5px 0}
+.prow>span{color:var(--muted);font-family:ui-monospace,monospace;font-size:11px}
+.pbar{height:6px;border-radius:999px;background:var(--line);overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--v);border-radius:999px}
+.prow b{font-family:ui-monospace,monospace;font-weight:500;font-size:11px;color:var(--muted);text-align:right}
 /* 推送样例 */
 .notif{display:flex;gap:10px;background:rgba(40,44,52,.92);backdrop-filter:blur(8px);border:1px solid #3A404C;border-radius:18px;padding:11px 12px;margin-top:10px}
 .notif .ic{width:34px;height:34px;border-radius:9px;background:var(--vsoft);color:var(--v);display:grid;place-items:center;font-size:16px;flex:0 0 auto}
@@ -322,6 +328,73 @@ table.rules tr:last-child td{border-bottom:0}
   </div>
 </div>
 <p class="cap"><b>图 6 · 推送文案</b><br>情报异动只发「发生了什么 + 我重算了」，不发「快买」。</p>
+</div>
+
+<!-- 7. AI 深度研判 -->
+<div>
+<div class="frame">
+  <div class="frame-h"><span class="t">← 结论详情 · AI 研判</span><span class="n">v0.3</span></div>
+  <div class="frame-b">
+    <div class="card">
+      <div class="eyebrow">🤖 AI 深度研判 <span class="tag ver">已封存</span></div>
+      <div style="font-size:15px;font-weight:600;line-height:1.6">倾向 <span style="color:var(--v)">让球主胜</span>，但把握度中等</div>
+      <div class="meta">综合 12 条情报 · 与统计模型分歧 +0.4pp（已按收缩纪律计入，上限 ±3pp）</div>
+      <div style="margin-top:12px">
+        <div class="prow"><span>基准 52%</span><div class="pbar"><i style="width:52%"></i></div><b>控球压制</b></div>
+        <div class="prow"><span>乐观 61%</span><div class="pbar"><i style="width:61%;opacity:.7"></i></div><b>哈兰德首发</b></div>
+        <div class="prow"><span>悲观 38%</span><div class="pbar"><i style="width:38%;opacity:.45"></i></div><b>轮换 4 人</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">三个关键驱动</div>
+      <div style="font-size:12.5px;line-height:1.9">
+        ① 布莱顿双中卫缺阵（xGA +12%，官方确认）<br>
+        ② 曼城主场 xG 2.1/场，压制型对阵<br>
+        ③ 布莱顿被迫压上 → 反击空间（转化率 18%）
+      </div>
+    </div>
+    <div class="card" style="border-left:3px solid var(--danger)">
+      <div class="eyebrow" style="color:var(--danger)">两条风险</div>
+      <div style="font-size:12.5px;line-height:1.9">
+        · 曼城 3 天后欧冠，轮换 43%（若 4 人轮换 → 悲观情景 38%）<br>
+        · 布莱顿定位球得分率联赛第 4（曼城防空第 11）
+      </div>
+    </div>
+    <div class="card" style="background:var(--asoft);border-color:rgba(217,164,65,.3)">
+      <div class="meta" style="color:var(--amber);line-height:1.7;font-size:11.5px">AI 只做情景与风险，最终概率来自统计模型（±3pp 内）。本段文字与输入快照已封存上链，可复现。</div>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>图 7 · 「AI 深度研判」卡</b><br>结论 + 情景树 + 驱动 + 风险 + 分歧。数字口径仍属统计模型，AI 的调整有硬上限且可关闭。</p>
+</div>
+
+<!-- 8. 情报全景 -->
+<div>
+<div class="frame">
+  <div class="frame-h"><span class="t">情报全景 · 12 类</span><span class="n">按可计算性排序</span></div>
+  <div class="frame-b">
+    <div class="chips" style="display:flex;flex-wrap:wrap;gap:7px;margin-top:2px">
+      <span class="gatechip"><i>✓</i>阵容 首发/伤停/停赛</span>
+      <span class="gatechip"><i>✓</i>体能 休息/密度/旅行</span>
+      <span class="gatechip"><i>✓</i>状态 xG 趋势/个体</span>
+      <span class="gatechip warn"><i>…</i>战意 排名/德比/杯赛</span>
+      <span class="gatechip warn"><i>…</i>战术 风格相克</span>
+      <span class="gatechip"><i>✓</i>定位球 攻防效率</span>
+      <span class="gatechip warn"><i>…</i>裁判 点球/红牌</span>
+      <span class="gatechip warn"><i>…</i>环境 风/雨/温度</span>
+      <span class="gatechip warn"><i>…</i>场地 草皮/尺寸</span>
+      <span class="gatechip"><i>✓</i>市场 移动/成交</span>
+      <span class="gatechip warn"><i>…</i>公告 发布会/官方</span>
+      <span class="gatechip warn"><i>…</i>情境 历史对照</span>
+    </div>
+    <div class="secnote" style="margin-top:12px">✓ = 可进概率（硬情报，有边界）；… = 只扩区间或只做叙事。**不做**：社媒情绪、球迷投票、球员身价、记者传闻。</div>
+    <div class="card" style="margin-top:10px">
+      <div class="eyebrow">为什么不做社媒情绪</div>
+      <div class="meta" style="line-height:1.75">① 噪声占比高（水军/反串）；② 不可证伪（赛后怎么解释都行）；③ 职业盘口已在消化它——你拿到的不是信息差，是滞后。情报要做“能核验的事实”，不是“感觉”。</div>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>图 8 · 情报全景</b><br>12 类中只有 4 类可进概率（阵容/体能/状态/定位球/市场），其余只扩区间或写叙事。</p>
 </div>
 
 </div>
