@@ -3,7 +3,7 @@
 > 范围：主动监控、推送、用户记忆、助理交互，以及与现有文档 / 后端 / 管理后台的对照。
 > 关联：`PRD-v5.1.md` F13/F19/F21/F22 + §5.2 推送矩阵；`TechSpec-v2.1.md` §4/§5/§8；`Intelligence-Layer-v1.0.md`；`Release-plan-v1.1.md` W5/W6。
 >
-> 状态：**P0 后端/管理后台已实现（2026-11-03）**：events / notifications / watch_targets / push_tokens / notify_settings / worker / inbox / 控制台助理/推送页；**156 tests passed**。Android JPush 真实凭证、前端 inbox/关注 UI、派生记忆、AI 分析仍待接。
+> 状态：**P0 后端/管理后台已实现（2026-11-03）**：events / notifications / watch_targets / push_tokens / notify_settings / worker / inbox / 控制台助理/推送页；**157 tests passed**。Android JPush 真实凭证、前端 inbox/关注 UI、派生记忆、AI 分析仍待接。
 >
 > **平台范围（2026-11-03 定）：MVP 只做 Android；iOS/APNs 与 Global/FCM 延后。**
 
@@ -501,7 +501,7 @@ JQ_LLM_PROVIDER=glm
 ### 17.1 评审范围
 
 - 后端：`app/models.py`、`app/routers/w6.py`、`app/modules/users.py`、`app/modules/chat.py`、`app/modules/messaging.py`、`app/routers/api.py`、`app/routers/console.py`、`app/main.py`；
-- 测试：`python -m pytest -q`，**156 passed**（修复 6 个墙钟依赖后）；
+- 测试：`python -m pytest -q`，**157 passed**（修复 6 个墙钟依赖后）；
 - 管理后台：`/console`、`/console/alerts`、`/console/variants`、`/console/ops`。
 
 ### 17.2 已确认可用
@@ -515,7 +515,7 @@ JQ_LLM_PROVIDER=glm
 | 判决/修订/封存链 | `Verdict` / `VerdictRevision` / `sealchain` |
 | 流接口 | `/stream` 返回 verdicts/watch/onsale/avoid + 缓存 |
 | 控制台登录 | 密码 + IP 白名单 + 5 次锁 10 分钟 + 会话 TTL |
-| 测试 | 156 passed（审计/契约/W2–W8 + assistant 7） |
+| 测试 | 157 passed（审计/契约/W2–W8 + assistant 8） |
 
 ### 17.3 评审发现
 
@@ -531,13 +531,13 @@ JQ_LLM_PROVIDER=glm
 | **P2** | `_VARIANT_POOL` 进程内存，重启丢失 | 运营标记不可持久 | v1.5 落 `narrative_pool` 表 |
 | **P2** | `/stream` 有 `onsale`，但前端 `mapStream` 只取 verdicts/watch/avoid | 吉祥物选比赛少一类数据源 | `mapStream` 接 `onsale`；或建 `/matches` 分类接口 |
 | **P2** | `app.main` 版本字符串仍是 `0.7.0-w7` | 版本展示/排障不一致 | 升到 w8/实际版本 |
-| **P2** | 6 个测试依赖墙钟：21:55 后 `future_kickoff` 落到次日 21:55，超出竞彩日窗口 | 夜间跑测试误报 rest_day/0 场 | 已修：`future_kickoff` 回落到次日 02:00；156 passed |
+| **P2** | 6 个测试依赖墙钟：21:55 后 `future_kickoff` 落到次日 21:55，超出竞彩日窗口 | 夜间跑测试误报 rest_day/0 场 | 已修：`future_kickoff` 回落到次日 02:00；157 passed |
 
 ### 17.4 本次实际修复
 
 - `tests/conftest.py::future_kickoff`：过期时不再“同日时刻 +1 天”，改为**次日 02:00**，保证落在 `当日 00:00–次日 04:59` 的竞彩窗口内；
 - `tests/test_w2_gaps.py::_seed_n`：固定“次日 02:00”种子，避免 21:30 后漂移；
-- 结果：`156 passed`（新增 assistant 7 项；原 149 项全保留）。
+- 结果：`157 passed`（新增 assistant 8 项；原 149 项全保留）。
 
 ### 17.5 结论
 
@@ -565,7 +565,7 @@ JQ_LLM_PROVIDER=glm
 | 控制台 | `/console/assistant`、`/console/push`；导航已接 |
 | 部署 | `deploy.py` 增加每分钟 assistant worker cron（`JQ_DAILY_BRIEF_HOUR=19`） |
 | 隐私 | `purge_expired_deletions` 覆盖 notifications/watch/push/user_events/notify_settings |
-| 测试 | `156 passed`（新增 7 项：监控幂等、扇出、inbox、push dry-run、静默/上限、iOS 拒绝、控制台页、删除清理） |
+| 测试 | `157 passed`（新增 8 项：监控幂等、扇出、inbox、push dry-run、静默/上限、iOS 拒绝、控制台页、删除清理） |
 
 ### 部署与验证
 
@@ -599,3 +599,22 @@ python -m app.assistant.worker --loop --interval 60
 # 本地/预发：JPush 未配置时自动 dry-run，不需要真凭证
 JQ_DAILY_BRIEF_HOUR=19 python -m app.assistant.worker --once
 ```
+
+
+---
+
+## 19. 二次代码评审修正（2026-11-03 夜）
+
+| 问题 | 风险 | 修正 |
+|---|---|---|
+| `emit_event` 用完整 key 查询、却存截断 160 字符的 key | 超长 dedupe key 会重复插入/返回 None | 查询与存储统一用截断后的 key |
+| worker 无 rollback；cron 每分钟可能重叠 | 事务异常后 session 脏；两个 worker 抢同一事件 | `run_once`/loop 加 rollback；`flock` 文件锁防 cron 重叠 |
+| JPush 网络/5xx 失败也累计 token 失败并停用 | 一次厂商抖动会误杀正常设备 | 只有明确 token 无效（1011/invalid/registration/not found）才累计/停用 |
+| 结算扫描用 CN 时间字符串比 UTC `settled_at` | 最近结算被误过滤（差 8 小时） | 统一转 UTC naive 后比较；新增回归测试 |
+| 终场事件只按 home/away 反查判决 | 同对阵历史比赛可能串到旧 `match_id` | 加 result date ±1 天 kickoff 窗口 |
+| 通知 title/body/deeplink 可能超列宽 | PostgreSQL 下 insert 失败/截断 | 入队前按 128/512/256 截断 |
+| provider 异常可能拖垮 worker | 单条推送异常中断整批 | `send()` 包 try/except 转 `PushResult(False)` |
+
+**仍未修**：控制台 token 在 URL / POST 无 CSRF；`_VARIANT_POOL` 进程内存；chat persona；前端 inbox/关注 UI；真实 JPush 凭证/厂商通道；派生记忆；AI 分析层。
+
+**测试**：`python -m pytest -q` → **157 passed**。

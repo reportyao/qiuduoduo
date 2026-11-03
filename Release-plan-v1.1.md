@@ -9,7 +9,7 @@
 
 > AI 助理运行时（主动监控 / 推送 / 记忆）的差距分析与 Android MVP 排期见 `Assistant-Runtime-v1.0.md`。
 
-> 2026-11-03 后端/控制台评审 + P0 实现：156 测试通过；events / notifications / watch_targets / push_tokens / notify_settings / inbox / worker / 控制台助理页已落地并部署腾讯云（79 路由 freeze clean）；真实 Android JPush 凭证、前端 inbox/关注、派生记忆待接；详见 `Assistant-Runtime-v1.0.md` §17/§18。
+> 2026-11-03 后端/控制台评审 + P0 实现：157 测试通过；events / notifications / watch_targets / push_tokens / notify_settings / inbox / worker / 控制台助理页已落地并部署腾讯云（79 路由 freeze clean）；真实 Android JPush 凭证、前端 inbox/关注、派生记忆待接；详见 `Assistant-Runtime-v1.0.md` §17/§18。
 
 ---
 

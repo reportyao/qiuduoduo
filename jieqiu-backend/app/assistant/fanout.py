@@ -144,7 +144,8 @@ def fanout_events(db: Session, limit: int = 100, now_cn: datetime | None = None)
             if allowed and event.type not in allowed and uid not in bet_users:
                 continue
             inapp = render_notification(event, "inapp")
-            title, body, link = inapp["title"], inapp["body"], inapp["deeplink"]
+            title, body, link = (inapp["title"][:128], inapp["body"][:512],
+                                 inapp["deeplink"][:256])
             if _get_notification(db, uid, event.id, "inapp") is None:
                 db.add(Notification(
                     user_id=uid, event_id=event.id, channel="inapp", status="sent",
@@ -170,6 +171,8 @@ def fanout_events(db: Session, limit: int = 100, now_cn: datetime | None = None)
                     suppressed += 1
                 continue
             p = render_notification(event, "push")
+            p = {"title": p["title"][:128], "body": p["body"][:512],
+                 "deeplink": p["deeplink"][:256]}
             status, sched, err = "pending", now_utc, ""
             if _in_quiet(now_cn, cfg["quiet_start"], cfg["quiet_end"]):
                 if event.type == "close_soon":

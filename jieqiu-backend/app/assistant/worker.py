@@ -18,7 +18,7 @@ from ..db import SessionLocal
 from ..models import Notification, PushToken
 from .fanout import fanout_events
 from .monitors import run_monitors
-from .providers import PushMessage, get_push_provider
+from .providers import PushMessage, PushResult, get_push_provider
 
 logger = logging.getLogger("jieqiu.assistant")
 
@@ -51,8 +51,11 @@ def send_pending_push(db: Session, limit: int = 50, now: datetime | None = None)
             suppressed += 1
             db.commit()
             continue
-        res = provider.send(list(tokens), PushMessage(
-            title=n.title, body=n.body, deeplink=n.deeplink))
+        try:
+            res = provider.send(list(tokens), PushMessage(
+                title=n.title, body=n.body, deeplink=n.deeplink))
+        except Exception as e:  # noqa: BLE001 provider 异常不拖垮 worker
+            res = PushResult(False, error=str(e)[:300])
         if res.ok:
             n.status = "sent"
             n.sent_at = _now()
@@ -73,21 +76,44 @@ def send_pending_push(db: Session, limit: int = 50, now: datetime | None = None)
             else:
                 n.status = "pending"
                 n.scheduled_at = _now() + timedelta(seconds=60 * (2 ** n.attempt))
-            for t in db.scalars(select(PushToken).where(
-                    PushToken.user_id == n.user_id, PushToken.enabled.is_(True))):
-                t.failure_count = (t.failure_count or 0) + 1
-                t.last_error = res.error[:250]
-                if t.failure_count >= 3:
-                    t.enabled = False
+            # 只有明确“token 无效”才累计并停用；网络/5xx 不惩罚设备
+            invalid = any(x in (res.error or "").lower() for x in
+                          ("invalid", "registration", "not found", "1011"))
+            if invalid:
+                for t in db.scalars(select(PushToken).where(
+                        PushToken.user_id == n.user_id, PushToken.enabled.is_(True))):
+                    t.failure_count = (t.failure_count or 0) + 1
+                    t.last_error = res.error[:250]
+                    if t.failure_count >= 3:
+                        t.enabled = False
         db.commit()
     return {"picked": len(rows), "sent": sent, "failed": failed, "suppressed": suppressed}
 
 
 def run_once(db: Session, backfill: bool = False) -> dict:
-    monitors = run_monitors(db, backfill=backfill)
-    fanout = fanout_events(db)
-    push = send_pending_push(db)
-    return {"monitors": monitors, "fanout": fanout, "push": push}
+    try:
+        monitors = run_monitors(db, backfill=backfill)
+        fanout = fanout_events(db)
+        push = send_pending_push(db)
+        return {"monitors": monitors, "fanout": fanout, "push": push}
+    except Exception:
+        db.rollback()
+        raise
+
+
+def _lock():
+    """防止 cron 重叠执行（Linux flock；Windows 开发环境跳过）。"""
+    try:
+        import fcntl
+    except ImportError:
+        return None
+    f = open("/tmp/jieqiu-assistant.lock", "w")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return f
+    except BlockingIOError:
+        f.close()
+        return False
 
 
 def main() -> None:
@@ -99,6 +125,10 @@ def main() -> None:
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    lock = _lock()
+    if lock is False:
+        print("another assistant worker is running; skip")
+        return
     db = SessionLocal()
     try:
         if args.loop:
@@ -106,6 +136,7 @@ def main() -> None:
                 try:
                     logger.info("run %s", run_once(db, backfill=args.backfill))
                 except Exception:  # noqa: BLE001 worker 不退出
+                    db.rollback()
                     logger.exception("assistant worker failed")
                 db.expire_all()
                 time.sleep(max(10, args.interval))
@@ -113,6 +144,8 @@ def main() -> None:
             print(run_once(db, backfill=args.backfill))
     finally:
         db.close()
+        if lock not in (None, False):
+            lock.close()
 
 
 if __name__ == "__main__":

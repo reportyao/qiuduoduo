@@ -170,8 +170,16 @@ def scan_final(db: Session, now_cn: datetime | None = None) -> int:
     ).all()
     made = 0
     for r in rows:
+        try:
+            d = datetime.strptime(r.match_date, "%Y-%m-%d")
+        except (TypeError, ValueError):
+            continue
+        # 赛果日期是欧洲当地日；判决 kickoff 是 CN 时间，取 ±1 天窗口避免串到历史同对阵
+        low = (d - timedelta(days=1)).strftime("%Y-%m-%d 00:00:00")
+        high = (d + timedelta(days=2)).strftime("%Y-%m-%d 00:00:00")
         v = db.scalar(
-            select(Verdict).where(Verdict.home == r.home, Verdict.away == r.away)
+            select(Verdict).where(Verdict.home == r.home, Verdict.away == r.away,
+                                  Verdict.kickoff >= low, Verdict.kickoff < high)
             .order_by(Verdict.kickoff.desc()).limit(1)
         )
         if v is None:
@@ -191,15 +199,17 @@ def scan_final(db: Session, now_cn: datetime | None = None) -> int:
 
 def scan_settlements(db: Session, now_cn: datetime | None = None) -> int:
     now = now_cn or cn_now()
-    since = (now - timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+    since = now.astimezone(timezone.utc).replace(tzinfo=None) - timedelta(days=3)
     rows = db.scalars(
         select(Verdict).where(Verdict.settled.isnot(None), Verdict.settled_at.isnot(None))
         .order_by(Verdict.settled_at.desc()).limit(200)
     ).all()
     made = 0
     for v in rows:
-        # SQLite 存的是字符串/naive，统一按字符串比较，避免 aware/naive 混用
-        if v.settled_at and str(v.settled_at) < since:
+        settled = v.settled_at
+        if settled is not None and settled.tzinfo is not None:
+            settled = settled.astimezone(timezone.utc).replace(tzinfo=None)
+        if settled is not None and settled < since:
             continue
         _, created = emit_event(
             db, type="settled", dedupe_key=f"settle:{v.id}", severity=1,

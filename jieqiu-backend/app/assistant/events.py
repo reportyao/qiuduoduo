@@ -23,20 +23,21 @@ def emit_event(db: Session, *, type: str, dedupe_key: str, severity: int = 1,
                payload: dict | None = None, data_cutoff: str = "",
                expires_at: datetime | None = None) -> tuple[Event | None, bool]:
     """幂等写入。返回 (event, created)；重复 dedupe_key 返回已有事件。"""
-    existing = db.scalar(select(Event).where(Event.dedupe_key == dedupe_key))
+    key = dedupe_key[:160]
+    existing = db.scalar(select(Event).where(Event.dedupe_key == key))
     if existing is not None:
         return existing, False
     payload = payload or {}
     ev = Event(type=type, severity=severity, match_id=match_id, team_id=team_id,
                payload=payload, payload_hash=canonical_hash(payload),
-               data_cutoff=data_cutoff, dedupe_key=dedupe_key[:160],
+               data_cutoff=data_cutoff, dedupe_key=key,
                expires_at=expires_at)
     db.add(ev)
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
-        existing = db.scalar(select(Event).where(Event.dedupe_key == dedupe_key))
+        existing = db.scalar(select(Event).where(Event.dedupe_key == key))
         return existing, False
     db.refresh(ev)
     return ev, True

@@ -167,3 +167,16 @@ def test_purge_removes_assistant_data(db):
     assert counts["removed_notify_settings"] == 1
     assert counts["removed_user_events"] == 1
     assert not db.query(WatchTarget).filter(WatchTarget.user_id == user.id).all()
+
+
+def test_scan_settlements_recent_utc(db):
+    from datetime import datetime, timezone
+    from app.assistant.monitors import scan_settlements
+    v = _verdict(db, vid="v-test-settle", mid="990001")
+    v.settled = "win"
+    v.settled_at = datetime.now(timezone.utc)
+    v.result_score = "2-0"
+    db.commit()
+    now_cn = datetime.now(CN)
+    assert scan_settlements(db, now_cn=now_cn) == 1
+    assert scan_settlements(db, now_cn=now_cn) == 0
