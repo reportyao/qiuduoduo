@@ -1,0 +1,12 @@
+*.db
+*.pyc
+.env
+.pytest_cache/
+__pycache__/
+app/modules/freeze_baseline.json
+backtest.log
+freeze_baseline.json
+jieqiu.db
+purge.log
+sync.log
+xg_dumps/

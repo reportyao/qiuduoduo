@@ -1,0 +1,19 @@
+# 数据/密钥/产物（绝不入库）
+*.db
+*.db-wal
+*.db-shm
+.env
+xg_dumps/
+sp-collector/sp_data.db
+sp-collector/collector.log
+sp-collector/probe.json
+jieqiu-backend/.git.bak/
+jieqiu-backend/venv/
+jieqiu-backend/app/modules/freeze_baseline.json
+jieqiu-backend/sync.log
+jieqiu-backend/backtest.log
+jieqiu-backend/purge.log
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
