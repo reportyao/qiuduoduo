@@ -16,11 +16,13 @@ interface AppHeaderProps {
   onBack?: () => void;
   backLabel?: string;
   border?: boolean;
+  /** 首页把 Header 放进 ScrollView 时关掉安全区内边距，避免双倍顶部留白。 */
+  insetTop?: boolean;
 }
 
 /**
- * 固定顶栏。首页只放品牌/指标，助理形象在滚动内容里自然滚出；
- * 其他 Tab 把助理形象固定在中间，保证「每个 Tab 都有 AI 实体」。
+ * 顶栏。Tab 页的 AI 实体由全局 FloatingAssistant 常驻，Header 不再重复放头像；
+ * 首页 Header 放进 ScrollView，滚动时随内容走，不再置顶。
  */
 export function AppHeader({
   title,
@@ -31,15 +33,17 @@ export function AppHeader({
   onBack,
   backLabel = "返回",
   border = true,
+  insetTop = true,
 }: AppHeaderProps) {
   const insets = useSafeAreaInsets();
   const { meta } = usePersonaContent();
+  const top = insetTop ? insets.top : 0;
 
   return (
     <View
       style={[
         styles.wrap,
-        { paddingTop: insets.top, height: insets.top + layout.headerHeight },
+        { paddingTop: top, height: top + layout.headerHeight },
         border && styles.border,
       ]}
     >

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import {
   ScrollView,
   StyleSheet,
+  View,
   type RefreshControlProps,
   type ScrollViewProps,
   type StyleProp,
@@ -24,7 +25,8 @@ export function AppScreen({
       edges={bottom ? ["left", "right", "bottom"] : ["left", "right"]}
       style={[styles.screen, style]}
     >
-      {children}
+      {/* 手机上是全宽；平板/模拟器宽屏时居中到 430pt，避免 UI 被横向拉伸。 */}
+      <View style={styles.maxWidth}>{children}</View>
     </SafeAreaView>
   );
 }
@@ -61,6 +63,7 @@ export function ScrollPage({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
+  maxWidth: { flex: 1, width: "100%", maxWidth: layout.maxWidth, alignSelf: "center" },
   content: {
     paddingHorizontal: layout.pagePadding,
     paddingTop: spacing.sm,

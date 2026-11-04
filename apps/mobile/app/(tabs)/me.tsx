@@ -95,7 +95,7 @@ export default function MeScreen() {
       <AppHeader
         title="我的"
         subtitle="解球 · AI 助理"
-        onAssistantPress={() => router.push("/assistant")}
+        showAssistant={false}
         right={
           <View>
             <IconButton name="mail-outline" onPress={() => router.push("/inbox")} accessibilityLabel="站内信" size={18} />

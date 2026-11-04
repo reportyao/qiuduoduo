@@ -40,7 +40,7 @@ export default function ToolsScreen() {
       <AppHeader
         title="工具箱"
         subtitle="解球 · AI 助理"
-        onAssistantPress={() => router.push("/assistant")}
+        showAssistant={false}
         right={<Chip label="8 个工具" tone="green" />}
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>

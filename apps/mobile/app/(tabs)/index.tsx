@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "@/components/AppHeader";
-import { AssistantHero } from "@/components/AssistantHero";
 import { AppScreen } from "@/components/Screen";
 import { Button, CardSkeleton, EmptyState, ErrorState, Text } from "@/components/ui";
 import { usePersonaContent } from "@/features/personas/usePersona";
@@ -37,6 +37,7 @@ import type { VerdictSummary } from "@/domain/types";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { copy } = usePersonaContent();
   const session = useAuthStore((s) => s.session);
   const [date, setDate] = useState(currentTradeDateCn());
@@ -99,17 +100,10 @@ export default function HomeScreen() {
 
   return (
     <AppScreen bottom={false}>
-      <AppHeader
-        title="解球"
-        subtitle={copy.brandSub}
-        showAssistant={false}
-        right={<Metrics stream={stream} />}
-      />
-
       <View style={styles.flex}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
           refreshControl={
             <RefreshControl
               refreshing={pulling}
@@ -118,11 +112,27 @@ export default function HomeScreen() {
             />
           }
         >
-          <AssistantHero onPress={() => setPickerOpen(true)} />
-          <DateStrip value={date} onChange={chooseDate} />
-          <DataStatusBanner stream={stream} onPress={() => setDataOpen(true)} />
-          <SaleBanner onsale={onsale} onPress={() => router.push("/tools/on-sale")} />
-          <ParlayBanner onPress={() => router.push("/tools/parlay")} />
+          {/* 首页菜单不再置顶：它随内容滚动，和悬浮头像处在同一高度带 */}
+          <AppHeader
+            title="解球"
+            subtitle={copy.brandSub}
+            showAssistant={false}
+            insetTop={false}
+            right={<Metrics stream={stream} />}
+          />
+          <View style={styles.content}>
+            <Pressable
+              onPress={() => setPickerOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="选今天的比赛"
+              style={styles.pickerHint}
+            >
+              <Text variant="caption" color={colors.green}>想让助理帮你选一场？点这里 →</Text>
+            </Pressable>
+            <DateStrip value={date} onChange={chooseDate} />
+            <DataStatusBanner stream={stream} onPress={() => setDataOpen(true)} />
+            <SaleBanner onsale={onsale} onPress={() => router.push("/tools/on-sale")} />
+            <ParlayBanner onPress={() => router.push("/tools/parlay")} />
 
           {streamQuery.isLoading ? (
             <>
@@ -186,6 +196,7 @@ export default function HomeScreen() {
               <LegalFooter text={copy.footer} />
             </>
           )}
+          </View>
         </ScrollView>
 
         <ChatComposer onPress={() => router.push("/assistant")} />
@@ -241,10 +252,11 @@ function Metrics({ stream }: { stream: ReturnType<typeof flattenStream>["page"] 
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  scrollContent: { paddingBottom: 140 },
   content: {
     paddingHorizontal: layout.pagePadding,
-    paddingBottom: 140,
   },
+  pickerHint: { alignSelf: "flex-start", paddingVertical: spacing.xs, marginBottom: spacing.xs },
   metrics: { alignItems: "flex-end", gap: 0 },
   more: { marginTop: spacing.base },
 });

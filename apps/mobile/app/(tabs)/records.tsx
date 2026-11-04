@@ -39,7 +39,7 @@ export default function RecordsScreen() {
       <AppHeader
         title="我的记录"
         subtitle="解球 · AI 助理"
-        onAssistantPress={() => router.push("/assistant")}
+        showAssistant={false}
         right={<Chip label={session?.mode === "jwt" ? "已登录" : "设备账户"} tone="neutral" />}
       />
       <ScrollView
