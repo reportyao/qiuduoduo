@@ -115,7 +115,7 @@ packages/api       生成的 client
 
 ## 5. 数据与契约
 
-- 目标生产/CI 使用自建 Postgres 16（非 Supabase）；详见 [数据库架构](./database-architecture.md)；当前旧部署仍可能使用 SQLite，切换步骤见该文；
+- 目标生产/CI 使用境内 Postgres 16（云托管优先 / 自建兜底，非 Supabase，ADR-0004）；详见 [数据库架构](./database-architecture.md)；当前旧部署仍可能使用 SQLite，切换步骤见该文；
 - Alembic 是 schema 事实源；
 - SQLite 仅允许纯单元测试、一次性工具或尚未切换的旧部署；
 - OpenAPI 由 FastAPI 生成；后端导出 `packages/api-client/openapi.json` 快照，client 从快照离线生成；

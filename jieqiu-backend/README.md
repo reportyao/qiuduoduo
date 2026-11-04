@@ -68,7 +68,7 @@ export JQ_DEPLOY_PASSWORD='...'
 export JQ_CONSOLE_PASSWORD='...'
 # 可选：控制台 IP 白名单（逗号分隔，支持 CIDR）
 export JQ_CONSOLE_IP_WHITELIST='1.2.3.4'
-# 可选：切自建 Postgres（不设则继续旧 SQLite）
+# 可选：切境内 Postgres（云托管优先 / 自建兜底；不设则继续旧 SQLite）
 export JQ_PROD_DATABASE_URL='postgresql+psycopg2://jieqiu:...@10.0.0.5:5432/jieqiu'
 
 python deploy.py   # VPS：数据代码分离；cron：同步/回测/purge/助理 worker/每周日数据保留
@@ -78,10 +78,10 @@ python deploy.py   # VPS：数据代码分离；cron：同步/回测/purge/助�
 
 ---
 
-## 数据库（自建 PostgreSQL，非 Supabase）
+## 数据库（境内 PostgreSQL：云托管优先 / 自建兜底，非 Supabase）
 
-生产目标：腾讯云 CVM 上自建 PostgreSQL 16；SQLite 只用于单元测试/一次性工具。
-完整架构、索引、连接池、备份、容量与切换步骤见
+生产目标：境内 PostgreSQL 16，首选云托管（腾讯云数据库 PG / TDSQL-C），纯自建（CVM + 云盘）作低成本兜底（ADR-0004）；SQLite 只用于单元测试/一次性工具。
+完整架构、选型对比、索引、连接池、备份/PITR 落地步骤、容量与切换见
 [docs/database-architecture.md](../docs/database-architecture.md)。
 
 ```bash

@@ -8,7 +8,7 @@
 | OpenAPI | 94 路径 / 107 方法 |
 | 后端测试 | 182 passed |
 | 前端测试 | 20 passed + typecheck/lint/bundle |
-| 数据库 | 目标自建 PostgreSQL 16；未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite |
+| 数据库 | 境内 PostgreSQL 16（云托管优先 / 自建兜底，ADR-0004）；未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite |
 | Alembic head | `20261104_04` |
 
 工程入口见 [AGENTS.md](./AGENTS.md)，完整文档索引见 [docs/README.md](./docs/README.md)，最新全栈审查见 [docs/reviews/2026-11-04-full-stack.md](./docs/reviews/2026-11-04-full-stack.md)。

@@ -1,8 +1,8 @@
-# 解球 · 数据库架构（自建 PostgreSQL）
+# 解球 · 数据库架构（境内 PostgreSQL：云托管优先 / 自建兜底）
 
-> 状态：生产目标架构。**不使用 Supabase**，也不依赖任何托管 BaaS。主库是自建 PostgreSQL 16（腾讯云 CVM + Docker volume / 云硬盘），SQLite 只用于纯单元测试、一次性本地工具，以及尚未切换的旧部署回退。
+> 状态：生产目标架构。**不使用 Supabase**，也不依赖任何托管 BaaS。主库是境内 PostgreSQL 16，**首选云托管（腾讯云数据库 PG / TDSQL-C），纯自建（CVM + 云盘）作为低成本兜底**；SQLite 只用于纯单元测试、一次性本地工具，以及尚未切换的旧部署回退。
 >
-> 深审记录：[docs/reviews/2026-11-04-database.md](reviews/2026-11-04-database.md)。
+> 选型决策：[ADR-0004](decisions/0004-managed-postgres-preferred.md)。深审记录：[docs/reviews/2026-11-04-database.md](reviews/2026-11-04-database.md)。
 
 ## 1. 拓扑
 
@@ -11,28 +11,41 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
                                       │
                                       ├─ SQLAlchemy 2.x 同步连接池
                                       ▼
-                             自建 PostgreSQL 16
+                             境内 PostgreSQL 16（云托管优先 / 自建兜底）
                              ├─ 主库（读写）
-                             ├─ pg_dump -Fc（下方命令；尚未自动化，需部署时配置 cron）
-                             ├─ WAL 归档 → PITR（上线前补齐，尚未配置）
+                             ├─ 备份：云托管自动备份+PITR / 自建 pg_dump（§7 落地步骤，尚未运行）
+                             ├─ WAL 归档 → PITR（自建形态按 §7 配置；云托管由平台提供）
                              └─ 只读副本（规模上来后）
 ```
 
-- 应用与数据库在同一 VPC；5432 **不暴露公网**，安全组只放应用机内网 IP。
+- 应用与数据库在同一 VPC；5432 **不暴露公网**，安全组只放应用机内网 IP。云托管形态用内网地址连接，同样不开公网。
 - 迁移由一个受控进程执行（`alembic upgrade head`），不由每个 API worker 各自执行。
 - 当前单机足够 MVP；多 API 实例时在应用与 Postgres 之间加 PgBouncer，或提高 `max_connections` 并缩小每个实例的连接池。
 
-## 2. 为什么是自建 Postgres，而不是 Supabase
+## 2. 选型决策：境内 PostgreSQL，云托管优先 / 自建兜底，不用 Supabase
 
-| 维度 | 自建 Postgres | Supabase |
-|---|---|---|
-| 数据位置 | 腾讯云中国境内外可控 | 海外托管为主，跨境/合规复杂 |
-| 成本 | CVM + 云盘，可预算 | 订阅 + 用量，增长后不可控 |
-| 连接 | 内网直连，低延迟 | 受网络与连接池限制 |
-| 自主性 | 版本、备份、扩展、审计全可控 | 受平台版本和策略约束 |
-| 迁移 | 标准 `pg_dump` / 逻辑复制 | 平台锁定风险 |
+> 正式决策记录见 [ADR-0004](decisions/0004-managed-postgres-preferred.md)。本节是结论与对比；代码保持标准 PostgreSQL，不写任何 Supabase / 云厂商专有 API。
 
-本项目选择自建，数据库代码保持标准 PostgreSQL，不写任何 Supabase 专有 API。
+三条候选路线对比：
+
+| 维度 | 云托管 Postgres（腾讯云数据库 PG / TDSQL-C） | 纯自建 Postgres（CVM + 云盘） | Supabase |
+|---|---|---|---|
+| 数据位置 / 合规 | 境内节点，数据不出境 | 境内节点，数据不出境 | **无中国大陆节点**，跨境 + PIPL 出境评估 |
+| CN 用户延迟 | 同 VPC 内网，低 | 同机 / 同 VPC，最低 | 跨境约 150–300ms |
+| 备份 / PITR / 高可用 | 平台托管，自动 | 全自己搭（**当前缺口**） | 平台托管（付费档） |
+| 运维负担 | 低 | 高 | 低 |
+| 成本 | 几十~几百/月，可预算 | 含在 CVM，最省 | 免费层有限，用量增长不可控 |
+| 控制权 / 扩展 | 受限但够用，标准 PG | 完全可控 | 受限 + 平台锁定 |
+| 迁移自由度 | 标准 PG，随时 `pg_dump` 迁走 | 标准 PG | PostgREST / RLS / Auth / SDK 锁定 |
+| 与现有栈契合 | 无缝（换 `JQ_DATABASE_URL` 即可） | 无缝 | 需引入 SDK / RLS，和 FastAPI 冲突 |
+
+**决策**：
+
+1. **首选云托管 Postgres**（腾讯云数据库 PostgreSQL / TDSQL-C）：保留境内 + 标准 PG + 无 BaaS 锁定的全部优点，把备份 / PITR / 主备切换 / 监控交给云厂商——正好补上纯自建当前最大的运维缺口。对单人 OPC、不想半夜处理备份 / 故障切换的场景，这是更稳的默认。
+2. **纯自建作为低成本兜底**：预算极紧或需要完全控制（自定义扩展 / 参数）时用；但**必须先把 §7 的备份 / PITR 落地**，否则等于承担自建风险却没拿到可靠性，不允许上生产。
+3. **不用 Supabase**：无中国大陆节点（延迟 + 数据出境双重问题）、内置 Auth 不贴合中国手机号 / 微信、PostgREST / SDK 与现有 FastAPI + OpenAPI codegen 重复且冲突、用量成本不可控。
+
+**不变量**：无论云托管还是自建，都是标准 PostgreSQL 16；连接只走 `JQ_DATABASE_URL`，schema 只走 Alembic。**切换形态不改一行业务代码**（云托管 ↔ 自建只是换连接串 + 运维责任归属）。
 
 ## 3. 连接与事务
 
@@ -132,19 +145,65 @@ JQ_DB_STATEMENT_TIMEOUT_MS=0 python -m app.db_maint --apply --json  # 备份后�
 
 ## 7. 备份 / 恢复 / 迁移
 
-### 备份（部署时配置，不是当前自动任务）
+### 备份 / PITR 落地步骤（部署时执行；当前尚未运行）
+
+> **云托管形态**：备份 / PITR / 主备由控制台开启即可（腾讯云数据库 PG 默认自动备份 + 按时间点回档），下面第 1–4 步的手写部分主要用于**纯自建兜底**；云托管只需确认备份策略 + 异机副本 + 第 5 步恢复演练。
+>
+> **目标**：RPO ≤ 5 分钟、RTO ≤ 1 小时；14 天日备 + 每月 1 份月备 + 至少一份异机 / 对象存储。
+> **前提**：运维机装 `postgresql-client`（`pg_dump` / `pg_restore` / `psql`），且能走内网连到主库。
+
+**第 1 步：逻辑备份脚本**（保存为 `jieqiu-backend/ops/pg_backup.sh`，`chmod 700`）：
 
 ```bash
-# 每日 03:20，压缩自定义格式
-pg_dump -Fc -h 127.0.0.1 -U jieqiu -d jieqiu -f /backup/jieqiu-$(date +%F).dump
-# 校验
-pg_restore --list /backup/jieqiu-2026-11-04.dump | head
+#!/usr/bin/env bash
+set -euo pipefail
+# 从 root-only env 读取连接（与 systemd 同源）；去掉 SQLAlchemy 驱动后缀
+source /etc/jieqiu-backend.env
+DB_URL="${JQ_DATABASE_URL/postgresql+psycopg2:/postgresql:}"
+DB_URL="${DB_URL/postgres:/postgresql:}"
+mkdir -p /backup
+OUT="/backup/jieqiu-$(date +%F).dump"
+pg_dump --dbname="$DB_URL" -Fc -f "$OUT"
+pg_restore --list "$OUT" >/dev/null                    # 校验备份可读
+find /backup -name 'jieqiu-*.dump' -mtime +14 -delete  # 保留 14 天
 ```
 
-- 保留 14 天日备 + 每月 1 份月备；至少一份异机/对象存储。
-- 上线前配置 WAL 归档（`archive_mode=on` + `archive_command`/pgBackRest），目标 RPO ≤ 5 分钟、RTO ≤ 1 小时。
-- 每季度做一次恢复演练：恢复到临时库，跑 `alembic current`、关键表 count、`/health` 链路。
-- **当前未自动化备份/PITR**：这两个是生产上线阻塞项；不要因为文档写了命令就认为已经在跑。
+> 安全提示：`--dbname="$DB_URL"` 会把含密码的 URI 短暂暴露在进程列表；单机单租户风险低，多用户主机请改用 `~/.pgpass`（0600）+ `pg_dump -h ... -U ... -d ...`，不要把密码写进脚本。脚本由 root cron 执行（env 文件是 root:root 0600）。
+
+**第 2 步：cron**（root crontab，每日 03:20，避开 03:00 purge / 周日 04:10 db_maint）：
+
+```cron
+20 3 * * * /home/ubuntu/jieqiu-backend/ops/pg_backup.sh >> /home/ubuntu/jieqiu-backend/backup.log 2>&1
+```
+
+**第 3 步：异机 / 对象存储**（至少一份离开本机；以腾讯云 COS `coscmd` 为例，也可用 rclone）：
+
+```bash
+coscmd upload "/backup/jieqiu-$(date +%F).dump" backup/jieqiu/
+# 月备：每月 1 号额外拷一份到 backup/jieqiu/monthly/，不被 14 天清理删掉
+```
+
+**第 4 步：WAL 归档 → PITR**（自建 `postgresql.conf`；云托管由平台提供，跳过）：
+
+```conf
+archive_mode = on
+archive_command = 'test ! -f /wal_archive/%f && cp %p /wal_archive/%f'
+# 生产建议直接用 pgBackRest 管理全量+增量+WAL，替代手写 archive_command
+```
+
+配合一次基础备份即可按时间点恢复；`/wal_archive` 同样要异机。
+
+**第 5 步：恢复演练（每季度；上线前必做一次，云托管也不可省）**：
+
+```bash
+createdb jieqiu_drill
+pg_restore -d jieqiu_drill --no-owner /backup/jieqiu-YYYY-MM-DD.dump
+psql jieqiu_drill -c "select count(*) from verdicts;"
+JQ_DATABASE_URL=postgresql://.../jieqiu_drill python -m alembic current
+# 关键表 count 与生产对齐；抽查 payload_hash / bets.sp；记录 RTO；演练库用完即删
+```
+
+**当前状态**：以上为落地步骤，**尚未配置运行**；备份 / PITR 仍是生产上线阻塞项。不要因为文档写了命令就认为已经在跑。后续可把 `pg_backup.sh` 纳入 `deploy.py` 的 cron 安装（与 `db_maint` 同批），实现部署即生效。
 
 ### SQLite → Postgres 切换
 

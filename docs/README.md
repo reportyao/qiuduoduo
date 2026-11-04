@@ -9,8 +9,17 @@
 | [AGENTS.md](../AGENTS.md) | 工程协作规则、目录约定、Definition of Done |
 | [README.md](../README.md) | monorepo 入口 + SP 采集器说明 |
 | [architecture.md](./architecture.md) | 目标架构与迁移阶段 |
-| [database-architecture.md](./database-architecture.md) | 自建 Postgres、连接池、索引、保留、备份、切换 |
+| [database-architecture.md](./database-architecture.md) | 境内 Postgres（云托管优先/自建兜底）、连接池、索引、保留、备份/PITR 落地、切换 |
 | [operations-runbook.md](./operations-runbook.md) | 当前部署、cron、健康检查、控制台、回滚与事故排查 |
+
+## 决策记录（ADR）
+
+| 文档 | 决策 |
+|---|---|
+| [0001-ai-native-modular-monolith.md](./decisions/0001-ai-native-modular-monolith.md) | AI 原生模块化单体 + 单仓多包 |
+| [0002-postgres-only.md](./decisions/0002-postgres-only.md) | 生产/CI 统一 Postgres，退出双数据库方言 |
+| [0003-contract-first-api-client.md](./decisions/0003-contract-first-api-client.md) | 前后端契约优先，客户端代码生成 |
+| [0004-managed-postgres-preferred.md](./decisions/0004-managed-postgres-preferred.md) | **境内 Postgres：云托管优先 / 自建兜底，不用 Supabase** |
 
 ## 产品与技术规格
 

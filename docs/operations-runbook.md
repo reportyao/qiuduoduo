@@ -1,6 +1,6 @@
 # 运维 Runbook（当前实现）
 
-最后更新：2026-11-04。适用于当前过渡期 `jieqiu-backend/` + 单台腾讯云 VPS；目标数据库是自建 PostgreSQL 16，未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。
+最后更新：2026-11-04。适用于当前过渡期 `jieqiu-backend/` + 单台腾讯云 VPS；目标数据库是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，见 ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。
 
 ## 1. 进程与目录
 
@@ -77,7 +77,7 @@ python -m app.db_maint --json              # dry-run
 JQ_DB_STATEMENT_TIMEOUT_MS=0 python -m app.db_maint --apply --json
 ```
 
-备份/PITR **尚未自动化**：上线前必须配置 pg_dump + WAL 归档，并做恢复演练。详见 [database-architecture.md](./database-architecture.md)。
+备份/PITR **尚未自动化，是上线阻塞项**：云托管形态在控制台开启自动备份 + 按时间点回档；自建形态按 [database-architecture.md §7](./database-architecture.md) 的落地步骤配置 `pg_backup.sh` + cron + WAL 归档。**两种形态都必须做一次恢复演练**。选型见 [ADR-0004](./decisions/0004-managed-postgres-preferred.md)。
 
 ## 8. 回滚
 
