@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Share, ScrollView, StyleSheet, View } from "react-native";
 import { goBackOr } from "@/lib/navigation";
 import { useRouter } from "expo-router";
@@ -18,9 +19,11 @@ export default function WeeklyScreen() {
   const session = useAuthStore((s) => s.session);
   const query = useWeeklyQuery(Boolean(session));
   const report = query.data;
+  const [sharing, setSharing] = useState(false);
 
   const share = async () => {
-    if (!session) return;
+    if (!session || sharing) return;
+    setSharing(true);
     try {
       const card = await callApi(
         api.client.POST("/share/weekly"),
@@ -31,6 +34,8 @@ export default function WeeklyScreen() {
       await Share.share({ message: `${card.text}\n${web}\n${card.deep_link}` });
     } catch (e) {
       toast.show(errorText(e), "error");
+    } finally {
+      setSharing(false);
     }
   };
 

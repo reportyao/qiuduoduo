@@ -8,6 +8,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
@@ -34,7 +35,15 @@ def login_device(db: Session, token: str | None) -> tuple[User, bool]:
     token = token or uuid.uuid4().hex
     u = User(id=uuid.uuid4().hex, device_token=token)
     db.add(u)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # 同一设备令牌并发首登：返回已创建账号，避免 500/双游客。
+        db.rollback()
+        u = db.scalar(select(User).where(User.device_token == token))
+        if u is None:
+            raise
+        return u, False
     return u, True
 
 
@@ -174,8 +183,14 @@ def upsert_memory(db: Session, user_id: str, key: str, value: str,
     if m is None:
         m = Memory(user_id=user_id, key=key, value=value, source=source)
         db.add(m)
-        db.commit()
-        return m, "created"
+        try:
+            db.commit()
+            return m, "created"
+        except IntegrityError:
+            db.rollback()
+            m = db.scalar(select(Memory).where(Memory.user_id == user_id, Memory.key == key))
+            if m is None:
+                raise
     if m.value != value and not confirm:
         return None, "conflict"
     m.value = value

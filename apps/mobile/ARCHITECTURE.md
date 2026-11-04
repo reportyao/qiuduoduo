@@ -116,7 +116,7 @@ src/
 
 ## 9. 当前验证状态（2026-11-04）
 
-- 后端 179 passed；OpenAPI 94 路径 / 107 方法。
+- 后端 182 passed；OpenAPI 94 路径 / 107 方法。
 - 前端 typecheck / ESLint / 20 Vitest passed；Android Hermes bundle 3.6 MB。
 - 自排除、401/410、刷新竞态、下注金额、05:00 日界、分享落地页已做回归。
 

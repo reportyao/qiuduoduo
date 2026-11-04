@@ -20,6 +20,7 @@ interface ComplianceState extends PersistedCompliance {
   hydrate: () => Promise<void>;
   exclude: (choice: ExclusionChoice) => Promise<boolean>;
   setPgsi: (score: number) => void;
+  clearPgsi: () => void;
 }
 
 const DEFAULTS: PersistedCompliance = {
@@ -94,6 +95,11 @@ export const useComplianceStore = create<ComplianceState>((set, get) => ({
 
   setPgsi: (score) => {
     set({ lastPgsiScore: score, lastPgsiAt: Date.now() });
+    persist(get());
+  },
+
+  clearPgsi: () => {
+    set({ lastPgsiScore: null, lastPgsiAt: null });
     persist(get());
   },
 }));

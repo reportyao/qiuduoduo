@@ -86,7 +86,9 @@ export default function ShareScreen() {
               <Card
                 tone="green"
                 onPress={() => {
-                  const verdictId = string(data.verdict_seal_url).split("/")[2];
+                  const parts = string(data.verdict_seal_url).split("/").filter(Boolean);
+                  const idx = parts.indexOf("verdicts");
+                  const verdictId = idx >= 0 ? parts[idx + 1] : undefined;
                   if (verdictId) router.push({ pathname: "/verdict/[id]", params: { id: verdictId } });
                 }}
                 accessibilityLabel="查看原判决封存"

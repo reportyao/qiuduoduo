@@ -98,6 +98,8 @@ def share_weekly(db: Session, user: User) -> tuple[ShareCard | None, str]:
     rep = weekly_report(db, user.id)
     payload = {
         "kind": "weekly",
+        # 不同用户即使统计相同也不能共用一张卡：否则 A 注销会删掉 B 的公开链接。
+        "owner": hashlib.sha256(user.id.encode("utf-8")).hexdigest()[:12],
         "range_days": rep["range_days"],
         "promoted": rep["promoted"],
         "settled": rep["settled"],
@@ -116,6 +118,7 @@ def share_streak(db: Session, user: User) -> tuple[ShareCard | None, str]:
     st = user_streak(db, user)
     payload = {
         "kind": "streak",
+        "owner": hashlib.sha256(user.id.encode("utf-8")).hexdigest()[:12],
         "streak": st["streak"],
         "active": st["active"],
         "settled_bets": st["settled_bets"],

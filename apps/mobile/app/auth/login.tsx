@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { goBackOr } from "@/lib/navigation";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
@@ -23,6 +23,7 @@ export default function LoginScreen() {
   const [code, setCode] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const autoBack = useRef(isLoggedIn(session));
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -31,11 +32,11 @@ export default function LoginScreen() {
   }, [cooldown]);
 
   useEffect(() => {
-    if (isLoggedIn(session)) {
-      // 已登录用户进入登录页时给出返回路径，避免死路。
+    if (autoBack.current && isLoggedIn(session)) {
+      // 只有“进入页面时已登录”才自动返回；提交登录后的跳转由 submit 统一处理。
       const timer = setTimeout(() => {
-        if (router.canGoBack()) router.back();
-        else router.replace("/(tabs)");
+        autoBack.current = false;
+        goBackOr(router);
       }, 600);
       return () => clearTimeout(timer);
     }
@@ -72,6 +73,7 @@ export default function LoginScreen() {
       return;
     }
     try {
+      autoBack.current = false;
       const result = await login(phone, code.trim());
       await queryClient.invalidateQueries({ queryKey: ["me"] });
       const merged = result.merged;
@@ -81,8 +83,7 @@ export default function LoginScreen() {
           : "登录成功，资料已同步",
         "success",
       );
-      if (router.canGoBack()) router.back();
-      else router.replace("/(tabs)");
+      goBackOr(router);
     } catch (e) {
       setError(errorText(e));
     }

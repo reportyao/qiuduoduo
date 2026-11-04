@@ -115,6 +115,7 @@ export default function WatchScreen() {
                   size={17}
                   accessibilityLabel="取消关注"
                   onPress={async () => {
+                    if (remove.isPending) return;
                     try {
                       await remove.mutateAsync(item.id);
                       toast.show("已取消关注", "info");

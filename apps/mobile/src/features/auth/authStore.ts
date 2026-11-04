@@ -4,6 +4,7 @@ import { API_BASE_URL } from "@/lib/env";
 import { ApiError, messageFromBody } from "@/lib/errors";
 import type { AuthSession } from "@/domain/types";
 import { readSessionRaw, writeSessionRaw } from "@/lib/sessionStorage";
+import { resetLocalAccountState } from "./resetLocalState";
 
 const SESSION_KEY = "jieqiu.session.v1";
 
@@ -303,6 +304,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const deviceToken = Crypto.randomUUID();
       set({ session: null });
       await saveSession(null);
+      await resetLocalAccountState().catch(() => {});
       if (refreshToken) {
         void requestJson<{ ok: boolean }>("/auth/logout", {
           method: "POST",

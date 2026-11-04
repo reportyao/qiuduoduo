@@ -27,7 +27,10 @@ export default function ProfileScreen() {
   const setAvatarUri = usePrefsStore((s) => s.setAvatarUri);
   const [name, setName] = useState("");
   const dirty = useRef(false);
+  const mounted = useRef(true);
   const me = meQuery.data;
+
+  useEffect(() => () => { mounted.current = false; }, []);
 
   useEffect(() => {
     if (me?.displayName && !dirty.current) setName(me.displayName);
@@ -57,7 +60,7 @@ export default function ProfileScreen() {
       await patchMe.mutateAsync({ displayName: trimmed });
       dirty.current = false;
       toast.show("资料已保存", "success");
-      goBackOr(router);
+      if (mounted.current) goBackOr(router);
     } catch (e) {
       toast.show(errorText(e), "error");
     }
@@ -117,7 +120,21 @@ export default function ProfileScreen() {
             style={styles.flex}
           />
           {avatarUri ? (
-            <Button label="恢复助理形象" variant="ghost" size="sm" onPress={() => setAvatarUri(null)} style={styles.flex} />
+            <Button
+              label="恢复助理形象"
+              variant="ghost"
+              size="sm"
+              onPress={async () => {
+                if (Platform.OS !== "web" && avatarUri && FileSystem.documentDirectory) {
+                  const dir = `${FileSystem.documentDirectory}avatars/`;
+                  if (avatarUri.startsWith(dir)) {
+                    await FileSystem.deleteAsync(avatarUri, { idempotent: true }).catch(() => {});
+                  }
+                }
+                setAvatarUri(null);
+              }}
+              style={styles.flex}
+            />
           ) : null}
         </View>
         <View style={styles.avatars}>

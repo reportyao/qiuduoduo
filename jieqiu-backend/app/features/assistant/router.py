@@ -377,7 +377,12 @@ def notify_put(body: NotifyBody, user: User = Depends(current_user),
         row.daily_cap = body.daily_cap
     if body.paused is not None:
         row.paused = body.paused
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # 并发首次保存偏好：主键冲突后重试一次，此时行已存在。
+        db.rollback()
+        return notify_put(body, user, db)
     return _notify_dict(row)
 
 
@@ -391,6 +396,20 @@ def push_register(body: PushRegister, user: User = Depends(current_user),
     token = body.token.strip()
     if not token:
         raise HTTPException(422, "token 不能为空")
+    def attach(existing: PushToken) -> None:
+        if existing.user_id != user.id:
+            owner = db.get(User, existing.user_id)
+            if owner is not None and not is_deleted(owner):
+                raise HTTPException(409, "该推送令牌已绑定其他账号，请先解绑")
+            # 原账号已注销时允许新设备接管，避免永久占用唯一令牌。
+            existing.user_id = user.id
+        existing.platform = body.platform
+        existing.enabled = True
+        existing.failure_count = 0
+        existing.last_error = ""
+        existing.app_version = body.app_version[:32]
+        existing.last_seen = _now()
+
     row = db.scalar(select(PushToken).where(
         PushToken.provider == body.provider, PushToken.token == token))
     if row is None:
@@ -399,19 +418,18 @@ def push_register(body: PushRegister, user: User = Depends(current_user),
                         app_version=body.app_version[:32])
         db.add(row)
     else:
-        if row.user_id != user.id:
-            owner = db.get(User, row.user_id)
-            if owner is not None and not is_deleted(owner):
-                raise HTTPException(409, "该推送令牌已绑定其他账号，请先解绑")
-            # 原账号已注销时允许新设备接管，避免永久占用唯一令牌。
-            row.user_id = user.id
-        row.platform = body.platform
-        row.enabled = True
-        row.failure_count = 0
-        row.last_error = ""
-        row.app_version = body.app_version[:32]
-        row.last_seen = _now()
-    db.commit()
+        attach(row)
+    try:
+        db.commit()
+    except IntegrityError:
+        # 双击/重试并发注册同一 token：回滚后接管已存在行，而不是 500。
+        db.rollback()
+        row = db.scalar(select(PushToken).where(
+            PushToken.provider == body.provider, PushToken.token == token))
+        if row is None:
+            raise
+        attach(row)
+        db.commit()
     return {"ok": True, "id": row.id}
 
 

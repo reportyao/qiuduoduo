@@ -79,6 +79,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         from .config import get_settings
         st = get_settings()
+        # 请求体上限：正常 JSON/表单都远小于 1MB；防止无界 body 打满内存。
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                if int(content_length) > 1_048_576:
+                    return JSONResponse({"detail": "请求体过大"}, status_code=413)
+            except ValueError:
+                return JSONResponse({"detail": "非法 Content-Length"}, status_code=400)
         if st.env == "test":  # 测试自身要打大量请求
             request.state.request_id = uuid.uuid4().hex[:12]
             return await call_next(request)

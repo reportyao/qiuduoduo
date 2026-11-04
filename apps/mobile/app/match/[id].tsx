@@ -8,7 +8,7 @@ import { Button, Card, Chip, Skeleton, Text } from "@/components/ui";
 import { useWhyNotQuery } from "@/features/verdict/queries";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { ApiError, errorText } from "@/lib/errors";
-import { formatDate, gateLabel, shortHash } from "@/lib/format";
+import { currentTradeDateCn, formatDate, gateLabel, shortHash } from "@/lib/format";
 import { isRecord, string } from "@/lib/parse";
 import { colors, layout, spacing } from "@/theme/tokens";
 import type { GateKey } from "@/domain/types";
@@ -19,7 +19,7 @@ export default function WhyNotScreen() {
   const { id, date } = useLocalSearchParams<{ id: string; date?: string }>();
   const router = useRouter();
   const { copy } = usePersonaContent();
-  const query = useWhyNotQuery(id, date || "", true);
+  const query = useWhyNotQuery(id, date || currentTradeDateCn(), true);
   const [logsOpen, setLogsOpen] = useState(false);
   const data = query.data;
 

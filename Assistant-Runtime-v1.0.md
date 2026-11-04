@@ -3,7 +3,7 @@
 > 范围：主动监控、推送、用户记忆、助理交互，以及与现有文档 / 后端 / 管理后台的对照。
 > 关联：`PRD-v5.1.md` F13/F19/F21/F22 + §5.2 推送矩阵；`TechSpec-v2.1.md` §4/§5/§8；`Intelligence-Layer-v1.0.md`；`Release-plan-v1.1.md` W5/W6。
 >
-> 状态：**P0 后端/管理后台/移动端已接（2026-11-04 更新）**：events / notifications / watch_targets / push_tokens / notify_settings / worker / inbox / 关注 / 通知设置 / 控制台助理/推送页；后端全量 **179 tests passed**。Android JPush 真实凭证、派生记忆、AI 分析、真实 live feed/进球提醒仍待接。完整全栈审查见 `docs/reviews/2026-11-04-full-stack.md`。
+> 状态：**P0 后端/管理后台/移动端已接（2026-11-04 更新）**：events / notifications / watch_targets / push_tokens / notify_settings / worker / inbox / 关注 / 通知设置 / 控制台助理/推送页；后端全量 **182 tests passed**。Android JPush 真实凭证、派生记忆、AI 分析、真实 live feed/进球提醒仍待接。完整全栈审查见 `docs/reviews/2026-11-04-full-stack.md`。
 >
 > **平台范围（2026-11-03 定）：MVP 只做 Android；iOS/APNs 与 Global/FCM 延后。**
 
@@ -496,7 +496,7 @@ JQ_LLM_PROVIDER=glm
 
 ## 17. 代码评审记录（2026-11-03）
 
-> 以下是当时的实现快照，文中 `157 passed` 为 2026-11-03 数值；当前全量测试为 **179 passed**，最新全栈修复见 `docs/reviews/2026-11-04-full-stack.md`。
+> 以下是当时的实现快照，文中 `157 passed` 为 2026-11-03 数值；当前全量测试为 **182 passed**，最新全栈修复见 `docs/reviews/2026-11-04-full-stack.md`。
 
 > 本节是评审当时（P0 开发前）的记录；已修复/已实现项见 §18。
 

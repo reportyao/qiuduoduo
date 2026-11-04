@@ -203,16 +203,12 @@ def scan_settlements(db: Session, now_cn: datetime | None = None) -> int:
     now = now_cn or cn_now()
     since = now.astimezone(timezone.utc).replace(tzinfo=None) - timedelta(days=3)
     rows = db.scalars(
-        select(Verdict).where(Verdict.settled.isnot(None), Verdict.settled_at.isnot(None))
-        .order_by(Verdict.settled_at.desc()).limit(200)
+        select(Verdict).where(Verdict.settled.isnot(None), Verdict.settled_at.isnot(None),
+                              Verdict.settled_at >= since)
+        .order_by(Verdict.settled_at.desc()).limit(1000)
     ).all()
     made = 0
     for v in rows:
-        settled = v.settled_at
-        if settled is not None and settled.tzinfo is not None:
-            settled = settled.astimezone(timezone.utc).replace(tzinfo=None)
-        if settled is not None and settled < since:
-            continue
         _, created = emit_event(
             db, type="settled", dedupe_key=f"settle:{v.id}", severity=1,
             match_id=v.match_id,

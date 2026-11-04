@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """竞彩 SP 采集器 v0.1 + 推送（本机版：家宽出口，服务器 567 被拒）"""
-import json, sqlite3, time, urllib.request, os, sys, subprocess
+import json, sqlite3, time, urllib.request, os, sys
 from datetime import datetime, timezone, timedelta
 
 API = "https://webapi.sporttery.cn/gateway/jc/football/getMatchCalculatorV1.qry?poolCode=hhad,had&channel=c"
 HDR = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Referer": "https://www.sporttery.cn/"}
 HERE = os.path.dirname(os.path.abspath(__file__))
 DB = os.path.join(HERE, "sp_data.db")
-REMOTE = "ubuntu@43.128.24.244:/home/ubuntu/jieqiu-sp/"
+REMOTE_HOST = os.environ.get("JQ_COLLECTOR_HOST", "43.128.24.244")
+REMOTE_USER = os.environ.get("JQ_COLLECTOR_USER", "ubuntu")
+REMOTE_PASSWORD = os.environ.get("JQ_COLLECTOR_PASSWORD", "")
+REMOTE_DIR = "/home/ubuntu/jieqiu-sp"
 CN = timezone(timedelta(hours=8))
 
 def now_cn(): return datetime.now(CN).strftime("%Y-%m-%dT%H:%M:%S+08:00")
@@ -43,20 +46,24 @@ def parse(d):
                 p = m.get(pool)
                 if not p: continue
                 try:
-                    rows_s.append((mid, pool, str(p.get("goalLine","")),
-                                   float(p.get("h",0)), float(p.get("d",0)), float(p.get("a",0)), ts))
+                    vals = (float(p.get("h", 0)), float(p.get("d", 0)), float(p.get("a", 0)))
+                    if min(vals) <= 1.0:
+                        continue  # 与后端契约一致：SP 必须 > 1
+                    rows_s.append((mid, pool, str(p.get("goalLine", "")), *vals, ts))
                 except (TypeError, ValueError): pass
     return rows_m, rows_s, ts
 
 def push():
     try:
         import paramiko
+        if not REMOTE_PASSWORD:
+            raise RuntimeError("未设置 JQ_COLLECTOR_PASSWORD（不要把密码写进代码）")
         c = paramiko.SSHClient(); c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        c.connect("43.128.24.244", username="ubuntu", password="lingjiu123@", timeout=20)
+        c.connect(REMOTE_HOST, username=REMOTE_USER, password=REMOTE_PASSWORD, timeout=20)
         s = c.open_sftp()
-        s.put(DB, "/home/ubuntu/jieqiu-sp/sp_data.db.tmp")  # 先写临时名
+        s.put(DB, f"{REMOTE_DIR}/sp_data.db.tmp")  # 先写临时名
         s.close()
-        _, o, e = c.exec_command("mv -f /home/ubuntu/jieqiu-sp/sp_data.db.tmp /home/ubuntu/jieqiu-sp/sp_data.db")
+        _, o, e = c.exec_command(f"mv -f {REMOTE_DIR}/sp_data.db.tmp {REMOTE_DIR}/sp_data.db")
         o.channel.recv_exit_status()  # 原子改名后云端才见完整文件
         c.close()
         print(f"[{now_cn()}] 备份推送完成", flush=True)

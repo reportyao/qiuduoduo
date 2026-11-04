@@ -1,6 +1,6 @@
 # 解球文档索引
 
-最后对账：2026-11-04。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **94 路径 / 107 方法**，后端 **179 tests**，前端 **20 tests**，Alembic head `20261104_03`。
+最后对账：2026-11-04。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **94 路径 / 107 方法**，后端 **182 tests**，前端 **20 tests**，Alembic head `20261104_04`。
 
 ## 先读
 
@@ -40,7 +40,8 @@
 
 | 文档 | 内容 |
 |---|---|
-| [2026-11-04-full-stack.md](./reviews/2026-11-04-full-stack.md) | **最新代码审查**：后端/后台/API/前端全栈深审与修复；残余风险 |
+| [2026-11-04-code-review-pass2.md](./reviews/2026-11-04-code-review-pass2.md) | **最新代码复审**：并发/事务/采集器/前端清理；182 tests |
+| [2026-11-04-full-stack.md](./reviews/2026-11-04-full-stack.md) | 第一轮全栈深审与修复；残余风险 |
 | [2026-11-04-docs-review.md](./reviews/2026-11-04-docs-review.md) | **最新文档审查**：过期事实、状态标注、索引与链接校验 |
 | [2026-11-04-api-audit.md](./reviews/2026-11-04-api-audit.md) | API 全量对账与补全（历史快照；路径数已被 full-stack 更新为 94/107） |
 | [2026-11-04-database.md](./reviews/2026-11-04-database.md) | 数据库深审（历史测试数 166） |

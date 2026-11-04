@@ -235,3 +235,32 @@ def test_auth_stub_only_allowed_in_dev_test(monkeypatch):
     with pytest.raises(HTTPException) as exc:
         auth_w5._ensure_login_ready("sms")
     assert exc.value.status_code == 503
+
+
+def test_verification_code_attempt_limit_is_atomic(db):
+    from app.modules import auth as A
+    out = A.send_code(db, "sms", "13800138000", "login")
+    code = out["dev_code"]
+    wrong = "000000" if code != "000000" else "000001"
+    for _ in range(5):
+        assert A.verify_code(db, "sms", "13800138000", wrong, "login") is False
+    assert A.verify_code(db, "sms", "13800138000", code, "login") is False
+
+
+def test_request_body_size_guard(client):
+    r = client.post("/chat", json={"text": "hi"},
+                    headers={"Content-Length": "2000000"})
+    assert r.status_code == 413
+
+
+def test_share_streak_isolated_per_user(db):
+    from app.models import User
+    from app.modules.share import share_streak
+    a = User(id="user-a", device_token="token-a")
+    b = User(id="user-b", device_token="token-b")
+    db.add_all([a, b])
+    db.commit()
+    ca, _ = share_streak(db, a)
+    cb, _ = share_streak(db, b)
+    assert ca.share_id != cb.share_id
+    assert ca.payload["owner"] != cb.payload["owner"]

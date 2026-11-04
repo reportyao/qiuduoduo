@@ -6,10 +6,10 @@
 |---|---|
 | 版本 | `0.8.0-w8+assistant` |
 | OpenAPI | 94 路径 / 107 方法 |
-| 后端测试 | 179 passed |
+| 后端测试 | 182 passed |
 | 前端测试 | 20 passed + typecheck/lint/bundle |
 | 数据库 | 目标自建 PostgreSQL 16；未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite |
-| Alembic head | `20261104_03` |
+| Alembic head | `20261104_04` |
 
 工程入口见 [AGENTS.md](./AGENTS.md)，完整文档索引见 [docs/README.md](./docs/README.md)，最新全栈审查见 [docs/reviews/2026-11-04-full-stack.md](./docs/reviews/2026-11-04-full-stack.md)。
 
@@ -25,7 +25,9 @@
 
 ## 运行
 
-```
+```bash
+export JQ_COLLECTOR_PASSWORD='...'   # SFTP 备份密码；不再写进代码
+# 可选：JQ_COLLECTOR_HOST / JQ_COLLECTOR_USER
 python collector.py        # 前台
 # 当前已以分离进程常驻运行（日志 collector.log）
 ```

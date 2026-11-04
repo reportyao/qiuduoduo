@@ -7,7 +7,7 @@
 
 - 生产后端仍在 `jieqiu-backend/`，尚未迁到 `services/api/`；`services/` 只有迁移说明。
 - 生产前端在 `apps/mobile/`；`apps/web/`、`apps/admin/` 仍是规划，当前管理后台是后端同进程的 `/console`。
-- OpenAPI 94 路径 / 107 方法；后端 179 tests；Alembic head `20261104_03`。
+- OpenAPI 94 路径 / 107 方法；后端 182 tests；Alembic head `20261104_04`。
 - Postgres 是目标生产库；未设置 `JQ_PROD_DATABASE_URL` 时生产部署仍可能是旧 SQLite 兼容模式。
 - 新增的 catalog/actions 已按 feature slice 落地；verdict/assistant 仍是混合目录，迁移未完成。
 
@@ -119,7 +119,7 @@ packages/api       生成的 client
 - Alembic 是 schema 事实源；
 - SQLite 仅允许纯单元测试、一次性工具或尚未切换的旧部署；
 - OpenAPI 由 FastAPI 生成；后端导出 `packages/api-client/openapi.json` 快照，client 从快照离线生成；
-- Postgres 迁移先于应用启动；Alembic head 为 `20261104_03`，baseline 覆盖 24 张表；
+- Postgres 迁移先于应用启动；Alembic head 为 `20261104_04`，baseline 覆盖 24 张表；
 - AI 输出必须通过 Pydantic / JSON Schema 校验；
 - 领域事件必须有 `dedupe_key`、`payload_hash`、`data_cutoff`。
 
@@ -143,7 +143,7 @@ packages/api       生成的 client
 | 前端单测 | Vitest + RNTL | hooks / 组件 |
 | E2E | Maestro | 核心用户流程 |
 
-> 当前实际（2026-11-04）：后端 pytest 179 项仍主要跑 SQLite；未接真实 Postgres CI；前端 Vitest 20 项 + typecheck/lint + Expo Android bundle；Maestro/E2E 尚未接入。
+> 当前实际（2026-11-04）：后端 pytest 182 项仍主要跑 SQLite；未接真实 Postgres CI；前端 Vitest 20 项 + typecheck/lint + Expo Android bundle；Maestro/E2E 尚未接入。
 
 ## 8. 迁移路线
 

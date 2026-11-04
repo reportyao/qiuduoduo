@@ -73,6 +73,7 @@ class Verdict(Base):
         Index("ix_verdicts_match_trade", "match_id", "trade_date"),
         Index("ix_verdicts_trade_kickoff", "trade_date", "kickoff"),
         Index("ix_verdicts_status_settled_kickoff", "status", "kickoff", "settled"),
+        Index("ix_verdicts_settled_at", "settled_at"),
     )
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True)  # v{trade_date}-{match_no}

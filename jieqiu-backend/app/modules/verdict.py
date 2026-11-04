@@ -314,7 +314,7 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
         v.gates = gates
         v.payload = payload
         v.payload_hash = digest
-        v.sealed_at = None
+        # 不在重建时清空 sealed_at：否则 screening/killed 每轮 seed 都会让“已封存”闪烁。
         out.append(v)
     db.commit()
     return out

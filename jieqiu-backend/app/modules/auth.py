@@ -19,7 +19,8 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 
 import jwt as pyjwt
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
@@ -234,13 +235,28 @@ def verify_code(db: Session, channel: str, target: str, code: str, purpose: str 
     if row.expires_at < _now():
         return False
     st = get_settings()
-    row.attempts += 1
-    if row.attempts > st.code_max_attempts:
-        db.commit()
+    # 原子增加尝试次数：并发请求不能同时读到旧 attempts 后一起放行。
+    claimed = db.execute(
+        update(VerificationCode)
+        .where(VerificationCode.id == row.id,
+               VerificationCode.consumed.is_(False),
+               VerificationCode.attempts < st.code_max_attempts)
+        .values(attempts=VerificationCode.attempts + 1))
+    if (claimed.rowcount or 0) != 1:
+        db.rollback()
         return False
+    db.commit()
+    db.refresh(row)
     ok = hmac.compare_digest(row.code_hash, _code_hash(channel, target, purpose, code))
     if ok:
-        row.consumed = True
+        # 消费也必须是条件更新：两个并发正确请求只有一个能消费成功。
+        consumed = db.execute(
+            update(VerificationCode)
+            .where(VerificationCode.id == row.id, VerificationCode.consumed.is_(False))
+            .values(consumed=True))
+        if (consumed.rowcount or 0) != 1:
+            db.rollback()
+            return False
     db.commit()
     return ok
 
@@ -352,7 +368,15 @@ def link_identity(db: Session, user: User, provider: str, uid: str, masked: str 
         return
     db.add(AuthIdentity(user_id=user.id, provider=provider, provider_uid=uid,
                         identifier_masked=masked))
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        existing = db.scalar(select(AuthIdentity).where(
+            AuthIdentity.provider == provider, AuthIdentity.provider_uid == uid))
+        if existing is not None and existing.user_id == user.id:
+            return
+        raise
 
 
 def create_user(db: Session, region: str, phone: str | None = None,
@@ -385,7 +409,15 @@ def get_or_create_by_phone(db: Session, phone: str) -> tuple[User, bool]:
         if changed:
             db.commit()
         return u, False
-    u = create_user(db, "cn", phone=phone)
+    try:
+        u = create_user(db, "cn", phone=phone)
+    except IntegrityError:
+        # 并发首次登录：唯一索引冲突后返回已存在账号，而不是 500。
+        db.rollback()
+        u = db.scalar(select(User).where(User.phone == phone))
+        if u is None:
+            raise
+        return u, False
     link_identity(db, u, "phone", phone, mask_phone(phone))
     return u, True
 
@@ -404,7 +436,14 @@ def get_or_create_by_email(db: Session, email: str) -> tuple[User, bool]:
         if changed:
             db.commit()
         return u, False
-    u = create_user(db, "global", email=email)
+    try:
+        u = create_user(db, "global", email=email)
+    except IntegrityError:
+        db.rollback()
+        u = db.scalar(select(User).where(User.email == email))
+        if u is None:
+            raise
+        return u, False
     link_identity(db, u, "email", email, mask_email(email))
     return u, True
 

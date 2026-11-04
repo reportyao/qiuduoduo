@@ -204,6 +204,7 @@ select pid, wait_event_type, wait_event, query from pg_stat_activity where wait_
 71af760b1e99  baseline W8（24 表）
 20261104_02   bets.sp 赔率快照（正确 P&L）
 20261104_03   热路径索引 + 手机/邮箱部分唯一索引
+20261104_04   verdicts.settled_at 索引（结算监控）
 ```
 
 验证命令：

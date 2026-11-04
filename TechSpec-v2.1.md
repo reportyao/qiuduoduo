@@ -155,7 +155,7 @@ next-intl 等价物 `i18n-js`+ICU；三语言解耦（UI/内容/球队名）；�
 > `/console/variants`（三人设模板 + A/Q/X 精选状态机，进程内存，v1.5 换 narrative_pool 表）·
 > `/console/ops`（环境/数据源/cron 日志指引/快捷命令）。
 > 后端硬化同批上线：令牌桶限流（读 120/min、写 30/min/IP，429+Retry-After）、X-Request-ID + JSON 访问日志、
-> python-multipart 依赖补齐。当前全量 **179 tests**，git 版本控制就位。
+> python-multipart 依赖补齐。当前全量 **182 tests**，git 版本控制就位。
 
 ### 分层架构
 
