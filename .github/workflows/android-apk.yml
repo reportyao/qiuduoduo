@@ -1,0 +1,100 @@
+name: Android APK
+
+on:
+  push:
+    tags:
+      - "apk-*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CI: "1"
+      EXPO_PUBLIC_API_BASE_URL: "http://43.128.24.244:8100"
+      EXPO_PUBLIC_APP_ENV: "staging"
+      EXPO_PUBLIC_ALLOW_HTTP: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Expo prebuild (Android)
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --clean --no-install
+
+      - name: Allow HTTP API for internal test build
+        working-directory: apps/mobile
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+          if "android:usesCleartextTraffic" not in s:
+              s = s.replace("<application ", '<application android:usesCleartextTraffic="true" ', 1)
+              p.write_text(s)
+          print("cleartext-enabled")
+          PY
+
+      - name: Build release APK (debug-signed)
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Prepare APK asset
+        working-directory: apps/mobile
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk \
+             "qiuduoduo-${GITHUB_REF_NAME}.apk"
+          ls -lh "qiuduoduo-${GITHUB_REF_NAME}.apk"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qiuduoduo-apk-${{ github.ref_name }}
+          path: apps/mobile/qiuduoduo-${{ github.ref_name }}.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish GitHub release asset
+        if: startsWith(github.ref, 'refs/tags/apk-')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: 球多多 Android 测试包 ${{ github.ref_name }}
+          body: |
+            内部测试 APK。
+
+            - 包名：`com.jieqiu.app`
+            - API：`http://43.128.24.244:8100`
+            - 使用 debug keystore 签名，仅供内部安装测试，不可上架分发
+            - 首次安装需要允许“安装未知来源应用”
+          files: apps/mobile/qiuduoduo-${{ github.ref_name }}.apk
+          fail_on_unmatched_files: true

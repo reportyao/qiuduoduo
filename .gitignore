@@ -31,3 +31,7 @@ export-check/
 dist/
 .turbo/
 *.tsbuildinfo
+
+# Expo prebuild 生成的原生工程（CI 生成，不提交）
+apps/mobile/android/
+apps/mobile/ios/

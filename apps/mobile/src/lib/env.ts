@@ -14,7 +14,8 @@ export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? DEV_DEFAULT;
 export const APP_ENV = process.env.EXPO_PUBLIC_APP_ENV ?? "development";
 
 const RELEASE_BUILD = process.env.NODE_ENV === "production" || APP_ENV !== "development";
-if (RELEASE_BUILD && !API_BASE_URL.startsWith("https://")) {
-  // 发布/预发包绝不能把 10.0.2.2 或 http:// 地址带出去；启动时 fail loud。
+// 仅内部测试包可显式放开 HTTP；正式发布不设置这个变量，仍然 fail loud。
+const ALLOW_HTTP = process.env.EXPO_PUBLIC_ALLOW_HTTP === "true";
+if (RELEASE_BUILD && !API_BASE_URL.startsWith("https://") && !ALLOW_HTTP) {
   throw new Error("EXPO_PUBLIC_API_BASE_URL 必须是 HTTPS（staging/production）");
 }
