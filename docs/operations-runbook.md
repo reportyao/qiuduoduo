@@ -29,7 +29,7 @@ export JQ_PROD_DATABASE_URL='postgresql+psycopg2://jieqiu:...@10.0.0.5:5432/jieq
 
 > 变量命名：`deploy.py` 的输入是 `JQ_PROD_DATABASE_URL`，部署时写入服务 EnvironmentFile 的变量名是 `JQ_DATABASE_URL`；本地直接运行只认 `JQ_DATABASE_URL`。两者不是同一个层的变量。
 >
-> 可选功能密钥（LLM/persona/API-Football/the-odds/短信/邮件/OAuth/`JQ_ADMIN_COOKIE_SECURE`）只从部署者显式 `export` 的环境变量透传到 EnvironmentFile；不会从仓库 `.env` 自动上传。未导出的项按降级路径运行。
+> 可选功能密钥（LLM/persona/API-Football/the-odds/短信/邮件/OAuth/`JQ_ADMIN_COOKIE_SECURE`）只从部署者显式 `export` 的环境变量透传到 EnvironmentFile；不会从仓库 `.env` 自动上传。未导出的项按降级路径运行。部署时会先读取远端 `/etc/jieqiu-backend.env` 与 `cron.env` 并合并保留已有 key；覆盖 `cron.env` 前自动备份最近 5 份（`cron.env.bak-时间戳`）。
 
 认证通道未配置时（短信/邮件/OAuth）认证端点返回 503；这是 fail-closed，不是服务挂了。`JQ_ENV=dev|test` 才允许 `JQ_AUTH_STUB=true`。
 

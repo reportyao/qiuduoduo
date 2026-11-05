@@ -35,10 +35,13 @@ OPTIONAL_ENV_KEYS = (
     "JQ_LLM_FAST_PROVIDER", "JQ_LLM_FAST_BASE_URL", "JQ_LLM_FAST_MODEL",
     "JQ_LLM_FAST_API_KEY", "JQ_LLM_DEEP_PROVIDER", "JQ_LLM_DEEP_BASE_URL",
     "JQ_LLM_DEEP_MODEL", "JQ_LLM_DEEP_API_KEY", "JQ_LLM_DAILY_BUDGET_CNY",
-    "JQ_LLM_TASK_BUDGET_CNY", "JQ_LLM_USER_DAILY_CALLS",
+    "JQ_LLM_TASK_BUDGET_CNY", "JQ_LLM_USER_DAILY_CALLS", "JQ_LLM_REVIEW_MAX_TOKENS",
     "JQ_PERSONA_LLM_BASE_URL", "JQ_PERSONA_LLM_API_KEY", "JQ_PERSONA_LLM_ENC_KEY",
     "JQ_PERSONA_LLM_MAX_TOKENS", "JQ_PERSONA_LLM_TEMPERATURE",
-    "JQ_API_FOOTBALL_KEY", "JQ_API_FOOTBALL_BASE_URL", "JQ_ODDS_API_KEY",
+    "JQ_API_FOOTBALL_KEY", "JQ_API_FOOTBALL_BASE_URL",
+    "JQ_API_FOOTBALL_PROVIDER", "JQ_API_FOOTBALL_RAPIDAPI_HOST",
+    "JQ_API_FOOTBALL_DAILY_LIMIT", "JQ_API_FOOTBALL_LINEUP_HOURS",
+    "JQ_API_FOOTBALL_MAX_REQUESTS_PER_RUN", "JQ_ODDS_API_KEY",
     "JQ_ODDS_SYNC_MIN_INTERVAL_HOURS", "JQ_ODDS_SPORTS",
     "JQ_SMS_PROVIDER", "JQ_EMAIL_PROVIDER", "JQ_RESEND_API_KEY",
     "JQ_WECHAT_APP_ID", "JQ_WECHAT_APP_SECRET", "JQ_GOOGLE_CLIENT_ID",
@@ -176,6 +179,21 @@ def main() -> None:
             remote_env[key] = value.strip().strip('"')
         if line.startswith("JQ_JWT_SECRET="):
             jwt_secret = line.split("=", 1)[1].strip().strip('"')
+    # cron.env 以 ubuntu 身份保存，systemd EnvironmentFile 可能没有某些 key
+    # （例如只给采集器/同步 cron 用的 API-Football key）。合并回来，避免一次
+    # 未导出环境变量的部署把只在 cron.env 里的密钥清空。
+    code, cron_out = run(ssh, f"cat {DATA}/cron.env 2>/dev/null")
+    for line in cron_out.splitlines():
+        line = line.strip()
+        if not line.startswith("JQ_") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        try:
+            parts = shlex.split(value)
+        except ValueError:
+            continue
+        if len(parts) == 1:
+            remote_env.setdefault(key.strip(), parts[0])
     print("[jwt] secret", "kept" if jwt_secret else "generated")
     if not jwt_secret:
         jwt_secret = _secrets.token_hex(32)
@@ -247,6 +265,10 @@ WantedBy=multi-user.target
         if value and key != "JQ_ADMIN_PASSWORD":
             cron_env[key] = value
     cron_env_text = "".join(_shell_env_line(k, v) for k, v in cron_env.items())
+    # 覆盖前留时间戳备份；只保留最近 5 份，避免无界增长。
+    run(ssh, f"cp -p {DATA}/cron.env {DATA}/cron.env.bak-$(date +%Y%m%d%H%M%S) "
+             f"2>/dev/null || true; ls -1t {DATA}/cron.env.bak-* 2>/dev/null | "
+             f"tail -n +6 | xargs -r rm -f")
     with sftp.file(f"{DATA}/cron.env", "w") as f:
         f.write(cron_env_text)
     sftp.chmod(f"{DATA}/cron.env", 0o600)
