@@ -295,7 +295,13 @@ export default function HomeScreen() {
         <ScrollView
           ref={scrollRef}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: insets.top,
+              paddingBottom: layout.composerHeight + spacing.xl + Math.max(insets.bottom, 0) + spacing.x4,
+            },
+          ]}
           onContentSizeChange={() => {
             if (!autoScroll.current) return;
             autoScroll.current = false;

@@ -253,7 +253,7 @@ function Quick({
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.sm, paddingBottom: spacing.x7, gap: spacing.base },
-  profile: { flexDirection: "row", alignItems: "center", gap: spacing.base, padding: spacing.base },
+  profile: { flexDirection: "row", alignItems: "center", gap: spacing.base, padding: spacing.xl },
   profileText: { flex: 1, gap: 3 },
   badges: { flexDirection: "row", gap: spacing.xs, flexWrap: "wrap", marginTop: 2 },
   unreadDot: {
@@ -270,8 +270,8 @@ const styles = StyleSheet.create({
   quick: { flexDirection: "row", gap: spacing.sm },
   quickCard: {
     flex: 1,
-    padding: spacing.base,
-    minHeight: 84,
+    padding: spacing.xl,
+    minHeight: 96,
     gap: 3,
     alignItems: "flex-start",
     justifyContent: "center",

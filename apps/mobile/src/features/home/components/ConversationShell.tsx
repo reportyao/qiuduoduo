@@ -191,7 +191,7 @@ export function AssistantTyping({ text }: { text: string }) {
 
 const styles = StyleSheet.create({
   message: { marginTop: spacing.base },
-  bubble: { width: "100%", borderRadius: radii.card, padding: spacing.xl },
+  bubble: { width: "100%", borderRadius: radii.card, padding: spacing.x3 },
   bubbleLight: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSunken,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.lg,
-    paddingVertical: 5,
+    paddingVertical: 6,
   },
   quick: {
     borderRadius: radii.pill,
@@ -221,8 +221,8 @@ const styles = StyleSheet.create({
     borderColor: colors.greenSoftStrong,
     backgroundColor: colors.greenSoft,
     paddingHorizontal: spacing.base,
-    paddingVertical: 7,
-    minHeight: 38,
+    paddingVertical: 8,
+    minHeight: 40,
     alignItems: "center",
     justifyContent: "center",
   },
