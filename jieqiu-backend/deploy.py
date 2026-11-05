@@ -39,6 +39,7 @@ OPTIONAL_ENV_KEYS = (
     "JQ_PERSONA_LLM_BASE_URL", "JQ_PERSONA_LLM_API_KEY", "JQ_PERSONA_LLM_ENC_KEY",
     "JQ_PERSONA_LLM_MAX_TOKENS", "JQ_PERSONA_LLM_TEMPERATURE",
     "JQ_API_FOOTBALL_KEY", "JQ_API_FOOTBALL_BASE_URL", "JQ_ODDS_API_KEY",
+    "JQ_ODDS_SYNC_MIN_INTERVAL_HOURS", "JQ_ODDS_SPORTS",
     "JQ_SMS_PROVIDER", "JQ_EMAIL_PROVIDER", "JQ_RESEND_API_KEY",
     "JQ_WECHAT_APP_ID", "JQ_WECHAT_APP_SECRET", "JQ_GOOGLE_CLIENT_ID",
     "JQ_APPLE_CLIENT_ID",
@@ -62,6 +63,11 @@ def _env_line(key: str, value: str) -> str:
     """systemd EnvironmentFile 的双引号行；转义反斜杠和双引号，不做 shell 展开。"""
     escaped = value.replace("\\", "\\\\").replace('"', '\\"')
     return f'{key}="{escaped}"\n'
+
+
+def _shell_env_line(key: str, value: str) -> str:
+    """cron.env 用 shell 单引号行；避免 source 时 $/反引号被展开。"""
+    return f"{key}={shlex.quote(str(value))}\n"
 
 
 
@@ -224,33 +230,53 @@ WantedBy=multi-user.target
     code, out = run_sudo(ssh, f"install -m 600 -o root -g root "
                               f"/tmp/jieqiu-backend.env {ENV_FILE} && echo env-ok", PWD)
     _require(code == 0 and "env-ok" in out, f"写入 {ENV_FILE} 失败：{out[-800:]}")
+
+    # cron 以 ubuntu 运行，读不到 root:root 0600 的 systemd EnvironmentFile；
+    # 单独写一份 0600 ubuntu 的 cron.env，让 seed/推荐/人设/worker 都能拿到可选密钥。
+    cron_env = {
+        "JQ_DATABASE_URL": PROD_DB_URL,
+        "JQ_ENV": "prod",
+        "JQ_XG_DATA_PATH": f"{ROOT}/xg_matches.csv",
+        "JQ_XG_EXTRA_DIR": f"{DATA}/xg_dumps",
+        "JQ_FREEZE_BASELINE": f"{DATA}/freeze_baseline.json",
+        "JQ_DB_STATEMENT_TIMEOUT_MS": "0",
+        "JQ_DAILY_BRIEF_HOUR": "19",
+    }
+    for key in OPTIONAL_ENV_KEYS:
+        value = os.environ.get(key) or remote_env.get(key, "")
+        if value and key != "JQ_ADMIN_PASSWORD":
+            cron_env[key] = value
+    cron_env_text = "".join(_shell_env_line(k, v) for k, v in cron_env.items())
+    with sftp.file(f"{DATA}/cron.env", "w") as f:
+        f.write(cron_env_text)
+    sftp.chmod(f"{DATA}/cron.env", 0o600)
     code, out = run_sudo(ssh, f"mv /tmp/jieqiu-backend.service "
                               f"/etc/systemd/system/jieqiu-backend.service && echo unit-ok", PWD)
     _require(code == 0 and "unit-ok" in out, f"写入 systemd unit 失败：{out[-800:]}")
-    # 同步 cron：每 30 分钟读采集器 SFTP 推送来的 DB 并重建判决（env 与 systemd 一致；DB 在 DATA）
-    envs = (f"{DB_ENV} JQ_DB_STATEMENT_TIMEOUT_MS=0 "
-            f"JQ_XG_DATA_PATH={ROOT}/xg_matches.csv JQ_XG_EXTRA_DIR={DATA}/xg_dumps")
-    cron = (f"*/30 * * * * cd {ROOT} && {envs} "
+    # 同步 cron：每 30 分钟读采集器 SFTP 推送来的 DB 并重建判决。
+    # 统一 source cron.env，保证国际盘/LLM/人设/API-Football 的可选密钥对 cron 可见。
+    cron_prefix = f"set -a; . {DATA}/cron.env; set +a; cd {ROOT} && "
+    cron = (f"*/30 * * * * {cron_prefix}"
             f"venv/bin/python -m app.seed /home/ubuntu/jieqiu-sp/sp_data.db >> {ROOT}/sync.log 2>&1 && "
             fr"venv/bin/python -m app.recommendations_cli run >> {ROOT}/recommendations.log 2>&1" + "\n"
             # 每日 19:05 预生成三套人设文案；用户请求只读缓存
-            f"5 19 * * * cd {ROOT} && {envs} "
+            f"5 19 * * * {cron_prefix}"
             fr"venv/bin/python -m app.persona_cli warm --date $(date +\%F) >> {ROOT}/persona.log 2>&1" + "\n"
             # 每周一 06:10 校准回测（校准数据周更，防腐烂）
-            f"10 6 * * 1 cd {ROOT} && {envs} "
+            f"10 6 * * 1 {cron_prefix}"
             f"venv/bin/python -m app.backtest_cli weekly >> {ROOT}/backtest.log 2>&1\n"
             # 每日 03:00 注销期满清除（7 天冷静期）
-            f"0 3 * * * cd {ROOT} && {envs} "
+            f"0 3 * * * {cron_prefix}"
             f"venv/bin/python -m app.purge_cli >> {ROOT}/purge.log 2>&1\n"
             # 助理 worker：每分钟事件/扇出/推送（Android JPush；未配置则 dry-run）
-            f"* * * * * cd {ROOT} && {envs} JQ_DAILY_BRIEF_HOUR=19 "
+            f"* * * * * {cron_prefix}"
             f"venv/bin/python -m app.features.assistant.worker --once >> {ROOT}/assistant.log 2>&1\n"
             # 数据保留：每周日 04:10 清理可再生日志；判决/账本/SP 快照永不自动删除
-            f"10 4 * * 0 cd {ROOT} && {envs} "
+            f"10 4 * * 0 {cron_prefix}"
             f"venv/bin/python -m app.db_maint --apply --json >> {ROOT}/db_maint.log 2>&1\n")
     if os.environ.get("JQ_API_FOOTBALL_KEY") or remote_env.get("JQ_API_FOOTBALL_KEY"):
         # 免费档每日一次 fixtures；未配 key 的部署不装这条，避免无意义失败日志。
-        cron += (f"15 6 * * * cd {ROOT} && {envs} "
+        cron += (f"15 6 * * * {cron_prefix}"
                  rf"venv/bin/python -m app.api_football_cli sync --date $(date +\%F) >> {ROOT}/api_football.log 2>&1" + "\n")
     # 用 SFTP 写 cron 文件，避免 echo 双引号把数据库密码里的 $/反引号做 shell 展开。
     with sftp.file("/tmp/jqcron", "w") as f:
@@ -261,8 +287,7 @@ WantedBy=multi-user.target
 
     # 上传当前采集器数据并跑一次种子；同样不能用管道吞掉 seed 的退出码。
     sftp.put(os.path.join(APP_DIR, "..", "sp-collector", "sp_data.db"), "/tmp/sp_data.db")
-    code, out = run(ssh, f"cd {ROOT} && {DB_ENV} JQ_DB_STATEMENT_TIMEOUT_MS=0 "
-                         f"JQ_XG_DATA_PATH={ROOT}/xg_matches.csv JQ_XG_EXTRA_DIR={DATA}/xg_dumps "
+    code, out = run(ssh, f"set -a; . {DATA}/cron.env; set +a; cd {ROOT} && "
                          f"venv/bin/python -m app.seed /tmp/sp_data.db > /tmp/jq-seed.log 2>&1; "
                          f"rc=$?; tail -3 /tmp/jq-seed.log; exit $rc")
     print("[5/6] seed on server:\n", out.strip())

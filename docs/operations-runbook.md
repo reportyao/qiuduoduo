@@ -94,7 +94,15 @@ venv/bin/python -m app.recommendations_cli run
 venv/bin/python -m app.odds_cli status
 ```
 
-`seed` 每 30 分钟会调用一次 `sync_the_odds_api`（有 key 且过 6h 节流时）。**不要在没有国际盘时用单源硬发**——这会把“市闸”变成装饰，也会破坏“永远对照市场”的产品承诺。
+`seed` 每 30 分钟会调用一次 `sync_the_odds_api`（有 key 且过 `JQ_ODDS_SYNC_MIN_INTERVAL_HOURS` 节流时）。sport key **按当日竞彩联赛动态选择**（英超/西甲/德甲/意甲/法甲/欧冠/欧联/欧协联等），不会为无关联赛烧配额；`JQ_ODDS_SPORTS` 仅作兜底。免费档 500 次/月时建议 `JQ_ODDS_SYNC_MIN_INTERVAL_HOURS=18` 或更高。**不要在没有国际盘时用单源硬发**——这会把“市闸”变成装饰，也会破坏“永远对照市场”的产品承诺。
+
+### 模型闸排障（市闸过了为什么还没有 promoted）
+
+- 让球 `hhad` 的市闸现在用 **had 快照** 对照 Pinnacle h2h（同口径）；精确 `spreads` 让球盘尚未接入，`market_gate.detail.market_pool` 会标 `had`。
+- 静态 `xg_matches.csv` 只到 2024-25；Understat 对云服务器返回挑战页，`penaltyblog` 解析失败。
+- 兜底：`app.results_sync` 从 football-data.co.uk 下载五大联赛历史比分，写成 `xg_extra_dir/footballdata_*.csv`（进球代理 xG，24h 节流）；证据层会标 `football-data 进球代理`，不是真 xG。
+- 若模型闸仍 `pending_data`：看 `/admin` 推荐主链的 `model` 闸 `reason`；要提升覆盖率/质量，需要 **API-Football 付费 key** 或可用的当前 xG 源（Understat 直连已被拦截）。
+- 2026-11-05 实测：国际盘覆盖 11/12，市闸 pass 10 / fail 1 / pending 1，模型闸 pass 1 / fail 1 / pending 10，已产出首条 published（水晶宫 vs 霍芬海姆，hhad 客胜）。
 
 ## 6. 管理后台
 

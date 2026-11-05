@@ -40,6 +40,7 @@ class DCModel:
     mu_half: float = 1.35          # 每队期望进球基准（(xg_h+xg_a)/2 的加权均值）
     home_adv: float = 1.15         # 主场系数（加权 xg_home / xg_away）
     teams: set[str] = field(default_factory=set)
+    source: str = "xg"             # xg / goals_proxy（证据层必须如实标注）
 
 
 GRID = np.arange(0, 11)

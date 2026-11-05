@@ -7,7 +7,7 @@
 
 - 生产后端仍在 `jieqiu-backend/`，尚未迁到 `services/api/`；`services/` 只有迁移说明。
 - 生产前端在 `apps/mobile/`；`apps/web/`、`apps/admin/` 仍是规划，当前管理后台是后端同进程的 `/admin`。
-- OpenAPI 128 路径 / 143 方法；后端 256 tests；Alembic head `20261105_12`。
+- OpenAPI 128 路径 / 143 方法；后端 260 tests；Alembic head `20261105_12`。
 - Postgres 是目标生产库；未设置 `JQ_PROD_DATABASE_URL` 时生产部署仍可能是旧 SQLite 兼容模式。
 - 新增的 catalog/actions 已按 feature slice 落地；verdict/assistant 仍是混合目录，迁移未完成。
 - **聚焦决策流部分实现**：前端已有 `focusStore`、头像/选择器选中回首页聚焦、聚焦卡、详情页“让助理看这场”；后端 `/stats/pulse`、`/matches/{id}/focus`、`/interactions`、`interaction_events` 已实现；`/matches/on-sale` 已返回与 focus 同一判定的 `coverage`；`intel_items`/`match_coverage`/`pulse_daily` 与前端数据脉搏首屏仍未实现。目标契约见 [focused-decision-flow.md](./focused-decision-flow.md)。
@@ -148,7 +148,7 @@ packages/api       生成的 client
 | 前端单测 | Vitest + RNTL | hooks / 组件 |
 | E2E | Maestro | 核心用户流程 |
 
-> 当前实际（2026-11-05）：后端 pytest 256 项仍主要跑 SQLite；未接真实 Postgres CI；前端 Vitest 22 项 + typecheck/lint + Expo Android bundle；Maestro/E2E 尚未接入。
+> 当前实际（2026-11-05）：后端 pytest 260 项仍主要跑 SQLite；未接真实 Postgres CI；前端 Vitest 22 项 + typecheck/lint + Expo Android bundle；Maestro/E2E 尚未接入。
 
 ## 8. 迁移路线
 

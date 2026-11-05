@@ -177,3 +177,34 @@ def test_predict_line_math():
     assert abs(line.p_home + line.p_draw + line.p_away - 1.0) < 1e-6
     assert line.p_home < raw.p_home       # 让一球更难
     assert line.p_away > raw.p_away       # 让一球后客胜口径概率上升
+
+
+def test_hhad_market_gate_uses_had_not_hhad(db, monkeypatch):
+    """让球判决的市闸必须用 had 对照国际盘 h2h，不能拿 hhad 概率硬比。"""
+    _mini_xg(monkeypatch)
+    kick = future_kickoff(today_cn())
+    db.merge(SPMatch(match_id="2043010", match_no="周三890", league="欧罗巴",
+                     home_raw="霸主", away_raw="弱旅", home="霸主", away="弱旅",
+                     kickoff=kick, single_flag=False))
+    db.merge(SPSnapshot(match_id="2043010", pool="had", goal_line="",
+                        sp_h=1.80, sp_d=3.50, sp_a=4.20,
+                        captured_at=today_cn() + "T12:00:00+08:00"))
+    db.merge(SPSnapshot(match_id="2043010", pool="hhad", goal_line="-1",
+                        sp_h=2.90, sp_d=3.40, sp_a=2.20,
+                        captured_at=today_cn() + "T12:00:00+08:00"))
+    cn = timezone(timedelta(hours=8))
+    utc = datetime.strptime(kick, "%Y-%m-%d %H:%M:%S").replace(
+        tzinfo=cn).astimezone(timezone.utc).isoformat()
+    db.merge(IntlOdds(source="pinnacle", sport="soccer_uefa_europa_league",
+                      league="Europa League", home_raw="Dominator",
+                      away_raw="Weak", home="霸主", away="弱旅",
+                      kickoff_utc=utc, sp_h=1.82, sp_d=3.45, sp_a=4.10,
+                      retrieved_at=datetime.now(timezone.utc).isoformat()))
+    db.commit()
+
+    v = build_verdicts(db, today_cn(), NOW)[0]
+    assert v.pool == "hhad"
+    mg = v.gates["market"]
+    assert mg["detail"]["market_pool"] == "had"
+    assert mg["detail"]["verdict_pool"] == "hhad"
+    assert mg["detail"]["divergence"] < 0.05

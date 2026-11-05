@@ -42,8 +42,8 @@ SEED_ALIASES: dict[str, list[str]] = {
     "阿斯顿维拉": ["astonvilla", "维拉", "阿士东维拉"],
     # 德甲
     "拜仁": ["bayernmunich", "fcbayern", "bayern", "拜仁慕尼黑", "拜仁慕尼黑足球俱乐部"],
-    "多特蒙德": ["borussiadortmund", "bvb", "多蒙特"],
-    "勒沃库森": ["bayerleverkusen", "bayer04leverkusen", "利华古逊"],
+    "多特蒙德": ["borussiadortmund", "dortmund", "bvb", "多蒙特"],
+    "勒沃库森": ["bayerleverkusen", "leverkusen", "bayer04leverkusen", "利华古逊"],
     "莱比锡红牛": ["rbleipzig", "莱比锡", "rb莱比锡"],
     "法兰克福": ["eintrachtfrankfurt", "法兰克福足球俱乐部"],
     "斯图加特": ["stuttgart", "vfbstuttgart"],
@@ -66,7 +66,7 @@ SEED_ALIASES: dict[str, list[str]] = {
     "马竞": ["atleticomadrid", "atleticodemadrid", "马德里竞技", "马体会", "atleticoclub", "clubatleticodemadrid"],
     "塞维利亚": ["sevilla", "西维尔"],
     "皇家社会": ["realsociedad", "皇社"],
-    "毕尔巴鄂": ["athleticbilbao", "毕尔巴鄂竞技", "毕尔包", "毕尔巴鄂足球俱乐部"],
+    "毕尔巴鄂": ["athleticbilbao", "athleticclub", "毕尔巴鄂竞技", "毕尔包", "毕尔巴鄂足球俱乐部"],
     "比利亚雷亚尔": ["villarreal", "比利亚雷"],
     "皇家贝蒂斯": ["realbetis", "betis", "贝蒂斯"],
     "赫塔费": ["getafe", "赫塔菲"],
@@ -103,9 +103,9 @@ SEED_ALIASES: dict[str, list[str]] = {
     "萨索洛": ["sassuolo"],
     "比萨": ["pisa"],
     # 法甲
-    "巴黎圣日耳曼": ["parissaintgermain", "psg", "paris", "巴黎", "巴黎圣日门", "巴黎圣杰门"],
-    "马赛": ["olympiquemarseille", "om", "马赛足球俱乐部", "马赛奥"],
-    "里昂": ["olympiquelyon", "里昂足球俱乐部"],
+    "巴黎圣日耳曼": ["parissaintgermain", "parissg", "psg", "paris", "巴黎", "巴黎圣日门", "巴黎圣杰门"],
+    "马赛": ["olympiquemarseille", "marseille", "om", "马赛足球俱乐部", "马赛奥"],
+    "里昂": ["olympiquelyon", "lyon", "里昂足球俱乐部"],
     "摩纳哥": ["monaco", "asmonaco"],
     "里尔": ["lille", "里尔足球俱乐部"],
     "朗斯": ["lens", "朗斯足球俱乐部"],
@@ -137,6 +137,26 @@ SEED_ALIASES: dict[str, list[str]] = {
     "南锡": ["nancy", "asnancy"],
     "索尔纳": ["aikstockholm", "aik", "solna"],
     "米竞技": ["atleticomineiro", "cam", "米内罗竞技"],
+
+    # ---- 欧战常见队名（The Odds API 英文名 → 竞彩中文名）----
+    "布斯巴达": ["spartaprague", "sparta"],
+    "奈梅亨": ["necnijmegen", "nec"],
+    "奥莫尼亚": ["omonoia", "omonia"],
+    "费伦茨": ["ferencvrostc", "ferencvaros", "ferencvarosi"],
+    "特拉布宗": ["trabzonspor"],
+    "萨迪纳摩": ["dinamozagreb"],
+    "圣吉联合": ["unionsaintgilloise", "unionstgilloise", "unionsg"],
+    "波兹南": ["lechpozna", "lechpoznan", "lech"],
+    "阿尔克马": ["azalkmaar", "az"],
+    "波尔图": ["porto", "fcporto"],
+    "布鲁日": ["clubbrugge", "brugge"],
+    "顿涅茨克矿工": ["shakhtardonetsk", "shakhtar"],
+    "费内巴切": ["fenerbahce"],
+    "维京": ["viking", "vikingfk"],
+    "布拉格斯拉维亚": ["slaviapraha", "slavia"],
+    "萨巴赫": ["sabahfk", "sabah"],
+    "葡萄牙体育": ["sportinglisbon", "sportingcp", "sporting"],
+    "埃因霍温": ["psveindhoven", "psv"],
 }
 
 _WS = re.compile(r"\s+")
@@ -160,16 +180,23 @@ def _upsert(db: Session, alias: str, canonical: str) -> None:
 
 
 def seed_aliases(db: Session) -> int:
-    """空表时播种内置别名，返回插入条数。幂等。"""
-    existing = db.scalar(select(TeamAlias.id).limit(1))
-    if existing is not None:
-        return 0
+    """补齐内置别名（不只在空表时），返回新增条数。幂等。
+
+    生产库早期可能只播过一部分别名；新加欧战/英文别名后必须能增量补进去，
+    否则 The Odds API 的英文队名会对不上竞彩中文名。
+    """
+    existing = set(db.scalars(select(TeamAlias.alias)).all())
     n = 0
     for canonical, variants in SEED_ALIASES.items():
         for v in [canonical, *variants]:
-            _upsert(db, normalize(v), canonical)
+            key = normalize(v)
+            if not key or key in existing:
+                continue
+            db.add(TeamAlias(alias=key, canonical=canonical))
+            existing.add(key)
             n += 1
-    db.commit()
+    if n:
+        db.commit()
     return n
 
 

@@ -21,9 +21,50 @@ from .align import Aligner
 CN = timezone(timedelta(hours=get_settings().tz_offset_hours))
 
 
+# 竞彩中文联赛名 → The Odds API sport key。按当日场次动态选择，避免为无关联赛烧配额。
+LEAGUE_SPORT_KEYS: dict[str, str] = {
+    "英超": "soccer_epl",
+    "英冠": "soccer_efl_champ",
+    "西甲": "soccer_spain_la_liga",
+    "西乙": "soccer_spain_segunda_division",
+    "德甲": "soccer_germany_bundesliga",
+    "德乙": "soccer_germany_bundesliga2",
+    "意甲": "soccer_italy_serie_a",
+    "法甲": "soccer_france_ligue_one",
+    "欧冠": "soccer_uefa_champs_league",
+    "欧联": "soccer_uefa_europa_league",
+    "欧罗巴": "soccer_uefa_europa_league",
+    "欧协联": "soccer_uefa_europa_conference_league",
+    "欧会杯": "soccer_uefa_europa_conference_league",
+    "苏超": "soccer_spl",
+    "奥甲": "soccer_austria_bundesliga",
+    "俄超": "soccer_russia_premier_league",
+}
+
+
+def sports_for_trade_date(db: Session, date: str | None = None) -> list[str]:
+    """按当日竞彩场次的联赛名，返回需要同步的 Odds API sport key（去重、保序）。"""
+    from ..models import SPMatch
+    from .timeutil import trade_date_now, trade_window
+
+    date = date or trade_date_now()
+    start, end = trade_window(date)
+    leagues = list(db.scalars(
+        select(SPMatch.league).where(SPMatch.kickoff >= start,
+                                     SPMatch.kickoff <= end)).all())
+    keys: list[str] = []
+    for league in leagues:
+        text = (league or "").strip()
+        for cn, key in LEAGUE_SPORT_KEYS.items():
+            if cn in text and key not in keys:
+                keys.append(key)
+    return keys
+
+
 def sync_the_odds_api(db: Session, aligner: Aligner, now_utc: datetime,
                       api_key: str | None = None,
-                      fetch_events=None) -> tuple[int, str]:
+                      fetch_events=None,
+                      sports: list[str] | None = None) -> tuple[int, str]:
     """同步国际盘。返回 (入库条数, 说明)。key 缺失/网络失败不抛错（管线不中断）。
 
     fetch_events(sport_key) -> list[event]：可注入用于测试（默认调 the-odds-api）。
@@ -53,7 +94,11 @@ def sync_the_odds_api(db: Session, aligner: Aligner, now_utc: datetime,
     retrieved = now_utc.isoformat(timespec="seconds")
     total = 0
     errors = []
-    for sport in [s.strip() for s in st.odds_sports.split(",") if s.strip()]:
+    sport_list = sports if sports is not None else [
+        s.strip() for s in st.odds_sports.split(",") if s.strip()]
+    if not sport_list:
+        return 0, "当日联赛没有对应的 Odds API sport key —— 市闸保持 pending_data"
+    for sport in sport_list:
         try:
             events = fetch_events(sport)
         except Exception as e:

@@ -4,7 +4,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from app.features.recommendations import service
-from app.models import IntlOdds, SPMatch, Verdict
+from app.models import IntlOdds, SPMatch, TeamAlias, Verdict
+from app.modules.align import normalize, seed_aliases
+from app.modules.intl_odds import sports_for_trade_date
 from app.modules.supply import content_supply
 from tests.conftest import CN, admin_login, today_cn
 from tests.test_recommendations import _seed, _seed_market
@@ -74,3 +76,28 @@ def test_supply_excludes_expired_published(db):
     assert data["snapshots"]["published"] == 0
     assert data["published"] == 0
     assert "国际盘" in (data["blocked_reason"] or "")
+
+
+def test_sports_for_trade_date_maps_european_leagues(db):
+    _seed_market(db, "sup-4", "周四001")
+    match = db.get(SPMatch, "sup-4")
+    match.league = "欧罗巴联赛"
+    db.merge(SPMatch(match_id="sup-5", match_no="周四002", league="欧协联",
+                     home_raw="A", away_raw="B", home="A", away="B",
+                     kickoff=match.kickoff, single_flag=False))
+    db.commit()
+
+    sports = sports_for_trade_date(db)
+    assert "soccer_uefa_europa_league" in sports
+    assert "soccer_uefa_europa_conference_league" in sports
+
+
+def test_seed_aliases_backfills_new_european_names(db):
+    db.add(TeamAlias(alias="keep-me", canonical="保留"))
+    db.commit()
+    added = seed_aliases(db)
+    assert added > 0
+    row = db.query(TeamAlias).filter_by(alias=normalize("Lyon")).one()
+    assert row.canonical == "里昂"
+    row = db.query(TeamAlias).filter_by(alias=normalize("Crystal Palace")).one()
+    assert row.canonical == "水晶宫"

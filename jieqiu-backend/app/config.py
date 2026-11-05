@@ -54,7 +54,10 @@ class Settings(BaseSettings):
     dc_min_matches: int = 3
     # 市闸国际盘源：the-odds-api（免费 500 次/月）。未配置 key → 市闸诚实 pending_data
     odds_api_key: str = ""
-    odds_sports: str = "soccer_epl,soccer_spain_la_liga,soccer_germany_bundesliga,soccer_italy_serie_a,soccer_france_ligue_one,soccer_uefa_champs_league"
+    odds_sports: str = ("soccer_epl,soccer_spain_la_liga,soccer_germany_bundesliga,"
+                        "soccer_italy_serie_a,soccer_france_ligue_one,"
+                        "soccer_uefa_champs_league,soccer_uefa_europa_league,"
+                        "soccer_uefa_europa_conference_league")
     odds_sync_min_interval_hours: float = 6.0
     # API-Football（免费档 100 请求/日；默认留 10 次给人工排查）
     api_football_key: str = ""

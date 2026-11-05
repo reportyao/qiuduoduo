@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 
 from .db import SessionLocal
 from .modules.align import Aligner, seed_aliases
-from .modules.intl_odds import sync_the_odds_api
+from .modules.intl_odds import sports_for_trade_date, sync_the_odds_api
 from .modules.supply import content_supply
 
 
@@ -43,11 +43,14 @@ def _sync(as_json: bool) -> int:
     db = SessionLocal()
     try:
         seed_aliases(db)
-        n, note = sync_the_odds_api(db, Aligner(db), datetime.now(timezone.utc))
+        sports = sports_for_trade_date(db)
+        n, note = sync_the_odds_api(db, Aligner(db), datetime.now(timezone.utc),
+                                    sports=sports or None)
         if as_json:
-            print(json.dumps({"synced": n, "note": note}, ensure_ascii=False))
+            print(json.dumps({"synced": n, "sports": sports, "note": note},
+                             ensure_ascii=False))
         else:
-            print(f"同步 {n} 场：{note}")
+            print(f"同步 {n} 场（sports={sports or '[]'}）：{note}")
         return 0 if n else 2
     finally:
         db.close()

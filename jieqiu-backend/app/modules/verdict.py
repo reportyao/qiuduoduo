@@ -26,6 +26,7 @@ from .dc_model import DCModel, add_alias, fit as dc_fit, load_xg, predict as dc_
 from .gates import (breakeven_prob, dynamic_threshold, implied_probs,
                     market_gate, model_gate, price_gate, shrink_to_market)
 from .intl_odds import sources_for_match
+from .results_sync import has_results_proxy
 from .sealchain import link_revision
 
 # 向后兼容（tests / 外部调用）
@@ -81,6 +82,7 @@ def _get_model(db: Session, aligner: Aligner, as_of: datetime) -> DCModel | None
         # 为规范中文队名建键：understat 英文名 → aligner → canonical
         for raw in list(model.attack.keys()):
             add_alias(model, raw, aligner.resolve(raw))
+        model.source = "goals_proxy" if has_results_proxy(st.xg_extra_dir) else "xg"
         _MODEL_CACHE[key] = model
         return model
     except Exception:
@@ -106,7 +108,8 @@ def _evidence(match: SPMatch, snap: SPSnapshot, pool: str, intl_rows: list,
             "tag": "已核验", "t": "DC v1.1 预测（市场收缩后）",
             "d": f"{pred.p_home:.1%} / {pred.p_draw:.1%} / {pred.p_away:.1%}"
                  f"（λ 主 {pred.lambda_home:.2f} · 客 {pred.lambda_away:.2f}）",
-            "src": f"Understat xG · 衰减窗口 {model.window_days}d · 拟合至 {model.as_of:%Y-%m-%d}",
+            "src": (f"{'football-data 进球代理' if model.source == 'goals_proxy' else 'Understat xG'}"
+                    f" · 衰减窗口 {model.window_days}d · 拟合至 {model.as_of:%Y-%m-%d}"),
         })
     else:
         ev.append({
@@ -186,6 +189,7 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
             # 单条历史脏快照（SP=1.0 等）不能拖垮整日判决；新数据由契约拦截。
             continue
         stage.append({"m": m, "snap": snap, "pool": pool,
+                      "had_snap": latest.get((m.match_id, "had")),
                       "probs": (p_h, p_d, p_a), "rake": rake})
 
     # ---- 第二阶段：动态价阈值 ----
@@ -201,10 +205,22 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
         # 价闸
         pg = price_gate(rake, threshold)
 
-        # 市闸：竞彩 ⊕ 国际盘（读取失败不中断管线，但错误写入闸门 detail 可见）
+        # 市闸：竞彩官方 had ⊕ 国际盘 h2h（必须同口径）。
+        # 让球 hhad 的胜平负概率不能直接与 Pinnacle h2h 比，否则会把让球线差异
+        # 误判成 20pp+ 的“市场分歧”，把所有非单关场次错误 kill。
         intl_rows = []
         intl_err = None
-        sources: dict[str, tuple[float, float, float]] = {"竞彩官方(去水)": p_jc}
+        market_snap = s.get("had_snap") or (snap if pool == "had" else None)
+        if market_snap is not None:
+            try:
+                mp_h, mp_d, mp_a, _ = implied_probs(
+                    market_snap.sp_h, market_snap.sp_d, market_snap.sp_a)
+                sources: dict[str, tuple[float, float, float]] = {
+                    "竞彩官方(去水)": (mp_h, mp_d, mp_a)}
+            except ValueError:
+                sources = {"竞彩官方(去水)": p_jc}
+        else:
+            sources = {"竞彩官方(去水)": p_jc}
         try:
             intl_rows = sources_for_match(db, m)
             for r in intl_rows:  # retrieved 倒序：同源多条时新快照优先（first-wins）
@@ -214,6 +230,12 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
         except Exception as e:
             intl_err = f"{type(e).__name__}: {e}"[:120]
         mg = market_gate(sources, st.market_div_threshold)
+        mg.detail["verdict_pool"] = pool
+        mg.detail["market_pool"] = "had" if market_snap is not None else pool
+        if pool == "hhad" and market_snap is not None:
+            mg.detail["note"] = "hhad 判决使用 had 做同口径市场一致性；让球盘精确 spreads 待接入"
+        if market_snap is None and pool == "hhad":
+            mg.detail["reason"] = "hhad 缺少 had 快照，无法同口径对照国际盘"
         if intl_err:
             mg.detail["intl_error"] = intl_err
 
@@ -234,6 +256,8 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
         if pred is not None:
             p_model = shrink_to_market((pred.p_home, pred.p_draw, pred.p_away), p_jc)
         dg = model_gate(p_model, (snap.sp_h, snap.sp_d, snap.sp_a), st.model_conf_threshold)
+        if model is not None:
+            dg.detail["engine_source"] = model.source
 
         gates = {"price": pg.as_dict(), "market": mg.as_dict(), "model": dg.as_dict()}
         pick = dg.detail.get("pick")

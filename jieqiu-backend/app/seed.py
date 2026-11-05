@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 
 from .db import SessionLocal, init_db
 from .modules.align import Aligner
-from .modules.intl_odds import sync_the_odds_api
+from .modules.intl_odds import sports_for_trade_date, sync_the_odds_api
 from .modules.ingest import import_collector_db
 from .modules.timeutil import trade_date_from_kickoff, trade_window
 from .modules.verdict import build_verdicts, promote_seal
@@ -49,17 +49,8 @@ def main() -> int:
               f"snapshots={res.snapshots_inserted}/{res.snapshots_seen} "
               f"unresolved_alias={res.alias_unresolved}")
 
-        # 国际盘同步（未配置 key → 跳过并说明，市闸诚实 pending）
         aligner = Aligner(db)
         now_utc = datetime.now(timezone.utc)
-        n_intl, note = sync_the_odds_api(db, aligner, now_utc)
-        print(f"[intl] {note}")
-
-        # 本季 xG 增量同步（源不可达 → 跳过说明；恢复后模闸自动生效）
-        from .modules.understat_sync import sync_understat
-        n_xg, xg_note = sync_understat(now_utc)
-        print(f"[xg] {xg_note}")
-
         now_actual = datetime.now(CN)
         # 销售日由墙钟决定（05:00 前仍算前一日）；--date 仅用于显式回填。
         trade_date = args.date or trade_date_from_kickoff(now_actual)
@@ -67,6 +58,21 @@ def main() -> int:
         if not args.date:
             start = max(start, now_actual.strftime("%Y-%m-%d %H:%M:%S"))
         now_cn_str = now_actual.strftime("%Y-%m-%d %H:%M:%S")
+
+        # 国际盘同步：按当日联赛动态选 sport key，避免为无关联赛烧配额。
+        sports = sports_for_trade_date(db, trade_date)
+        n_intl, note = sync_the_odds_api(db, aligner, now_utc, sports=sports or None)
+        print(f"[intl] sports={sports or '[]'} {note}")
+
+        # 本季 xG 增量同步（源不可达 → 跳过说明；恢复后模闸自动生效）
+        from .modules.understat_sync import sync_understat
+        n_xg, xg_note = sync_understat(now_utc)
+        print(f"[xg] {xg_note}")
+
+        # 赛果兜底（Understat 被云 IP 拦截时，用 football-data 进球代理补模型输入）
+        from .modules.results_sync import sync_results_xg
+        n_proxy, proxy_note = sync_results_xg(now_utc)
+        print(f"[results] {proxy_note}")
 
         vs = build_verdicts(db, trade_date, now_cn_str, window_start=start, window_end=end)
         # 结算 + 当日锚点（W4）
