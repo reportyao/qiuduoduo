@@ -196,7 +196,7 @@ recommendation_plans
   status: draft|reviewing|approved|review_failed|published|expired|withdrawn
   review_run_id, published_at, expires_at, payload_hash
 
-recommendation_copies
+recommendation_copies            # ⏳ 待建（当前无此表；三套人设推荐文案未实现）
   draft_id, persona_id, text
   review_status, review_run_id, prompt_ver
 
@@ -209,10 +209,12 @@ review_runs
 
 ```text
 GET  /recommendations/today        仅 published + 未过期（已实现）
+GET  /recommendations/{snapshot_id}      单条 published 详情（已实现；读时惰性 expire）
+GET  /recommendations/plans/{plan_id}    单个 published 组合详情（已实现；读时惰性 expire）
 POST /tools/parlay/plan            帮我配（已实现：确定性组合，不调用 LLM；preview 入口）
 POST /tools/parlay/check           自己体检（已实现）
-POST /recommendations/{id}/view
-POST /recommendations/{id}/remind
+POST /recommendations/{id}/view    ⏳ 待做（浏览上报）
+POST /recommendations/{id}/remind  ⏳ 待做（设提醒）
 ```
 
 ### 6.3 后台（部分实现）

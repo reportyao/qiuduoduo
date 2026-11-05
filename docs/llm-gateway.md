@@ -38,6 +38,7 @@ Profile：fast（免费/低成本） / deep（DeepSeek） / none（模板）
 |---|---|---|---|
 | `copy_polish` | fast | 人设文案、通知改写、卡片摘要、推荐观点委婉化 |
 | `decision_review` | deep | L1–L5 发布前复核；规则为主，LLM 为可选增强 | schema JSON；无 Key 时标记降级，不阻塞规则门 |
+| `adversarial_review` | deep | 对抗复核：找反例/失效条件（L4 可选增强） | 同 decision_review；当前规则门为主 |
 | `plan_review` | fast | 组合腿/覆盖/风险复核 | 同上 |
 | `persona_translate` | persona pool | 人设语气翻译 | 走 `call_profile`；模型池/熔断/缓存独立 |
 | `open_chat` | fast | 开放问答、跑题引导、FAQ | 只带公开事实；默认收起；配额 |
@@ -151,7 +152,7 @@ llm_budgets             -- ✅ 已实现（global 行 task='*', profile='*'）
 迁移建议：
 
 - `20261104_07_llm_gateway.py`：已落 `llm_usage`/`llm_cache`/`llm_budgets`；
-- `20261104_10_focus_intel.py`：聚焦/情报表（待落）；
+- 聚焦/情报表（`intel_items`/`match_coverage`/`pulse_daily`）：待落，用下一个可用迁移号（当前 head `20261105_12`）；
 - 都要求 up/down；生产只 `alembic upgrade head`。
 
 ### 预算必须原子
@@ -312,7 +313,7 @@ TTL 建议：
 - 日志脱敏：Authorization、Key、手机号/邮箱、注单金额不入日志。
 - Provider 数据条款/数据地域/是否训练要先审；免费档不作为长期唯一依赖。
 - `match_analysis` 输出必须经数字白名单、禁用词、概率语法；不合格回模板。
-- 预算/路由/情报发布必须有审计；没有 RBAC 前后台只做只读 + 开关 + 预算。
+- 预算/路由/情报发布必须有审计；RBAC 已落地（viewer/operator/admin），后台写操作须 CSRF + 审计；模型用量页当前仍只读，路由/预算编辑待做。
 
 ## 11. 分阶段落地
 

@@ -117,7 +117,7 @@ last_used_at  用于排序与清理
 
 ## 4. 与管理后台的对照
 
-当前后台是 `/admin`：总览、模型池/用量、人设文案、推荐主链、组合预览、数据源、运维（告警/API-Football/通知/Push/互动）、账号、审计、日志。旧 `/console/*` 页面已全部下线，仅 302 到 `/admin`。
+当前后台是 `/admin`：总览、模型池/用量、人设文案、推荐主链、组合预览、数据源、运维（告警/API-Football/通知/Push/互动）、账号、审计、日志；RBAC（viewer/operator/admin）+ CSRF + 会话撤销 + `admin_audit` 审计。旧 `/console/*` 页面已全部下线，仅 302 到 `/admin`。
 
 缺口：
 
@@ -629,6 +629,8 @@ JQ_DAILY_BRIEF_HOUR=19 python -m app.assistant.worker --once
 
 **历史快照（2026-11-03）仍未修**：控制台 token 在 URL / POST 无 CSRF；`_VARIANT_POOL` 进程内存；chat persona；前端 inbox/关注 UI；真实 JPush 凭证/厂商通道；派生记忆；AI 分析层。
 
-**2026-11-04 更新**：控制台 token 已移出 URL（cookie-only + logout）；前端 inbox/关注/通知设置已接；CSRF token、`_VARIANT_POOL` 持久化、真实 JPush、派生记忆/AI 分析仍未完成。
+**2026-11-04 更新**：控制台 token 已移出 URL（cookie-only + logout）；前端 inbox/关注/通知设置已接。
+
+**2026-11-05 更新**：后台 CSRF + RBAC（viewer/operator/admin）+ 会话撤销 + `admin_audit` 审计已上线，旧 `/console` 下线、统一 `/admin`；W8 冻结基线已重新采纳（145 路由）。`_VARIANT_POOL` 持久化、真实 JPush、派生记忆/AI 分析仍未完成。
 
 **测试**：`python -m pytest -q` → **251 passed（当前）**。

@@ -352,9 +352,11 @@ pulse_daily
   display_factor, display_data_points, computed_at
   -- 累计/历史脉搏聚合，避免每次 COUNT 全表
 
+# ✅ 已实现（迁移 20261105_11_admin_rbac_audit；不再属于目标态）
 admin_audit
-  id, actor, action, target, before_json, after_json,
-  created_at, index(created_at)
+  id, actor, role, action, target_type, target_id,
+  before_json, after_json, ip, created_at
+  index(created_at), index(actor), index(action)
 ```
 
 说明：
@@ -367,7 +369,7 @@ admin_audit
 - `pulse_daily` 用于“累计/历史”脉搏；当日实时计数仍可实时算，后台可重算。
 - `admin_audit` 记录展示系数、路由、预算、情报发布等后台变更。
 - 迁移需可 up/down；Postgres 生产只走 Alembic。
-- 已落迁移：`20261104_05_interaction_events.py`（head 从 `20261104_04` 前进到 `20261104_05`），随后 `20261104_06_api_football.py` 把 head 推进到 `20261104_06`；`20261104_07_llm_gateway.py` 再推进到 `20261104_07`；`20261104_08_persona_llm.py` 推进到 `20261104_08`；`20261104_09_persona_profiles.py` 推进到 `20261104_09`；`20261105_10_recommendation_pipeline.py` 推进到 `20261105_10`。intel 表仍待后续迁移。
+- 已落迁移：`20261104_05_interaction_events.py`（head 从 `20261104_04` 前进到 `20261104_05`），随后 `20261104_06_api_football.py` 把 head 推进到 `20261104_06`；`20261104_07_llm_gateway.py` 再推进到 `20261104_07`；`20261104_08_persona_llm.py` 推进到 `20261104_08`；`20261104_09_persona_profiles.py` 推进到 `20261104_09`；`20261105_10_recommendation_pipeline.py` 推进到 `20261105_10`；`20261105_11_admin_rbac_audit.py`（admin_users/admin_audit）推进到 `20261105_11`；`20261105_12_user_compliance.py`（users 合规列）推进到 `20261105_12`（当前 head）。intel 表仍待后续迁移。
 
 ### 3.3 覆盖率与数据点口径
 
@@ -467,7 +469,7 @@ app/features/intel/
 
 ## 5. 管理后台
 
-现有 `/admin` 是单操作员监控台；先加只读/运维页面，再做编辑。
+现有 `/admin` 已是 RBAC 多角色运营台（viewer/operator/admin + CSRF + 会话撤销 + `admin_audit` 审计）；只读/运维/推荐主链/模型/人设/账号/审计页已上线，编辑台变体精选仍是后续。
 
 ### `/admin` 数据源页
 
@@ -508,7 +510,7 @@ app/features/intel/
 
 ### 权限与审计
 
-- 当前密码/IP 只适合单操作员；任何路由/预算/情报修改要写 `audit_log`（操作者、时间、旧值、新值）。
+- 已落地 RBAC（viewer/operator/admin）+ CSRF + 会话撤销；任何路由/预算/情报/账号修改写 `admin_audit`（操作者、角色、时间、旧值、新值、IP）。
 - POST 已加 CSRF；测试按钮已审计；错误信息不回显 Key。
 - 新路由上线前按 AGENTS.md 重新采纳 W8 冻结基线。
 
@@ -546,15 +548,15 @@ LLM 成本必须跟用户层级走，不能匿名无限问：
 
 1. ✅ `focusStore`（`FocusTarget`）已加到 `apps/mobile/src/features/home/focusStore.ts`。
 2. ✅ `GlobalMatchPicker` 和首页 `MatchPickerSheet` 选中后 `setFocus → close → 回首页`，不再直接 push 详情；详情页增加“让助理看这场”。
-3. ◐ 首页已有聚焦区（复用 `VerdictMessage`/`FocusPending`），但无聚焦时的 `idle` 数据脉搏首屏尚未做；`empty/rest/error` 仍是旧逻辑。
-4. ⏳ `DataPulse`、`IntelFacts`、`ActionStack`、输入框默认收起尚未做。
-5. ⏳ 动作点击写 `POST /interactions` 尚未做。
+3. ◐ 首页已有聚焦区（复用 `VerdictMessage`/`FocusPending`）+ `FocusPanel`（覆盖率/事实/未知项/拦截原因）；但无聚焦时的 `idle` 数据脉搏独立首屏尚未做；`empty/rest/error` 仍是旧逻辑。
+4. ◐ 真实数据脉搏指标（`Metrics`/`DataStatusSheet`）与聚焦事实/未知项展示已接；`ActionStack`、输入框默认收起尚未做。
+5. ✅ 动作点击写 `POST /interactions` 已接（`focus_select`/`action_click`/`free_text_send`/`pulse_open`，见 `src/features/telemetry/interactions.ts`）。
 
 ### 后端
 
 1. ✅ `/stats/pulse`（现有表聚合）与 `/matches/{id}/focus`（复用 verdict/evidence；intel 动态生成）。
 2. ✅ `interaction_events` 表 + `POST /interactions`（幂等/白名单/限流）。
-3. ✅ `/admin` 数据源页、`/admin` 运维页、`/admin` 运维页 只读后台页面。
+3. ✅ `/admin` 数据源页、运维页、模型用量页、推荐主链页等后台页面（RBAC+CSRF+审计）。
 4. ✅ API-Football fixtures/lineups/injuries/standings + 免费额度 + 人工链接。
 5. ⏳ `intel_items` / `match_coverage` / `pulse_daily` 持久化。
 6. ⏳ `analysis_jobs` / `ai_analyses` 与 `/admin` 模型用量页。

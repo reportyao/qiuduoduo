@@ -83,7 +83,7 @@ app/features/<feature>/
 ## 4. 数据与契约
 
 - OpenAPI 是唯一接口事实源；后端代码导出 `packages/api-client/openapi.json` 快照，client 从快照离线生成；禁止对着可能过期的本地服务生成。
-- Postgres 是生产事实源（自建，非 Supabase）；SQLite 只允许用于纯单元测试或本地工具；架构/索引/备份见 `docs/database-architecture.md`。
+- Postgres 是生产事实源（云托管优先 / 自建兜底，非 Supabase，ADR-0004）；SQLite 只允许用于纯单元测试或本地工具；架构/索引/备份见 `docs/database-architecture.md`。
 - Alembic 管理迁移；迁移必须可 up/down；生产禁止 `create_all`。
 - 领域事件必须有 `dedupe_key`、`payload_hash`、`data_cutoff`。
 - 推送/通知文案保持中性，不得出现“买 / 注 / 赔率 / 推荐 / 稳赚”。

@@ -3,7 +3,7 @@
 - 状态：已采纳
 - 日期：2026-11-03
 - 影响范围：后端架构、仓库结构、开发流程
-- 实现状态（2026-11-04）：monorepo/mobile/api-client 已落地；后端仍在 `jieqiu-backend/`，`services/api/` 迁移未完成；Web/Admin 仍是规划。
+- 实现状态（2026-11-05）：monorepo/mobile/api-client 已落地；后端仍在 `jieqiu-backend/`，`services/api/` 迁移未完成；进程内 `/admin` 后台已上线（RBAC+CSRF+审计），独立 `apps/admin` 与 Web 仍是规划。
 
 ## 背景
 

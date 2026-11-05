@@ -67,7 +67,7 @@
 
 - `archive/`：旧版 PRD/TechSpec/Review，仅用于追溯，不代表当前实现。
 - `w1-validation/`：W1 数据验证结果，历史数据口径。
-- `jieqiu-app/`：临时展示 UI，只作设计参考，禁止继续加功能。
+- `jieqiu-app/`：临时展示 UI，只作设计参考，禁止继续加功能（见 [jieqiu-app/README.md](../jieqiu-app/README.md)）。
 
 ## 维护规则
 

@@ -6,7 +6,7 @@
 | 前提 | 一人（OPC）+ AI 代理军团；每周新功能 ≤1 个的节奏不变 |
 | 核心公式 | **AI 出产能，人出品味与合规；每个自动化必须有一个明确的人工闸门** |
 | 配套 | TechSpec v2.1 §9（AI 开发规范）扩写为本文 §2 |
-| 当前状态 | **目标蓝图，不代表已部署**。当前已有：cron/worker、`/admin` 编辑台骨架、`/review/*` 冻结/扫描；n8n、Chatwoot、Listmonk、Postiz、Langfuse 等尚未接入 |
+| 当前状态 | **目标蓝图，不代表已部署**。当前已有：cron/worker、`/admin` 运营台（RBAC+CSRF+审计+推荐主链页）、`/review/*` 冻结/扫描；n8n、Chatwoot、Listmonk、Postiz、Langfuse 等尚未接入 |
 
 ---
 
@@ -35,7 +35,7 @@
 |---|---|---|---|---|---|
 | 1 | **开发工** | PR/Issue/口头指令 | 需求 → 代码+测试+PR | CI 七门禁 + 把关五清单 | Claude/GPT 代理 + OpenAPI codegen |
 | 2 | **评审员** | 每个 PR 自动 | diff → 审查意见/小修直改 | 命中五清单则必人审 | CodeRabbit / 自建 LLM judge |
-| 3 | **编辑部** | 每晚 21:00 | match_facts → 300 条变体/内容草稿 → 精选 120 入池 | **每晚 10 分钟精选（品味工资单）** | narrate 管道 + **editor_console（TechSpec §4.5）** |
+| 3 | **编辑部** | 每晚 21:00 | match_facts → 300 条变体/内容草稿 → 精选 120 入池 | **每晚 10 分钟精选（品味工资单）** | narrate 管道 + **`/admin` 运营台（历史设计 editor_console，TechSpec §4.5）** |
 | 4 | **客服生** | 用户消息 | 问题 → 分层应答：FAQ/RAG 直答 → 复杂转工单 | 转人工 48h SLA | Chatwoot + RAG + 敏感词 |
 | 5 | **增长官** | 每周一/赛后 | 关键词榜+赛事日历 → SEO 文章 brief、社媒帖草稿、分享卡 | 发帖前 5 分钟批量过目 | Postiz（定时发）+ satori（卡片图） |
 | 6 | **值班员** | 告警触发 | uptime/错误 → runbook 自动执行 → 小修直接开 PR | 大事故叫醒人 | uptime-kuma + n8n + GH Actions |

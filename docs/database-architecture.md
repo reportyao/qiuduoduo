@@ -70,7 +70,7 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 
 | 域 | 表 | 说明 |
 |---|---|---|
-| 赛事/赔率 | `sp_matches` / `sp_snapshots` | 官方在售场次与 SP 追加快照 |
+| 赛事/赔率 | `sp_matches` / `sp_snapshots` / `intl_odds` | 官方在售场次与 SP 追加快照；国际盘多源赔率 |
 | 对齐 | `team_aliases` | 队名归一化 |
 | 判决 | `verdicts` | 赛前封存结论、三关、概率、结算 |
 | 修订/链 | `verdict_revisions` / `daily_anchors` | 追加式修订、跨日锚 |
@@ -174,7 +174,7 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 
 **当前刻意不入库**：
 
-- 自排除/PGSI 自评：前端本机强制拦截（`compliance` 本地存储），服务端合规表和接口尚未实现；已登录时会尝试暂停服务端通知。多设备同步是上线前阻塞项。
+- 自排除/PGSI 自评：**已服务端入库**（2026-11-05，迁移 `20261105_12`）——`users` 合规列 `age_verified/birth_year/under18_locked/self_exclusion_until/at/reason/compliance_json`；`/compliance/*` + `/gate/verify` + `/me/under18-lock` 提供读写，`/bets` 与 focus capabilities 硬拦截（未成年 403 / 自排除·休息中 423）。前端本机缓存仅作离线兜底，启动时以服务端为准。
 - 个人头像：本机 `documentDirectory`，不上传、不入库。
 - 串关体检/赔率/仓位/回本线：纯本地计算，无 `parlay_reports` 等服务端表。
 - 订阅/支付：尚未接入，不建空表，避免出现与接口不一致的“假 schema”。

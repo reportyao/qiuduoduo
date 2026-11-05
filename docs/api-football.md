@@ -34,11 +34,11 @@ python -m app.api_football_cli sync --date 2026-11-04 --json
 python -m app.api_football_cli link --fixture 12345 --match 2042508
 ```
 
-建议 cron（按免费额度调整频率）：
+cron：**配置了 `JQ_API_FOOTBALL_KEY` 的部署，`deploy.py` 会自动安装每日 06:15 的 sync cron**（无需手装）；未配置则不装。手动执行或自定义频率时参考：
 
 ```cron
-# 每天 09:10 拉当日 fixtures；只拉一次
-10 9 * * * cd /home/ubuntu/jieqiu-backend && python -m app.api_football_cli sync --date $(date +\%F) >> /home/ubuntu/jieqiu-backend/af.log 2>&1
+# 每天拉当日 fixtures；只拉一次（deploy 自动安装的是 15 6 * * *）
+15 6 * * * cd /home/ubuntu/jieqiu-backend && python -m app.api_football_cli sync --date $(date +\%F) >> /home/ubuntu/jieqiu-backend/api_football.log 2>&1
 ```
 
 免费档不要每 5 分钟全量拉；fixtures 1 次/日，lineups 默认只补开赛前 6 小时窗口（含开赛 2 小时内），injuries 默认补 24 小时窗口，standings 1 次/日/联赛。

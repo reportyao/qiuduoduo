@@ -25,4 +25,4 @@ AI 助理运行时：事件监控 → 扇出 → 站内信/推送 → 用户行�
 - 未决 T-30m、T-3h 动态触发。
 - 盘口异动、阵容/伤停监控。
 - `user_events` 记忆推导。
-- 控制台 AI / memory 页。
+- `/admin` AI / memory 页（旧 /console 已下线）。

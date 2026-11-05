@@ -1,6 +1,6 @@
 # 前端功能 ↔ 后端接口 ↔ 数据流 完整映射 v1.0
 
-> **2026-11-05 对账：本文件是 v1 设计映射，不是当前实现清单。** 实际路径/方法以 `packages/api-client/openapi.json` 为准。已知路径迁移：`POST /parlay/check` → `POST /tools/parlay/check`；`POST /tools/parlay/plan` 已实现但为未复核预览。已实现 focus/pulse/interactions、新闻/情报动态覆盖、API-Football、人设模型池/`GET /personas`、推荐主链 `decision_snapshots/review_runs/publish`、`/admin 组合预览页|personas|recommendations`；`/parlay/{id}/report|plans|confirm`、vision、billing、compliance、goal-alert 等仍是设计。逐项状态见本文件末尾“2026-11-04 聚焦决策流接口（部分实现）”。
+> **2026-11-05 对账：本文件是 v1 设计映射，不是当前实现清单。** 实际路径/方法以 `packages/api-client/openapi.json` 为准（128 路径 / 143 方法）。已知路径迁移：`POST /parlay/check` → `POST /tools/parlay/check`；`POST /tools/parlay/plan` 已实现但为未复核预览。已实现 focus/pulse/interactions（前端已接真实数据）、新闻/情报动态覆盖、API-Football、人设模型池/`GET /personas`、推荐主链 `decision_snapshots/recommendation_plans/review_runs/recommendation_events`（build→L1–L5→publish/expire/withdraw，公开契约带 direction/conditions/invalidators/review 徽章）、合规闭环 `/compliance/state|self-exclusion|self-assessment` + `/gate/verify` + `/me/under18-lock`、`/admin` 后台（RBAC+CSRF+审计）；`/parlay/{id}/report|plans|confirm`、vision、billing/subscription、goal-alert、真实 live feed 等仍是设计。逐项状态见本文件末尾“2026-11-04 聚焦决策流接口（部分实现）”。
 
 | 项目 | 内容 |
 |---|---|
@@ -63,7 +63,7 @@
 | 票单死因回访 | 卡片点击 | "死在第 2 关"+what-if | `GET /bets/{id}/postmortem` | verdict | bets.legs+match_facts | v1.0 |
 | 周报 | Tab 点击 | 采纳/归因/眼光分/砍场 | `GET /weekly-report` | leaderboard | bets+verdicts | v0.5 |
 | 公开账本 | Tab 点击 | 全部结论+连败 | `GET /ledger` | leaderboard | verdicts(公开) | v0.5 |
-| 记忆管理 | Tab 点击 | 可见可删列表 | `GET|DELETE /memories` | users | memories | v1.0 |
+| 记忆管理 | Tab 点击 | 可见可删列表 | `GET / DELETE /memories` | users | memories | v1.0 |
 | 导出数据 | Tab 点击 | JSON 下载 | `GET /me/export` | users | 全表 | v1.0 |
 
 ## Tab ④ 我的
@@ -72,8 +72,9 @@
 |---|---|---|---|---|---|---|
 | 人设选择 | 行点击→试读→✓ | 试读样句+立即生效 | `PATCH /me` | users | users.persona | v1.0 |
 | 连败保护开关 | Toggle | 开/关 | `PATCH /me/discipline` | compliance | budgets | v0.5补 |
-| 合规中心·自排除 | 选项→二次确认 | 生效横幅+热线 | `POST /compliance/self-exclusion` | compliance | compliance_events | v0.5 |
-| 合规中心·PGSI | 量表→提交 | 分级结果 | `POST /compliance/self-assessment` | compliance | compliance_events | v0.5 |
+| 合规中心·自排除 | 选项→二次确认 | 生效横幅+热线 | `POST /compliance/self-exclusion` | compliance | users 合规列 | ✅ 已实现 |
+| 合规中心·PGSI | 量表→提交 | 分级结果 | `POST /compliance/self-assessment` | compliance | users.compliance_json | ✅ 已实现 |
+| 合规状态读取 | 启动/进合规中心 | 年龄/自排除/可记注 | `GET /compliance/state` | compliance | users 合规列 | ✅ 已实现 |
 | 界面语言 | 行点击→弹层 | Tab+按钮即切 | `PATCH /me` | users+i18n | users.locale | v1.0 |
 | 赔率格式 | 行点击循环 | 数字变化 | `PATCH /me` | users | users.odds_format | v1.0 |
 | 订阅 | 行点击→付费页 | 四态：可购/处理/成功/失败 | `POST /billing/*` | billing | subscriptions | v1.5 |
@@ -84,7 +85,8 @@
 
 | 功能 | 触发 | API | 后端模块 | 数据表 | 版 |
 |---|---|---|---|---|---|
-| 年龄门 | 首次启动 | `POST /gate/verify` | auth | consents | v0.5 |
+| 年龄门 | 首次启动 | `POST /gate/verify` | compliance | users.age_verified/under18_locked | ✅ 已实现 |
+| 未成年锁定 | 年龄门判未成年 | `POST /me/under18-lock` | compliance | users.under18_locked | ✅ 已实现 |
 | 登录/注册（按国家） | 点买了/订阅触发 | `POST /auth/*` | auth | users + auth_identities + refresh_tokens | v0.5 |
 | 通知软请求 | 首次看判决后 | `POST /devices` | push | push_tokens | v1.0 |
 | 实况卡 | 看比赛详情 | `GET /matches/{id}/live` | collector+market | sp_snapshots+match_facts | v1.0 |
@@ -93,7 +95,7 @@
 | 赔率格式切换 | 偏好循环 | `PATCH /me` | users | users.odds_format | v1.0 |
 | 深链路由 | 推送点击 | `jieqiu://verdict/{id}` | — (前端路由) | — | v1.0 |
 | 分享卡生成 | 分享按钮 | `POST /share/card` | narrate | — | v1.0 |
-| PGSI 自评 | 合规中心 | `POST /compliance/self-assessment` | compliance | compliance_events | v1.0 |
+| PGSI 自评 | 合规中心 | `POST /compliance/self-assessment` | compliance | users.compliance_json | ✅ 已实现 |
 | 功能旗全量 | 启动时拉取 | SDK 内置 | PostHog | — | v1.0 |
 
 ---
@@ -219,10 +221,10 @@ OpenAPI 从 72 路径补到 **128 路径 / 143 方法**（含后续 `/s/{id}` �
 | 数据脉搏 | 首页顶部实时计数 | `GET /stats/pulse?date=` | sp_matches/sp_snapshots/intl_odds/model_runs/verdicts | ✅ |
 | 选比赛→首页聚焦 | 头像/选择器选中后回首页，不跳详情 | 前端 focusStore + 现有 `/matches/on-sale` | — | ✅ |
 | 单场聚焦卡 | 一次请求拿结论/闸门/情报/覆盖/动作 | `GET /matches/{id}/focus?date=` | verdicts + evidence（动态覆盖） | ✅ |
-| 选择器覆盖徽章 | 显示模型/盘口/阵容覆盖 | `GET /matches/on-sale` 已返回 `coverage`（与 focus 同一判定） | 动态覆盖（verdict/证据/lineups/standings） | ✅（前端徽章待接） |
-| 动作漏斗 | 点击/展开/自由提问上报 | `POST /interactions` | interaction_events | ✅ |
+| 选择器覆盖徽章 | 显示模型/盘口/阵容覆盖 | `GET /matches/on-sale` 已返回 `coverage`（与 focus 同一判定） | 动态覆盖（verdict/证据/lineups/standings） | ✅（前端已接：覆盖分/覆盖足筛选） |
+| 动作漏斗 | 点击/展开/自由提问上报 | `POST /interactions` | interaction_events | ✅（前端 focus_select/action_click/free_text_send/pulse_open 已上报） |
 | 串关四维体检 | 2–4 腿：成本/信息/模型/结构 | `POST /tools/parlay/check` | verdicts + focus 动态覆盖 | ✅（后端+移动端） |
-| 今日主看/方向判断 | 首页 1 条完整试读；付费其余未做 | `GET /recommendations/today`（published） | decision_snapshots + review_runs | ✅ 主链已实现；付费待做 |
+| 今日主看/方向判断 | 首页 1 条完整试读；付费其余未做 | `GET /recommendations/today`（published）；公开契约带 direction/confidence/conditions/invalidators/review 徽章 | decision_snapshots + review_runs | ✅ 主链已实现；付费待做 |
 | 串关参谋·帮我配 | 保守/均衡/进取 2–3 腿组合 | `POST /tools/parlay/plan`（preview）；published plans 在 `/recommendations/today` | recommendation_plans + review_runs | ✅ 主链；组合页 published 优先，preview 回退 |
 | 推荐AI 复核流水线 | 观点/组合 AI 复核后发布 | `/admin` 推荐主链页 | decision_snapshots/recommendation_plans/review_runs | ✅ L1–L5 + 可选 LLM |
 | 付费墙/权益 | 免费 1 条；付费组合/临场/复盘 | 订阅权益（规划） | users/subscriptions | 🧩 设计 |

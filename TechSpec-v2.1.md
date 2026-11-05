@@ -12,7 +12,9 @@
 
 > 2026-11-05 产品口径修订：允许经 AI 复核的方向判断/参考组合/串关参谋；免费付费、AI 复核流水线与文案规则见 [docs/recommendation-product.md](docs/recommendation-product.md)。
 >
-> 2026-11-04 目标补充：首页“数据脉搏 → 选一场 → 聚焦一场 → 客观情报 → 动作按钮”的交互与 focus/pulse/interactions API、数据表、管理后台设计见 [docs/focused-decision-flow.md](docs/focused-decision-flow.md)；多模型 fast/deep 路由、预算与 `/console/ai` 见 [docs/llm-gateway.md](docs/llm-gateway.md)。前端“选中→回首页聚焦”已实现；后端 focus/pulse/interactions 已实现，情报表仍为设计稿；当前 OpenAPI 为 123/138。
+> 2026-11-04 目标补充：首页“数据脉搏 → 选一场 → 聚焦一场 → 客观情报 → 动作按钮”的交互与 focus/pulse/interactions API、数据表、管理后台设计见 [docs/focused-decision-flow.md](docs/focused-decision-flow.md)；多模型 fast/deep 路由、预算与 `/admin` 模型用量页见 [docs/llm-gateway.md](docs/llm-gateway.md)。前端“选中→回首页聚焦”、真实数据脉搏/聚焦面板/覆盖筛选/互动埋点已实现；后端 focus/pulse/interactions 已实现，intel 持久化表仍为设计稿；当前 OpenAPI 为 **128/143**。
+>
+> 2026-11-05 实现进展：推荐主链（decision_snapshots/recommendation_plans/review_runs/recommendation_events，build→L1–L5 复核→publish→expire/withdraw）与合规服务端闭环（年龄门/未成年锁定/自排除/PGSI，`/bets` 与 focus 硬拦截 403/423）已上线；管理后台为 `/admin`（RBAC+CSRF+会话撤销+审计），旧 `/console/*` 全部 302 下线。后端 **251 tests**，Alembic head `20261105_12`。
 
 ---
 
@@ -151,19 +153,21 @@ next-intl 等价物 `i18n-js`+ICU；三语言解耦（UI/内容/球队名）；�
 
 **原则**：OPC 阶段不建自研重管理后台；各专业工具各管一摊，**编辑台**是唯一需要自建界面的模块（它是产品灵魂）。B 端白标（v2.5）前不升级。
 
-> **W7 落地状态（2026-11-03；2026-11-04 安全更新）**：editor_console v0 已上线（`app/routers/console.py`，与 API 同进程；密码 + HttpOnly cookie + 可选 IP 白名单，token 不再进 URL）——
+> **当前实现（2026-11-05）**：自建后台已落地为 **`/admin`**（`app/routers/admin_api.py` + `app/static/admin/`，与 API 同进程）——`admin_users` RBAC（viewer/operator/admin）+ PBKDF2 密码 + CSRF（`admin_csrf`+`X-CSRF-Token`）+ 会话撤销 + `admin_audit` 审计；页面含总览/模型池/用量/人设/推荐主链/组合/数据/运维/账号/审计/日志。旧 `/console/*` 已全部 302 到 `/admin`。下文 editor_console 为 **v1 历史设计**，仅作演进参考；独立 `apps/admin` 仍是规划。运维细节见 [docs/operations-runbook.md](docs/operations-runbook.md)。
+
+> **W7 落地状态（2026-11-03 历史快照）**：editor_console v0 曾上线（`app/routers/console.py`，密码 + HttpOnly cookie + 可选 IP 白名单）——
 > `/console/login`（密码 `JQ_CONSOLE_PASSWORD`，生产必设 + 可选 `JQ_CONSOLE_IP_WHITELIST`）·
 > `/console` 数据日报（计数/链状态/账本/模型评估/近期判决）· `/console/alerts`（断链/同步延迟/源未配/密码未设）·
 > `/console/variants`（三人设模板 + A/Q/X 精选状态机，进程内存，v1.5 换 narrative_pool 表）·
 > `/console/ops`（环境/数据源/cron 日志指引/快捷命令）。
 > 后端硬化同批上线：令牌桶限流（读 120/min、写 30/min/IP，429+Retry-After）、X-Request-ID + JSON 访问日志、
-> python-multipart 依赖补齐。当前全量 **245 tests**，git 版本控制就位。
+> python-multipart 依赖补齐。当时全量 245 tests（当前 251）；该 `/console` 实现已于 2026-11-05 下线，由 `/admin` 取代。
 
 ### 分层架构
 
 | 层 | 工具 | 管什么 | 频率 | 认证 |
 |---|---|---|---|---|
-| **统一入口页** | **editor_console**（自建单页，FastAPI+HTMX，部署同 VPS `/console`） | 变体精选/数据日报/告警/快捷运维 | 每晚 10 分钟 + 每日抽查 | **自建会话（密码 + HttpOnly cookie + 可选 IP 白名单，W7 已上线）** |
+| **统一入口页** | **`/admin` 运营台**（自建单页，FastAPI+原生 JS，部署同 VPS；历史设计为 editor_console `/console`） | 推荐主链/模型/人设/数据/告警/账号/审计 | 每晚 10 分钟 + 每日抽查 | **admin_users RBAC + PBKDF2 + CSRF + 会话撤销 + 审计（2026-11-05 已上线）** |
 | **数据库管理** | **pgAdmin / DBeaver 远程连接**（只读账号为主）+ `psql` | 全表 CRUD/SQL/备份 | 按需 | SSH 隧道 + 2FA |
 | **客服工单** | **Chatwoot**（开源 Docker 同 VPS） | 工单/申诉/消息 | 每日 15 分钟 | Chatwoot 账号 |
 | **分析/AB/旗** | **PostHog Cloud** | 埋点/漏斗/旗/回放 | 每周 | PostHog 账号 |
@@ -172,7 +176,7 @@ next-intl 等价物 `i18n-js`+ICU；三语言解耦（UI/内容/球队名）；�
 | **监控** | uptime-kuma + Sentry | 存活/异常 | 告警触发 | — |
 | **服务器** | SSH + systemd | 采集器/静态站/collector | 告警才看 | SSH 密钥 |
 
-### 编辑台（editor_console）技术规格
+### 编辑台（editor_console）技术规格 · v1 历史设计（已由 `/admin` 取代）
 
 ```
 技术栈: FastAPI 子路由(/console/*) + Jinja2 + HTMX（服务端渲染，无前端框架）
@@ -212,6 +216,8 @@ next-intl 等价物 `i18n-js`+ICU；三语言解耦（UI/内容/球队名）；�
 | 多人协作 | 编辑台加审计日志 + 细粒度角色 |
 
 ## 5. 数据模型（核心表定稿）
+
+> 2026-11-05 对账：本节为 v1 设计清单。当前 ORM 共 **43 张表**，以 `app/models.py` 与 Alembic（head `20261105_12`）为准。已落地但本节未列：推荐主链 `decision_snapshots`/`recommendation_plans`/`review_runs`/`recommendation_events`（迁移 `20261105_10`）、后台 `admin_users`/`admin_audit`（`20261105_11`）、`users` 合规列 age_verified/under18_locked/self_exclusion_*（`20261105_12`）、`interaction_events`、API-Football 5 表、`llm_usage/cache/budgets`、`persona_llm_models/copy_cache/profiles/copy_slots`。表结构详见 [docs/database-architecture.md](docs/database-architecture.md)。
 
 ```sql
 users(id, market, locale, timezone, odds_format, currency, data_region, status)
@@ -265,9 +271,9 @@ reconciliation(id, provider, external_id, amount NUMERIC, status, checked_at TIM
 
 ---
 
-## 6. API（v1 设计清单 41 个；当前实现 123 路径 / 138 方法）
+## 6. API（v1 设计清单 41 个；当前实现 128 路径 / 143 方法）
 
-> 2026-11-05 对账：本节是 v1 设计清单，不是当前完整契约。当前契约以 `packages/api-client/openapi.json` 为准；已实现目录/成本/证据/避雷/水位/日历/SP 异动/哨兵/`/me/comfort`/`/verdicts/{id}/react`/`/share/card`、串关四维体检 `/tools/parlay/check`、组合参谋 `/tools/parlay/plan`、`/personas` 与 `/console/plans|personas`。仍未实现：出票/确认、vision OCR、compliance/gate/under18、billing/subscription、真实 live feed 与 goal-alert、console JSON 工单。详见 `docs/reviews/2026-11-04-api-audit.md`。
+> 2026-11-05 对账：本节是 v1 设计清单，不是当前完整契约。当前契约以 `packages/api-client/openapi.json` 为准（128 路径 / 143 方法）。已实现目录/成本/证据/避雷/水位/日历/SP 异动/哨兵/`/me/comfort`/`/verdicts/{id}/react`/`/share/card`、串关四维体检 `/tools/parlay/check`、组合参谋 `/tools/parlay/plan`、`/personas`、推荐主链 `/recommendations/today|{snapshot_id}|plans/{plan_id}`、合规 `/compliance/state|self-exclusion|self-assessment` + `/gate/verify` + `/me/under18-lock`、`/admin/api/*` 后台。仍未实现：出票/确认、vision OCR、billing/subscription、真实 live feed 与 goal-alert。详见 `docs/reviews/2026-11-04-api-audit.md`。
 
 **Auth/账户（9）**：`POST /auth/sms/code` · `POST /auth/login` · `POST /auth/oauth/{google,apple}` · `POST /auth/refresh|logout` · `POST /gate/verify` · `GET|PATCH /me` · `GET /me/export` · `DELETE /me` · `POST /devices`
 
@@ -277,8 +283,8 @@ reconciliation(id, provider, external_id, amount NUMERIC, status, checked_at TIM
 **用户数据（6）**：`POST|GET|DELETE /memories` · `GET /bets|/bets/{id}/postmortem` · `GET /weekly-report` · `PATCH /me/persona`（人设切换）
 
 **实时与交互补全（本次审计新增 9 个）**：`GET /matches/{id}/live`（实况卡：timeline+走盘计算）· `POST /matches/{id}/goal-alert`（进球提醒开关）· `GET /parlay/{id}/plans`（方案对比）· `POST /parlay/{id}/confirm`（拆单出票）· `POST /me/rest`（今天不看了）· `PATCH /me/discipline`（连败保护/连败关切）· `GET /analysis-log?match_id=`（分析日志弹层）· `POST /me/under18-lock`（未成年锁定）· `GET /me/comfort`（买后安抚卡内容，也可流内推）
-**编辑台（当前实现：密码 + HttpOnly cookie + 可选 IP 白名单；HTML 页面，非 JWT JSON API）**：`GET /console/variants` · `POST /console/variants`（A/X/Q，进程内）· `GET /console`（日报）· `GET /console/alerts` · `GET /console/personas`（模型池/人设/槽位）· `GET /console/plans`（组合预览）；`/console/daily`、`/console/tickets`、`/console/variants/{id}/decide`、`/console/recommendations` 仍是 v1.5 目标，未实现。
-**商业化/合规（8）**：`POST /billing/rc/webhook|wechat/notify` · `GET /subscription` · `POST /compliance/{self-exclusion,self-assessment,limits}` · `POST /push/preferences` · `GET /push/health`（权限状态）
+**管理后台（当前实现：`/admin` + `/admin/api/*`，admin_users RBAC + CSRF + 会话撤销 + 审计）**：模型池/人设/推荐主链（复核/发布/撤回/批量）/组合/数据/运维/账号/审计/日志；旧 `/console/*` 全部 302 下线。编辑台变体精选（narrative_pool）仍是 v1.5 目标。
+**商业化/合规（8）**：`POST /billing/rc/webhook|wechat/notify` · `GET /subscription`（待做）· `GET /compliance/state` · `POST /compliance/{self-exclusion,self-assessment}` · `POST /gate/verify` · `POST /me/under18-lock`（合规已实现；limits 待做）· `POST /push/preferences` · `GET /push/health`（权限状态）
 
 **规范**：RFC 7807；`Idempotency-Key` 全 POST；免登录白名单（cost/evidence/why-not/ledger/stream.public/gate/on-sale）；限速 chat 20/h、验证码 5/h/IP；**深链路由表随构建配置发布（§3.6）**；错误码→UI 映射：每个 problem+json 类型对应一个预置文案与重试动作，未登记类型兜底"出了点问题，正在修"。
 
@@ -571,7 +577,7 @@ locale 协商 path>cookie>系统；market profile YAML（源/edge 论点/LegalSl
 
 ## 11. 安全
 
-AEAD 加密手机号（KMS）· refresh 旋转+复用检测 · 自排除中间件（451+helpline）· 备份 RTO 1h/RPO 5min 季度演练 · 密钥 90 天轮换 · 防薅设备指纹 · 成本标签字段水印。
+AEAD 加密手机号（KMS）· refresh 旋转+复用检测 · 合规硬拦截（未成年 403 / 自排除·休息中 423，`/bets` 与 focus capabilities 双执行，2026-11-05 已上线）· 后台 CSRF+RBAC+会话撤销+审计 · 备份 RTO 1h/RPO 5min 季度演练（待落地）· 密钥 90 天轮换 · 防薅设备指纹 · 成本标签字段水印。
 
 ---
 
@@ -628,7 +634,7 @@ AEAD 加密手机号（KMS）· refresh 旋转+复用检测 · 自排除中间�
 - 赔率四格式互转纯函数（欧/港/印尼/美式）
 - 对齐：联赛映射→±1 天→别名精确→编辑距离≥0.85→人工队列（日≤5），匹配率<98% 告警
 - i18n key：`域.页面.槽位[.状态]`
-- 环境变量：`SUPABASE_URL/ANON/SERVICE · RC_API_KEY · JPUSH_APPKEY · ODDS_API_KEY · LINEUP_API_KEY · LIVE_SCORE_KEY · LLM_API_KEY · KMS_KEY · MARKET_DEFAULT · DATA_REGION · BETFAIR_USER/CERT/APPKEY（M2）`
+- 环境变量（当前，不用 Supabase）：`JQ_DATABASE_URL · JQ_JWT_SECRET · JQ_ADMIN_PASSWORD · RC_API_KEY（待）· JPUSH_APPKEY/MASTER_SECRET（待）· JQ_ODDS_API_KEY · JQ_API_FOOTBALL_KEY · JQ_LLM_FAST/DEEP_API_KEY · JQ_PERSONA_LLM_API_KEY/ENC_KEY · MARKET_DEFAULT · DATA_REGION · BETFAIR_USER/CERT/APPKEY（M2）`
 - **数据源适配层接口**（换源不动业务）：
 ```python
 class SourceAdapter(Protocol):

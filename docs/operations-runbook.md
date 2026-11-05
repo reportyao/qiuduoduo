@@ -51,10 +51,11 @@ python deploy.py
 | `0 3 * * *` | `app.purge_cli`（注销冷静期满清理） |
 | `* * * * *` | `app.features.assistant.worker --once`（事件/扇出/推送） |
 | `10 4 * * 0` | `app.db_maint --apply`（保留策略） |
+| `15 6 * * *` | `app.api_football_cli sync`（**仅配置了 `JQ_API_FOOTBALL_KEY` 的部署自动安装**） |
 
 cron 中 `JQ_DB_STATEMENT_TIMEOUT_MS=0`，避免批量任务被 API 的 15s 语句超时打断。
 
-API-Football 同步目前不写进 deploy cron，按需手动执行 `python -m app.api_football_cli sync --date $(date +%F)`；免费档 90/日，避免与 30 分钟 seed 抢额度。
+API-Football 同步：配置了 `JQ_API_FOOTBALL_KEY` 的部署，`deploy.py` 会自动安装每日 06:15 的 sync cron；未配置则不装（避免无意义失败日志），也可手动 `python -m app.api_football_cli sync --date $(date +%F)`。免费档 90/日，避免与 30 分钟 seed 抢额度。
 
 ## 5. 健康与告警
 
@@ -63,9 +64,9 @@ curl -s 'http://127.0.0.1:8100/health'            # 轻量：DB ping + 延迟 + 
 curl -s 'http://127.0.0.1:8100/health?detailed=1' # 额外全表 count，勿给探针高频调用
 ```
 
-`/admin` 运维页自动提示：封存链断裂、采集同步延迟 >35/90 分钟、无 SP 快照、the-odds-api 未配、控制台密码未设。
+`/admin` 运维页自动提示四类告警：SP 数据不可用或延迟（`sync_lag` 为空或 >1800s=30 分钟）、封存链异常、复核失败条数、API-Football 未配置。告警为请求时现算，尚无持久化/确认/外发（见 §10）。
 
-**聚焦决策流（后端已实现，前端部分接入）**：`GET /stats/pulse` 与 `/admin` 数据源页同口径；源延迟/覆盖率告警复用本节阈值。数据点展示系数（默认 3、上限 5）只乘字段/数据点，不乘场次/封存数；后台同时展示 raw/display。契约见 [focused-decision-flow.md](./focused-decision-flow.md)。
+**聚焦决策流（前后端已接通）**：`GET /stats/pulse` 与 `/admin` 数据源页同口径；源延迟/覆盖率告警复用本节阈值。数据点展示系数（默认 3、上限 5）只乘字段/数据点，不乘场次/封存数；后台同时展示 raw/display。契约见 [focused-decision-flow.md](./focused-decision-flow.md)。
 
 ## 6. 管理后台
 
@@ -86,7 +87,7 @@ curl -s 'http://127.0.0.1:8100/health?detailed=1' # 额外全表 count，勿给�
   - 组合预览、数据源、运维（告警/API-Football/通知队列/Push/24h 互动）、账号、审计、日志。
 - **审计**：`admin_audit` 记录 actor/role/action/target/before/after/IP；登录、模型、人设、推荐发布、账号变更均写入；`/admin/api/audit?limit=&offset=` 读取。
 - **分页**：`/admin/api/recommendations?limit=&offset=` 返回 `page.has_more/next_offset`；审计同样 limit/offset；日志只读尾部 256KB。
-- **GET 只读**：`/admin/api/overview`、`/recommendations` 不再写库；过期由 30 分钟 cron 的 `run_pipeline → expire_due` 处理；`/recommendations/today` 只按 `expires_at` 过滤。
+- **GET 只读**：`/admin/api/*` 与 `/recommendations/today` 只读不写库；过期由 30 分钟 cron 的 `run_pipeline → expire_due` 处理，`/recommendations/today` 只按 `expires_at` 过滤。公开详情 `GET /recommendations/{id}`、`/recommendations/plans/{id}` 仍会惰性 `expire_due`（读时顺带过期），属预期。
 - **会话/横向扩展**：`admin_t` 会话在进程内存；多 worker 前需换 Redis/DB 会话。
 - **W8 冻结**：新增路由后登录后台调用 `POST /review/freeze/adopt`；当前基线 **145 路由**。
 
@@ -178,5 +179,7 @@ JQ_DB_STATEMENT_TIMEOUT_MS=0 python -m app.db_maint --apply --json
 
 - TLS/反代、多进程会话；
 - 备份/PITR 自动化；
-- 真实 JPush、支付、OCR、服务端合规同步、真实 live feed；
+- 真实 JPush、支付/权益、OCR、真实 live feed/进球提醒、持久化告警/任务中心；
 - 真实 Android APK / iOS 原生构建验收。
+
+> 合规服务端同步已于 2026-11-05 闭环（年龄门/未成年/自排除/PGSI + `/bets`、focus 硬拦截），不再列入未完成。

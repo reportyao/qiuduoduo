@@ -12,7 +12,9 @@
 >
 > 实现说明（2026-11-04）：生产前端已从 `jieqiu-app/index.html` 迁到 `apps/mobile/`；旧 HTML 仅作设计参考，不再加功能。PRD 是产品事实源，技术实现/当前状态以 `TechSpec-v2.1.md`、`Feature-API-Mapping-v1.0.md`、`Release-plan-v1.1.md` 和 `docs/reviews/2026-11-04-full-stack.md` 为准。
 
-> 交互目标补充（2026-11-04）：首页从“12 张卡 + 常驻输入框”改为“数据脉搏 → 选一场 → 聚焦一场 → 客观情报/解读 → 动作按钮”；选比赛后回首页聚焦，不直接跳详情。前端“选中比赛→回首页聚焦”已实现，数据脉搏首屏与客情卡尚未接；后端 focus/pulse/interactions 已实现，`intel_items`/`match_coverage`/`pulse_daily` 情报表仍为设计稿。完整交互/API/后台见 [docs/focused-decision-flow.md](docs/focused-decision-flow.md)；多模型 fast/deep 路由与预算见 [docs/llm-gateway.md](docs/llm-gateway.md)（Phase 1 已实现：open_chat→fast；deep/解读待做）。
+> 交互目标补充（2026-11-04）：首页从“12 张卡 + 常驻输入框”改为“数据脉搏 → 选一场 → 聚焦一场 → 客观情报/解读 → 动作按钮”；选比赛后回首页聚焦，不直接跳详情。前端“选中比赛→回首页聚焦”、真实数据脉搏指标、聚焦面板（覆盖率/事实/未知项/动作）、在售覆盖筛选与互动埋点已实现；后端 focus/pulse/interactions 已实现，`intel_items`/`match_coverage`/`pulse_daily` 情报表仍为设计稿。完整交互/API/后台见 [docs/focused-decision-flow.md](docs/focused-decision-flow.md)；多模型 fast/deep 路由与预算见 [docs/llm-gateway.md](docs/llm-gateway.md)（Phase 1 已实现：open_chat→fast；deep/解读待做）。
+>
+> 实现进展（2026-11-05）：推荐主链（今日主看/方向判断/参考组合，build→L1–L5 AI 复核→publish，公开契约带方向/成立条件/失效条件/复核徽章）已落地；合规服务端闭环（年龄门/未成年锁定/自排除/PGSI，记注硬拦截）已上线；管理后台 `/admin`（RBAC+CSRF+审计）已上线。付费/权益、三套人设推荐文案、真实推送仍待做。
 
 ---
 
