@@ -96,7 +96,7 @@ export default function MeScreen() {
     <AppScreen bottom={false}>
       <AppHeader
         title="我的"
-        subtitle="球多多 · AI 助理"
+        subtitle="球多多 · AI 预测"
         showAssistant={false}
         right={
           <View>
@@ -170,7 +170,7 @@ export default function MeScreen() {
           />
           <SettingsRow
             title={rested ? "今天休息中" : "今天不看了"}
-            subtitle={rested ? "明晚结论照常等你" : "随时可以停，反悔也能恢复"}
+            subtitle={rested ? "明晚预测照常等你" : "随时可以停，反悔也能恢复"}
             right={
               <Toggle
                 value={rested}

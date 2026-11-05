@@ -4,9 +4,9 @@
 - 未结算/未推 → 复述状态，不做归因
 - lose 且封存时市闸 pending → 「信息不足」
 - lose 且 pick 概率 ≥ 60% → 「高置信落空（随机波动）」
-- lose 且收缩前模型与市场偏差 > 8pp → 「强判断落空（曾大幅偏离市场）」
+- lose 且收缩前模型与市场偏差 > 8pp → 「强预测落空（曾大幅偏离市场）」
 - 其余 lose → 「随机波动」
-- win → 「判断兑现」，附是否收缩触发（侥幸/实力标注）
+- win → 「预测兑现」，附是否收缩触发（侥幸/实力标注）
 
 what-if（诚实口径）：
 - 用户注单 realized P&L
@@ -32,7 +32,7 @@ def attribute(v: Verdict) -> dict:
     if v.settled == "win":
         shrunk = (v.payload or {}).get("model", {}).get("shrunk") or [0, 0, 0]
         top = max(shrunk)
-        return {"settled": True, "class": "判断兑现",
+        return {"settled": True, "class": "预测兑现",
                 "note": f"中奖（{v.result_score}）。收缩后置信 {top*100:.1f}%。"}
     gates = v.gates or {}
     market_pending = gates.get("market", {}).get("result") == "pending_data"
@@ -42,13 +42,13 @@ def attribute(v: Verdict) -> dict:
         return {"settled": True, "class": "信息不足",
                 "note": "封存时国际盘缺席（单源复核），市场一致性未验证。"}
     if deviation is not None and deviation > 0.08:
-        return {"settled": True, "class": "强判断落空",
+        return {"settled": True, "class": "强预测落空",
                 "note": f"模型曾偏离市场 {deviation*100:.1f}pp（收缩纪律已减半），本次偏离未兑现。"}
     if pick_prob >= 0.60:
         return {"settled": True, "class": "高置信落空",
                 "note": f"置信 {pick_prob*100:.1f}% 仍落——随机波动，注意长期样本而非单场。"}
     return {"settled": True, "class": "随机波动",
-            "note": f"置信 {pick_prob*100:.1f}% 的判断，结果落在少数侧——正常。"}
+            "note": f"置信 {pick_prob*100:.1f}% 的预测，结果落在少数侧——正常。"}
 
 def _pre_shrink_deviation(v: Verdict) -> float | None:
     """收缩前模型概率（payload.model.raw 若有）与市场去水的最大偏差。"""
@@ -93,7 +93,7 @@ def postmortem(v: Verdict) -> dict:
 
 def _whatif_promoted(v: Verdict) -> str:
     if v.settled == "win":
-        return "中了。判断与成本账都在封存里可复算。"
+        return "中了。预测与成本账都在封存里可复算。"
     if v.settled == "lose":
         return (f"未中（{v.result_score}）。若下注 100 元，本次亏损 100 元——"
                 "这类场次长期按置信概率兑现，单场落空已在预期内。")
@@ -181,7 +181,7 @@ def weekly_report(db: Session, user_id: str | None = None) -> dict:
 
 
 def _within_days(date_str: str, days: int) -> bool:
-    """CN 时区口径的近 N 天判断（服务器可能非 CST，不能用本地 date.today()）。"""
+    """CN 时区口径的近 N 天预测（服务器可能非 CST，不能用本地 date.today()）。"""
     from datetime import date as _d, timedelta as _td
     try:
         y, m, d = map(int, date_str.split("-"))

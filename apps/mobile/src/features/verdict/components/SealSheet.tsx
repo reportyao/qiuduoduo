@@ -31,7 +31,7 @@ export function SealSheet({ visible, verdictId, sealed = true, onClose }: SealSh
       visible={visible}
       onClose={onClose}
       title="封存与验证"
-      subtitle="结论赛前封存。改一个字，哈希就对不上。"
+      subtitle="预测赛前封存。改一个字，哈希就对不上。"
       footer={
         seal ? (
           <Button label="复制完整哈希" variant="secondary" icon="copy-outline" onPress={copyHash} fullWidth />

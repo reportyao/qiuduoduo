@@ -31,17 +31,17 @@ export function DetailHero({
   );
   const pickLabel = detail.pick?.dir
     ? pickDirectionLabel(detail.pool, detail.pick.dir)
-    : "暂不选择";
+    : "暂不预测";
   const summary = copy.verdictSummary({
     status: detail.status,
     pickLabel,
     prob: detail.pick?.prob ?? null,
     rake: detail.rake,
     pendingGate: pending ? `${gateLabel(pending)}闸` : null,
-    gateNote: pending ? "数据没齐，先不推。" : "",
+    gateNote: pending ? "数据没齐，暂不发布预测。" : "",
   });
   const statusLabel =
-    detail.status === "promoted" ? "三关全过" : detail.status === "killed" ? "已砍" : "复核中";
+    detail.status === "promoted" ? "三关通过" : detail.status === "killed" ? "本期不预测" : "预测复核中";
   const statusColor =
     detail.status === "promoted"
       ? colors.greenAccent
@@ -68,12 +68,12 @@ export function DetailHero({
         <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>
           {detail.league || "联赛待同步"} · {detail.pool === "hhad" ? `让球 ${detail.goalLine ?? ""}` : "胜平负"}
         </Text>
-        <Chip label="三关 v3" tone={dark ? "dark" : "neutral"} />
+        <Chip label="预测引擎 v3" tone={dark ? "dark" : "neutral"} />
       </View>
 
       <View style={styles.pickRow}>
         <View style={styles.flex}>
-          <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>选择</Text>
+          <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>预测</Text>
           <Text variant="h1" color={dark ? colors.inkInverse : colors.ink}>{pickLabel}</Text>
           <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>
             官方抽水 {pct(detail.rake)} · 阈值 {pct(detail.rakeThreshold)}
@@ -84,7 +84,7 @@ export function DetailHero({
             {detail.pick?.prob != null ? pct(detail.pick.prob) : "—"}
           </Text>
           <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>
-            {detail.pick?.prob != null ? "模型置信" : "模型置信待定"}
+            {detail.pick?.prob != null ? "预测概率" : "预测概率待定"}
           </Text>
         </View>
       </View>

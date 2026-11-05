@@ -40,7 +40,7 @@ export default function RecordsScreen() {
     <AppScreen bottom={false}>
       <AppHeader
         title="我的记录"
-        subtitle="球多多 · AI 助理"
+        subtitle="球多多 · AI 预测"
         showAssistant={false}
         right={<Chip label={session?.mode === "jwt" ? "已登录" : "设备账户"} tone="neutral" />}
       />
@@ -93,7 +93,7 @@ export default function RecordsScreen() {
           <EmptyState
             title="还没有记过注"
             body="在首页三关全过的卡片上点「记一注」，这里就会出现你的真实记录。球多多只记账，不代购。"
-            actionLabel="看今日结论"
+            actionLabel="看今日预测"
             onAction={() => router.push("/(tabs)")}
             secondaryLabel="看公开账本"
             onSecondary={() => router.push("/records/ledger")}

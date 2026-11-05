@@ -16,7 +16,7 @@
 ```text
 app/                         Expo Router 路由（只做布局与页面组合）
   (tabs)/                    首页 / 工具 / 记录 / 我的
-  verdict/[id].tsx           判决完整账
+  verdict/[id].tsx           预测完整页
   match/[id].tsx             为什么不推 / 复核中说明
   share/[id].tsx             分享落地页（编号可验）
   tools/*                    7 个工具页（公开账本为第 8 个工具，路由在 records/）
@@ -41,9 +41,9 @@ src/
 | 路由 | 作用 |
 |---|---|
 | `/` | 读本地年龄状态后分流：onboarding / minor / tabs |
-| `/(tabs)` | 今日判决流（三条横幅 + AI 实体 + 卡片 + 对话入口） |
+| `/(tabs)` | 今日预测流（三条横幅 + AI 实体 + 卡片 + 对话入口） |
 | `/verdict/[id]` | 完整账：三关明细、情报、证据、封存、记一注、关注、分享 |
-| `/match/[id]?date=` | 为什么不推；404 时明确显示“没有判决记录” |
+| `/match/[id]?date=` | 为什么不出预测；404 时明确显示“没有预测记录” |
 | `/share/[id]` | 分享落地页：编号=content_hash 前 12 位可验，篡改即暴露 |
 | `/tools/parlay` | 串关体检 2.0 + 串关参谋：选腿/体检 `POST /tools/parlay/check`；自动配 `POST /tools/parlay/plan`（未复核预览） |
 | `/tools/rake` | 抽水 / 返还率 / 去水概率 / 公平赔率 |

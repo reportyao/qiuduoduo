@@ -12,7 +12,7 @@
 - 新增的 catalog/actions 已按 feature slice 落地；verdict/assistant 仍是混合目录，迁移未完成。
 - **聚焦决策流部分实现**：前端已有 `focusStore`、头像/选择器选中回首页聚焦、聚焦卡、详情页“让助理看这场”；后端 `/stats/pulse`、`/matches/{id}/focus`、`/interactions`、`interaction_events` 已实现；`/matches/on-sale` 已返回与 focus 同一判定的 `coverage`；`intel_items`/`match_coverage`/`pulse_daily` 与前端数据脉搏首屏仍未实现。目标契约见 [focused-decision-flow.md](./focused-decision-flow.md)。
 - **API-Football 已接入但默认关闭**：配置 `JQ_API_FOOTBALL_KEY` 后同步 fixtures/lineups/injuries/standings；未配置时 focus 明确返回 missing，不伪造。见 [api-football.md](./api-football.md)。
-- **产品口径 2026-11-05 转向**：允许经 AI 复核的方向判断/参考组合/串关参谋；推荐主链（`decision_snapshots`/`recommendation_plans` + AI 复核/发布）已实现，Today Hero 优先消费 published snapshot，`/tools/parlay/plan` 保留未复核预览，付费/权益待做，见 [recommendation-product.md](./recommendation-product.md)。
+- **产品口径 2026-11-05 转向**：允许经 AI 复核的赛前预测/参考组合/串关参谋；推荐主链（`decision_snapshots`/`recommendation_plans` + AI 复核/发布）已实现，Today Hero 优先消费 published snapshot，`/tools/parlay/plan` 保留未复核预览，付费/权益待做，见 [recommendation-product.md](./recommendation-product.md)。
 - **LLM Gateway Phase 1 已实现**：`open_chat` fallback → fast，带缓存、原子预算、PII 脱敏、调用账本与 后台 `/admin` 模型用量页只读看板；persona 传输已走 `call_profile`；deep 分析与 focus 解读待 Phase 2。见 [llm-gateway.md](./llm-gateway.md)。
 - **推荐主链已实现**：`decision_snapshots` + `recommendation_plans` + `review_runs` + `recommendation_events`；build → L1–L5 review → publish → expire/withdraw；`GET /recommendations/today` 只返回 published；Today Hero 已优先消费 snapshot，组合页已优先 published，preview 仅回退。见 [recommendation-product.md](./recommendation-product.md)。
 
@@ -163,10 +163,10 @@ packages/api       生成的 client
 
 ## 9. 内容与发布规则（2026-11-05 修订）
 
-- 允许经 AI 复核的方向判断、参考组合与参考预算；不承诺收益。
+- 允许经 AI 复核的赛前预测、参考组合与参考预算；不承诺收益。
 - 推荐观点/组合正式发布必须经 `decision_snapshots` / `recommendation_plans` 的 AI 复核流水线（L1–L5 → publish）；当前 `/tools/parlay/plan` 是未复核预览，不得进入付费区。
 - 公开文案用委婉语；付费详情必须写明方向、条件、失效条件与成本。
-- 推送只写“今日判断已更新”等中性提示，不写具体赔率/结果。
+- 推送只写“今日预测已更新”等中性提示，不写具体赔率/结果。
 - 年龄确认、自排除、连败保护作为支付/上架能力保留；
 - 用户原始下注数据不得上传第三方。
 

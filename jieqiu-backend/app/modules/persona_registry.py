@@ -40,7 +40,7 @@ DEFAULT_SLOTS = {
     "empty": "今天没有足够值得主看的场次。",
     "postmatch": "昨天主看 {result}，过程 {process}。",
     "review_badge": "AI 复核 · {time} · v{version}",
-    "push": "今日判断已更新：{count} 条观点。",
+    "push": "今日预测已更新：{count} 条观点。",
 }
 
 

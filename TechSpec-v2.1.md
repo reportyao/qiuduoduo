@@ -10,7 +10,7 @@
 
 > AI 助理运行时（监控/推送/记忆）P0 已实现：events / notifications / watch_targets / push_tokens / notify_settings / inbox / worker / 控制台助理页；详见 [Assistant-Runtime-v1.0.md](Assistant-Runtime-v1.0.md) §18。
 
-> 2026-11-05 产品口径修订：允许经 AI 复核的方向判断/参考组合/串关参谋；免费付费、AI 复核流水线与文案规则见 [docs/recommendation-product.md](docs/recommendation-product.md)。
+> 2026-11-05 产品口径修订：允许经 AI 复核的赛前预测/参考组合/串关参谋；免费付费、AI 复核流水线与文案规则见 [docs/recommendation-product.md](docs/recommendation-product.md)。
 >
 > 2026-11-04 目标补充：首页“数据脉搏 → 选一场 → 聚焦一场 → 客观情报 → 动作按钮”的交互与 focus/pulse/interactions API、数据表、管理后台设计见 [docs/focused-decision-flow.md](docs/focused-decision-flow.md)；多模型 fast/deep 路由、预算与 `/admin` 模型用量页见 [docs/llm-gateway.md](docs/llm-gateway.md)。前端“选中→回首页聚焦”、真实数据脉搏/聚焦面板/覆盖筛选/互动埋点已实现；后端 focus/pulse/interactions 已实现，intel 持久化表仍为设计稿；当前 OpenAPI 为 **128/143**。
 >
@@ -488,7 +488,7 @@ ERROR 阻断入库并告警；WARN 记录并进日报。空抓取（当日 0 行
 
 ### 8.8 AI 研判层：LLM 深度分析如何并入而不破坏准确率
 
-**定位（必须写死）**：LLM 是**情报合成器与情景分析师**，不是概率预测器。最终概率 = 统计模型 ⊕ 有界信号调整（LLM 只贡献 ≤±3pp 的情景判断 + 信息完备度判定 + 解释）。数字口径永远可回测，LLM 的贡献有上限、可关闭、可审计。
+**定位（必须写死）**：LLM 是**情报合成器与情景解释器**，不是概率预测器；方向和概率仍由统计模型产出。最终概率 = 统计模型 ⊕ 有界信号调整（LLM 只贡献 ≤±3pp 的情景判断 + 信息完备度判定 + 解释）。数字口径永远可回测，LLM 的贡献有上限、可关闭、可审计。
 
 #### 8.8.1 数据流（漏斗后置，成本可控）
 

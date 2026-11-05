@@ -67,9 +67,9 @@ export function DataStatusSheet({
         { name: "赛程 / 停售", status: "已同步", ok: true },
       ];
   return (
-    <Sheet visible={visible} onClose={onClose} title="数据状态" subtitle="每条判断都带来源与截止时间。">
+    <Sheet visible={visible} onClose={onClose} title="数据状态" subtitle="每条预测都带来源与截止时间。">
       <Text variant="small" color={colors.muted} style={styles.paragraph}>
-        {stream?.stats.gateNote || "三关引擎：价=抽水阈值 · 市=多源分歧 · 模=收缩置信。"}
+        {stream?.stats.gateNote || "预测引擎：价=抽水阈值 · 市=多源分歧 · 模=收缩置信。"}
       </Text>
       <View style={styles.sourceList}>
         {rows.map((row) => (

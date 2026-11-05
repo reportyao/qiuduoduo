@@ -1,6 +1,6 @@
 # 球多多 Monorepo
 
-有判断、有参考组合的赛前决策助手。**Decision Snapshot → AI Review → Publish 主链已接**，`/admin` 运营台已上线，合规（年龄门/未成年锁定/自排除）服务端闭环已落地，不承诺结果。
+有赛前预测、概率区间和参考组合的决策助手。**Decision Snapshot → AI Review → Publish 主链已接**，`/admin` 运营台已上线，合规（年龄门/未成年锁定/自排除）服务端闭环已落地，不承诺结果。
 
 - 仓库：https://github.com/reportyao/qiuduoduo （公开）
 - 生产前端：`apps/mobile/`（Expo React Native，Android 先发，iOS 后补）

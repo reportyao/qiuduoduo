@@ -39,7 +39,7 @@ export default function PersonaScreen() {
   };
 
   return (
-    <SettingsPage title="助理风格" subtitle="只改语气，不改判断" onBack={() => goBackOr(router)}>
+    <SettingsPage title="助理风格" subtitle="只改语气，不改预测" onBack={() => goBackOr(router)}>
       <Card style={styles.intro}>
         <Text variant="h3">选一个说话方式</Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>
@@ -82,7 +82,7 @@ export default function PersonaScreen() {
       </View>
 
       <Card tone="green" style={styles.preview}>
-        <Text variant="overline" color={colors.green}>预览 · 今晚的结论会这样说</Text>
+        <Text variant="overline" color={colors.green}>预览 · 今晚的预测会这样说</Text>
         <Text variant="body" color={colors.ink} style={styles.paragraph}>
           {meta.sample}
         </Text>

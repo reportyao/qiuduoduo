@@ -230,7 +230,7 @@ export default function ParlayToolScreen() {
 
   return (
     <AppScreen bottom={false}>
-      <AppHeader title="串关体检" showAssistant={false} onBack={() => goBackOr(router)} />
+      <AppHeader title="串关参谋" showAssistant={false} onBack={() => goBackOr(router)} />
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
@@ -240,7 +240,7 @@ export default function ParlayToolScreen() {
         <Text variant="overline" color={colors.green}>串关参谋 · 帮我配</Text>
         <Text variant="display" style={styles.title}>先看组合，再自己改。</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
-          从今日有明确方向的场次生成参考组合；也可以往下自己选 2–4 场做四维体检。
+          从今日有预测的场次生成参考组合；也可以往下自己选 2–4 场做四维体检。
           当前显示：{oddsFormatLabel(oddsFormat)}。
         </Text>
         <DateStrip
@@ -258,7 +258,7 @@ export default function ParlayToolScreen() {
         <View style={styles.planBox}>
           <Text variant="captionStrong" color={colors.muted}>帮我配</Text>
           <Text variant="small" color={colors.muted}>
-            从今日有方向的场次生成保守/均衡/进取参考组合；没有足够腿就不硬配。
+            从今日有预测的场次生成保守/均衡/进取参考组合；没有足够腿就不硬配。
           </Text>
           <Button
             label={plan.isPending ? "生成中…" : "生成参考组合"}
@@ -403,7 +403,7 @@ export default function ParlayToolScreen() {
           </Text>
         </View>
         <Button
-          label={legs.length < 2 ? "再选一场" : check.isPending ? "体检中…" : report ? "查看结果" : "开始体检"}
+          label={legs.length < 2 ? "再选一场" : check.isPending ? "分析中…" : report ? "查看结果" : "开始分析"}
           variant="primary"
           disabled={legs.length < 2 || check.isPending}
           onPress={startReport}

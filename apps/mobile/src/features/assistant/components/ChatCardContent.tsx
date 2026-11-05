@@ -12,8 +12,8 @@ export interface ChatMessage {
 }
 
 export const INTENT_LABEL: Record<string, string> = {
-  buy_tonight: "今日结论",
-  why_not: "死因",
+  buy_tonight: "今日预测",
+  why_not: "未出原因",
   postmortem: "复盘",
   memory_write: "记忆",
   memory_query: "记忆",
@@ -70,7 +70,7 @@ export function ChatCardContent({
         />
       ) : null}
 
-      {card?.deadGate ? <Chip label={`死因：${card.deadGate}`} tone="amber" /> : null}
+      {card?.deadGate ? <Chip label={`未出原因：${card.deadGate}`} tone="amber" /> : null}
 
       {card?.conflict && !confirmed ? (
         <Card tone="amber" style={styles.conflict}>
@@ -101,7 +101,7 @@ export function ChatCardContent({
 
       {card?.verdictId ? (
         <Button
-          label="看完整账"
+          label="看完整预测"
           variant="secondary"
           size="sm"
           onPress={() => onOpenVerdict(card.verdictId!)}

@@ -28,7 +28,7 @@ _INTENT_RULES: list[tuple[str, tuple[str, ...]]] = [
     ("protection", ("连败", "保护", "降温")),
     ("lookup_team", ("查：", "查一下", "怎么看")),
     ("buy_tonight", ("今晚买啥", "今晚买什么", "今晚看哪场", "今晚看什么", "看哪场",
-                     "有什么推荐", "买啥", "推一场")),
+                     "今日预测", "有什么预测", "看预测", "有什么推荐", "买啥", "推一场")),
 ]
 
 
@@ -62,7 +62,7 @@ def respond(db: Session, user: User | None, text: str,
             card["text"] = (f"{verdict.get('home')} vs {verdict.get('away')}：三关全过，已发布。"
                             f"详情与封存哈希见卡片。")
         else:
-            card["text"] = "今晚还没有已发布的判断——没有就不推，这是纪律。"
+            card["text"] = "今晚还没有已发布的预测——没有就不推，这是纪律。"
 
     elif intent == "why_not":
         killed = db.scalars(
@@ -74,9 +74,9 @@ def respond(db: Session, user: User | None, text: str,
             card["verdict_id"] = killed.id
             card["dead_gate"] = next((g for g in ("price", "market", "model")
                                       if killed.gates.get(g, {}).get("result") == "fail"), None)
-            card["text"] = f"最近被砍的是 {killed.home} vs {killed.away}，死因见卡片。"
+            card["text"] = f"最近没给预测的是 {killed.home} vs {killed.away}，原因见卡片。"
         else:
-            card["text"] = "今日暂无被砍场次记录。"
+            card["text"] = "今日暂无未给预测的场次记录。"
 
     elif intent == "memory_write":
         if user is None:
@@ -148,8 +148,8 @@ def respond(db: Session, user: User | None, text: str,
         card["text"] = "报「查：队名」我可以定位到具体判决。"
 
     else:  # fallback
-        card["text"] = ("我聊今晚看哪场、为什么不推、你的复盘和记忆。"
-                        "试试：今晚看哪场 / 为什么不推 / 复盘 / 记住我的主队是曼城。")
+        card["text"] = ("我聊今日预测、为什么不出、你的复盘和记忆。"
+                        "试试：今日预测 / 为什么不出 / 复盘 / 记住我的主队是曼城。")
         # 匿名用户固定引导（0 LLM）；登录后跑题/开放问题才进入 fast。
         if user is not None:
             from .llm_gateway import complete

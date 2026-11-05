@@ -93,7 +93,7 @@ export default function OnSaleScreen() {
           {([
             ["all", "全部"],
             ["single", "单关"],
-            ["promoted", "过三关"],
+            ["promoted", "通过三关"],
             ["screening", "复核中"],
             ["covered", "覆盖足"],
           ] as [Filter, string][]).map(([key, label]) => (
@@ -212,11 +212,11 @@ export default function OnSaleScreen() {
             <View style={styles.kv}>
               <Text variant="small" color={colors.muted}>状态</Text>
               <Text variant="bodyStrong">
-                {selected.status === "promoted" ? "三关全过" : selected.status === "screening" ? "复核中" : "暂无判断"}
+                {selected.status === "promoted" ? "三关全过" : selected.status === "screening" ? "复核中" : "暂无预测"}
               </Text>
             </View>
             <Text variant="caption" color={colors.muted} style={styles.sheetNote}>
-              这场还没出结论。关注后，停售前和终场会收到中性提醒；通知里不会出现队名和赔率。
+              这场还没出预测。关注后，停售前和终场会收到中性提醒；通知里不会出现队名和赔率。
             </Text>
           </>
         ) : null}

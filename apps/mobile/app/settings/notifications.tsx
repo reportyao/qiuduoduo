@@ -26,8 +26,8 @@ import { errorText } from "@/lib/errors";
 import { colors, spacing } from "@/theme/tokens";
 
 const EVENT_OPTIONS = [
-  { id: "verdict_change", label: "结论变化" },
-  { id: "verdict_promoted", label: "过三关" },
+  { id: "verdict_change", label: "预测更新" },
+  { id: "verdict_promoted", label: "新预测" },
   { id: "close_soon", label: "停售提醒" },
   { id: "final", label: "终场" },
   { id: "settled", label: "结算" },

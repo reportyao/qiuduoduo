@@ -79,7 +79,7 @@ export default function VerdictDetailScreen() {
   if (detailQuery.isLoading) {
     return (
       <AppScreen bottom={false}>
-        <AppHeader title="完整账" showAssistant={false} onBack={() => goBackOr(router)} />
+        <AppHeader title="完整预测" showAssistant={false} onBack={() => goBackOr(router)} />
         <View style={styles.loading}>
           <Skeleton height={320} radius={26} />
           <Skeleton height={150} radius={20} style={{ marginTop: spacing.base }} />
@@ -92,10 +92,10 @@ export default function VerdictDetailScreen() {
   if (!detail) {
     return (
       <AppScreen bottom={false}>
-        <AppHeader title="完整账" showAssistant={false} onBack={() => goBackOr(router)} />
+        <AppHeader title="完整预测" showAssistant={false} onBack={() => goBackOr(router)} />
         <View style={styles.loading}>
           <ErrorState
-            message={detailQuery.isError ? errorText(detailQuery.error) : "这场判断不存在或已下线。"}
+            message={detailQuery.isError ? errorText(detailQuery.error) : "这场预测不存在或已下线。"}
             onRetry={() => detailQuery.refetch()}
           />
         </View>
@@ -107,7 +107,7 @@ export default function VerdictDetailScreen() {
   return (
     <AppScreen bottom={false}>
       <AppHeader
-        title="完整账"
+        title="完整预测"
         subtitle={`${detail.home} vs ${detail.away}`}
         showAssistant={false}
         onBack={() => goBackOr(router)}
@@ -119,7 +119,7 @@ export default function VerdictDetailScreen() {
         {detailQuery.isError ? (
           <ErrorState
             compact
-            message="刷新失败，先显示上次的完整账。"
+            message="刷新失败，先显示上次的完整预测。"
             onRetry={() => detailQuery.refetch()}
           />
         ) : null}
@@ -132,8 +132,8 @@ export default function VerdictDetailScreen() {
           <Text variant="h3">反方怎么看</Text>
           <Text variant="small" color={colors.muted} style={styles.counterText}>
             {detail.status === "promoted"
-              ? `这场的判断是 ${pct(detail.pick?.prob)}，不是「稳」。单场完全可能落在少数侧；如果临场首发或资金方向反转，结论会重算并另做封存。`
-              : "不推，不代表它不会赢。是我们算不清它会不会赢——算不清的就不碰。你可以看三关里到底缺哪一块。"}
+              ? `这场的预测概率是 ${pct(detail.pick?.prob)}，不是「稳」。单场完全可能落在少数侧；如果临场首发或资金方向反转，预测会重算并另做封存。`
+              : "不出预测，不代表它不会赢。是我们算不清它会不会赢——算不清就不预测。你可以看三关里到底缺哪一块。"}
           </Text>
           <Text variant="caption" color={colors.subtle} style={styles.counterText}>
             AI 只做情景与风险解释；最终数字来自统计模型，所有输入都带截止时间。
@@ -153,7 +153,7 @@ export default function VerdictDetailScreen() {
           {copy.footer}
         </Text>
         <Text variant="caption" color={colors.subtle} center style={styles.footer}>
-          封存时间 {detail.sealedAt ? formatDateTime(detail.sealedAt) : "未封存"} · 引擎 {detail.engine || "三关 v3"}
+          封存时间 {detail.sealedAt ? formatDateTime(detail.sealedAt) : "未封存"} · 引擎 {detail.engine || "预测引擎 v3"}
         </Text>
       </ScrollView>
 

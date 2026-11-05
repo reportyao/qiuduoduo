@@ -7,7 +7,7 @@ import { Text } from "@/components/ui/Text";
 import { colors, layout } from "@/theme/tokens";
 
 const META: Record<string, { label: string; icon: IconName; activeIcon: IconName }> = {
-  index: { label: "首页", icon: "home-outline", activeIcon: "home" },
+  index: { label: "预测", icon: "analytics-outline", activeIcon: "analytics" },
   tools: { label: "工具", icon: "grid-outline", activeIcon: "grid" },
   records: { label: "记录", icon: "list-outline", activeIcon: "list" },
   me: { label: "我的", icon: "person-outline", activeIcon: "person" },

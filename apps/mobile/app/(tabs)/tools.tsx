@@ -19,14 +19,14 @@ interface Tool {
 }
 
 const TOOLS: Tool[] = [
-  { key: "parlay", title: "串关体检", subtitle: "多腿组合的返还率与期望", icon: "git-merge-outline", route: "/tools/parlay" },
+  { key: "parlay", title: "串关参谋", subtitle: "从预测生成组合，或自己体检", icon: "git-merge-outline", route: "/tools/parlay" },
   { key: "rake", title: "抽水计算", subtitle: "三向赔率 → 真实抽水", icon: "water-outline", route: "/tools/rake" },
   { key: "odds", title: "赔率换算", subtitle: "欧 / 港 / 印尼 / 美式", icon: "swap-horizontal-outline", route: "/tools/odds" },
   { key: "stake", title: "仓位计算", subtitle: "凯利分数与单注上限", icon: "stats-chart-outline", route: "/tools/stake" },
   { key: "breakeven", title: "回本线", subtitle: "这个赔率要赢多少才不亏", icon: "analytics-outline", route: "/tools/break-even" },
   { key: "onsale", title: "今日在售", subtitle: "停售时间与过闸状态", icon: "calendar-outline", route: "/tools/on-sale" },
-  { key: "whynot", title: "为什么不推", subtitle: "死在哪一关，全部公开", icon: "close-circle-outline", route: "/tools/why-not" },
-  { key: "ledger", title: "公开账本", subtitle: "全部结论与连败都在", icon: "book-outline", route: "/records/ledger" },
+  { key: "whynot", title: "为什么不出", subtitle: "没给预测的场次，原因全公开", icon: "close-circle-outline", route: "/tools/why-not" },
+  { key: "ledger", title: "公开账本", subtitle: "全部预测与连败都在", icon: "book-outline", route: "/records/ledger" },
 ];
 
 export default function ToolsScreen() {
@@ -41,7 +41,7 @@ export default function ToolsScreen() {
     <AppScreen bottom={false}>
       <AppHeader
         title="工具箱"
-        subtitle="球多多 · AI 助理"
+        subtitle="球多多 · AI 预测"
         showAssistant={false}
         right={<Chip label="8 个工具" tone="green" />}
       />
@@ -52,9 +52,9 @@ export default function ToolsScreen() {
         scrollEventThrottle={48}
       >
         <Text variant="overline" color={colors.green}>工具</Text>
-        <Text variant="display" style={styles.title}>把账算清楚。</Text>
+        <Text variant="display" style={styles.title}>把预测看透。</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
-          拍票、比价、体检、复盘。每个工具只回答一个问题：这笔钱花得值不值。
+          预测之后，用这些工具把成本、仓位、组合和复盘算清楚。
         </Text>
 
         <View style={styles.grid}>
@@ -71,14 +71,14 @@ export default function ToolsScreen() {
           <View style={styles.summaryHead}>
             <View style={styles.flex}>
               <Text variant="overline" color={colors.green}>今日数据</Text>
-              <Text variant="h3">{stats ? `复核 ${stats.total} 场` : "正在同步今日场次"}</Text>
+              <Text variant="h3">{stats ? `扫描 ${stats.total} 场` : "正在同步今日场次"}</Text>
             </View>
             <Icon name="pulse-outline" size={20} color={colors.green} />
           </View>
           <View style={styles.metricsRow}>
-            <Metric label="过三关" value={String(stats?.promoted ?? 0)} />
+            <Metric label="通过三关" value={String(stats?.promoted ?? 0)} />
             <Metric label="复核中" value={String(stats?.screening ?? 0)} />
-            <Metric label="已砍" value={String(stats?.priceFail ?? 0)} />
+            <Metric label="未出预测" value={String(stats?.priceFail ?? 0)} />
           </View>
           <Text variant="caption" color={colors.muted} style={styles.summaryNote}>
             {copy.whyNotLead}

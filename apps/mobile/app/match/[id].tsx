@@ -28,7 +28,7 @@ export default function WhyNotScreen() {
   return (
     <AppScreen bottom={false}>
       <AppHeader
-        title={data?.verdictKind === "pending" ? "为什么还不出" : "为什么不推"}
+        title={data?.verdictKind === "pending" ? "为什么还不出" : "为什么不出"}
         subtitle={data?.league || "判决复核"}
         showAssistant={false}
         onBack={() => goBackOr(router)}
@@ -42,7 +42,7 @@ export default function WhyNotScreen() {
           </>
         ) : query.isError || !data ? (
           <Card style={styles.emptyCard}>
-            <Text variant="h3">{notFound ? "这场没有判决记录" : "暂时取不到死因"}</Text>
+            <Text variant="h3">{notFound ? "这场没有预测记录" : "暂时取不到原因"}</Text>
             <Text variant="small" color={colors.muted} style={styles.paragraph}>
               {notFound
                 ? "可能还没进复核池，或数据尚未同步。没有记录就不编原因。"
@@ -58,10 +58,10 @@ export default function WhyNotScreen() {
             <Chip label="三关全过" tone="green" />
             <Text variant="h2" style={styles.promotedTitle}>{data.home} vs {data.away}</Text>
             <Text variant="small" color={colors.muted} style={styles.paragraph}>
-              这场已经过了三关，不该出现在「为什么不推」里。直接看完整账。
+              这场已经有三关通过的预测，不该出现在「为什么不出」里。直接看完整预测。
             </Text>
             <Button
-              label="看完整账"
+              label="看完整预测"
               onPress={() =>
                 data.verdictId
                   ? router.push({ pathname: "/verdict/[id]", params: { id: data.verdictId } })
@@ -75,7 +75,7 @@ export default function WhyNotScreen() {
             <Card style={[styles.hero, data.verdictKind === "fail" ? styles.failHero : styles.pendingHero]}>
               <View style={styles.heroHead}>
                 <Chip
-                  label={data.verdictKind === "pending" ? "复核中" : "已砍"}
+                  label={data.verdictKind === "pending" ? "预测复核中" : "未给预测"}
                   tone={data.verdictKind === "pending" ? "amber" : "danger"}
                 />
                 <Text variant="caption" color={colors.muted}>
@@ -86,13 +86,13 @@ export default function WhyNotScreen() {
               <Text variant="h3" style={styles.title}>{friendlyTitle(data)}</Text>
               <Text variant="small" color={colors.muted} style={styles.paragraph}>
                 {data.verdictKind === "pending"
-                  ? "不是不推，是还在等关键数据。数据齐了会自动重评，不会悄悄放行。"
-                  : "这道闸没过，所以不推。下面把每一层账都摊开。"}
+                  ? "不是不给预测，是还在等关键数据。数据齐了会自动重评，不会悄悄放行。"
+                  : "这道闸没过，所以暂时不给预测。下面把每一层原因都摊开。"}
               </Text>
             </Card>
 
             <Card style={styles.block}>
-              <Text variant="h3">{data.verdictKind === "pending" ? "三关卡在哪" : "三关到底死在哪"}</Text>
+              <Text variant="h3">三关为什么没过</Text>
               {(["price", "market", "model"] as GateKey[]).map((gate, index) => {
                 const raw = isRecord(data.gates[gate]) ? data.gates[gate] : {};
                 return (
@@ -156,7 +156,7 @@ export default function WhyNotScreen() {
               <Button label="看已过三关" variant="secondary" onPress={() => router.push("/(tabs)")} fullWidth />
             </View>
             <Text variant="caption" color={colors.subtle} center style={styles.footer}>
-              不推 ≠ 不会赢。今晚被砍的场里，约有一部分会朝「本可以被推」的方向走 —— 但算不清是哪一场。算不清的就不碰。
+              不出预测 ≠ 不会赢。今晚没给预测的场里，约有一部分会朝「本可以发布」的方向走 —— 但算不清是哪一场。算不清就不预测。
             </Text>
           </>
         )}
@@ -171,14 +171,14 @@ function friendlyTitle(data: {
   deadGate: GateKey | null;
 }): string {
   if (data.verdictKind === "pending") {
-    if (data.deadGate === "market") return "复核中 · 等国际盘数据";
-    if (data.deadGate === "model") return "复核中 · 等模型数据";
-    return "复核中 · 数据还没齐";
+    if (data.deadGate === "market") return "预测复核中 · 等国际盘数据";
+    if (data.deadGate === "model") return "预测复核中 · 等模型数据";
+    return "预测复核中 · 数据还没齐";
   }
-  if (data.deadGate === "price") return "死于价 · 抽水超过阈值";
-  if (data.deadGate === "market") return "死于市 · 多源分歧过大";
-  if (data.deadGate === "model") return "死于模 · 模型置信不足";
-  return "这场没有过三关";
+  if (data.deadGate === "price") return "没给预测 · 抽水超过阈值";
+  if (data.deadGate === "market") return "没给预测 · 多源分歧过大";
+  if (data.deadGate === "model") return "没给预测 · 预测置信不足";
+  return "这场暂时没有预测";
 }
 
 function humanRunDetail(detail: Record<string, unknown>): string {

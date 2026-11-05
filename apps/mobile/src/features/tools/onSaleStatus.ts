@@ -2,6 +2,6 @@
 export function onSaleStatusLabel(status: string | null | undefined): string {
   if (status === "promoted") return "已过";
   if (status === "screening") return "复核";
-  if (status === "killed") return "已砍";
+  if (status === "killed") return "未给预测";
   return "在售";
 }

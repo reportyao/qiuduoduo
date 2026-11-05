@@ -81,7 +81,7 @@ export default function InboxScreen() {
           <EmptyState
             icon="notifications-outline"
             title={unreadOnly ? "没有未读消息" : "收件箱是空的"}
-            body="关注比赛后，结论变化、停售和终场提醒会出现在这里。站内信不受系统通知权限影响。"
+            body="关注比赛后，预测更新、停售和终场提醒会出现在这里。站内信不受系统通知权限影响。"
             actionLabel="去关注比赛"
             onAction={() => router.push("/watch")}
           />

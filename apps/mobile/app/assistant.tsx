@@ -22,7 +22,7 @@ import { usePersonaContent } from "@/features/personas/usePersona";
 import { errorText } from "@/lib/errors";
 import { colors, fontFamily, layout, radii, shadows, spacing } from "@/theme/tokens";
 
-const SUGGESTIONS = ["今晚看哪场", "为什么不推", "复盘", "记住我的主队是曼城"];
+const SUGGESTIONS = ["今日预测", "为什么不出", "复盘", "记住我的主队是曼城"];
 
 export default function AssistantScreen() {
   const router = useRouter();
@@ -71,7 +71,7 @@ export default function AssistantScreen() {
     <AppScreen bottom={false}>
       <AppHeader
         title={meta.name}
-        subtitle="问今晚、问死因、问复盘"
+        subtitle="问预测、问依据、问复盘"
         showAssistant={false}
         onBack={() => goBackOr(router)}
         backLabel="关闭助理"

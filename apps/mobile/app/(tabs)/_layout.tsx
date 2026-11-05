@@ -15,7 +15,7 @@ export default function TabsLayout() {
         screenOptions={{ headerShown: false }}
         tabBar={(props) => <BottomTabBar {...props} unread={unread} />}
       >
-        <Tabs.Screen name="index" options={{ title: "首页" }} />
+        <Tabs.Screen name="index" options={{ title: "预测" }} />
         <Tabs.Screen name="tools" options={{ title: "工具" }} />
         <Tabs.Screen name="records" options={{ title: "记录" }} />
         <Tabs.Screen name="me" options={{ title: "我的" }} />

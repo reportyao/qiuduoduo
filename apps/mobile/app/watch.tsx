@@ -70,7 +70,7 @@ export default function WatchScreen() {
         <Text variant="overline" color={colors.green}>关注列表</Text>
         <Text variant="h2" style={styles.title}>{watched.length} 场</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
-          关注后，结论变化、停售和终场会出现在收件箱。锁屏推送不会出现队名和赔率。
+          关注后，预测更新、停售和终场会出现在收件箱。锁屏推送不会出现队名和赔率。
         </Text>
 
         {query.isLoading ? (
@@ -108,7 +108,7 @@ export default function WatchScreen() {
                       : "时间待同步"}
                   </Text>
                   <View style={styles.chips}>
-                    <Chip label="结论变化" tone="green" />
+                    <Chip label="预测更新" tone="green" />
                     <Chip label="终场" tone="neutral" />
                   </View>
                 </Pressable>
@@ -131,7 +131,7 @@ export default function WatchScreen() {
           </View>
         )}
 
-        <Button label="去看今日结论" variant="secondary" onPress={() => router.push("/(tabs)")} fullWidth style={styles.more} />
+        <Button label="去看今日预测" variant="secondary" onPress={() => router.push("/(tabs)")} fullWidth style={styles.more} />
       </ScrollView>
     </AppScreen>
   );

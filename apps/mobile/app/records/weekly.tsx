@@ -62,11 +62,11 @@ export default function WeeklyScreen() {
               <Text variant="small" color={colors.muted}>
                 {report.settled > 0
                   ? "已结算命中 / 已结算"
-                  : `平台近 ${report.rangeDays} 天 · 复核与发布`}
+                  : `平台近 ${report.rangeDays} 天 · 预测与发布`}
               </Text>
               <View style={styles.heroMeta}>
-                <Mini label="复核" value={String(report.verdictsTotal)} />
-                <Mini label="过三关" value={String(report.promoted)} />
+                <Mini label="扫描" value={String(report.verdictsTotal)} />
+                <Mini label="通过三关" value={String(report.promoted)} />
                 <Mini label="已结算" value={String(report.settled)} />
               </View>
             </Card>
@@ -105,7 +105,7 @@ export default function WeeklyScreen() {
                 ))
               )}
               <Text variant="caption" color={colors.muted} style={styles.note}>
-                归因是确定性的：随机波动、信息不足、强判断落空、高置信落空、判断兑现，都能回放。
+                归因是确定性的：随机波动、信息不足、强预测落空、高置信落空、预测兑现，都能回放。
               </Text>
             </Card>
 

@@ -20,15 +20,15 @@ export default function AboutScreen() {
   const legal = useLegalQuery(me.data?.region ?? "cn");
 
   return (
-    <SettingsPage title="关于球多多" subtitle="不预测，只算账" onBack={() => goBackOr(router)}>
+    <SettingsPage title="关于球多多" subtitle="赛前预测，有依据" onBack={() => goBackOr(router)}>
       <Card tone="green">
         <Text variant="h2">球多多</Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>
-          面向竞彩用户的分析助理。核心不是猜谁赢，而是把这一注的成本、概率和不确定性算清楚。
-          没有值得记的场次，就不推。
+          面向竞彩用户的赛前预测助理。给出方向、预测概率、依据与失效条件，也把这一注的成本和不确定性算清楚。
+          没有把握的场次，就不发预测。
         </Text>
         <Text variant="caption" color={colors.green} style={styles.slogan}>
-          算得清才说，算不清就不碰。
+          看得准才说，看不准就不发。
         </Text>
       </Card>
 
@@ -40,13 +40,13 @@ export default function AboutScreen() {
       </Card>
 
       <Card style={styles.block}>
-        <Text variant="overline" color={colors.green}>数据与判断</Text>
+        <Text variant="overline" color={colors.green}>数据与预测</Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>
           价格来自竞彩官方 SP；国际盘与 xG 模型按覆盖情况接入。每个数字都带截止时间，
           未覆盖的维度会明确写「未覆盖」，不会补编。
         </Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>
-          判断赛前封存 sha256，赛后不改。输赢与连败都在公开账本里。
+          预测赛前封存 sha256，赛后不改。输赢与连败都在公开账本里。
         </Text>
         <KeyValueRow label="合规最低年龄" value={`${legal.data?.minAge ?? 18} 周岁`} />
         <KeyValueRow label="数据来源" value={legal.data?.dataSource || "竞彩官方 / 公开数据源"} last />

@@ -85,7 +85,7 @@ export default function PreferencesScreen() {
       </SettingsGroup>
       <Card tone="green">
         <Text variant="caption" color={colors.green} style={styles.note}>
-          中文文案已按人设分离。切换助理风格时，按钮、卡片和结论语气会一起变，但数字不会。
+          中文文案已按人设分离。切换助理风格时，按钮、卡片和预测语气会一起变，但数字不会。
         </Text>
       </Card>
     </SettingsPage>

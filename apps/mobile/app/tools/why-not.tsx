@@ -59,12 +59,12 @@ export default function WhyNotListScreen() {
 
   return (
     <AppScreen bottom={false}>
-      <AppHeader title="为什么不推" showAssistant={false} onBack={() => goBackOr(router)} />
+      <AppHeader title="为什么不出" showAssistant={false} onBack={() => goBackOr(router)} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <Text variant="overline" color={colors.green}>死因 · 全公开</Text>
-        <Text variant="display" style={styles.title}>不推，也是结论。</Text>
+        <Text variant="overline" color={colors.green}>原因 · 全公开</Text>
+        <Text variant="display" style={styles.title}>没有预测，也是结论。</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
-          被砍的、还在等数据的，都在这里。点开看它死在哪一关，以及什么条件会让它重新进池。
+          没给预测的、还在等数据的，都在这里。点开看卡在哪一关，以及什么条件会让它重新进入预测池。
         </Text>
 
         {query.isLoading ? (
@@ -75,7 +75,7 @@ export default function WhyNotListScreen() {
           <EmptyState
             icon="checkmark-circle-outline"
             title="今天没有需要解释的场次"
-            body="没有已砍或复核中的记录。要么都过了，要么今天还没同步。"
+            body="没有未给预测或复核中的记录。要么都过了，要么今天还没同步。"
             actionLabel="看今日在售"
             onAction={() => router.push("/tools/on-sale")}
           />
@@ -88,7 +88,7 @@ export default function WhyNotListScreen() {
                   key={`${row.status}-${row.matchId}-${row.matchNo}`}
                   onPress={() => router.push({ pathname: "/match/[id]", params: { id: row.matchId, date: stream?.tradeDate ?? currentTradeDateCn() } })}
                   accessibilityRole="button"
-                  accessibilityLabel={`${row.home} 对 ${row.away}，${row.status === "killed" ? "已砍" : "复核中"}`}
+                  accessibilityLabel={`${row.home} 对 ${row.away}，${row.status === "killed" ? "未给预测" : "预测复核中"}`}
                   style={({ pressed }) => [styles.row, pressed && styles.pressed]}
                 >
                   <View style={[styles.gate, { backgroundColor: tone.soft }]}>
@@ -104,7 +104,7 @@ export default function WhyNotListScreen() {
                       {row.text}
                     </Text>
                   </View>
-                  <Chip label={row.status === "killed" ? "已砍" : "复核中"} tone={row.status === "killed" ? "danger" : "amber"} />
+                  <Chip label={row.status === "killed" ? "未给预测" : "预测复核中"} tone={row.status === "killed" ? "danger" : "amber"} />
                 </Pressable>
               );
             })}
@@ -112,7 +112,7 @@ export default function WhyNotListScreen() {
         )}
 
         <Card style={styles.note}>
-          <Text variant="smallStrong">不推 ≠ 不会赢</Text>
+          <Text variant="smallStrong">不出预测 ≠ 不会赢</Text>
           <Text variant="caption" color={colors.muted} style={styles.noteText}>
             {copy.whyNotLead} 被砍的场次也会在赛后公开结局，砍对和砍错都写，不删历史。
           </Text>

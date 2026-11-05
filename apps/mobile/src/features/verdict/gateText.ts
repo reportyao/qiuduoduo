@@ -12,7 +12,7 @@ function humanizeReason(reason: string): string {
     return "国际盘还没覆盖这场，等数据源接入后会自动重评。";
   }
   if (reason.includes("xG") || reason.includes("队名未入")) {
-    return "模型还没有这场的足够数据，暂不参与判断。";
+    return "模型还没有这场的足够数据，暂不参与预测。";
   }
   return reason;
 }

@@ -65,7 +65,7 @@ export default function ComplianceScreen() {
     const label = choice === "permanent" ? "永久" : `${choice} 天`;
     Alert.alert(
       `确认自排除${label}？`,
-      "期间无法查看判断与记录，到期前不可撤销。这是保护功能，不是惩罚。",
+      "期间无法查看预测与记录，到期前不可撤销。这是保护功能，不是惩罚。",
       [
         { text: "取消", style: "cancel" },
         {

@@ -82,7 +82,7 @@ describe("labels", () => {
     expect(pickDirectionLabel("hhad", "主胜")).toBe("让球主胜");
     expect(pickDirectionLabel("hhad", "平局")).toBe("让球平");
     expect(pickDirectionLabel("hhad", "客胜")).toBe("让球客胜");
-    expect(pickDirectionLabel("had", null)).toBe("未给方向");
+    expect(pickDirectionLabel("had", null)).toBe("暂无预测");
   });
 
   it("shortens hashes without losing ends", () => {

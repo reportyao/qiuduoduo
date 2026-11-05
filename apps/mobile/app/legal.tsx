@@ -50,16 +50,16 @@ function Terms() {
     <>
       <Text variant="h2" style={styles.title}>球多多是什么</Text>
       <Text variant="body" color={colors.muted} style={styles.paragraph}>
-        球多多是一个竞彩数据分析工具。它展示抽水、市场概率、模型置信和不确定性，帮助你在下注前把成本算清楚。
+        球多多是一个赛前预测与组合参考工具。它给出方向、预测概率、依据与失效条件，同时展示抽水、市场分歧和不确定性。
       </Text>
       <Section title="不做什么">
         <Text variant="body" color={colors.muted} style={styles.paragraph}>
-          不销售彩票、不代购、不代兑奖、不承诺收益。所有判断都是概率与情景分析，不是结果保证。
+          不销售彩票、不代购、不代兑奖、不承诺收益。所有预测都是概率与情景分析，不是结果保证。
         </Text>
       </Section>
-      <Section title="判断与封存">
+      <Section title="预测与封存">
         <Text variant="body" color={colors.muted} style={styles.paragraph}>
-          每条判断在赛前封存 sha256。赛后修订会保留完整历史，不能覆盖旧结论。公开账本同时展示命中与未中。
+          每条预测在赛前封存 sha256。赛后修订会保留完整历史，不能覆盖旧预测。公开账本同时展示命中与未中。
         </Text>
       </Section>
       <Section title="账号与记录">
@@ -69,7 +69,7 @@ function Terms() {
       </Section>
       <Section title="年龄与自排除">
         <Text variant="body" color={colors.muted} style={styles.paragraph}>
-          未满 18 周岁只能查看公开账本。自排除生效后本机立即拦截判断与记录，并同步到账号；
+          未满 18 周岁只能查看公开账本。自排除生效后本机立即拦截预测与记录，并同步到账号；
           到期前不可撤销，换设备或重装也不能绕过。
         </Text>
       </Section>
@@ -125,7 +125,7 @@ function AiNotice() {
     <>
       <Text variant="h2" style={styles.title}>数字从哪来</Text>
       <Text variant="body" color={colors.muted} style={styles.paragraph}>
-        概率来自统计模型（Dixon-Coles 等）与市场去水。AI 负责把结构化数据解释成人话、组织反方情景，
+        预测概率来自统计模型（Dixon-Coles 等）与市场去水。AI 负责复核、解释和组织反方情景，
         不负责“编一个概率”。模型与市场未覆盖的维度，会明确显示「未覆盖」。
       </Text>
       <Section title="误差与边界">
@@ -141,7 +141,7 @@ function AiNotice() {
       </Section>
       <Section title="数据截止">
         <Text variant="body" color={colors.muted} style={styles.paragraph}>
-          每条依据都有来源和截止时间。首发公布后若关键数据变化，结论会重算并生成新修订，旧版本保留。
+          每条依据都有来源和截止时间。首发公布后若关键数据变化，预测会重算并生成新修订，旧版本保留。
         </Text>
       </Section>
     </>

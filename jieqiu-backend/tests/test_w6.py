@@ -175,10 +175,10 @@ def test_attribution_classes_deterministic():
     """F12 gate：归因抽检正确率 ≥90% —— 规则确定性，构造用例全对。"""
     cases = [
         (_mk_verdict("lose", 0.66, market_pending=True), "信息不足"),
-        (_mk_verdict("lose", 0.66, raw_dev=0.12), "强判断落空"),
+        (_mk_verdict("lose", 0.66, raw_dev=0.12), "强预测落空"),
         (_mk_verdict("lose", 0.62), "高置信落空"),
         (_mk_verdict("lose", 0.54), "随机波动"),
-        (_mk_verdict("win", 0.62), "判断兑现"),
+        (_mk_verdict("win", 0.62), "预测兑现"),
         (_mk_verdict(None, 0.62), None),
     ]
     correct = sum(1 for v, exp in cases if attribute(v)["class"] == exp)

@@ -45,7 +45,7 @@ export function PostmortemSheet({
                       ? decimalToFormat(pm.pick.sp, oddsFormat)
                       : "--"
                 }`
-                : "未给方向"}
+                : "暂无预测"}
               {pm.settled ? ` · ${pm.settled === "win" ? "已中" : "未中"} ${pm.resultScore ?? ""}` : " · 待结算"}
             </Text>
             {pm.bet ? (
@@ -71,7 +71,7 @@ export function PostmortemSheet({
 
           <View style={styles.kvBlock}>
             <KeyValueRow label="玩法" value={pm.pool === "hhad" ? `让球 ${pm.goalLine ?? ""}` : "胜平负"} />
-            <KeyValueRow label="模型置信" value={pm.pick?.prob != null ? pct(pm.pick.prob) : "未提供"} />
+            <KeyValueRow label="预测概率" value={pm.pick?.prob != null ? pct(pm.pick.prob) : "未提供"} />
             <KeyValueRow label="复盘类型" value={kindLabel(pm.kind)} last />
           </View>
 
@@ -86,8 +86,8 @@ export function PostmortemSheet({
 }
 
 function kindLabel(kind: string): string {
-  if (kind === "promoted") return "已过三关";
-  if (kind === "killed") return "已砍";
+  if (kind === "promoted") return "通过三关";
+  if (kind === "killed") return "未给预测";
   if (kind === "screening") return "复核中";
   return kind;
 }

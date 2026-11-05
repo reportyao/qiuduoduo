@@ -25,7 +25,7 @@ function dimensionValue(items: EvidenceItem[]): IntelDimension[] {
         label: rule.label,
         value: "未覆盖",
         direction: "unknown",
-        note: "这个维度还没接入数据；不编结论。",
+        note: "这个维度还没接入数据；不编预测。",
       };
     }
     const text = `${hit.title}：${hit.detail}`;
@@ -81,11 +81,11 @@ export function buildIntelReport(detail: VerdictDetail): IntelReport {
       ? "三关已过，情报已封存"
       : pendingGate
         ? `还在等${gateName}数据`
-        : "情报已收齐，结论见下");
+        : "情报已收齐，预测见下");
   const summary =
     string(payloadIntel.summary) ||
     (detail.status === "promoted"
-      ? `模型与市场方向一致。共 ${detail.evidence.length} 条依据，其中 ${priced} 条已计入判断。`
+      ? `模型与市场方向一致。共 ${detail.evidence.length} 条依据，其中 ${priced} 条已计入预测。`
       : `当前没有足够数据把这场算清楚。已记录 ${detail.evidence.length} 条依据，${unPriced} 条尚未定价。`);
   return {
     headline,

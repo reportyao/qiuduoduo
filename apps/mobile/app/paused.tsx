@@ -35,7 +35,7 @@ export default function PausedScreen() {
         <Text variant="overline" color={colors.amber}>自排除生效中</Text>
         <Text variant="display" center style={styles.title}>先停一停。</Text>
         <Text variant="body" color={colors.muted} center style={styles.lead}>
-          在这段时间里，这台设备不会给你看判断与记录；已登录账号会同步暂停通知。到期前不可撤销。
+          在这段时间里，这台设备不会给你看预测与记录；已登录账号会同步暂停通知。到期前不可撤销。
         </Text>
       </View>
 

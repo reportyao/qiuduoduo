@@ -18,7 +18,7 @@ export function EvidenceList({
     <Card padded={false} style={styles.card}>
       <View style={styles.head}>
         <View style={styles.flex}>
-          <Text variant="h3">判断依据</Text>
+          <Text variant="h3">预测依据</Text>
           <Text variant="caption" color={colors.muted}>
             {items.length} 条 · 截止 {cutoff ? formatDateTime(cutoff) : "同步中"}
           </Text>
@@ -71,7 +71,7 @@ export function EvidenceList({
         })
       )}
       <Text variant="caption" color={colors.subtle} style={styles.note}>
-        「已核验 / 已计入」才进入判断；「仅背景」不参与模型，只作人话解释。
+        「已核验 / 已计入」才进入预测；「仅背景」不参与模型，只作人话解释。
       </Text>
     </Card>
   );

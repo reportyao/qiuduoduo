@@ -55,11 +55,11 @@ export default function LedgerScreen() {
         <Text variant="overline" color={colors.green}>F14 · 不删历史</Text>
         <Text variant="display" style={styles.title}>赢的写，输的也写。</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
-          每条判断赛前封存 SHA-256。任何一条都能独立复算，连败也公开。
+          每条预测赛前封存 SHA-256。任何一条都能独立复算，连败也公开。
         </Text>
 
         <View style={styles.stats}>
-          <Stat label="复核过三关" value={String(stats?.promotedTotal ?? 0)} />
+          <Stat label="通过三关" value={String(stats?.promotedTotal ?? 0)} />
           <Stat label="已结算" value={String(stats?.settled ?? 0)} />
           <Stat label="中 / 未中" value={`${stats?.wins ?? 0} / ${stats?.losses ?? 0}`} />
           <Stat label="当前连败" value={String(stats?.currentLosingStreak ?? 0)} tone="danger" />
@@ -90,8 +90,8 @@ export default function LedgerScreen() {
           <EmptyState
             icon="book-outline"
             title="账本还是空的"
-            body="还没有已公开的结论。等第一批判断产生，这里会按时间倒序出现。"
-            actionLabel="看今日结论"
+            body="还没有已公开的预测。等第一批预测产生，这里会按时间倒序出现。"
+            actionLabel="看今日预测"
             onAction={() => router.push("/(tabs)")}
           />
         ) : (
@@ -159,7 +159,7 @@ export default function LedgerScreen() {
         }
       >
         <Text variant="small" color={colors.muted} style={styles.verifyText}>
-          1. 打开任意一条判断，点「封存与验证」。
+          1. 打开任意一条预测，点「封存与验证」。
         </Text>
         <Text variant="small" color={colors.muted} style={styles.verifyText}>
           2. 复制封存原文（payload.json）。

@@ -120,7 +120,7 @@ export function MatchPickerSheet({
 
       <View style={styles.filters}>
         <Chip label="全部" selected={filter === "all"} onPress={() => setFilter("all")} />
-        <Chip label="已过三关" selected={filter === "promoted"} onPress={() => setFilter("promoted")} />
+        <Chip label="通过三关" selected={filter === "promoted"} onPress={() => setFilter("promoted")} />
         <Chip label="复核中" selected={filter === "screening"} onPress={() => setFilter("screening")} />
         <Chip label="仅在售" selected={filter === "onsale"} onPress={() => setFilter("onsale")} />
         <Chip label="覆盖足" selected={filter === "covered"} onPress={() => setFilter("covered")} />
@@ -177,9 +177,9 @@ export function MatchPickerSheet({
 }
 
 function rowStatus(status: string): string {
-  if (status === "promoted") return "三关全过 · 可看完整账";
-  if (status === "screening") return "复核中 · 数据未齐";
-  if (status === "killed") return "已砍 · 看死因";
+  if (status === "promoted") return "三关通过 · 看完整预测";
+  if (status === "screening") return "预测复核中 · 数据未齐";
+  if (status === "killed") return "未给预测 · 看原因";
   return "已分析";
 }
 

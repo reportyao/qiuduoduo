@@ -6,7 +6,7 @@
 >
 > 当前前端已完成“选中 → 回首页聚焦”的导航和聚焦卡壳；后端 focus/pulse/interactions 已接；数据脉搏首屏、客观情报卡与 intel 固化表仍是下一阶段。
 >
-> 2026-11-05 口径修订：产品允许经审核的方向判断/参考组合/串关参谋，见 [recommendation-product.md](./recommendation-product.md)。
+> 2026-11-05 口径修订：产品允许经审核的赛前预测/参考组合/串关参谋，见 [recommendation-product.md](./recommendation-product.md)。
 >
 > 关联：[PRD-v5.1](../PRD-v5.1.md) · [TechSpec-v2.1](../TechSpec-v2.1.md) §8 · [Intelligence-Layer-v1.0](../Intelligence-Layer-v1.0.md) · [Feature-API-Mapping-v1.0](../Feature-API-Mapping-v1.0.md) · [数据库架构](./database-architecture.md)
 
@@ -17,7 +17,7 @@ idle（未选场）
   → picker（头像/“选一场”）
   → focused（已选场）
       → why（展开闸门/死因）
-      → detail（看完整账）
+      → detail（看完整预测）
       → bet（记一注）
       → watch（加入关注）
       → switch（换一场）
@@ -30,7 +30,7 @@ idle（未选场）
 
 - 一次只保留一个聚焦场；其他场次进“今日全部”。
 - 头像/选择器选中比赛后：**设置 focus + 回首页**，不直接跳 `/verdict/[id]` 或 `/match/[id]`。
-- “看完整账”才跳详情；返回时保留聚焦和滚动位置。
+- “看完整预测”才跳详情；返回时保留聚焦和滚动位置。
 - 05:00 竞彩日切换：清空 focus，刷新数据脉搏。
 - screening → promoted/killed：聚焦卡原地更新，提示“结论已更新”。
 - 停售/开赛/结算：状态切换，动作随 `capabilities` 变化。
@@ -281,7 +281,7 @@ idle（未选场）
 
 | 动作 | 接口 |
 |---|---|
-| 看完整账 | `GET /verdicts/{id}`、`GET /verdicts/{id}/evidence`、`/seal` |
+| 看完整预测 | `GET /verdicts/{id}`、`GET /verdicts/{id}/evidence`、`/seal` |
 | 为什么不推 | `GET /matches/{id}/why-not` |
 | 记一注 | `POST /bets`、`DELETE /bets/{id}` |
 | 关注 | `GET/POST /me/watch`、`DELETE /me/watch/{id}` |
@@ -522,7 +522,7 @@ app/features/intel/
 - 解读层只对 `coverage.level=full` 的场次生成；数据不足直接返回模板“数据不够，先看三闸/成本”。
 - 深度分析按 `match_id + data_cutoff + prompt_ver + model` 缓存，所有用户共享；不按用户生成。
 - 一份深度分析 + 三个人设外层改写；不要让 DeepSeek 跑三遍。
-- 解读不得改数字、不得给预测/推荐；输出过数字白名单、禁用词、概率语法校验。
+- 解读不得改预测数字与方向；输出过数字白名单、禁用词、概率语法校验。
 - 动作按钮永远不调用 LLM；自由提问默认收起，只做 fallback。
 - 预算原子预占、超时/失败回模板；`ai_status=unavailable` 不阻塞 focus。
 

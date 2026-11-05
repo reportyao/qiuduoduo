@@ -20,7 +20,7 @@ export default function BreakEvenToolScreen() {
     <ToolScreen
       title="回本线"
       eyebrow="成本 · 胜负门槛"
-      description="这个赔率要赢多少次才不亏？把回本线和你的真实判断放在一起看，别只看单场输赢。"
+      description="这个赔率要赢多少次才不亏？把回本线和你的真实预测放在一起看，别只看单场输赢。"
       onBack={() => goBackOr(router)}
     >
       <Field label="赔率（欧洲盘）" value={decimal} onChangeText={setDecimal} keyboardType="decimal-pad" />

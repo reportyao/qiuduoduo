@@ -58,7 +58,7 @@ import type { VerdictSummary } from "@/domain/types";
 
 /**
  * 首页 = 一条持续的对话流。
- * 助理先报今天的账，再把每场判决作为消息逐条发出来；不推、复盘、休息日也都是消息。
+ * 助理先报今天的预测，再把每场预测作为消息逐条发出来；没给预测、复盘、休息日也都是消息。
  * 顶部只留身份与在线状态，头像常驻在 Tab 层，滚动时不打断对话。
  */
 export default function HomeScreen() {
@@ -273,7 +273,7 @@ export default function HomeScreen() {
   const emptyTitle = stream?.stats.total === 0
     ? viewingToday
       ? copy.pendingTitle
-      : `${formatDate(date)}的结论还没出来。`
+      : `${formatDate(date)}的预测还没出来。`
     : copy.emptyTitle;
   const emptyBody = stream?.stats.total === 0
     ? viewingToday
@@ -328,6 +328,9 @@ export default function HomeScreen() {
               <AssistantBrief
                 stream={briefStream}
                 dayLabel={dayLabel}
+                publishedCount={verdicts.length}
+                publishedReady={recommendationsQuery.isSuccess || publishedUnavailable}
+                publishedMessage={recommendationsQuery.data?.message ?? null}
                 onsaleCount={viewingToday ? onsale.length : briefStream.onsale.length}
                 onsaleLabel={viewingToday ? "在售场次" : "当日场次"}
                 onPicker={() => setPickerOpen(true)}
@@ -454,7 +457,7 @@ export default function HomeScreen() {
               <>
                 {streamQuery.isError ? (
                   <AssistantMessage>
-                    <Text variant="small" color={colors.muted}>刷新失败，先显示上次的结论。</Text>
+                    <Text variant="small" color={colors.muted}>刷新失败，先显示上次的预测。</Text>
                     <Pressable
                       onPress={() => streamQuery.refetch()}
                       accessibilityRole="button"
@@ -609,7 +612,7 @@ function FocusPending({
 }) {
   const status =
     focus.status === "promoted" ? "三关全过"
-      : focus.status === "killed" ? "已砍"
+      : focus.status === "killed" ? "未给预测"
         : focus.status === "screening" ? "复核中"
           : "在售";
   const hasVerdict = Boolean(focus.verdictId);
@@ -621,14 +624,14 @@ function FocusPending({
       </Text>
       <Text variant="body" color={colors.ink} style={styles.focusText}>
         {hasVerdict
-          ? "这场还没有完整判决可展示；数据没齐之前，不给你硬凑结论。"
+          ? "这场还没有完整预测可展示；数据没齐之前，不给你硬凑预测。"
           : "这场还在售，助理还没算完；先看赛程，别急着下。"}
       </Text>
       <View style={styles.focusActions}>
         {hasVerdict ? (
           <>
             <Button
-              label="看完整账"
+              label="看完整预测"
               variant="primary"
               onPress={() => focus.verdictId && onOpenVerdict(focus.verdictId)}
               style={styles.focusAction}
@@ -668,7 +671,7 @@ function Metrics({
         <Text variant="caption" color={colors.muted}>在线</Text>
       </View>
       <Text variant="captionStrong" color={colors.green}>
-        三关 v3 · {points > 0 ? `${points} 个数据点` : "等待同步"}
+        预测引擎 v3 · {points > 0 ? `${points} 个数据点` : "等待同步"}
       </Text>
       <Text variant="caption" color={colors.subtle}>
         {pulse?.asOf ? relativeTime(pulse.asOf, now) : stream?.generatedAt ? relativeTime(stream.generatedAt, now) : "实时"}

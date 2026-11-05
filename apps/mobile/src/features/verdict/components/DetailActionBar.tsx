@@ -39,7 +39,7 @@ export function DetailActionBar({
                 ? copy.bought
                 : copy.buy
               : detail.status === "killed"
-                ? "看死因"
+                ? "看原因"
                 : copy.pendingCta
           }
           onPress={promoted ? onBet : onWhyNot}
@@ -60,7 +60,7 @@ export function DetailActionBar({
         <IconButton
           name="share-social-outline"
           onPress={onShare}
-          accessibilityLabel="分享这场判断"
+          accessibilityLabel="分享这场预测"
         />
       </View>
     </View>

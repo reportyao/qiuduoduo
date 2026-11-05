@@ -22,9 +22,9 @@ import {
 } from "./ConversationShell";
 
 function verdictStatus(status: string): { label: string; color: string } {
-  if (status === "promoted") return { label: "三关全过", color: colors.greenAccent };
-  if (status === "killed") return { label: "已砍", color: colors.danger };
-  if (status === "screening") return { label: "复核中", color: colors.amber };
+  if (status === "promoted") return { label: "三关通过", color: colors.greenAccent };
+  if (status === "killed") return { label: "本期不预测", color: colors.danger };
+  if (status === "screening") return { label: "预测复核中", color: colors.amber };
   return { label: status, color: colors.muted };
 }
 
@@ -41,6 +41,9 @@ function pendingGate(verdict: VerdictSummary): GateKey | null {
 export function AssistantBrief({
   stream,
   dayLabel,
+  publishedCount,
+  publishedReady,
+  publishedMessage,
   onsaleCount,
   onsaleLabel,
   onPicker,
@@ -51,6 +54,9 @@ export function AssistantBrief({
 }: {
   stream: StreamResponse;
   dayLabel: string;
+  publishedCount: number;
+  publishedReady: boolean;
+  publishedMessage?: string | null;
   onsaleCount: number;
   onsaleLabel: string;
   onPicker: () => void;
@@ -66,16 +72,39 @@ export function AssistantBrief({
   return (
     <AssistantMessage>
       <Text variant="body" style={styles.lead}>
-        {copy.conversationOpen(dayLabel, stats.total, stats.promoted, stats.screening, killed)}
+        {copy.conversationOpen(dayLabel, stats.total, stats.promoted, publishedCount, stats.screening, killed)}
       </Text>
 
       <View style={styles.statRow}>
-        <MiniStat label={dayLabel === "今天" ? "今日复核" : "当日复核"} value={String(stats.total)} />
+        <MiniStat label={dayLabel === "今天" ? "今日扫描" : "当日扫描"} value={String(stats.total)} />
         <View style={styles.statLine} />
-        <MiniStat label="复核过三关" value={String(stats.promoted)} accent />
+        <MiniStat label="通过三关" value={String(stats.promoted)} />
+        <View style={styles.statLine} />
+        <MiniStat label="已发布预测" value={publishedReady ? String(publishedCount) : "—"} accent />
         <View style={styles.statLine} />
         <MiniStat label={onsaleLabel} value={String(onsaleCount)} />
       </View>
+
+      {publishedReady && publishedCount === 0 ? (
+        <Pressable
+          onPress={onData}
+          accessibilityRole="button"
+          accessibilityLabel="查看数据状态"
+          style={styles.publishEmpty}
+        >
+          <Text variant="caption" color={colors.amber}>
+            {stats.promoted > 0
+              ? `有 ${stats.promoted} 场通过三关，但今天还没有发布预测`
+              : "今天还没有发布预测"}
+          </Text>
+          {publishedMessage ? (
+            <Text variant="caption" color={colors.subtle} style={styles.publishNote}>
+              {publishedMessage}
+            </Text>
+          ) : null}
+          <Text variant="caption" color={colors.green} style={styles.publishNote}>查看数据状态 ›</Text>
+        </Pressable>
+      ) : null}
 
       <Pressable
         onPress={onData}
@@ -86,22 +115,22 @@ export function AssistantBrief({
       >
         <StatusDot color={colors.green} />
         <Text variant="caption" color={colors.muted} style={styles.flex} numberOfLines={1}>
-          三关引擎 v3 · 价 / 市 / 模
+          预测引擎 v3 · 价 / 市 / 模
         </Text>
         <Text variant="caption" color={colors.green}>数据状态 ›</Text>
       </Pressable>
 
       <View style={styles.quickRow}>
         <QuickReply label="今日在售" onPress={onOnSale} style={styles.quickItem} />
-        <QuickReply label="帮我选一场" onPress={onPicker} style={styles.quickItem} />
-        <QuickReply label="为什么不推" onPress={onWhyNot} style={styles.quickItem} />
-        <QuickReply label="串关体检" onPress={onParlay} style={styles.quickItem} />
+        <QuickReply label="选一场预测" onPress={onPicker} style={styles.quickItem} />
+        <QuickReply label="为什么不出预测" onPress={onWhyNot} style={styles.quickItem} />
+        <QuickReply label="串关参谋" onPress={onParlay} style={styles.quickItem} />
       </View>
     </AssistantMessage>
   );
 }
 
-/** 一条判决就是助理发来的一条消息：先给结论，再给三关和成本。 */
+/** 一条已发布预测：先给方向与概率，再给依据和成本。 */
 export const VerdictMessage = memo(function VerdictMessage({
   verdict,
   betExists = false,
@@ -129,7 +158,7 @@ export const VerdictMessage = memo(function VerdictMessage({
   const pending = pendingGate(verdict);
   const pickLabel = verdict.pick?.dir
     ? pickDirectionLabel(verdict.pool, verdict.pick.dir)
-    : "暂不选择";
+    : "暂不预测";
   const pickProb = verdict.pick?.prob ?? null;
   const summary = copy.verdictSummary({
     status: verdict.status,
@@ -137,7 +166,7 @@ export const VerdictMessage = memo(function VerdictMessage({
     prob: pickProb,
     rake: verdict.rake,
     pendingGate: pending ? gateLabel(pending) + "闸" : null,
-    gateNote: pending ? "数据没齐，先不推。" : "",
+    gateNote: pending ? "数据没齐，暂不发布预测。" : "",
   });
 
   const fg = dark ? colors.inkInverse : colors.ink;
@@ -172,13 +201,13 @@ export const VerdictMessage = memo(function VerdictMessage({
 
       <View style={styles.pickRow}>
         <View style={styles.pickLeft}>
-          <Text variant="caption" color={sub}>助理选</Text>
+          <Text variant="caption" color={sub}>预测</Text>
           <Text variant="h2" color={fg}>{pickLabel}</Text>
         </View>
         <View style={styles.pickRight}>
           <Text variant="metric" color={fg}>{pickProb != null ? pct(pickProb) : "—"}</Text>
           <Text variant="caption" color={sub}>
-            {pickProb != null ? "模型置信" : "模型置信待定"}
+            {pickProb != null ? "预测概率" : "预测概率待定"}
           </Text>
         </View>
       </View>
@@ -191,7 +220,7 @@ export const VerdictMessage = memo(function VerdictMessage({
         <View style={styles.recommendation}>
           <View style={styles.recommendationHead}>
             <Text variant="overline" color={dark ? colors.greenAccent : colors.green}>
-              已发布判断
+              已发布预测
             </Text>
             {verdict.review ? (
               <Text variant="caption" color={verdict.review.status === "passed" ? colors.green : colors.amber}>
@@ -201,8 +230,8 @@ export const VerdictMessage = memo(function VerdictMessage({
           </View>
           {verdict.direction ? (
             <Text variant="small" color={sub}>
-              方向：{verdict.direction}
-              {verdict.confidence != null ? ` · 把握度 ${pct(verdict.confidence)}` : ""}
+              预测方向：{verdict.direction}
+              {verdict.confidence != null ? ` · 置信度 ${pct(verdict.confidence)}` : ""}
               {verdict.probLow != null && verdict.probHigh != null
                 ? ` · 参考区间 ${pct(verdict.probLow)}–${pct(verdict.probHigh)}`
                 : verdict.intervalStatus === "accumulating" ? " · 区间样本积累中" : ""}
@@ -499,11 +528,11 @@ export function LoadMore({
       onPress={onPress}
       disabled={loading}
       accessibilityRole="button"
-      accessibilityLabel="加载更多结论"
+      accessibilityLabel="加载更多预测"
       style={({ pressed }) => [styles.more, pressed && styles.pressed, loading && styles.disabled]}
     >
       <Text variant="caption" color={colors.muted} center>
-        {loading ? "正在加载…" : "↑ 加载更多结论"}
+        {loading ? "正在加载…" : "↑ 加载更多预测"}
       </Text>
     </Pressable>
   );
@@ -521,6 +550,8 @@ const styles = StyleSheet.create({
     borderTopColor: colors.line,
   },
   statLine: { width: StyleSheet.hairlineWidth, backgroundColor: colors.line, marginHorizontal: spacing.base },
+  publishEmpty: { marginTop: spacing.base, paddingTop: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line, gap: 3 },
+  publishNote: { lineHeight: 17 },
   dataLink: {
     flexDirection: "row",
     alignItems: "center",

@@ -33,7 +33,7 @@ export default function OnboardingScreen() {
     <SafeAreaView style={styles.screen} edges={["top", "bottom", "left", "right"]}>
       <View style={styles.brandRow}>
         <Text variant="h2">球多多</Text>
-        <Text variant="caption" color={colors.muted}>AI 竞彩分析助理</Text>
+        <Text variant="caption" color={colors.muted}>AI 赛前预测</Text>
       </View>
 
       <View style={styles.hero}>
@@ -50,7 +50,7 @@ export default function OnboardingScreen() {
           <Text variant="overline" color={colors.green}>开始之前</Text>
           <Text variant="display" style={styles.title}>先确认一件事</Text>
           <Text variant="body" color={colors.muted} style={styles.lead}>
-            球多多只做数据分析，不卖彩票、不代购。未满 18 周岁不能购买彩票，也不能使用判断与记录功能。
+            球多多提供赛前预测与数据分析，不卖彩票、不代购。未满 18 周岁不能购买彩票，也不能使用预测与记录功能。
           </Text>
 
           <Card style={styles.note}>
@@ -76,25 +76,25 @@ export default function OnboardingScreen() {
       ) : (
         <View style={styles.body}>
           <Text variant="overline" color={colors.green}>球多多怎么用</Text>
-          <Text variant="display" style={styles.title}>先把账算清楚。</Text>
+          <Text variant="display" style={styles.title}>先看预测，再做决定。</Text>
           <Text variant="body" color={colors.muted} style={styles.lead}>
-            不猜谁赢。每一场先算抽水、市场分歧和模型置信；算不清的，直接不碰。
+            每场给出方向、预测概率和成立条件。预测有误差，看不准的就不发。
           </Text>
 
           <View style={styles.promises}>
-            <Promise icon="calculator-outline" title="先算成本" body="抽水、返还率、期望值，全部摊开。" />
-            <Promise icon="shield-checkmark-outline" title="赛前封存" body="结论先上哈希，赛后改一个字都对不上。" />
-            <Promise icon="close-circle-outline" title="不推也是结论" body="没有值得记的，就诚实告诉你今天别看。" />
+            <Promise icon="analytics-outline" title="先看概率" body="方向、预测概率、模型 vs 市场，全部摊开。" />
+            <Promise icon="shield-checkmark-outline" title="赛前封存" body="预测先上哈希，赛后改一个字都对不上。" />
+            <Promise icon="close-circle-outline" title="不出也是答案" body="没有把握就不发预测，诚实告诉你今天别硬上。" />
           </View>
 
           <View style={styles.actions}>
-            <Button label="看今日结论" onPress={enter} fullWidth iconRight="arrow-forward" />
+            <Button label="看今日预测" onPress={enter} fullWidth iconRight="arrow-forward" />
             <Pressable onPress={() => setStep("age")} accessibilityRole="button" style={styles.back}>
               <Text variant="caption" color={colors.muted}>返回上一步</Text>
             </Pressable>
           </View>
           <Text variant="caption" color={colors.subtle} center style={styles.legal}>
-            数据分析结果，不构成投注建议。
+            预测有误差，不构成投注建议。
           </Text>
         </View>
       )}

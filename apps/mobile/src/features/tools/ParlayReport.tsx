@@ -37,7 +37,7 @@ const MISSING_LABEL: Record<string, string> = {
 const STATUS_LABEL: Record<string, string> = {
   promoted: "三关全过",
   screening: "复核中",
-  killed: "不推",
+  killed: "未给预测",
 };
 
 const FACT_STATUS: Record<string, string> = {
@@ -129,7 +129,7 @@ function LegCard({ leg, index, oddsFormat }: {
         <Text variant="caption" color={colors.muted}>预</Text>
         <Text variant="small" style={styles.flex} color={leg.model_prob == null ? colors.amber : colors.ink}>
           {leg.model_prob == null
-            ? "模型未覆盖，无法判断模型 vs 市场"
+            ? "模型未覆盖，无法比较预测与市场"
             : `模型 ${pct(leg.model_prob)} vs 市场 ${pct(leg.market_prob)}${edge == null ? "" : `（${edge >= 0 ? "+" : ""}${(edge * 100).toFixed(1)}pp）`}`}
         </Text>
       </View>

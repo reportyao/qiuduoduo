@@ -258,7 +258,7 @@ export function adaptChat(value: unknown): ChatCard {
   const raw = record(value);
   const card: ChatCard = {
     type: string(raw.type, "fallback"),
-    text: string(raw.text, "我在。可以问今晚、为什么不推、复盘或我的记忆。"),
+    text: string(raw.text, "我在。可以问今日预测、为什么不出、复盘或我的记忆。"),
     verdictId: nullableString(raw.verdict_id) ?? undefined,
     deadGate: nullableString(raw.dead_gate) ?? undefined,
   };
