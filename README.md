@@ -8,7 +8,7 @@
 - 接口契约：`packages/api-client/`（OpenAPI 快照 + 生成 TS client，禁止手写接口类型）
 - 数据底座：`sp-collector/`（竞彩官方 SP 自采，家宽出口）
 - 当前线上：`43.128.24.244:8100`，代码提交 `dd4555b`（2026-11-05 部署）
-- 仓库最新：`6113e3b`（2026-11-06；后端修复待部署，Android 包已更新到 `apk-20261106-7`）
+- 仓库最新：`3c70bbc`（2026-11-06；后端修复待部署，Android 包已更新到 `apk-20261106-8`）
 
 | 事实 | 当前值（2026-11-06） |
 |---|---|
@@ -19,7 +19,7 @@
 | 生产数据库 | **当前 SQLite + WAL（过渡，单写者）**；目标境内 PostgreSQL 16（云托管优先 / 自建兜底，ADR-0004） |
 | Alembic head | `20261105_13`（CLV 收盘价字段；升级/降级已验证） |
 | W8 冻结基线 | 145 路由（新增路由后须重新采纳） |
-| 线上提交 | `dd4555b`（2026-11-05；仓库最新 `6113e3b` 待部署） |
+| 线上提交 | `dd4555b`（2026-11-05；仓库最新 `3c70bbc` 待部署） |
 
 工程入口见 [AGENTS.md](./AGENTS.md)，完整文档索引见 [docs/README.md](./docs/README.md)，运维手册见 [docs/operations-runbook.md](./docs/operations-runbook.md)。
 
@@ -39,7 +39,7 @@
 4. **赛前提醒**：worker 增加 T-3h / T-30m 扫描、去重、中性文案和扇出事件。
 5. **部署加固**：`deploy.py` 合并远端 `/etc/jieqiu-backend.env` 与 `cron.env` 的可选 key，覆盖 `cron.env` 前自动备份最近 5 份。
 6. **移动端深度测试**：修复悬浮头像遮挡、详情原始 ISO 时间、覆盖面板“偏旧/缺”混淆、已砍场次误显示为在售、账本发布状态、周报空态、自排除服务端补同步、深链 `jieqiu://today`、助理发布门等；详见 [docs/frontend-deep-test-2026-11-06.md](./docs/frontend-deep-test-2026-11-06.md)。
-7. **Android 内部测试包**：`apk-20261106-7`，版本 `0.1.1`，包名 `com.qiuduoduo.app`。
+7. **Android 内部测试包**：`apk-20261106-8`，版本 `0.1.1`，包名 `com.qiuduoduo.app`。
 
 ## 功能完成度
 
