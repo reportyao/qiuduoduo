@@ -176,6 +176,11 @@ def _name_score(candidate: str | None, api_name: str | None, db: Session) -> flo
         return 0.0
     if left_variants & right_variants:
         return 1.0
+    # 两侧都可能是别名（竞彩“莱红牛”和 API “RB Leipzig”）。
+    left_canonical = _alias_canonical(db, left_raw)
+    if left_canonical:
+        left_variants |= {v for v in (norm_name(left_canonical),
+                                      normalize(left_canonical)) if v}
     canonical = _alias_canonical(db, right_raw)
     if canonical:
         canonical_variants = {v for v in (norm_name(canonical), normalize(canonical)) if v}
@@ -308,6 +313,7 @@ def sync_lineups(db: Session, hours: int | None = None,
     limit = max_requests or st.api_football_max_requests_per_run
     fixtures = _linked_fixtures(db, hours or st.api_football_lineup_hours)
     done = 0
+    total_rows = 0
     errors: list[str] = []
     for fixture in fixtures:
         if done >= limit:
@@ -327,6 +333,7 @@ def sync_lineups(db: Session, hours: int | None = None,
         # 阵容是整场快照：成功返回后先清掉旧行，避免上一版多出的球员/边路残留。
         db.execute(delete(MatchLineup).where(
             MatchLineup.fixture_id == fixture.fixture_id))
+        stored = 0
         for item in items:
             team = item.get("team") or {}
             tid = int(team.get("id") or 0)
@@ -358,10 +365,14 @@ def sync_lineups(db: Session, hours: int | None = None,
             row.starters = starters
             row.subs = subs
             row.synced_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            stored += 1
         fixture.lineups_synced_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.commit()
-        done += 1
-    return {"fixtures": len(fixtures), "synced": done, "errors": errors}
+        # 接口在赛前可能返回空数组；不要把它算成“已同步”，否则后台计数会虚高。
+        total_rows += stored
+        if stored:
+            done += 1
+    return {"fixtures": len(fixtures), "synced": done, "rows": total_rows, "errors": errors}
 
 
 def sync_injuries(db: Session, hours: int | None = None,
