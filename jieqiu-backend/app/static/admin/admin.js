@@ -146,13 +146,13 @@ function footballCard(af = {}) {
         ${state}
       </div>
       <div class="af-metrics">
-        <div class="af-metric"><span>目标场次</span><b>${target.linked ?? 0}/${target.matches ?? 0}</b></div>
+        <div class="af-metric"><span>今日场次</span><b>${target.today_linked ?? 0}/${target.today_matches ?? 0}</b></div>
+        <div class="af-metric"><span>明日场次</span><b>${target.tomorrow_linked ?? 0}/${target.tomorrow_matches ?? 0}</b></div>
         <div class="af-metric"><span>目标阵容</span><b>${target.lineups ?? 0} 行</b></div>
         <div class="af-metric"><span>目标伤停</span><b>${target.injuries ?? 0} 条</b></div>
-        <div class="af-metric"><span>积分榜</span><b>${af.standings ?? 0} 行</b></div>
       </div>
       <div class="af-quota"><span style="width:${pct}%"></span></div>
-      <div class="af-foot">剩余 ${af.remaining ?? 0} 次 · ${esc(quotaLabel)}</div>
+      <div class="af-foot">剩余 ${af.remaining ?? 0} 次 · ${esc(quotaLabel)} · 积分榜 ${af.standings ?? 0} 行${target.tomorrow_pending ? " · 明日赛程待 06:15" : ""}</div>
       ${warnings.length ? `<div class="af-warnings">${warnings.map(w => `<div class="af-warning">${esc(w)}</div>`).join("")}</div>` : ""}
     </div>
   `;

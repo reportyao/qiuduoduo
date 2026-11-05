@@ -584,19 +584,31 @@ def status(db: Session) -> dict:
     standings = int(db.scalar(select(func.count()).select_from(TeamStanding)) or 0)
     last = db.scalar(select(func.max(ApiFootballFixture.synced_at)))
 
-    # 今日+明日的竞彩目标场次覆盖：后台只关心真正要发布的比赛，而不是全部 400+ 场。
-    start = f"{day} 00:00:00"
-    end = (datetime.strptime(day, "%Y-%m-%d")
-           + timedelta(days=2)).strftime("%Y-%m-%d 00:00:00")
-    target_matches = int(db.scalar(
-        select(func.count()).select_from(SPMatch).where(
-            SPMatch.kickoff >= start, SPMatch.kickoff < end)) or 0)
+    # 今日/明日的竞彩目标场次覆盖：后台只关心真正要发布的比赛，而不是全部 400+ 场。
+    base = datetime.strptime(day, "%Y-%m-%d")
+    today_start = base.strftime("%Y-%m-%d 00:00:00")
+    tomorrow_start = (base + timedelta(days=1)).strftime("%Y-%m-%d 00:00:00")
+    day_after = (base + timedelta(days=2)).strftime("%Y-%m-%d 00:00:00")
+
+    def _matches(lo: str, hi: str) -> int:
+        return int(db.scalar(
+            select(func.count()).select_from(SPMatch).where(
+                SPMatch.kickoff >= lo, SPMatch.kickoff < hi)) or 0)
+
+    def _linked(lo: str, hi: str) -> int:
+        return int(db.scalar(
+            select(func.count(func.distinct(SPMatch.match_id))).select_from(SPMatch)
+            .join(ApiFootballFixture, ApiFootballFixture.match_id == SPMatch.match_id)
+            .where(SPMatch.kickoff >= lo, SPMatch.kickoff < hi)) or 0)
+
+    today_matches = _matches(today_start, tomorrow_start)
+    today_linked = _linked(today_start, tomorrow_start)
+    tomorrow_matches = _matches(tomorrow_start, day_after)
+    tomorrow_linked = _linked(tomorrow_start, day_after)
+    target_matches = today_matches + tomorrow_matches
+    target_linked = today_linked + tomorrow_linked
     target_ids = select(SPMatch.match_id).where(
-        SPMatch.kickoff >= start, SPMatch.kickoff < end)
-    target_linked = int(db.scalar(
-        select(func.count(func.distinct(SPMatch.match_id))).select_from(SPMatch)
-        .join(ApiFootballFixture, ApiFootballFixture.match_id == SPMatch.match_id)
-        .where(SPMatch.kickoff >= start, SPMatch.kickoff < end)) or 0)
+        SPMatch.kickoff >= today_start, SPMatch.kickoff < day_after)
     target_lineups = int(db.scalar(
         select(func.count()).select_from(MatchLineup)
         .where(MatchLineup.match_id.in_(target_ids))) or 0)
@@ -617,8 +629,8 @@ def status(db: Session) -> dict:
     if not st.api_football_key:
         warnings.append("API-Football 未配置")
     else:
-        if target_matches and target_linked < target_matches:
-            warnings.append(f"今日/明日目标场次链接 {target_linked}/{target_matches}")
+        if today_matches and today_linked < today_matches:
+            warnings.append(f"今日目标场次链接 {today_linked}/{today_matches}")
         if target_linked and target_lineups == 0:
             warnings.append("已链接场次尚无阵容；通常在停售前 1 小时内发布")
         if target_linked and standings == 0:
@@ -649,8 +661,13 @@ def status(db: Session) -> dict:
         "target": {
             "matches": target_matches,
             "linked": target_linked,
+            "today_matches": today_matches,
+            "today_linked": today_linked,
+            "tomorrow_matches": tomorrow_matches,
+            "tomorrow_linked": tomorrow_linked,
             "lineups": target_lineups,
             "injuries": target_injuries,
+            "tomorrow_pending": tomorrow_linked < tomorrow_matches,
         },
         "lineups_state": lineups_state,
         "standings_state": standings_state,
