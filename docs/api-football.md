@@ -1,6 +1,8 @@
 # API-Football 接入（免费档优先）
 
-> 状态：**生产已配置 API-Sports `apisports` Free 档**（100 请求/日、10 请求/分钟）。已跑通当天+次日 fixtures、已链接场次的 lineups/injuries；2026-11-05 实测今日/明日 13 场竞彩目标场次全部链接。**当前赛季 standings 被 Free 档拒绝**（`Free plans do not have access to this season`）；lineups 通常在停售前才发布，由每小时 `sync-enrich` 补充。`apifootball.com` 是另一家 provider（`APIkey` 查询参数），当前代码未接入。
+> 状态：**生产已配置 API-Sports `apisports` Free 档**（100 请求/日、10 请求/分钟）。已跑通当天+次日 fixtures、已链接场次的 lineups/injuries；2026-11-05 实测今日/明日目标窗口 23/23 场全部链接。**当前赛季 standings 被 Free 档拒绝**（`Free plans do not have access to this season`）；lineups 通常在停售前才发布，由每小时 `sync-enrich` 补充。`apifootball.com` 是另一家 provider（`APIkey` 查询参数），当前代码未接入。生产设置 `JQ_API_FOOTBALL_STANDINGS_ENABLED=false`，避免 Free 档每次同步浪费 standings 请求；升级付费档后改为 true。
+
+后台 `/admin` 的「数据源/运维」页现在展示 API-Football 结构化卡片：目标场次链接数、目标阵容/伤停、积分榜、今日额度条、剩余次数与 warnings（未链接/阵容待发布/积分榜关闭/额度不足）。
 
 ## 1. 用途
 

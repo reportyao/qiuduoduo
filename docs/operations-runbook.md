@@ -156,8 +156,9 @@ python -m app.api_football_cli sync-enrich --lineups-max 2 --injuries-max 1 --js
 
 - `apisports` 用 `x-apisports-key`；RapidAPI 用 `x-rapidapi-key` + host，需在同一账号订阅。
 - Free 档 100 请求/日、10 次/分钟；代码默认 90/日 + 7 秒节流。`401` 是 key 错，`403` 是订阅未生效，`429` 是分钟限流。
-- fixtures 每日 1 次（今天+明天）；lineups/injuries 按窗口补；**当前赛季 standings 被 Free 档拒绝**，需付费档。
+- fixtures 每日 1 次（今天+明天）；lineups/injuries 按窗口补；**当前赛季 standings 被 Free 档拒绝**，生产已关闭 standings 请求，升级付费档后开启。
 - 未配 key 时 `/admin` 运维页显示未配置，同步命令返回 `configured: false`，不影响判决主链。
+- `/admin` 数据源/运维页的 API-Football 卡片显示目标链接、阵容/伤停、积分榜、今日额度条和 warnings；Free 档 standings 通过 `JQ_API_FOOTBALL_STANDINGS_ENABLED=false` 关闭。
 - 详见 [api-football.md](./api-football.md)。
 
 ### 人设语气翻译（TokenRhythm）

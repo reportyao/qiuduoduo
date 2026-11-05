@@ -149,7 +149,7 @@ SEED_ALIASES: dict[str, list[str]] = {
     "波兹南": ["lechpozna", "lechpoznan", "lech"],
     "阿尔克马": ["azalkmaar", "az"],
     "波尔图": ["porto", "fcporto"],
-    "布鲁日": ["clubbrugge", "clubbruggekv", "brugge"],
+    "布鲁日": ["clubbrugge", "clubbruggekv", "bruggekv", "brugge"],
     "顿涅茨克矿工": ["shakhtardonetsk", "shakhtar"],
     "费内巴切": ["fenerbahce"],
     "维京": ["viking", "vikingfk"],

@@ -13,7 +13,7 @@
 |---|---|
 | 版本 | `0.8.0-w8+assistant` |
 | OpenAPI | 128 路径 / 143 方法 |
-| 后端测试 | 267 passed |
+| 后端测试 | 268 passed |
 | 前端测试 | 22 passed + typecheck / ESLint / Android Hermes bundle |
 | 生产数据库 | **当前 SQLite + WAL（过渡，单写者）**；目标境内 PostgreSQL 16（云托管优先 / 自建兜底，ADR-0004） |
 | Alembic head | `20261105_13`（CLV 收盘价字段；升级/降级已验证） |
@@ -27,7 +27,7 @@
 - **API/后台**：`/health` 正常，封存链 OK；`/admin` 运营台可用。
 - **推荐内容**：主链 build → L1–L5 复核 → publish 已跑通；当前有 1 条 published，`/recommendations/today` 只读 published。
 - **数据供给**：国际盘已配置，市闸/模型闸按各自阈值工作；模型闸仍有大量 `pending_data`，覆盖率提升依赖更好的当前赛季数据。
-- **API-Football 已配置**：生产使用 API-Sports `apisports` Free 档（100 次/日、10 次/分钟）。已支持当天+次日 fixtures、已链接场次的线阵容/伤停；今日/明日 13 场竞彩目标场次已全部链接。当前赛季积分榜被 Free 档限制，需付费档；lineups 通常在停售前才发布，由每小时 `sync-enrich` 补充。
+- **API-Football 已配置**：生产使用 API-Sports `apisports` Free 档（100 次/日、10 次/分钟）。已支持当天+次日 fixtures、已链接场次的线阵容/伤停；今日/明日目标窗口 23/23 场已链接。当前赛季积分榜被 Free 档限制，需付费档；lineups 通常在停售前才发布，由每小时 `sync-enrich` 补充。
 - **已知待接**：JPush 真机推送客户端与厂商凭证；`dry-run` 和站内信不受影响。
 
 ## 最近完成（2026-11-05）
@@ -68,6 +68,7 @@
 - **JPush 真机推送**：客户端 token 注册、通知权限软请求、点击深链、厂商凭证。
 - **支付/订阅权益**：`subscriptions/entitlements`、RevenueCat/微信商户号、免费 1 条/其余锁定。
 - **备份/PITR**：云控制台自动备份或自建 `pg_backup.sh` + WAL 归档 + 恢复演练（上线阻塞项）。
+- **当前赛季 xG**：API-Football 不提供 xG；当前仍是静态历史 xG + 进球代理。选型见 [docs/xg-providers.md](./docs/xg-providers.md)，优先 Sportmonks，回测可用 StatsBomb/FBref。
 - **真实 live feed / 进球提醒**：`/matches/{id}/live` 目前基于已同步赛果与 SP 快照。
 - **推荐三套人设文案**：`recommendation_copies` 表、按 persona 生成、L3 逐套复核。
 - **持久化告警/任务中心**：ack/静默/外发 webhook、任务 last-run。
@@ -85,7 +86,7 @@ just api-install          # pip install -r jieqiu-backend/requirements.txt
 just db-up                # 本地 Postgres（docker compose，端口 5433）
 just db-migrate           # alembic upgrade head
 just api-run              # uvicorn app.main:app --port 8100
-just api-test             # pytest（267 tests）
+just api-test             # pytest（268 tests）
 
 # 前端（Node 22 自带 corepack；仓库 .npmrc 固定 node-linker=hoisted）
 just install              # corepack pnpm install
