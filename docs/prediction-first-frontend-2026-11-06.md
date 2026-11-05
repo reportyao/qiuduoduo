@@ -33,7 +33,7 @@
 
 - 后端：pytest **271** 项通过。
 - 前端：Vitest **30** 项、`tsc --noEmit`、ESLint、Android Hermes bundle 通过。
-- APK 11（`0.2.0`）在 MuMu Android 12 复测：预测 Tab、四项扫描统计、空态原因、详情预测层级、三关明细、旧后端聊天兼容均正常。
+- APK 12（`0.2.0`）在 MuMu Android 12 复测：预测 Tab、四项扫描统计、空态原因、详情预测层级、三关明细、旧后端聊天兼容均正常。
 
 ### 首页与发布卡
 
