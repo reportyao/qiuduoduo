@@ -1,6 +1,8 @@
 """API 路由：health / stream / verdicts。只读接口，W2 无鉴权（公开数据）。"""
 from __future__ import annotations
 
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -19,6 +21,9 @@ from ..modules.timeutil import (trade_date_from_kickoff, trade_date_now,
 router = APIRouter()
 
 CN = timezone(timedelta(hours=get_settings().tz_offset_hours))
+_ON_SALE_CACHE: dict[str, tuple[float, dict]] = {}
+_ON_SALE_TTL = 15.0
+_ON_SALE_LOCK = threading.Lock()
 
 
 def cn_now() -> datetime:
@@ -138,6 +143,12 @@ def matches_on_sale(db: Session = Depends(get_db)):
     """今日在售（竞彩规则：当日及次日 04:59 前开赛），带抽水与三关状态（F17）。"""
     now = cn_now()
     today = trade_date_now(now)
+    use_cache = get_settings().env != "test"
+    if use_cache:
+        with _ON_SALE_LOCK:
+            cached = _ON_SALE_CACHE.get(today)
+        if cached and (time.time() - cached[0]) < _ON_SALE_TTL:
+            return cached[1]
     start, end = trade_window(today)
     rows = db.scalars(
         select(SPMatch).where(SPMatch.kickoff >= max(start, now.strftime("%Y-%m-%d %H:%M:%S")),
@@ -169,7 +180,14 @@ def matches_on_sale(db: Session = Depends(get_db)):
             "coverage": intel_service.build_coverage_brief(
                 db, m, trade_date, v, now_dt),
         })
-    return {"date": today, "count": len(rows), "matches": matches}
+    result = {"date": today, "count": len(rows), "matches": matches}
+    if use_cache:
+        with _ON_SALE_LOCK:
+            _ON_SALE_CACHE[today] = (time.time(), result)
+            if len(_ON_SALE_CACHE) > 20:
+                for old_key in list(_ON_SALE_CACHE)[:-10]:
+                    _ON_SALE_CACHE.pop(old_key, None)
+    return result
 
 
 @router.get("/matches/sale-schedule")

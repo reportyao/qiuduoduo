@@ -45,7 +45,11 @@ def make_engine(url: str | None = None):
         def _sqlite_pragma(dbapi_conn, _rec):
             cur = dbapi_conn.cursor()
             cur.execute("PRAGMA journal_mode=WAL")       # cron 写 + API 读并发（W6 深审查）
+            cur.execute("PRAGMA synchronous=NORMAL")     # WAL 下安全且明显减少 fsync
             cur.execute("PRAGMA busy_timeout=5000")      # 锁等待 5s，不再瞬时报 locked
+            cur.execute("PRAGMA temp_store=MEMORY")
+            cur.execute("PRAGMA cache_size=-20000")      # ~20MB page cache
+            cur.execute("PRAGMA mmap_size=67108864")     # 64MB mmap，降低读放大
             cur.execute("PRAGMA foreign_keys=ON")
             cur.close()
     return eng

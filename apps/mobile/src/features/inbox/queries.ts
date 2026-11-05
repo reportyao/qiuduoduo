@@ -42,7 +42,7 @@ export function useUnreadCountQuery() {
       return raw as { unread: number };
     },
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval: 120_000,
     enabled: ready && hasSession,
   });
 }

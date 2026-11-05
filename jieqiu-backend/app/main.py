@@ -3,6 +3,7 @@ import logging
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import RedirectResponse
 
 from .db import init_db
@@ -32,6 +33,8 @@ app = FastAPI(
 )
 # W7 后端硬化：限流 + 结构化访问日志（内层）
 app.add_middleware(RateLimitMiddleware)
+# 压缩 JSON/HTML/JS（>1KB）；移动端首屏与后台资源加载更省流量
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 # CORS 必须最后添加 → 位于最外层：限流 429 也要带 CORS 头，否则浏览器只见 CORS 错误
 import os as _os
 _extra = _os.environ.get("JQ_CORS_EXTRA_ORIGINS", "").strip()

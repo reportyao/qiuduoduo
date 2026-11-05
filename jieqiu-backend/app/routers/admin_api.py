@@ -189,7 +189,7 @@ def _tail_log(name: str, lines: int = 160) -> list[str]:
 @router.get("", include_in_schema=False)
 def admin_shell():
     return FileResponse(STATIC_DIR / "index.html", headers={
-        "Cache-Control": "no-store",
+        "Cache-Control": "no-cache",
         "X-Frame-Options": "DENY",
         "Referrer-Policy": "no-referrer",
         "X-Content-Type-Options": "nosniff",
@@ -292,7 +292,7 @@ def admin_asset(filename: str):
         raise HTTPException(404)
     media = "text/css" if path.suffix == ".css" else "application/javascript"
     return FileResponse(path, media_type=f"{media}; charset=utf-8", headers={
-        "Cache-Control": "no-store",
+        "Cache-Control": "no-cache",
         "X-Content-Type-Options": "nosniff",
     })
 

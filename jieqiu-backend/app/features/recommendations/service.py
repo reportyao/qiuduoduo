@@ -563,13 +563,7 @@ def run_pipeline(db: Session, date: str | None = None, stake: float = 100,
             "expired": expired}
 
 
-def _review_public(db: Session, subject_type: str, subject_id: str,
-                   review_run_id: int | None = None) -> dict | None:
-    """公开复核徽章：只暴露状态/复核人/时间/层结果，不暴露 prompt 细节。"""
-    run = db.get(ReviewRun, review_run_id) if review_run_id else db.scalar(
-        select(ReviewRun).where(ReviewRun.subject_type == subject_type,
-                                ReviewRun.subject_id == subject_id)
-        .order_by(ReviewRun.id.desc()))
+def _review_from_run(run: ReviewRun | None) -> dict | None:
     if run is None:
         return None
     return {
@@ -582,7 +576,20 @@ def _review_public(db: Session, subject_type: str, subject_id: str,
     }
 
 
-def _public_snapshot(db: Session, row: DecisionSnapshot) -> dict:
+def _review_public(db: Session, subject_type: str, subject_id: str,
+                   review_run_id: int | None = None,
+                   review_run: ReviewRun | None = None) -> dict | None:
+    """公开复核徽章：只暴露状态/复核人/时间/层结果，不暴露 prompt 细节。"""
+    if review_run is None:
+        review_run = db.get(ReviewRun, review_run_id) if review_run_id else db.scalar(
+            select(ReviewRun).where(ReviewRun.subject_type == subject_type,
+                                    ReviewRun.subject_id == subject_id)
+            .order_by(ReviewRun.id.desc()))
+    return _review_from_run(review_run)
+
+
+def _public_snapshot(db: Session, row: DecisionSnapshot,
+                     review_run: ReviewRun | None = None) -> dict:
     payload = row.payload or {}
     verdict = payload.get("verdict") or {}
     pick = verdict.get("pick") or {}
@@ -603,11 +610,13 @@ def _public_snapshot(db: Session, row: DecisionSnapshot) -> dict:
         "prob_high": None,
         "conditions": payload.get("conditions") or [],
         "invalidators": payload.get("invalidators") or [],
-        "review": _review_public(db, SUBJECT_DECISION, row.id, row.review_run_id),
+        "review": _review_public(db, SUBJECT_DECISION, row.id, row.review_run_id,
+                                 review_run),
     }
 
 
-def _public_plan(db: Session, row: RecommendationPlan) -> dict:
+def _public_plan(db: Session, row: RecommendationPlan,
+                 review_run: ReviewRun | None = None) -> dict:
     payload = row.payload or {}
     return {
         "plan_id": row.id,
@@ -624,7 +633,8 @@ def _public_plan(db: Session, row: RecommendationPlan) -> dict:
         "note": payload.get("note"),
         "conditions": payload.get("conditions") or [],
         "invalidators": payload.get("invalidators") or [],
-        "review": _review_public(db, SUBJECT_PLAN, row.id, row.review_run_id),
+        "review": _review_public(db, SUBJECT_PLAN, row.id, row.review_run_id,
+                                 review_run),
     }
 
 
@@ -648,6 +658,13 @@ def today(db: Session, date: str | None = None) -> dict:
             RecommendationPlan.status == PUBLISHED,
             not_expired_plan)
         .order_by(RecommendationPlan.risk_profile, RecommendationPlan.version)).all())
+    ids = [row.id for row in snaps] + [row.id for row in plans]
+    review_by_subject: dict[tuple[str, str], ReviewRun] = {}
+    if ids:
+        for run in db.scalars(select(ReviewRun)
+                              .where(ReviewRun.subject_id.in_(ids))
+                              .order_by(ReviewRun.id.desc())).all():
+            review_by_subject.setdefault((run.subject_type, run.subject_id), run)
     message = None
     if not snaps and not plans:
         verdicts = list(db.scalars(select(Verdict).where(Verdict.trade_date == date)).all())
@@ -666,8 +683,10 @@ def today(db: Session, date: str | None = None) -> dict:
     return {
         "trade_date": date,
         "generated_at": _now_cn().strftime("%Y-%m-%d %H:%M:%S"),
-        "snapshots": [_public_snapshot(db, s) for s in snaps],
-        "plans": [_public_plan(db, p) for p in plans],
+        "snapshots": [_public_snapshot(
+            db, s, review_by_subject.get((SUBJECT_DECISION, s.id))) for s in snaps],
+        "plans": [_public_plan(
+            db, p, review_by_subject.get((SUBJECT_PLAN, p.id))) for p in plans],
         "verdicts": [(s.payload or {}).get("verdict") or {} for s in snaps],
         "message": message,
     }

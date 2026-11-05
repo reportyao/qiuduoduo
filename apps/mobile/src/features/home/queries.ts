@@ -29,8 +29,8 @@ export function useStreamQuery(date: string, enabled = true) {
     },
     getNextPageParam: (last) => last.nextCursor,
     enabled,
-    staleTime: 15_000,
-    refetchInterval: 60_000,
+    staleTime: 30_000,
+    refetchInterval: 120_000,
   });
 }
 
@@ -52,7 +52,7 @@ export function useOnSaleQuery(enabled = true) {
     },
     enabled,
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval: 120_000,
   });
 }
 
@@ -70,7 +70,7 @@ export function useRecommendationsTodayQuery(date: string, enabled = true) {
     enabled,
     retry: false,
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval: 120_000,
   });
 }
 
@@ -105,6 +105,6 @@ export function usePulseQuery(date: string, enabled = true) {
     enabled,
     retry: false,
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval: 120_000,
   });
 }

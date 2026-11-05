@@ -16,6 +16,7 @@
 | [api-football.md](./api-football.md) | **API-Football 免费档接入**：fixtures/lineups/injuries/standings、免费额度、队名链接、focus 集成、后台页面 |
 | [database-architecture.md](./database-architecture.md) | 境内 Postgres（云托管优先/自建兜底）、连接池、索引、保留、备份/PITR 落地、切换 |
 | [operations-runbook.md](./operations-runbook.md) | 当前部署、cron、健康检查、`/admin` 后台、回滚与事故排查 |
+| [performance.md](./performance.md) | 性能基线：接口 p50/p95、缓存/gzip/SQLite/包体优化、网络与并发限制 |
 | [open-source-watchlist.md](./open-source-watchlist.md) | 开源引用/候选清单：维护状态、许可证、采纳/降级结论 |
 
 ## 决策记录（ADR）

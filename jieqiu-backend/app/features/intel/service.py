@@ -7,6 +7,8 @@
 """
 from __future__ import annotations
 
+import threading
+import time
 import uuid
 from datetime import datetime, timezone
 
@@ -23,6 +25,10 @@ from ...modules.users import user_streak
 from ..compliance import service as compliance_service
 
 PERSONAS = {"zhuanjia", "laopao", "meng"}
+
+_PULSE_CACHE: dict[str, tuple[float, dict]] = {}
+_PULSE_TTL = 30.0
+_PULSE_LOCK = threading.Lock()
 
 
 def _now() -> datetime:
@@ -46,13 +52,15 @@ def _parse_cn(value: str | None) -> datetime | None:
         return None
 
 
-def _in_window(value: str | None, date: str) -> bool:
-    dt = _parse_cn(value)
-    if dt is None:
+def _in_window(value: str | None, date: str,
+               start: str | None = None, end: str | None = None) -> bool:
+    """轻量窗口判断：ISO 字符串前 19 位做字典序比较，避免每行 strptime。"""
+    if start is None or end is None:
+        start, end = trade_window(date)
+    text = str(value or "")[:19].replace("T", " ")
+    if not text:
         return False
-    start, end = trade_window(date)
-    lo, hi = _parse_cn(start), _parse_cn(end)
-    return bool(lo and hi and lo <= dt <= hi)
+    return start <= text <= end
 
 
 def _minutes_until(value: str | None, now: datetime) -> int | None:
@@ -508,11 +516,20 @@ def _state(match: SPMatch, v: Verdict | None, now: datetime) -> str:
 def build_pulse(db: Session, date: str | None = None) -> dict:
     now = _now()
     d = date or trade_date_now(now)
+    factor = float(get_settings().pulse_display_factor)
+    cache_key = f"{d}:{factor}"
+    use_cache = get_settings().env != "test"
+    if use_cache:
+        with _PULSE_LOCK:
+            cached = _PULSE_CACHE.get(cache_key)
+        if cached and (time.time() - cached[0]) < _PULSE_TTL:
+            return cached[1]
     matches = _matches_for_date(db, d)
     ids = [m.match_id for m in matches]
+    win_start, win_end = trade_window(d)
     snapshots = [s for s in (db.scalars(
         select(SPSnapshot).where(SPSnapshot.match_id.in_(ids))).all() if ids else [])
-        if _in_window(s.captured_at, d)]
+        if _in_window(s.captured_at, d, win_start, win_end)]
     intl = [r for m in matches for r in sources_for_match(db, m)]
     model_runs = list(db.scalars(
         select(ModelRun).where(ModelRun.run_date == d, ModelRun.match_id.in_(ids))
@@ -563,7 +580,6 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
     raw_points = (len(snapshots) * 3 + len(intl) * 3 + len(model_runs)
                   + evidence_count + len(lineups) + len(injuries)
                   + len(standing_rows))
-    factor = float(get_settings().pulse_display_factor)
     last_snaps = max((s.captured_at for s in snapshots), default=None)
     last_intl = max((r.retrieved_at for r in intl), default=None)
     stale = None
@@ -613,7 +629,7 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
                            if r.synced_at is not None), default=None),
          "coverage": min(1.0, len(standing_rows) / (linked_count * 2)) if linked_count else 0.0},
     ]
-    return {
+    result = {
         "trade_date": d, "as_of": now.isoformat(timespec="seconds"),
         "stale_seconds": stale,
         "counts": {"matches": len(matches), "sp_snapshots": len(snapshots),
@@ -646,6 +662,13 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
         "definition": "data_points = sp_snapshots*3 + intl_odds*3 + model_runs + intel_items; "
                       "display = data_points × factor；不乘场次/封存/准确率",
     }
+    if use_cache:
+        with _PULSE_LOCK:
+            _PULSE_CACHE[cache_key] = (time.time(), result)
+            if len(_PULSE_CACHE) > 200:
+                for old_key in list(_PULSE_CACHE)[:100]:
+                    _PULSE_CACHE.pop(old_key, None)
+    return result
 
 
 def build_coverage_brief(db: Session, match: SPMatch, date: str,
