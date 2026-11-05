@@ -1,6 +1,6 @@
 # 球多多 · LLM Gateway 与多模型路由（Phase 1 已实现）
 
-> **状态：Phase 1 已实现。** `llm_usage`/`llm_cache`/`llm_budgets` 三张表与迁移 `20261104_07` 已落；`/chat` 的登录用户 fallback 已接入 `open_chat → fast`，失败/无 Key/超预算/超时/schema 失败一律回到固定引导；后台 `/admin` 模型用量页已展示 profile 状态、今日用量、预算与最近调用。`match_analysis → deep`、`analysis_jobs`、`ai_analyses`、`intel_items` 仍待 Phase 2；`narrate.py` 先读 `persona_copy_cache`，未命中走确定性模板，不在请求时调 LLM。审核任务 `decision_review` / `adversarial_review` / `plan_review` 已接入；persona 的实际 HTTP 调用也统一走 `llm_gateway.call_profile`，模型池/熔断仍由 persona 子系统管理。
+> **状态：Phase 1 已实现。** `llm_usage`/`llm_cache`/`llm_budgets` 三张表与迁移 `20261104_07` 已落；`/chat` 的登录用户 fallback 已接入 `open_chat → fast`，失败/无 Key/超预算/超时/schema 失败一律回到固定引导；后台 `/admin` 模型用量页已展示 profile 状态、今日用量、预算与最近调用。`match_analysis → deep`、`analysis_jobs`、`ai_analyses`、`intel_items` 仍待 Phase 2；2026-11-05 已配置 deep profile（TokenRhythm `deepseek-v4.1-flash-1017`）并用于发布前复核，`llm_review` 实测通过；复核使用压缩 payload + `JQ_LLM_REVIEW_MAX_TOKENS=1600`（推理模型 reasoning tokens 会占额度）。`narrate.py` 先读 `persona_copy_cache`，未命中走确定性模板，不在请求时调 LLM。审核任务 `decision_review` / `adversarial_review` / `plan_review` 已接入；persona 的实际 HTTP 调用也统一走 `llm_gateway.call_profile`，模型池/熔断仍由 persona 子系统管理。
 >
 > 目标：用 **两条车道 + 任务路由 + 缓存 + 原子预算 + 异步分析** 接入多个模型，而不是每条消息都调一次 LLM。
 >

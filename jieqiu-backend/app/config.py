@@ -86,6 +86,9 @@ class Settings(BaseSettings):
     llm_task_budget_cny: float = Field(default=20.0, ge=0)
     llm_user_daily_calls: int = Field(default=50, ge=1, le=10000)
     llm_cache_ttl_seconds: int = Field(default=1800, ge=0, le=86400)
+    # 推理模型（deepseek-v4.1-flash 等）reasoning tokens 会占用额度；
+    # 复核 JSON 必须留足输出空间，否则 content 为空、被误判 degraded。
+    llm_review_max_tokens: int = Field(default=1600, ge=256, le=4096)
 
     # 人设语气翻译专用模型池（OpenAI-compatible；后台可增删/排序）
     persona_llm_base_url: str = "https://tokenrhythm.studio/v1"

@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from ...models import (DecisionSnapshot, RecommendationEvent, RecommendationPlan,
                        ReviewRun, Verdict, utcnow)
+from ...config import get_settings
 from ...modules import llm_gateway
 from ...modules.compliance import scan_text
 from ...modules.timeutil import CN, trade_date_now
@@ -280,16 +281,46 @@ def _get_subject(db: Session, subject_type: str, subject_id: str):
     raise ValueError("unknown subject_type")
 
 
+def _review_payload(subject_type: str, payload: dict) -> dict:
+    """复核只带必要字段：12k 全量 payload 会让推理模型把 token 全花在 reasoning 上。"""
+    if subject_type == SUBJECT_DECISION:
+        v = payload.get("verdict") or {}
+        return {
+            "schema": payload.get("schema"),
+            "direction": payload.get("direction"),
+            "conditions": payload.get("conditions"),
+            "invalidators": payload.get("invalidators"),
+            "source": payload.get("source"),
+            "verdict": {k: v.get(k) for k in (
+                "match_no", "league", "home", "away", "pool", "goal_line",
+                "sp", "rake", "rake_threshold", "probs", "pick", "gates",
+                "sealed", "model", "status")},
+        }
+    return {
+        "schema": payload.get("schema"),
+        "label": payload.get("label"),
+        "risk_profile": payload.get("risk_profile"),
+        "legs": payload.get("legs"),
+        "conditions": payload.get("conditions"),
+        "invalidators": payload.get("invalidators"),
+        "check": payload.get("check"),
+        "note": payload.get("note"),
+    }
+
+
 def _llm_review(db: Session, subject_type: str, payload: dict) -> tuple[dict, bool, str]:
     """可选 deep/fast 复核；无 Key/超预算/失败不阻塞规则门，但会标记降级。"""
     task = "plan_review" if subject_type == SUBJECT_PLAN else "decision_review"
-    body = _canonical(payload)[:12000]
+    body = _canonical(_review_payload(subject_type, payload))[:6000]
     result = llm_gateway.complete(
         db, task,
         [
             {"role": "system", "content": (
-                "你是发布前复核器。只检查给定 canonical payload 是否有事实矛盾、"
-                "数字越界、过度承诺、缺失失效条件。不要新增观点。"
+                "你是发布前复核器。规则门已检查抽水阈值、三闸与封存；"
+                "你只检查给定 canonical payload 是否有事实矛盾、数字越界"
+                "（概率不在 0–1、方向与概率不一致）、过度承诺、缺失失效条件。"
+                "不要因为抽水绝对值或风险偏好判 fail，除非与 payload 内 "
+                "rake_threshold 明确冲突；不要新增观点。"
                 "只输出 JSON：{\"verdict\":\"pass|fail\",\"issues\":[\"...\"]}。")},
             {"role": "user", "content": body},
         ],
@@ -301,7 +332,7 @@ def _llm_review(db: Session, subject_type: str, payload: dict) -> tuple[dict, bo
             },
             "required": ["verdict"],
         },
-        max_tokens=400,
+        max_tokens=get_settings().llm_review_max_tokens,
         temperature=0.1,
     )
     if result.degraded:

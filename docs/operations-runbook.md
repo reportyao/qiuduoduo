@@ -168,13 +168,20 @@ python -m app.persona_cli warm --date $(date +%F)
 
 ```bash
 export JQ_LLM_FAST_API_KEY='...'      # 可选；未配置则 /chat fallback 走固定引导
-export JQ_LLM_DEEP_API_KEY='...'      # Phase 2 深读使用；当前未接分析任务
+export JQ_LLM_DEEP_PROVIDER='tokenrhythm'
+export JQ_LLM_DEEP_BASE_URL='https://tokenrhythm.studio/v1'
+export JQ_LLM_DEEP_API_KEY='sk_tr_...'
+export JQ_LLM_DEEP_MODEL='deepseek-v4.1-flash-1017'
+export JQ_LLM_TIMEOUT_S=60
+export JQ_LLM_REVIEW_MAX_TOKENS=1600  # 推理模型 reasoning tokens 会吃额度；400/800 会返回空 content
 export JQ_LLM_DAILY_BUDGET_CNY=50
 export JQ_LLM_TASK_BUDGET_CNY=20
 export JQ_LLM_USER_DAILY_CALLS=50
 ```
 
 - 固定意图 0 LLM；匿名固定引导；只有登录用户的 `/chat` fallback 进入 `open_chat → fast`。
+- `decision_review`/`plan_review` 已接 deep 模型；复核只发送压缩后的必要字段（~1KB），避免推理模型把 token 全花在 reasoning 上。2026-11-05 实测 `rules+deepseek-v4.1-flash-1017`、`llm_degraded=false`、`llm_review=pass`。
+- `match_analysis`/`adversarial_review` 任务已注册，但尚未接异步分析队列/情报表；当前只用于发布前复核。
 - 无 Key/超预算/超时/schema 失败均 `degraded`，不会阻塞判决，也不会返回 5xx。
 - Key 只在 env；`/admin` 模型用量页只显示“已配置/未配置”，不回显明文。
 - `/admin` 模型池/人设写操作均已接入 `admin_audit`；写操作强制 CSRF（`admin_csrf` + `X-CSRF-Token`），角色/启停/改密/删除会撤销该账号全部会话。
