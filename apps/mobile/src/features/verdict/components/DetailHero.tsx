@@ -19,13 +19,18 @@ import { SealLine } from "./Seal";
 
 export function DetailHero({
   detail,
+  published = null,
   onSeal,
 }: {
   detail: VerdictDetail;
+  /** 是否在今日 published 列表中；null=还在确认。 */
+  published?: boolean | null;
   onSeal: () => void;
 }) {
   const { copy } = usePersonaContent();
-  const dark = detail.status === "promoted";
+  // 只有已发布（或发布状态尚未确认）的 promoted 才用深色主卡；
+  // 复核预览用浅色卡，避免把未发布稿当成正式推荐。
+  const dark = detail.status === "promoted" && published !== false;
   const pending = (["market", "model", "price"] as GateKey[]).find(
     (gate) => detail.gates[gate] === "pending_data",
   );
@@ -69,6 +74,12 @@ export function DetailHero({
           {detail.league || "联赛待同步"} · {detail.pool === "hhad" ? `让球 ${detail.goalLine ?? ""}` : "胜平负"}
         </Text>
         <Chip label="预测引擎 v3" tone={dark ? "dark" : "neutral"} />
+        {detail.status === "promoted" && published != null ? (
+          <Chip
+            label={published ? "已发布预测" : "未发布 · 复核预览"}
+            tone={published ? "green" : "amber"}
+          />
+        ) : null}
       </View>
 
       <View style={styles.pickRow}>
@@ -128,7 +139,7 @@ export function DetailHero({
       </LinearGradient>
     );
   }
-  return <View style={[styles.light, pending && styles.pending]}>{content}</View>;
+  return <View style={[styles.light, (pending || published === false) && styles.pending]}>{content}</View>;
 }
 
 const styles = StyleSheet.create({

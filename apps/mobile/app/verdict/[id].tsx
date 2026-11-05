@@ -8,6 +8,7 @@ import { Card, ErrorState, Skeleton, Text, useToast } from "@/components/ui";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { useAuthStore } from "@/features/auth/authStore";
 import { useBetsQuery } from "@/features/records/queries";
+import { useRecommendationsTodayQuery } from "@/features/home/queries";
 import { useMeQuery } from "@/features/account/queries";
 import { useWatchQuery } from "@/features/inbox/queries";
 import { useShareVerdictMutation } from "@/features/assistant/queries";
@@ -20,7 +21,7 @@ import { buildIntelReport } from "@/domain/intel";
 import { focusFromDetail, useFocusStore } from "@/features/home/focusStore";
 import { errorText } from "@/lib/errors";
 import { api } from "@/lib/api";
-import { formatDateTime, pct } from "@/lib/format";
+import { currentTradeDateCn, formatDateTime, pct } from "@/lib/format";
 import { colors, layout, spacing } from "@/theme/tokens";
 import { DetailHero } from "@/features/verdict/components/DetailHero";
 import { GateDetailsCard } from "@/features/verdict/components/GateDetailsCard";
@@ -42,6 +43,13 @@ export default function VerdictDetailScreen() {
 
   const detailQuery = useVerdictDetailQuery(id);
   const detail = detailQuery.data;
+  const publishedQuery = useRecommendationsTodayQuery(
+    detail?.tradeDate ?? currentTradeDateCn(),
+    Boolean(detail),
+  );
+  const published = publishedQuery.isSuccess
+    ? publishedQuery.data.snapshots.some((snapshot) => snapshot.verdict?.id === detail?.id)
+    : null;
   const betsQuery = useBetsQuery(Boolean(session));
   const meQuery = useMeQuery(Boolean(session?.userId));
   const watchQuery = useWatchQuery();
@@ -123,7 +131,7 @@ export default function VerdictDetailScreen() {
             onRetry={() => detailQuery.refetch()}
           />
         ) : null}
-        <DetailHero detail={detail} onSeal={() => setSealOpen(true)} />
+        <DetailHero detail={detail} published={published} onSeal={() => setSealOpen(true)} />
         <IntelSection report={buildIntelReport(detail)} />
         <GateDetailsCard detail={detail} />
         <EvidenceList items={detail.evidence} cutoff={detail.dataCutoff} />
@@ -159,6 +167,7 @@ export default function VerdictDetailScreen() {
 
       <DetailActionBar
         detail={detail}
+        published={published}
         betExists={betExists}
         watching={Boolean(watch)}
         onBet={() => setBetOpen(true)}

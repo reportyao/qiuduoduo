@@ -94,6 +94,7 @@ export function AssistantBrief({
           </Text>
           {publishedMessage ? (
             <Text variant="caption" color={colors.subtle} style={styles.publishNote}>
+              {/* 旧后端 message 仍写“判断/判决”；后端部署后可移除这层兼容。 */}
               {publishedMessage.replace(/判断/g, "预测").replace(/判决/g, "预测")}
             </Text>
           ) : null}

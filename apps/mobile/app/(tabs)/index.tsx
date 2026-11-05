@@ -328,7 +328,7 @@ export default function HomeScreen() {
               <AssistantBrief
                 stream={briefStream}
                 dayLabel={dayLabel}
-                publishedCount={recommendationsQuery.data?.verdicts.length ?? 0}
+                publishedCount={recommendationsQuery.data?.snapshots.length ?? 0}
                 publishedReady={recommendationsQuery.isSuccess}
                 publishedMessage={recommendationsQuery.data?.message ?? null}
                 onsaleCount={viewingToday ? onsale.length : briefStream.onsale.length}

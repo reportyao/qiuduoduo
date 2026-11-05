@@ -7,6 +7,8 @@ import { Button, IconButton } from "@/components/ui";
 
 interface DetailActionBarProps {
   detail: VerdictDetail;
+  /** 是否已发布；false 时禁止记注，避免把复核预览当正式推荐。 */
+  published?: boolean | null;
   betExists: boolean;
   watching: boolean;
   onBet: () => void;
@@ -18,6 +20,7 @@ interface DetailActionBarProps {
 
 export function DetailActionBar({
   detail,
+  published = null,
   betExists,
   watching,
   onBet,
@@ -29,21 +32,24 @@ export function DetailActionBar({
   const insets = useSafeAreaInsets();
   const { copy } = usePersonaContent();
   const promoted = detail.status === "promoted";
+  const locked = promoted && published === false;
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
       <View style={styles.row}>
         <Button
           label={
-            promoted
-              ? betExists
-                ? copy.bought
-                : copy.buy
-              : detail.status === "killed"
-                ? "看原因"
-                : copy.pendingCta
+            locked
+              ? "未发布，暂不可记"
+              : promoted
+                ? betExists
+                  ? copy.bought
+                  : copy.buy
+                : detail.status === "killed"
+                  ? "看原因"
+                  : copy.pendingCta
           }
-          onPress={promoted ? onBet : onWhyNot}
-          disabled={promoted && betExists}
+          onPress={promoted && !locked ? onBet : onWhyNot}
+          disabled={promoted && (betExists || locked)}
           style={styles.primary}
         />
         <IconButton
@@ -59,8 +65,9 @@ export function DetailActionBar({
         />
         <IconButton
           name="share-social-outline"
-          onPress={onShare}
-          accessibilityLabel="分享这场预测"
+          onPress={locked ? undefined : onShare}
+          accessibilityLabel={locked ? "未发布预测，暂不可分享" : "分享这场预测"}
+          color={locked ? colors.subtle : colors.ink}
         />
       </View>
     </View>
