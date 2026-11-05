@@ -105,7 +105,7 @@ src/
 - 详情：三关、情报四维、证据逐条、封存自检。
 - “为什么不推”：人话标题 + 三关明细 + 再入池条件 + 可折叠技术附录；不透出 `the-odds-api key` 等配置。
 - 未成年：只允许公开账本与 legal；根守卫拦截所有其他路由。
-- 自排除：本机强制拦截；到期前不可撤销；页面明确“多设备同步是上线前阻塞项”。
+- 自排除：本机强制拦截；到期前不可撤销；登录/联网后用 `syncPending` 补写服务端，换设备/重装不能绕过。
 - 登录合并：报告合并注数，避免“登录后账没了”。
 
 ## 7.1 聚焦决策流（前后端已接通）
@@ -131,7 +131,7 @@ src/
 ## 8. 已知后端缺口（前端不伪造）
 
 - 推荐主链已接：Today Hero 消费 published snapshot（方向/条件/失效条件/AI 复核徽章），组合页 published 优先、`POST /tools/parlay/plan` 为**未复核预览**（UI 标注"参考·未复核"）。订阅/支付、OCR/拍票、真实 live feed/进球提醒仍未接入。新口径见 [docs/recommendation-product.md](../../docs/recommendation-product.md)。
-- 合规已服务端闭环：`/gate/verify`、`/me/under18-lock`、`/compliance/state|self-exclusion|self-assessment`；`useComplianceSync` 启动回填服务端状态（服务端不可用时保留本机已生效的自排除）；记注被未成年/自排除/休息中硬拦截。
+- 合规已服务端闭环：`/gate/verify`、`/me/under18-lock`、`/compliance/state|self-exclusion|self-assessment`；`useComplianceSync` 启动回填服务端状态（服务端不可用时保留本机已生效的自排除，并在联网后补写）；记注被未成年/自排除/休息中硬拦截。
 - 后端已提供 `/matches/{id}/live`，但只展示已同步赛果 + SP 快照，`live_feed:false`，不伪造进球时间线。
 - JPush 真实 token 注册未接；通知设置/站内信/关注已接服务端。
 - 详情/首页已有 `goBackOr` 处理深链冷启动返回；新增页面必须复用 `src/lib/navigation.ts`，不要直接 `router.back()`。

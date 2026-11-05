@@ -37,6 +37,7 @@ const EVENT_OPTIONS = [
 const ALL_TYPES = EVENT_OPTIONS.map((option) => option.id);
 // 后端约定空数组 = 全部；用哨兵表达“明确一个都不要”，避免取消最后一个类型后又变回全选。
 const NONE_TYPE = "__none__";
+const HM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -71,8 +72,8 @@ export default function NotificationsScreen() {
 
   const save = async () => {
     if (!draft) return;
-    if (!/^\d{2}:\d{2}$/.test(draft.quietStart) || !/^\d{2}:\d{2}$/.test(draft.quietEnd)) {
-      toast.show("静默时段格式需要 HH:MM", "warning");
+    if (!HM.test(draft.quietStart) || !HM.test(draft.quietEnd)) {
+      toast.show("静默时段需要在 00:00–23:59 之间", "warning");
       return;
     }
     try {

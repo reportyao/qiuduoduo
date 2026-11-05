@@ -67,14 +67,20 @@ export const useComplianceStore = create<ComplianceState>((set, get) => ({
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<PersistedCompliance>;
+        const excludedUntil =
+          typeof parsed.excludedUntil === "number" ? parsed.excludedUntil : null;
+        const excludedPermanent = Boolean(parsed.excludedPermanent);
+        const active = excludedPermanent || (excludedUntil != null && excludedUntil > Date.now());
         set({
-          excludedUntil: typeof parsed.excludedUntil === "number" ? parsed.excludedUntil : null,
+          excludedUntil,
           excludedAt: typeof parsed.excludedAt === "number" ? parsed.excludedAt : null,
-          excludedPermanent: Boolean(parsed.excludedPermanent),
+          excludedPermanent,
           lastPgsiScore:
             typeof parsed.lastPgsiScore === "number" ? parsed.lastPgsiScore : null,
           lastPgsiAt: typeof parsed.lastPgsiAt === "number" ? parsed.lastPgsiAt : null,
-          syncPending: Boolean(parsed.syncPending),
+          // 旧版本没有 syncPending 字段：本机仍在自排除时按未确认处理，
+          // 首次联网补写一次；成功后会持久化为 false。
+          syncPending: typeof parsed.syncPending === "boolean" ? parsed.syncPending : active,
           storageError: false,
         });
       }

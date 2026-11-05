@@ -56,7 +56,7 @@ def ensure_seeded(db: Session) -> None:
         if row is None:
             db.add(PersonaProfile(id=pid, **p, version=1, enabled=True))
             changed = True
-        elif pid == "meng" and row.name == "萌妹萝莉":
+        elif pid == "meng" and row.name == "萌妹萝莉" and row.address == "主人":
             # 旧默认人设带未成年化/主仆暗示，不适合博彩类应用；
             # 只迁移仍是旧默认值的行，运营改过的配置不覆盖。
             for field in ("name", "address", "tone", "style_prompt", "allowed_emoji"):

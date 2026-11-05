@@ -124,7 +124,7 @@ venv/bin/python -m app.odds_cli status
   - `viewer`：只读总览/模型/用量/人设/推荐/数据/运维/审计；
   - `operator`：额外可运行主链、复核、发布、撤回、测试模型；
   - `admin`：额外可改模型池、人设 profile/槽位、创建/停用账号、重置密码。
-- **合规（服务端强制）**：`GET /compliance/state`、`POST /gate/verify`、`POST /me/under18-lock`、`POST /compliance/self-exclusion`、`POST /compliance/self-assessment`；`POST /bets` 与 `focus.capabilities` 同时检查未成年锁定/自排除/休息中，重装或换设备不能绕过。
+- **合规（服务端强制）**：`GET /compliance/state`、`POST /gate/verify`、`POST /me/under18-lock`、`POST /compliance/self-exclusion`、`POST /compliance/self-assessment`；`POST /bets` 与 `focus.capabilities` 同时检查未成年锁定/自排除/休息中，重装或换设备不能绕过。客户端本机自排除先持久化，服务端同步失败时保留 `syncPending` 并在下次前台/登录自动补写。
 - **旧 `/console` 已全部下线**：`/console` 及 `/console/*` 一律 302 到 `/admin`，不再提供登录或页面；W8 `/review/*` 也改用 `admin_t` + RBAC。
 - **新版页面**：
   - 总览：KPI + 今日待办（待复核/复核失败/待发布/模型降级/SP 延迟/未配 Key）；

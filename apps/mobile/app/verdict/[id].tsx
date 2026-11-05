@@ -20,7 +20,7 @@ import { buildIntelReport } from "@/domain/intel";
 import { focusFromDetail, useFocusStore } from "@/features/home/focusStore";
 import { errorText } from "@/lib/errors";
 import { api } from "@/lib/api";
-import { formatDate, pct } from "@/lib/format";
+import { formatDateTime, pct } from "@/lib/format";
 import { colors, layout, spacing } from "@/theme/tokens";
 import { DetailHero } from "@/features/verdict/components/DetailHero";
 import { GateDetailsCard } from "@/features/verdict/components/GateDetailsCard";
@@ -153,7 +153,7 @@ export default function VerdictDetailScreen() {
           {copy.footer}
         </Text>
         <Text variant="caption" color={colors.subtle} center style={styles.footer}>
-          封存时间 {detail.sealedAt ? formatDate(detail.sealedAt) : "未封存"} · 引擎 {detail.engine || "三关 v3"}
+          封存时间 {detail.sealedAt ? formatDateTime(detail.sealedAt) : "未封存"} · 引擎 {detail.engine || "三关 v3"}
         </Text>
       </ScrollView>
 

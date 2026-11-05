@@ -59,7 +59,7 @@ export default function LedgerScreen() {
         </Text>
 
         <View style={styles.stats}>
-          <Stat label="已推" value={String(stats?.promotedTotal ?? 0)} />
+          <Stat label="复核过三关" value={String(stats?.promotedTotal ?? 0)} />
           <Stat label="已结算" value={String(stats?.settled ?? 0)} />
           <Stat label="中 / 未中" value={`${stats?.wins ?? 0} / ${stats?.losses ?? 0}`} />
           <Stat label="当前连败" value={String(stats?.currentLosingStreak ?? 0)} tone="danger" />
