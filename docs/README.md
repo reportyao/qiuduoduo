@@ -2,9 +2,9 @@
 
 最后对账：2026-11-06。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **128 路径 / 143 方法**，后端 **271 tests**，前端 **27 tests**，Alembic head `20261105_13`；当前仍是 SQLite + WAL 过渡。
 
-## 当前状态（2026-11-05）
+## 当前状态（2026-11-06）
 
-- 推荐主链、概率经验区间、CLV、未采纳复盘、T-3h/T-30m 赛前提醒已上线；`/recommendations/today` 只读 published。
+- 推荐主链、概率经验区间、CLV、未采纳复盘、T-3h/T-30m 赛前提醒已上线；`/recommendations/today` 只读 published。**当前生产该接口为空**（raw 有 1 场复核过三关但未发布），发布链待运营排查；前端已按 published 门控。
 - 合规（年龄门/未成年锁定/自排除）服务端闭环；`/admin` 运营台可用。
 - **API-Football 已配置**：API-Sports `apisports` Free（100/日、10/分钟），当天+次日 fixtures、lineups、injuries、自动链接已跑通；当前赛季 standings 被 Free 档限制，lineups 由每小时 `sync-enrich` 在停售前补齐。
 - **JPush 真机推送待接**：后端事件/站内信/dry-run 可用，客户端 SDK、厂商凭证和深链仍缺。

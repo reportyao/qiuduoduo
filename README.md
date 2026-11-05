@@ -2,14 +2,15 @@
 
 有判断、有参考组合的赛前决策助手。**Decision Snapshot → AI Review → Publish 主链已接**，`/admin` 运营台已上线，合规（年龄门/未成年锁定/自排除）服务端闭环已落地，不承诺结果。
 
-- 仓库：https://github.com/reportyao/qiuduoduo （私有）
+- 仓库：https://github.com/reportyao/qiuduoduo （公开）
 - 生产前端：`apps/mobile/`（Expo React Native，Android 先发，iOS 后补）
 - 生产后端：`jieqiu-backend/`（FastAPI 模块化单体，过渡期目录，迁移目标 `services/api/`）
 - 接口契约：`packages/api-client/`（OpenAPI 快照 + 生成 TS client，禁止手写接口类型）
 - 数据底座：`sp-collector/`（竞彩官方 SP 自采，家宽出口）
 - 当前线上：`43.128.24.244:8100`，代码提交 `dd4555b`（2026-11-05 部署）
+- 仓库最新：`6113e3b`（2026-11-06；后端修复待部署，Android 包已更新到 `apk-20261106-7`）
 
-| 事实 | 当前值（2026-11-05） |
+| 事实 | 当前值（2026-11-06） |
 |---|---|
 | 版本 | `0.8.0-w8+assistant` |
 | OpenAPI | 128 路径 / 143 方法 |
@@ -18,25 +19,27 @@
 | 生产数据库 | **当前 SQLite + WAL（过渡，单写者）**；目标境内 PostgreSQL 16（云托管优先 / 自建兜底，ADR-0004） |
 | Alembic head | `20261105_13`（CLV 收盘价字段；升级/降级已验证） |
 | W8 冻结基线 | 145 路由（新增路由后须重新采纳） |
-| 线上提交 | `dd4555b`（2026-11-05） |
+| 线上提交 | `dd4555b`（2026-11-05；仓库最新 `6113e3b` 待部署） |
 
 工程入口见 [AGENTS.md](./AGENTS.md)，完整文档索引见 [docs/README.md](./docs/README.md)，运维手册见 [docs/operations-runbook.md](./docs/operations-runbook.md)。
 
-## 当前运行状态（2026-11-05）
+## 当前运行状态（2026-11-06）
 
 - **API/后台**：`/health` 正常，封存链 OK；`/admin` 运营台可用。
-- **推荐内容**：主链 build → L1–L5 复核 → publish 已跑通；当前有 1 条 published，`/recommendations/today` 只读 published。
+- **推荐内容**：主链 build → L1–L5 复核 → publish 已跑通；但 **当前生产 `/recommendations/today` 为空**——raw 复核有 1 场“复核过三关”，尚未产出 published snapshot/plan。前端已按 published 门控，不把未发布判决当推荐；发布链仍需在 `/admin` 查 `review_runs` 失败层。
 - **数据供给**：国际盘已配置，市闸/模型闸按各自阈值工作；模型闸仍有大量 `pending_data`，覆盖率提升依赖更好的当前赛季数据。
 - **API-Football 已配置**：生产使用 API-Sports `apisports` Free 档（100 次/日、10 次/分钟）。已支持当天+次日 fixtures、已链接场次的线阵容/伤停；后台按“今日/明日”分开展示链接数；当日目标场次已全部链接，次日赛程在每日 06:15 同步。当前赛季积分榜被 Free 档限制，需付费档；lineups 通常在停售前才发布，由每小时 `sync-enrich` 补充。
 - **已知待接**：JPush 真机推送客户端与厂商凭证；`dry-run` 和站内信不受影响。
 
-## 最近完成（2026-11-05）
+## 最近完成（2026-11-06）
 
 1. **概率经验区间**：`calibration.interval` 用已结算 promoted 判决的残差分布生成 `prob_low/prob_high`；样本 <20 返回 `accumulating`，绝不编造区间。
 2. **CLV 闭环**：结算时锁定停售前最后一条同池 SP，写 `closing_sp_*`/`closing_at`/`clv`；周报汇总平均 CLV 与正 CLV 占比。
 3. **未采纳复盘**：`/stream` 的 `unattended` 返回“看过但没记注”的已结算场次，移动端独立卡片展示，只复盘不追损。
 4. **赛前提醒**：worker 增加 T-3h / T-30m 扫描、去重、中性文案和扇出事件。
 5. **部署加固**：`deploy.py` 合并远端 `/etc/jieqiu-backend.env` 与 `cron.env` 的可选 key，覆盖 `cron.env` 前自动备份最近 5 份。
+6. **移动端深度测试**：修复悬浮头像遮挡、详情原始 ISO 时间、覆盖面板“偏旧/缺”混淆、已砍场次误显示为在售、账本发布状态、周报空态、自排除服务端补同步、深链 `jieqiu://today`、助理发布门等；详见 [docs/frontend-deep-test-2026-11-06.md](./docs/frontend-deep-test-2026-11-06.md)。
+7. **Android 内部测试包**：`apk-20261106-7`，版本 `0.1.1`，包名 `com.qiuduoduo.app`。
 
 ## 功能完成度
 
