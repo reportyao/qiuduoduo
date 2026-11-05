@@ -86,12 +86,7 @@ export function AssistantBrief({
       </View>
 
       {publishedReady && publishedCount === 0 ? (
-        <Pressable
-          onPress={onData}
-          accessibilityRole="button"
-          accessibilityLabel="查看数据状态"
-          style={styles.publishEmpty}
-        >
+        <View style={styles.publishEmpty}>
           <Text variant="caption" color={colors.amber}>
             {stats.promoted > 0
               ? `有 ${stats.promoted} 场通过三关，但今天还没有发布预测`
@@ -99,11 +94,10 @@ export function AssistantBrief({
           </Text>
           {publishedMessage ? (
             <Text variant="caption" color={colors.subtle} style={styles.publishNote}>
-              {publishedMessage}
+              {publishedMessage.replace(/判断/g, "预测").replace(/判决/g, "预测")}
             </Text>
           ) : null}
-          <Text variant="caption" color={colors.green} style={styles.publishNote}>查看数据状态 ›</Text>
-        </Pressable>
+        </View>
       ) : null}
 
       <Pressable

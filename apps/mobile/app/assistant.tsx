@@ -46,7 +46,9 @@ export default function AssistantScreen() {
     if (!text || chat.isPending) return;
     setInput("");
     setMessages((prev) => [...prev, { id: nextId("u"), role: "user", text }]);
-    chat.mutate(text, {
+    // 兼容尚未升级的后端：新快捷词用旧意图词发送，避免落到 fallback。
+    const apiText = text === "今日预测" ? "今晚看哪场" : text;
+    chat.mutate(apiText, {
       onSuccess: (card) => {
         setMessages((prev) => [
           ...prev,
