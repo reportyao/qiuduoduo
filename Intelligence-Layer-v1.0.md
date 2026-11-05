@@ -1,9 +1,9 @@
-# 解球 · 情报层设计 v1.0
+# 球多多 · 情报层设计 v1.0
 
 > 本文把「每场比赛的数据与分析从哪来、怎么算、怎么展示、怎么控成本」收敛成一份可落地的设计。
 > 关联：`TechSpec-v2.1.md` §8.7（情报层）、§8.8（AI 研判层）；`jieqiu-app/index.html`（v3 测试前端）；`Feature-API-Mapping-v1.0.md`。
 >
-> 状态（2026-11-04 更新）：**设计定稿**。生产移动端已有情报/证据 UI，但数据来自判决 payload 的 evidence/model 字段与本地派生，不是独立的 signals/ai_analyses/AI 研判；后端 `signals` / `ai_analyses` / API-Football 仍未实现。
+> 状态（2026-11-05 更新）：**设计定稿，部分数据已接**。生产移动端已有情报/证据 UI；后端 `signals` / `ai_analyses` 仍未建，情报分/深读未接入判决；API-Football fixtures/lineups/injuries/standings 已接（默认关闭），focus 覆盖率已消费阵容/积分榜。
 
 ---
 
@@ -134,9 +134,9 @@
 | 国际盘 Pinnacle / Betfair / 亚盘 | the-odds-api / 采集器 | 6 小时节流 | 市闸、分歧 | 接口已留，生产 Key 未配 |
 | 赛果 | football-data | 6 小时 | 结算、回测 | 已有 |
 | xG / xA | Understat | 每日 | Dixon-Coles | 已有 |
-| 首发 / 伤停 / 停赛 | API-Football | T-24h / T-60min | 硬情报 | 待接 |
+| 首发 / 伤停 / 停赛 | API-Football | T-24h / T-60min | 硬情报 | 数据已接；未并入情报分/判决 |
 | 休息天数 / 赛程密度 | 开球时间 + 赛程库 | 每日 | 疲劳信号 | 部分可算 |
-| 积分 / 排名 / 战意 | 积分榜 | 每日 | 战意信号 | 待接 |
+| 积分 / 排名 / 战意 | 积分榜 | 每日 | 战意信号 | 数据已接；信号未建 |
 | 天气 | Open-Meteo | 每小时 | 软情报 | 待接 |
 | 裁判 | API-Football / 人工 | 赛前 | 软情报 | 待接 |
 | 定位球 / 战术 | StatsBomb / Opta | 每周 | 硬/软情报 | 未接，成本高 |

@@ -52,6 +52,10 @@ export interface PersonaCopy {
   parlaySub: string;
   parlayCta: string;
   feedTitle: string;
+  conversationOpen: (dayLabel: string, total: number, promoted: number, screening: number, killed: number) => string;
+  typing: string;
+  avoidLead: string;
+  postmortemLead: string;
   buy: string;
   bought: string;
   detail: string;
@@ -90,6 +94,11 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     parlaySub: "把投注单拆成数字，先看清成本再决定",
     parlayCta: "去体检",
     feedTitle: "今日结论",
+    conversationOpen: (dayLabel, total, promoted, screening, killed) =>
+      `${dayLabel} ${total} 场，我算了一遍：${promoted} 场过三关，${screening} 场还在等数据${killed ? `，${killed} 场直接砍掉` : ""}。没算清的，我不碰。`,
+    typing: "正在把账算一遍…",
+    avoidLead: "这几场我不碰，死因都写在这：",
+    postmortemLead: "最近几场复盘，输赢都写：",
     buy: "记一注",
     bought: "已记 ✓",
     detail: "看完整账",
@@ -102,7 +111,7 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     restBody: "歇一天不是放弃，是纪律的一部分。明天结论照常等你。",
     comfort: "记下了。中间不用再看了，有结果我会叫你。",
     protection: (streak) => `你已连败 ${streak} 场，保护已触发：今天先只看，不下。`,
-    chatPlaceholder: "继续问解球…",
+    chatPlaceholder: "继续问球多多…",
     chatGreeting: "我在。问今晚、问为什么不推、问复盘，或者让我记住你的偏好。",
     whyNotLead: "不推不是它不会赢，是我们算不清。算不清的就不碰。",
     footer: "数据分析结果，不构成投注建议。未满 18 周岁禁止购买彩票。",
@@ -129,6 +138,11 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     parlaySub: "把票拆开算，别让串关把账搅浑",
     parlayCta: "去算账",
     feedTitle: "今天看什么",
+    conversationOpen: (dayLabel, total, promoted, screening, killed) =>
+      `${dayLabel === "今天" ? "今儿" : dayLabel} ${total} 场，我扒拉了一遍：过三关的 ${promoted} 场，还有 ${screening} 场在等数据${killed ? `，${killed} 场直接砍了` : ""}。没算明白的，先晾着。`,
+    typing: "正在扒场子…",
+    avoidLead: "这几场我劝你别碰，死因都在这：",
+    postmortemLead: "最近几场，输赢都摆出来：",
     buy: "记一注",
     bought: "记上了 ✓",
     detail: "看完整账",
@@ -168,6 +182,11 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     parlaySub: "主人把票票拆开，人家 30 秒算给你看",
     parlayCta: "去体检嘛",
     feedTitle: "今日结论",
+    conversationOpen: (dayLabel, total, promoted, screening, killed) =>
+      `主人～${dayLabel} ${total} 场，人家都算过啦：过三关的 ${promoted} 场，还有 ${screening} 场在等数据${killed ? `，${killed} 场人家直接砍掉啦` : ""}。算不清的，人家先不让主人碰哦。`,
+    typing: "人家正在努力算账…",
+    avoidLead: "这几场人家不建议碰，原因都写好啦：",
+    postmortemLead: "最近几场复盘，输赢人家都记着呢：",
     buy: "记一注",
     bought: "记好啦 ✓",
     detail: "看完整账",

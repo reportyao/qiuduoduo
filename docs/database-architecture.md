@@ -1,4 +1,4 @@
-# 解球 · 数据库架构（境内 PostgreSQL：云托管优先 / 自建兜底）
+# 球多多 · 数据库架构（境内 PostgreSQL：云托管优先 / 自建兜底）
 
 > 状态：生产目标架构。**不使用 Supabase**，也不依赖任何托管 BaaS。主库是境内 PostgreSQL 16，**首选云托管（腾讯云数据库 PG / TDSQL-C），纯自建（CVM + 云盘）作为低成本兜底**；SQLite 只用于纯单元测试、一次性本地工具，以及尚未切换的旧部署回退。
 >
@@ -83,6 +83,49 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 | 助理 | `events` / `notifications` / `push_tokens` / `notify_settings` / `user_events` / `assistant_state` | 事件→扇出→站内信/推送 |
 | 分享 | `share_cards` | 分享内容哈希，可独立验真 |
 
+### 4.1 聚焦决策流 / LLM 表（部分实现）
+
+> 目标契约见 [focused-decision-flow.md](./focused-decision-flow.md) 与 [api-football.md](./api-football.md)。当前 Alembic head 为 `20261105_12`：`interaction_events`、API-Football 5 张表、LLM 3 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表已创建；intel/analysis 表仍未创建。
+
+| 表 | 用途 | 关键约束/索引 |
+|---|---|---|
+| `intel_items` | 客观情报事实：来源、时间、confirmed/inferred/unknown、置信度 | `(match_id, trade_date, kind)`；`(source, captured_at)` |
+| `match_coverage` | 单场数据覆盖率/缺失源 | `(match_id, trade_date)` 主键 |
+| `interaction_events` | ✅ 已实现：聚焦/动作/自由提问漏斗，支持匿名 session | `(event, created_at)`；`(match_id, created_at)` |
+| `api_football_fixtures` | ✅ 已实现：fixture 快照与竞彩 match 链接 | `match_id`；`kickoff_utc`；`league_id+season` |
+| `match_lineups` | ✅ 已实现：双方首发/替补 | `unique(fixture_id, team_id)`；`match_id` |
+| `match_injuries` | ✅ 已实现：伤停/停赛 | `unique(fixture_id, player_id, type)`；`match_id` |
+| `team_standings` | ✅ 已实现：联赛/赛季/球队积分榜 | `unique(league_id, season, team_id)` |
+| `api_football_usage` | ✅ 已实现：免费额度按日/endpoint 计数 | `unique(day, endpoint)` |
+| `analysis_jobs` | 深读解读异步任务 | `unique(input_hash)`；`(status, scheduled_at)` |
+| `ai_analyses` | 事实分析（人设无关）、prompt/模型/成本、缓存 | `unique(input_hash, prompt_ver, provider, model)` |
+| `narrative_pool` | 各人设外层文案；数字由渲染器注入 | `unique(verdict_id, persona, prompt_ver, source)` |
+| `pulse_daily` | 每日 raw/display 数据脉搏聚合 | `trade_date` 主键 |
+| `admin_users` | ✅ 已实现：后台账号/RBAC（viewer/operator/admin），PBKDF2 密码 | `username` 唯一；`role` |
+| `admin_audit` | ✅ 已实现：模型/人设/发布/账号变更审计 | `(created_at)`；`(actor)`；`(action)` |
+| `llm_profiles` | fast/deep/backup 模型配置；Key 只存 env 名 | `name` 唯一；`kind` 白名单（Phase 3） |
+| `llm_routes` | task → profile/fallback、max_tokens、温度、预算 | `task` 主键（Phase 3） |
+| `llm_usage` | ✅ 已实现：调用用量/成本/延迟/缓存/失败；含 user/session | `(created_at)`；`(user_id, created_at)`；`(task, created_at)` |
+| `llm_cache` | ✅ 已实现：任务/模型/prompt/输入哈希缓存 | `cache_key` 主键；`expires_at` |
+| `llm_budgets` | ✅ 已实现：按日/任务/profile 的原子预算预占与结算 | PK(day, task, profile)；原子 UPDATE |
+| `persona_llm_models` | ✅ 已实现：人设翻译模型池，Key 加密存储 | `unique(base_url, model)`；`priority` |
+| `persona_copy_cache` | ✅ 已实现：人设翻译结果缓存 | `unique(source_key, source_hash, persona)` |
+| `persona_profiles` | ✅ 已实现：人设称呼/风格/字数/emoji 配置 | `id` 主键；`version` |
+| `persona_copy_slots` | ✅ 已建表/可后台编辑：Today Hero/组合/付费墙等槽位模板；运行时尚未消费，回退在 `narrate.py` | `unique(persona_id, slot_key)` |
+| `decision_snapshots` | ✅ 已实现：单场 canonical 判断，承载 payload_hash 与 published/expired/withdrawn 生命周期 | `unique(trade_date, match_id, version)`；`(trade_date, status)` |
+| `recommendation_plans` | ✅ 已实现：2–3 腿参考组合、4D 体检结果、发布生命周期 | `unique(trade_date, risk_profile, version)`；`(trade_date, status)` |
+| `review_runs` | ✅ 已实现：L1–L5 + 可选 LLM 复核，逐层留档 | `(subject_type, subject_id)`；`(created_at)` |
+| `recommendation_events` | ✅ 已实现：build/review/publish/expire/withdraw 审计 | `(subject_type, subject_id)` |
+
+迁移要求：
+
+- 可 up/down；生产只 `alembic upgrade head`，禁止 `create_all`；
+- 大表建索引遵守 `lock_timeout`；先建表/回填再建索引；
+- `intel_items` 与 `verdicts.payload.evidence` 并存：前者是 UI 规范化视图，后者仍是封存证据；
+- `interaction_events` 不存原始设备号；匿名只存随机 session_id/哈希；默认保留 180 天；
+- `llm_usage`/`llm_cache` 记录成本与缓存，但不存完整用户隐私 prompt；默认保留 180 天/缓存 TTL 到期清理；
+- 回填脚本按 `(match_id, trade_date)` 幂等，可重复执行。
+
 **刻意不做外键级联**：用户注销采用 7 天冷静期 + `purge_cli` 显式清理；判决/事件/分享是审计资产，不能被一次级联误删。唯一性由 `UNIQUE` 索引保证，跨表一致性由 service 层事务保证。
 
 ## 5. 索引设计与热路径
@@ -121,6 +164,9 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 | 已送达/失败/被抑制 notifications | 180 天 | 收件箱历史 |
 | model_runs | 365 天 | 复盘/审计一年 |
 | user_events | 180 天 | 行为信号 |
+| interaction_events | 180 天 | 聚焦/动作漏斗；匿名只存随机 session |
+| llm_usage | 180 天 | 调用成本/降级审计；不存完整 prompt |
+| llm_cache | TTL 到期即删 | 响应缓存；user_private 作用域隔离 |
 | verification_codes | 7 天 | 已过期验证码 |
 | refresh_tokens | 过期即删 | 安全与体积 |
 
@@ -264,6 +310,14 @@ select pid, wait_event_type, wait_event, query from pg_stat_activity where wait_
 20261104_02   bets.sp 赔率快照（正确 P&L）
 20261104_03   热路径索引 + 手机/邮箱部分唯一索引
 20261104_04   verdicts.settled_at 索引（结算监控）
+20261104_05   interaction_events（聚焦/动作漏斗）
+20261104_06   API-Football fixtures/lineups/injuries/standings/usage
+20261104_07   LLM gateway usage/cache/budget
+20261104_08   persona LLM model pool + copy cache
+20261104_09   persona profiles + copy slots
+20261105_10   decision snapshots + recommendation plans + review runs + events
+20261105_11   admin users + audit log
+20261105_12   users 合规列：年龄门/未成年锁定/自排除（迁移 + SQLite 兼容补列）
 ```
 
 验证命令：

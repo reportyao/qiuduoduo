@@ -1,6 +1,6 @@
 # Monorepo 基座 Review 记录（2026-11-04）
 
-> **历史快照**：本文记录当时的测试数/路径数/结论；最新全栈审查与当前事实见 [docs/reviews/2026-11-04-full-stack.md](2026-11-04-full-stack.md)（2026-11-04：179 tests / 94 路径）。
+> **历史快照（2026-11-04）**：本文的测试数/路径数/结论反映当时状态，不是当前事实。当前事实见 [docs/README.md](../README.md)：251 tests / 128 路径 / 143 方法 / Alembic `20261105_12`。
 
 
 范围：上一轮 AI 优先架构落地（monorepo / Expo 基座 / OpenAPI client / Alembic / assistant feature slice）的代码、配置、脚本与产物。
@@ -19,7 +19,7 @@
 
 ### 1. 生成的 client 缺 12 个 assistant 接口（高）
 
-本机 8100 端口是旧进程 `0.7.0-w7`，OpenAPI 只有 59 条路径；当前代码是 `0.8.0-w8+assistant`，71 条路径。原先 `pnpm generate` 直接拉 8100，导致 `schema.d.ts` 漏掉 inbox/watch/notify/push 全部接口且无任何报错。
+本机 8100 端口是旧进程 `0.7.0-w7`，OpenAPI 只有 59 条路径；当时代码是 `0.8.0-w8+assistant`，71 条路径。原先 `pnpm generate` 直接拉 8100，导致 `schema.d.ts` 漏掉 inbox/watch/notify/push 全部接口且无任何报错。
 
 修复：改为从当前代码导出 `packages/api-client/openapi.json` 快照，再离线生成；`generate:url` 仅保留给联调。
 
@@ -33,7 +33,7 @@
 
 `migrations/versions/` 为空，`just db-migrate` 是空操作，切 Postgres 时无表可建。
 
-修复：生成 `71af760b1e99_baseline_w8_assistant_runtime.py`，覆盖当前 24 张表；验证 downgrade/upgrade 与 `alembic check`。已有库明确走 `alembic stamp head`，禁止直接跑 baseline。
+修复：生成 `71af760b1e99_baseline_w8_assistant_runtime.py`，覆盖当时 24 张表；验证 downgrade/upgrade 与 `alembic check`。已有库明确走 `alembic stamp head`，禁止直接跑 baseline。
 
 ### 4. Expo bundle 缺 `@babel/runtime`（高）
 

@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 from ..models import Bet, User, Verdict
 from ..modules import users as U
+from ..features.compliance import service as compliance_service
 from ..modules.chat import respond
 from ..modules.postmortem import postmortem, weekly_report
 
@@ -112,6 +113,7 @@ class BetBody(BaseModel):
 
 class ChatBody(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
+    session_id: str = Field(default="", max_length=64)
 
 
 # ---------- 认证 / 档案 ----------
@@ -149,6 +151,7 @@ def me(user: User = Depends(current_user), db: Session = Depends(get_db)):
         "email": mask_email(user.email) if user.email else None,
         "streak": U.user_streak(db, user),
         "rested_until": user.rested_until,
+        "compliance": compliance_service.state(user),
         "memories": _memory_items(db, user),
     }
 
@@ -329,6 +332,16 @@ def bet_create(body: BetBody, user: User = Depends(current_user),
         raise HTTPException(422, "这场已经结算，不能补记")
     if v.kickoff <= datetime.now(U.CN).strftime("%Y-%m-%d %H:%M:%S"):
         raise HTTPException(422, "这场已经停售，不能补记")
+    block = compliance_service.bet_block_reason(user)
+    if block == "under18":
+        raise HTTPException(403, detail={
+            "error": "under18", "message": "未满 18 周岁只能查看公开账本，不能记注。"})
+    if block == "self_excluded":
+        raise HTTPException(423, detail={
+            "error": "self_excluded", "message": "自排除生效中，到期前不能记注。"})
+    if block == "rested":
+        raise HTTPException(423, detail={
+            "error": "rested", "message": "你已选择今晚休息；结论照常更新，但先不记注。"})
     # F11 行为面：连败保护触发时，加注前必须显式确认（先于重复检查——保护优先提醒）
     st = U.user_streak(db, user)
     if st["active"] and not body.confirm:
@@ -433,4 +446,4 @@ def weekly(authorization: str | None = Header(default=None),
 @router.post("/chat")
 def chat(body: ChatBody, user: User | None = Depends(optional_user),
          db: Session = Depends(get_db)):
-    return respond(db, user, body.text)
+    return respond(db, user, body.text, session_id=body.session_id)

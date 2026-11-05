@@ -1,5 +1,7 @@
 # 全栈深度审查与修复记录（2026-11-04）
 
+> **历史快照（2026-11-04）**：本文的测试数/路径数/结论反映当时状态，不是当前事实。当前事实见 [docs/README.md](../README.md)：251 tests / 128 路径 / 143 方法 / Alembic `20261105_12`。
+
 范围：`jieqiu-backend`（业务/事务/鉴权/推送/封存链）、管理后台 `/console`、OpenAPI 契约、`apps/mobile`（会话/合规/交易/交互）。
 
 ## 审查方式
@@ -68,10 +70,10 @@
 
 ## 验证
 
-- 后端：**179 passed**
+- 当时后端：**179 passed**（当前 246）
 - 前端：typecheck / ESLint / **20 Vitest** 通过
 - Android Hermes bundle：**3.6 MB `.hbc`** 成功
-- OpenAPI client：重新生成快照（94 路径 / 107 方法）并 typecheck
+- 当时 OpenAPI client：重新生成快照（94 路径 / 107 方法；当前 128/143）并 typecheck
 - 新增回归：模型闸门、worker 过期租约、封存锚冻结、XSS、分享 HTML、超大 path id、交易窗口、auth stub fail-closed
 
 ## 仍未修复 / 上线前必须补

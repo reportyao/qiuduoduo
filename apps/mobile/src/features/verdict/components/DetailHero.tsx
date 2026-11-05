@@ -45,8 +45,8 @@ export function DetailHero({
     <>
       <View style={styles.head}>
         <View style={styles.status}>
-          <StatusDot color={dark ? statusColor : statusColor} />
-          <Text variant="captionStrong" color={dark ? statusColor : statusColor}>{statusLabel}</Text>
+          <StatusDot color={statusColor} />
+          <Text variant="captionStrong" color={statusColor}>{statusLabel}</Text>
         </View>
         <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>
           {detail.matchNo} · {formatDate(detail.kickoff)} {formatTime(detail.kickoff)} 停售
@@ -84,7 +84,7 @@ export function DetailHero({
       <Text variant="body" color={dark ? colors.inkInverse : colors.ink} style={styles.summary}>
         {summary}
       </Text>
-      <ProbabilityBar probs={detail.probs} dark={dark} />
+      <ProbabilityBar probs={detail.probs} dark={dark} pool={detail.pool} />
       <GateStrip
         gates={detail.gates}
         dark={dark}

@@ -39,7 +39,6 @@ def _seasons() -> list[str]:
 
 
 def _last_result_sync() -> str:
-    from ..config import get_settings
     import tempfile
     try:
         return open(os.path.join(tempfile.gettempdir(), "jq_results_last_sync"), encoding="utf-8").read().strip()
@@ -62,7 +61,6 @@ def sync_results_football_data(db: Session, aligner: Aligner,
 
     6 小时节流（赛果一天最多变几次；避免每 30 分钟 ×10 请求打爆数据源）。
     """
-    from ..config import get_settings
     last = _last_result_sync()
     if fetch is None and last:
         try:

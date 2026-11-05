@@ -1,15 +1,20 @@
-# 解球 · AI 优先架构（v1）
+# 球多多 · AI 优先架构（v1）
 
 > 状态：已采纳（ADR-0001 / 0002 / 0003）。**本文描述目标态，不等同于当前目录。**
 > 目标：让 AI 开发“每次只在一个小上下文里写对”，并让错误在类型、契约、测试层被立刻发现。
 
-## 0. 当前实现（2026-11-04）
+## 0. 当前实现（2026-11-05）
 
 - 生产后端仍在 `jieqiu-backend/`，尚未迁到 `services/api/`；`services/` 只有迁移说明。
-- 生产前端在 `apps/mobile/`；`apps/web/`、`apps/admin/` 仍是规划，当前管理后台是后端同进程的 `/console`。
-- OpenAPI 94 路径 / 107 方法；后端 182 tests；Alembic head `20261104_04`。
+- 生产前端在 `apps/mobile/`；`apps/web/`、`apps/admin/` 仍是规划，当前管理后台是后端同进程的 `/admin`。
+- OpenAPI 128 路径 / 143 方法；后端 251 tests；Alembic head `20261105_12`。
 - Postgres 是目标生产库；未设置 `JQ_PROD_DATABASE_URL` 时生产部署仍可能是旧 SQLite 兼容模式。
 - 新增的 catalog/actions 已按 feature slice 落地；verdict/assistant 仍是混合目录，迁移未完成。
+- **聚焦决策流部分实现**：前端已有 `focusStore`、头像/选择器选中回首页聚焦、聚焦卡、详情页“让助理看这场”；后端 `/stats/pulse`、`/matches/{id}/focus`、`/interactions`、`interaction_events` 已实现；`/matches/on-sale` 已返回与 focus 同一判定的 `coverage`；`intel_items`/`match_coverage`/`pulse_daily` 与前端数据脉搏首屏仍未实现。目标契约见 [focused-decision-flow.md](./focused-decision-flow.md)。
+- **API-Football 已接入但默认关闭**：配置 `JQ_API_FOOTBALL_KEY` 后同步 fixtures/lineups/injuries/standings；未配置时 focus 明确返回 missing，不伪造。见 [api-football.md](./api-football.md)。
+- **产品口径 2026-11-05 转向**：允许经 AI 复核的方向判断/参考组合/串关参谋；Today Hero 与组合参谋已用现有 verdict 做未复核预览，`recommendation_drafts`/`recommendation_plans` 与 AI 复核/发布层仍是设计稿，见 [recommendation-product.md](./recommendation-product.md)。
+- **LLM Gateway Phase 1 已实现**：`open_chat` fallback → fast，带缓存、原子预算、PII 脱敏、调用账本与 后台 `/admin` 模型用量页只读看板；persona 传输已走 `call_profile`；deep 分析与 focus 解读待 Phase 2。见 [llm-gateway.md](./llm-gateway.md)。
+- **推荐主链已实现**：`decision_snapshots` + `recommendation_plans` + `review_runs` + `recommendation_events`；build → L1–L5 review → publish → expire/withdraw；`GET /recommendations/today` 只返回 published；Today Hero 已优先消费 snapshot，组合页已优先 published，preview 仅回退。见 [recommendation-product.md](./recommendation-product.md)。
 
 ## 1. 架构原则
 
@@ -119,7 +124,7 @@ packages/api       生成的 client
 - Alembic 是 schema 事实源；
 - SQLite 仅允许纯单元测试、一次性工具或尚未切换的旧部署；
 - OpenAPI 由 FastAPI 生成；后端导出 `packages/api-client/openapi.json` 快照，client 从快照离线生成；
-- Postgres 迁移先于应用启动；Alembic head 为 `20261104_04`，baseline 覆盖 24 张表；
+- Postgres 迁移先于应用启动；Alembic head 为 `20261105_12`，baseline 24 张表，当前 ORM 共 43 张表（新增 interaction_events、API-Football 5 张表、LLM 3 张表、人设翻译 4 张表、推荐主链 4 张表与管理账号/审计 2 张表）；
 - AI 输出必须通过 Pydantic / JSON Schema 校验；
 - 领域事件必须有 `dedupe_key`、`payload_hash`、`data_cutoff`。
 
@@ -143,7 +148,7 @@ packages/api       生成的 client
 | 前端单测 | Vitest + RNTL | hooks / 组件 |
 | E2E | Maestro | 核心用户流程 |
 
-> 当前实际（2026-11-04）：后端 pytest 182 项仍主要跑 SQLite；未接真实 Postgres CI；前端 Vitest 20 项 + typecheck/lint + Expo Android bundle；Maestro/E2E 尚未接入。
+> 当前实际（2026-11-05）：后端 pytest 251 项仍主要跑 SQLite；未接真实 Postgres CI；前端 Vitest 22 项 + typecheck/lint + Expo Android bundle；Maestro/E2E 尚未接入。
 
 ## 8. 迁移路线
 
@@ -156,10 +161,43 @@ packages/api       生成的 client
 | Phase 4 | verdict / intel / billing 迁移到 feature slice |
 | Phase 5 | admin 迁移；旧目录退役 |
 
-## 9. 当前红线
+## 9. 内容与发布规则（2026-11-05 修订）
 
-- `jieqiu-app/index.html` 不继续扩展；
-- 认证、支付、封存链、合规文案必须人工 review；
-- 推送/通知不得出现赔率/投注/“稳赚”字样；
-- 未成年保护、自排除、连败保护不得绕过；
+- 允许经 AI 复核的方向判断、参考组合与参考预算；不承诺收益。
+- 推荐观点/组合正式发布必须经 `recommendation_drafts` / `recommendation_plans` 的 AI 复核流水线；当前 `/tools/parlay/plan` 是未复核预览，不得进入付费区。
+- 公开文案用委婉语；付费详情必须写明方向、条件、失效条件与成本。
+- 推送只写“今日判断已更新”等中性提示，不写具体赔率/结果。
+- 年龄确认、自排除、连败保护作为支付/上架能力保留；
 - 用户原始下注数据不得上传第三方。
+
+
+## 10. 聚焦决策流与情报层（目标态）
+
+> 部分实现：前端已有选中→回首页聚焦、focusStore、聚焦卡、详情入口；后端 focus/pulse/interactions 已实现；intel_items/match_coverage/pulse_daily 与前端数据脉搏首屏仍未实现。OpenAPI 为 128/143。详见 [focused-decision-flow.md](./focused-decision-flow.md)。
+
+首页从“12 张判决卡 + 常驻输入框”改为：
+
+```text
+数据脉搏 → 选一场 → 首页聚焦这一场 → 客观情报 + 解读 → 动作按钮
+```
+
+对应后端边界：
+
+| 能力 | 目标接口/模块 | 数据 |
+|---|---|---|
+| 数据脉搏 | `GET /stats/pulse` · `features/intel` | 现有 sp_matches/sp_snapshots/intl_odds/model_runs/verdicts |
+| 单场聚焦 | `GET /matches/{id}/focus` · `features/intel` | focus service 复用 verdict/catalog；新增 intel_items/match_coverage |
+| 比赛选择器覆盖徽章 | `GET /matches/on-sale` 扩展 | match_coverage |
+| 动作漏斗 | `POST /interactions` | interaction_events |
+| 深读解读 | `analysis_jobs` / `ai_analyses` + LLM Gateway | 仅 eligible 场次，异步/缓存 |
+| 多模型路由 | [llm-gateway.md](./llm-gateway.md) · `/admin` 模型用量页 | fast/deep、预算、缓存、usage |
+| 客观情报 | [api-football.md](./api-football.md) · `modules/api_football.py` | fixtures/lineups/injuries/standings；免费档 90/日 |
+| 后台 | `/admin` 运营台 + `/admin/api/*` | 总览/模型池/用量/人设/主链/组合/数据/日志 |
+
+约束：
+
+- 选中比赛必须回首页聚焦，不直接跳详情；详情仍走 `/verdicts/{id}`。
+- `capabilities` 由后端计算，前端不能自行放开下注/关注/休息。
+- 数据脉搏只展示真实计数；无数据返回 0/missing，不造假。
+- 事实层由确定性代码生成；LLM 只做解读，且只对 coverage 达标场次。
+- 新增路由需重新采纳 W8 freeze 基线；新表走 Alembic，禁止 `create_all`。

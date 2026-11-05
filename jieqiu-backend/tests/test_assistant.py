@@ -8,9 +8,9 @@ from app.features.assistant.fanout import fanout_events
 from app.features.assistant.monitors import (scan_close_soon, scan_daily_brief,
                                     scan_verdict_changes)
 from app.features.assistant.worker import send_pending_push
-from app.models import (Notification, PushToken, SPMatch, User, Verdict,
+from app.models import (Notification, PushToken, SPMatch, Verdict,
                         VerdictRevision, WatchTarget)
-from tests.conftest import CN, future_kickoff, today_cn
+from tests.conftest import admin_login, CN, future_kickoff, today_cn
 
 
 def _login(client):
@@ -162,11 +162,10 @@ def test_push_register_rejects_ios(db, client):
     assert r.status_code == 422
 
 
-def test_console_assistant_and_push_pages(db, client):
-    r = client.post("/console/login", data={"pw": "dev"}, follow_redirects=False)
-    assert r.status_code == 303
-    assert client.get("/console/assistant").status_code == 200
-    assert client.get("/console/push").status_code == 200
+def test_admin_ops_exposes_notification_and_push_state(db, client):
+    admin_login(client)
+    data = client.get("/admin/api/ops").json()
+    assert "notifications" in data and "push_tokens" in data
 
 
 def test_purge_removes_assistant_data(db):

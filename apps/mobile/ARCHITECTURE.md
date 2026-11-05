@@ -1,4 +1,4 @@
-# 解球 Mobile · 开发与交接说明
+# 球多多 Mobile · 开发与交接说明
 
 面向 Android 先发、iOS 后补的 Expo React Native 生产前端。本文是给后续开发者/AI 的入口：先读这里，再读 `AGENTS.md`。
 
@@ -43,7 +43,7 @@ src/
 | `/(tabs)` | 今日判决流（三条横幅 + AI 实体 + 卡片 + 对话入口） |
 | `/verdict/[id]` | 完整账：三关明细、情报、证据、封存、记一注、关注、分享 |
 | `/match/[id]?date=` | 为什么不推；404 时明确显示“没有判决记录” |
-| `/tools/parlay` | 本地串关计算（日期可选、最多 4 腿、赔率格式跟随设置） |
+| `/tools/parlay` | 串关体检 2.0 + 串关参谋：选腿/体检 `POST /tools/parlay/check`；自动配 `POST /tools/parlay/plan`（未复核预览） |
 | `/tools/rake` | 抽水 / 返还率 / 去水概率 / 公平赔率 |
 | `/tools/odds` | 欧/港/印尼/美式换算 |
 | `/tools/stake` | 凯利仓位（默认半凯利 + 5% 本金上限） |
@@ -95,7 +95,7 @@ src/
 
 自定义底栏 `src/components/BottomTabBar.tsx`：React Navigation 默认标签在 390px Web 会把中文裁半行，这里自绘；原生同样使用。
 
-滚动交互：首页头部固定，AI 实体位于滚动内容中自然滚出；不使用折叠/压缩。
+滚动交互：首页 Header 随内容滚动；AI 悬浮头像跨 4 Tab 常驻，滚动时缩小但不消失，点击打开“今日比赛”选择器。首页输入框当前常驻底部，收起态/次级入口仍是目标，见 §7.1。
 
 ## 7. 空态、错误态与合规拦截
 
@@ -106,17 +106,35 @@ src/
 - 自排除：本机强制拦截；到期前不可撤销；页面明确“多设备同步是上线前阻塞项”。
 - 登录合并：报告合并注数，避免“登录后账没了”。
 
+## 7.1 聚焦决策流（部分实现）
+
+已实现：
+
+- `src/features/home/focusStore.ts`：`FocusTarget` + Zustand focus；
+- `GlobalMatchPicker`、首页 `MatchPickerSheet` 选中后 `setFocus → 关弹层 → 回首页`，不再直接跳详情；
+- 首页聚焦区：命中当前 stream 时复用 `VerdictMessage`，未命中时 `FocusPending`；提供“换一场 / 今日全部 / 今日其他”；
+- 详情页 `DetailActionBar` 新增“让助理看这场”，设置 focus 后回首页。
+
+待落地：
+
+- 无聚焦时的“数据脉搏 + 选一场”首屏；
+- `DataPulse`、`IntelFacts`、`ActionStack`、输入框默认收起；
+- 前端数据脉搏首屏、客观情报卡、互动漏斗仍未接；后端 `GET /stats/pulse`、`GET /matches/{id}/focus`、`POST /interactions` 已实现，`intel_items`/`match_coverage` 仍是后续表。
+
+完整契约见 [docs/focused-decision-flow.md](../../docs/focused-decision-flow.md)。
+
 ## 8. 已知后端缺口（前端不伪造）
 
-- 串关报告服务端、OCR/拍票、订阅/支付、自排除/PGSI 服务端同步、真实 live feed/进球提醒：未接入。串关仍是**本地数学计算器**，合规自排除仍是**本机强制拦截**；没有假按钮。
+- 串关报告服务端已接入（四维体检）；串关参谋“帮我配”已接 `POST /tools/parlay/plan`，但为**未复核预览**，UI 标注“参考·未复核”。推荐观点/审核队列、订阅/支付、OCR/拍票、自排除/PGSI 服务端同步、真实 live feed/进球提醒仍未接入。新口径见 [docs/recommendation-product.md](../../docs/recommendation-product.md)。
 - 后端已提供 `/matches/{id}/live`，但只展示已同步赛果 + SP 快照，`live_feed:false`，不伪造进球时间线。
 - JPush 真实 token 注册未接；通知设置/站内信/关注已接服务端。
 - 详情/首页已有 `goBackOr` 处理深链冷启动返回；新增页面必须复用 `src/lib/navigation.ts`，不要直接 `router.back()`。
 - 服务端新目录接口（`/matches`、`/cost`、`/water-rank`、`/calendar` 等）已生成 client，页面可按需接入；当前主要页面仍使用 `/stream`/`/on-sale`。
+- 聚焦导航已实现（头像/选择器→回首页聚焦）；后端 focus/pulse/interactions 已实现，前端数据脉搏首屏、客观情报卡、互动漏斗仍未接，需按 `docs/focused-decision-flow.md` 继续。
 
-## 9. 当前验证状态（2026-11-04）
+## 9. 当前验证状态（2026-11-05）
 
-- 后端 182 passed；OpenAPI 94 路径 / 107 方法。
+- 后端 251 passed；OpenAPI 128 路径 / 143 方法；Alembic head `20261105_12`。
 - 前端 typecheck / ESLint / 20 Vitest passed；Android Hermes bundle 3.6 MB。
 - 自排除、401/410、刷新竞态、下注金额、05:00 日界、分享落地页已做回归。
 

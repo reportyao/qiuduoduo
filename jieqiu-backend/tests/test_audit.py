@@ -7,14 +7,14 @@ import pandas as pd
 import pytest
 from sqlalchemy import select
 
-from app.models import (AuthIdentity, IntlOdds, MatchResult, RefreshToken, SPMatch,
-                        SPSnapshot, User, Verdict, VerdictRevision)
+from app.models import (IntlOdds, MatchResult, SPMatch, SPSnapshot, Verdict,
+                        VerdictRevision)
 from app.modules import auth as A
 from app.modules import verdict as vz
-from app.modules.align import Aligner, seed_aliases
+from app.modules.align import Aligner
 from app.modules.ingest import import_collector_db
 from app.modules.verdict import build_verdicts
-from tests.conftest import future_kickoff, today_cn
+from tests.conftest import admin_login, future_kickoff, today_cn
 
 NOW = "2026-11-03 19:02:00"
 
@@ -147,7 +147,6 @@ def test_chain_status_cache_fingerprint(db, monkeypatch):
 
 
 def _seed_one(db):
-    from app.models import VerdictRevision  # noqa
     db.merge(SPMatch(match_id="2080001", match_no="周六201", league="英超",
                      home_raw="霸主", away_raw="弱旅", home="霸主", away="弱旅",
                      kickoff=future_kickoff(today_cn()), single_flag=True))
@@ -174,33 +173,21 @@ def test_chat_never_recommends_settled_match(db, client, monkeypatch):
 def test_chat_memory_key_no_slash(db, client):
     client.post("/auth/device", json={"device_token": "tok-slash"})
     tok = {"Authorization": "Bearer tok-slash"}
-    r = client.post("/chat", json={"text": "记住我的A/B是X"}, headers=tok).json()
+    client.post("/chat", json={"text": "记住我的A/B是X"}, headers=tok)
     mems = client.get("/me/memories", headers=tok).json()
     assert mems and "/" not in mems[0]["key"]
 
 
 # ---------- 安全加固验证 ----------
 
-def test_console_login_lockout(db, client):
-    from app.routers import console as C
-    C._LOGIN_FAILS.clear()
-    for _ in range(5):
-        client.post("/console/login", data={"pw": "wrong"})
-    r = client.post("/console/login", data={"pw": "wrong"})
-    assert r.status_code == 429
-    C._LOGIN_FAILS.clear()
-
-
-def test_console_session_expiry(db, client):
-    from app.routers import console as C
-    C._LOGIN_FAILS.clear()
-    r = client.post("/console/login", data={"pw": "dev"}, follow_redirects=False)
-    tok = r.cookies.get("console_t")
-    assert tok
-    assert C._authed(type("R", (), {"cookies": {"console_t": tok}, "client": None})())
-    C._SESSIONS[tok] = time.time() - 1  # 过期
-    r2 = client.get("/console", follow_redirects=False)
-    assert r2.status_code == 302
+def test_admin_session_expiry(db, client):
+    from app.modules import admin_auth as A
+    admin_login(client)
+    tok = client.cookies.get(A.SESSION_COOKIE)
+    assert tok and tok in A._SESSIONS
+    A._SESSIONS[tok]["exp"] = time.time() - 1
+    assert client.get("/review/freeze").status_code == 401
+    assert client.get("/admin/api/session").json()["authenticated"] is False
 
 
 def test_device_login_can_be_disabled(db, client, monkeypatch):

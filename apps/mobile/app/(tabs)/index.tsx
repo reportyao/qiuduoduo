@@ -1,44 +1,72 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
-import { Button, CardSkeleton, EmptyState, ErrorState, Text } from "@/components/ui";
+import { Button, StatusDot, Text, useToast } from "@/components/ui";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { useAuthStore } from "@/features/auth/authStore";
-import { flattenStream, useOnSaleQuery, useStreamQuery } from "@/features/home/queries";
-import { useBetsQuery } from "@/features/records/queries";
+import { useFloatingStore } from "@/features/assistant/floatingStore";
 import {
-  DataStatusBanner,
-  ParlayBanner,
-  SaleBanner,
-} from "@/features/home/components/HomeBanners";
+  focusFromOnSale,
+  focusFromVerdict,
+  useFocusStore,
+  type FocusTarget,
+} from "@/features/home/focusStore";
+import { useChatMutation } from "@/features/assistant/queries";
+import { ChatCardContent, type ChatMessage } from "@/features/assistant/components/ChatCardContent";
+import { useMemoryMutations } from "@/features/account/queries";
+import { flattenStream, useFocusQuery, useOnSaleQuery, usePulseQuery, useRecommendationsTodayQuery, useStreamQuery } from "@/features/home/queries";
+import { useBetsQuery } from "@/features/records/queries";
+import { trackInteraction } from "@/features/telemetry/interactions";
 import { ChatComposer } from "@/features/home/components/ChatComposer";
 import { MatchPickerSheet } from "@/features/home/components/MatchPickerSheet";
+import { FocusPanel } from "@/features/home/components/FocusPanel";
+import { DataStatusSheet, LegalFooter } from "@/features/home/components/HomeSections";
 import {
-  AvoidSection,
-  DataStatusSheet,
-  DateStrip,
-  EmptyDayCard,
-  FeedSummary,
-  LegalFooter,
-  PostmortemSection,
-  RestDayCard,
-} from "@/features/home/components/HomeSections";
-import { VerdictCard } from "@/features/verdict/components/VerdictCard";
+  AssistantMessage,
+  AssistantTyping,
+  ConversationDate,
+} from "@/features/home/components/ConversationShell";
+import {
+  AssistantBrief,
+  AvoidMessage,
+  EmptyMessage,
+  ErrorMessage,
+  LoadMore,
+  PostmortemMessage,
+  RestMessage,
+  VerdictMessage,
+} from "@/features/home/components/ConversationMessages";
 import { BetSheet } from "@/features/verdict/components/BetSheet";
 import { SealSheet } from "@/features/verdict/components/SealSheet";
-import { errorText } from "@/lib/errors";
-import { currentTradeDateCn, relativeTime, shiftDateCn } from "@/lib/format";
+import { ApiError, errorText } from "@/lib/errors";
+import { currentTradeDateCn, formatDate, formatTime, relativeTime, shiftDateCn } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
 import { colors, layout, spacing } from "@/theme/tokens";
 import type { VerdictSummary } from "@/domain/types";
 
+/**
+ * 首页 = 一条持续的对话流。
+ * 助理先报今天的账，再把每场判决作为消息逐条发出来；不推、复盘、休息日也都是消息。
+ * 顶部只留身份与在线状态，头像常驻在 Tab 层，滚动时不打断对话。
+ */
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { copy } = usePersonaContent();
+  const { copy, meta } = usePersonaContent();
+  const toast = useToast();
+  const chat = useChatMutation();
+  const { save: saveMemory } = useMemoryMutations();
   const session = useAuthStore((s) => s.session);
   const [date, setDate] = useState(currentTradeDateCn());
   const [manualDate, setManualDate] = useState(false);
@@ -49,35 +77,157 @@ export default function HomeScreen() {
   const [betTarget, setBetTarget] = useState<VerdictSummary | null>(null);
   const [sealTarget, setSealTarget] = useState<string | null>(null);
   const [pulling, setPulling] = useState(false);
+  const focus = useFocusStore((s) => s.focus);
+  const setFocus = useFocusStore((s) => s.setFocus);
+  const clearFocus = useFocusStore((s) => s.clearFocus);
+  const [input, setInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [confirmedConflicts, setConfirmedConflicts] = useState<string[]>([]);
+  const scrollRef = useRef<ScrollView>(null);
+  const autoScroll = useRef(false);
+  const chatId = useRef(0);
+  const nextChatId = (prefix: string) => {
+    chatId.current += 1;
+    return `${prefix}-${chatId.current}`;
+  };
+
+  const sendChat = (raw?: string) => {
+    const text = (raw ?? input).trim();
+    if (!text || chat.isPending) return;
+    trackInteraction("free_text_send", { metadata: { length: text.length } });
+    setInput("");
+    autoScroll.current = true;
+    setChatMessages((prev) => [...prev, { id: nextChatId("u"), role: "user", text }]);
+    chat.mutate(text, {
+      onSuccess: (card) => {
+        autoScroll.current = true;
+        setChatMessages((prev) => [
+          ...prev,
+          { id: nextChatId("a"), role: "assistant", text: card.text, card },
+        ]);
+      },
+      onError: (e) => {
+        autoScroll.current = true;
+        setChatMessages((prev) => [
+          ...prev,
+          { id: nextChatId("e"), role: "assistant", text: errorText(e), error: true },
+        ]);
+      },
+    });
+  };
+
+  const confirmMemory = (messageId: string, key: string, value: string) => {
+    if (saveMemory.isPending) return;
+    saveMemory.mutate(
+      { key, value, confirm: true },
+      {
+        onSuccess: () => {
+          setConfirmedConflicts((prev) => (prev.includes(messageId) ? prev : [...prev, messageId]));
+          toast.show("已覆盖记忆", "success");
+          autoScroll.current = true;
+          setChatMessages((prev) => [
+            ...prev,
+            { id: nextChatId("m"), role: "assistant", text: `已更新：${key} = ${value}。` },
+          ]);
+        },
+        onError: (e) => toast.show(errorText(e), "error"),
+      },
+    );
+  };
+
+  // 头像常驻在 Tab 层；首页滚动时缩小并加顶部渐隐，始终跟随可见。
+  const setFloatingCompact = useFloatingStore((s) => s.setCompact);
+  const scrollY = useRef(0);
+  useFocusEffect(
+    useCallback(() => {
+      setFloatingCompact(scrollY.current > 96);
+      return () => setFloatingCompact(false);
+    }, [setFloatingCompact]),
+  );
+
 
   useEffect(() => {
     // 跨过 05:00 竞彩日界时，自动跟随“今天”；用户手动选了旧日期则不打扰。
-    if (!manualDate && date !== today) setDate(today);
-  }, [date, manualDate, today]);
+    if (!manualDate && !focus && date !== today) setDate(today);
+  }, [date, focus, manualDate, today]);
 
   const chooseDate = (next: string) => {
     setDate(next);
     setManualDate(next !== currentTradeDateCn());
+    if (focus && focus.tradeDate !== next) clearFocus();
   };
 
+  // 从别的 Tab 选中比赛后，首页要自动切到该场所属竞彩日。
+  useEffect(() => {
+    if (!focus || focus.tradeDate === date) return;
+    setDate(focus.tradeDate);
+    setManualDate(focus.tradeDate !== currentTradeDateCn());
+  }, [date, focus]);
+
+  // 选中/换场后回到聚焦区，不要停留在旧的滚动位置。
+  useEffect(() => {
+    if (!focus) return;
+    const timer = setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [focus]);
+
   const streamQuery = useStreamQuery(date);
+  const recommendationsQuery = useRecommendationsTodayQuery(date);
+  const pulseQuery = usePulseQuery(date);
+  const focusQuery = useFocusQuery(focus?.matchId ?? null, focus?.tradeDate ?? date, Boolean(focus));
   const onsaleQuery = useOnSaleQuery();
   const betsQuery = useBetsQuery(Boolean(session));
 
-  const { page: stream, verdicts } = useMemo(() => {
+  const { page: stream, verdicts: streamVerdicts } = useMemo(() => {
     const pages = streamQuery.data?.pages ?? [];
     if (pages.length === 0) return { page: null, verdicts: [] as VerdictSummary[] };
     return flattenStream(pages);
   }, [streamQuery.data]);
+  // 发布门：接口成功时只显示 published snapshot；只有旧后端 404 才回退 stream。
+  // 加载中/网络错误/服务端错误都不能闪未复核的 raw verdict，避免把预览当成已发布内容。
+  const publishedUnavailable = recommendationsQuery.error instanceof ApiError
+    && recommendationsQuery.error.status === 404;
+  const verdicts = useMemo(
+    () => (recommendationsQuery.isSuccess
+      ? recommendationsQuery.data.verdicts
+      : publishedUnavailable
+        ? streamVerdicts
+        : []),
+    [recommendationsQuery.data, recommendationsQuery.isSuccess,
+     publishedUnavailable, streamVerdicts],
+  );
 
   const onsale = onsaleQuery.data ?? stream?.onsale ?? [];
   const betIds = useMemo(
     () => new Set((betsQuery.data ?? []).map((bet) => bet.verdictId)),
     [betsQuery.data],
   );
+  const focusedVerdict = useMemo(
+    () => (focus?.verdictId
+      ? verdicts.find((verdict) => verdict.id === focus.verdictId)
+        ?? streamVerdicts.find((verdict) => verdict.id === focus.verdictId)
+        ?? null
+      : null),
+    [focus?.verdictId, verdicts, streamVerdicts],
+  );
+  const heroVerdict = useMemo(() => {
+    if (focus) return null;
+    return verdicts.find((v) => v.status === "promoted")
+      ?? verdicts.find((v) => v.status !== "killed" && Boolean(v.pick?.dir))
+      ?? null;
+  }, [focus, verdicts]);
+  const restVerdicts = useMemo(
+    () => (heroVerdict ? verdicts.filter((v) => v.id !== heroVerdict.id) : verdicts),
+    [heroVerdict, verdicts],
+  );
 
   const openVerdict = useCallback(
-    (id: string) => router.push({ pathname: "/verdict/[id]", params: { id } }),
+    (id: string) => {
+      trackInteraction("action_click", { verdictId: id, action: "open_detail" });
+      router.push({ pathname: "/verdict/[id]", params: { id } });
+    },
     [router],
   );
   const openWhyNot = useCallback(
@@ -85,11 +235,21 @@ export default function HomeScreen() {
     [date, router],
   );
 
+  const offerWhyNot = useCallback(() => {
+    const target = stream?.avoid[0]?.matchId
+      ?? verdicts.find((verdict) => verdict.status === "screening")?.matchId;
+    if (target) openWhyNot(target);
+    else router.push("/assistant");
+  }, [openWhyNot, router, stream?.avoid, verdicts]);
+
   const refreshAll = async () => {
     setPulling(true);
     try {
       await Promise.all([
         streamQuery.refetch(),
+        recommendationsQuery.refetch(),
+        pulseQuery.refetch(),
+        focusQuery.refetch(),
         onsaleQuery.refetch(),
         betsQuery.refetch(),
       ]);
@@ -98,12 +258,48 @@ export default function HomeScreen() {
     }
   };
 
+  const isEmptyDay = stream !== null && !stream.restDay && verdicts.length === 0;
+  const viewingToday = date === today;
+  const dayLabel = viewingToday ? "今天" : date === shiftDateCn(today, -1) ? "昨天" : formatDate(date);
+  const emptyTitle = stream?.stats.total === 0
+    ? viewingToday
+      ? copy.pendingTitle
+      : `${formatDate(date)}的结论还没出来。`
+    : copy.emptyTitle;
+  const emptyBody = stream?.stats.total === 0
+    ? viewingToday
+      ? copy.pendingBody
+      : "这天的场次还没入库，或已经翻过去了。可以回今天，或先看今日在售。"
+    : copy.emptyBody;
+  // 有复核场次就先让助理报账；全部被砍时也要报总数，不能只剩一句“没有值得记的”。
+  const briefStream = stream && !stream.restDay && (verdicts.length > 0 || stream.stats.total > 0)
+    ? stream
+    : null;
+
   return (
     <AppScreen bottom={false}>
-      <View style={styles.flex}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={0}
+      >
         <ScrollView
+          ref={scrollRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
+          onContentSizeChange={() => {
+            if (!autoScroll.current) return;
+            autoScroll.current = false;
+            scrollRef.current?.scrollToEnd({ animated: true });
+          }}
+          scrollEventThrottle={48}
+          onScroll={(event) => {
+            const y = event.nativeEvent.contentOffset.y;
+            const wasDocked = scrollY.current > 96;
+            const nowDocked = y > 96;
+            scrollY.current = y;
+            if (wasDocked !== nowDocked) setFloatingCompact(nowDocked);
+          }}
           refreshControl={
             <RefreshControl
               refreshing={pulling}
@@ -112,65 +308,174 @@ export default function HomeScreen() {
             />
           }
         >
-          {/* 首页菜单不再置顶：它随内容滚动，和悬浮头像处在同一高度带 */}
+          {/* 顶部随对话滚走，不抢消息流；中间位置留给常驻助理头像 */}
           <AppHeader
-            title="解球"
+            title="球多多"
             subtitle={copy.brandSub}
             showAssistant={false}
             insetTop={false}
-            right={<Metrics stream={stream} />}
+            border={false}
+            right={<Metrics stream={stream} pulse={pulseQuery.data} now={now} />}
           />
-          <View style={styles.content}>
-            <Pressable
-              onPress={() => setPickerOpen(true)}
-              accessibilityRole="button"
-              accessibilityLabel="选今天的比赛"
-              style={styles.pickerHint}
-            >
-              <Text variant="caption" color={colors.green}>想让助理帮你选一场？点这里 →</Text>
-            </Pressable>
-            <DateStrip value={date} onChange={chooseDate} />
-            <DataStatusBanner stream={stream} onPress={() => setDataOpen(true)} />
-            <SaleBanner onsale={onsale} onPress={() => router.push("/tools/on-sale")} />
-            <ParlayBanner onPress={() => router.push("/tools/parlay")} />
 
-          {streamQuery.isLoading ? (
-            <>
-              <CardSkeleton />
-              <CardSkeleton />
-            </>
-          ) : streamQuery.isError && !stream ? (
-            <ErrorState message={errorText(streamQuery.error)} onRetry={() => streamQuery.refetch()} />
-          ) : !stream ? (
-            <EmptyState
-              title="今天的数据还没到"
-              body="稍后下拉刷新，或先看看今日在售。"
-              actionLabel="看今日在售"
-              onAction={() => router.push("/tools/on-sale")}
-            />
-          ) : (
-            <>
-              <FeedSummary stream={stream} />
-              {streamQuery.isError ? (
-                <ErrorState
-                  compact
-                  message="刷新失败，先显示上次的结论。"
-                  onRetry={() => streamQuery.refetch()}
-                />
-              ) : null}
-              {stream.restDay ? (
-                <RestDayCard rest={stream.restDay} onOpenLedger={() => router.push("/records/ledger")} />
-              ) : verdicts.length === 0 ? (
-                <EmptyDayCard
-                  copyTitle={stream.stats.total === 0 ? copy.pendingTitle : copy.emptyTitle}
-                  copyBody={stream.stats.total === 0 ? copy.pendingBody : copy.emptyBody}
-                  onYesterday={() => chooseDate(shiftDateCn(currentTradeDateCn(), -1))}
-                  onOnSale={() => router.push("/tools/on-sale")}
-                />
-              ) : (
-                verdicts.map((verdict) => (
-                  <VerdictCard
+          <View style={styles.conversation}>
+            <ConversationDate value={date} onChange={chooseDate} />
+
+            {briefStream ? (
+              <AssistantBrief
+                stream={briefStream}
+                dayLabel={dayLabel}
+                onsaleCount={viewingToday ? onsale.length : briefStream.onsale.length}
+                onsaleLabel={viewingToday ? "在售场次" : "当日场次"}
+                onPicker={() => setPickerOpen(true)}
+                onOnSale={() => router.push("/tools/on-sale")}
+                onParlay={() => router.push("/tools/parlay")}
+                onWhyNot={offerWhyNot}
+                onData={() => {
+                  trackInteraction("pulse_open");
+                  setDataOpen(true);
+                }}
+              />
+            ) : null}
+
+            {focus ? (
+              <View style={styles.focus}>
+                <View style={styles.focusHead}>
+                  <View style={styles.flex}>
+                    <Text variant="overline" color={colors.green}>正在看</Text>
+                    <Text variant="caption" color={colors.muted}>
+                      {focus.matchNo} · {focus.league || "联赛待同步"}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setPickerOpen(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="换一场比赛"
+                    hitSlop={8}
+                  >
+                    <Text variant="captionStrong" color={colors.green}>换一场</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={clearFocus}
+                    accessibilityRole="button"
+                    accessibilityLabel="回到今日全部"
+                    hitSlop={8}
+                  >
+                    <Text variant="caption" color={colors.subtle}>今日全部</Text>
+                  </Pressable>
+                </View>
+
+                <FocusPanel focus={focusQuery.data} loading={focusQuery.isLoading} />
+
+                {focusedVerdict ? (
+                  <VerdictMessage
+                    verdict={focusedVerdict}
+                    betExists={betIds.has(focusedVerdict.id)}
+                    onOpen={openVerdict}
+                    onBet={setBetTarget}
+                    onWhyNot={openWhyNot}
+                    onSeal={setSealTarget}
+                  />
+                ) : (
+                  <FocusPending
+                    focus={focus}
+                    onOpenVerdict={openVerdict}
+                    onWhyNot={openWhyNot}
+                    onOnSale={() => router.push("/tools/on-sale")}
+                    onSwitch={() => setPickerOpen(true)}
+                  />
+                )}
+
+                {verdicts.length > (focusedVerdict ? 1 : 0) ? (
+                  <Pressable
+                    onPress={() => setPickerOpen(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="看今日其他比赛"
+                    style={styles.otherMatches}
+                  >
+                    <Text variant="caption" color={colors.muted}>
+                      今日其他 {verdicts.length - (focusedVerdict ? 1 : 0)} 场 · 选一场 ›
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+
+            {streamQuery.isLoading || (recommendationsQuery.isLoading && !recommendationsQuery.isError) ? (
+              <AssistantTyping text={copy.typing} />
+            ) : streamQuery.isError && !stream ? (
+              <ErrorMessage
+                message={errorText(streamQuery.error)}
+                onRetry={() => streamQuery.refetch()}
+              />
+            ) : recommendationsQuery.isError && !publishedUnavailable ? (
+              <ErrorMessage
+                message={errorText(recommendationsQuery.error)}
+                onRetry={() => recommendationsQuery.refetch()}
+              />
+            ) : !stream ? (
+              <EmptyMessage
+                title="今天的数据还没到"
+                body="稍后下拉刷新，或先看看今日在售。"
+                secondaryLabel="看昨日复盘"
+                onSecondary={() => chooseDate(shiftDateCn(currentTradeDateCn(), -1))}
+                onOnSale={() => router.push("/tools/on-sale")}
+              />
+            ) : stream.restDay ? (
+              <RestMessage
+                rest={stream.restDay}
+                title={viewingToday ? undefined : `${formatDate(date)}没有竞彩足球场次。`}
+                onOpenLedger={() => router.push("/records/ledger")}
+              />
+            ) : isEmptyDay ? (
+              <>
+                {stream.stats.total === 0 ? (
+                  <EmptyMessage
+                    title={emptyTitle}
+                    body={emptyBody}
+                    secondaryLabel={viewingToday ? "看昨日复盘" : "回到今天"}
+                    onSecondary={() =>
+                      chooseDate(viewingToday ? shiftDateCn(currentTradeDateCn(), -1) : currentTradeDateCn())
+                    }
+                    onOnSale={() => router.push("/tools/on-sale")}
+                  />
+                ) : null}
+                <AvoidMessage items={stream.avoid} onOpen={openWhyNot} />
+                <PostmortemMessage items={stream.postmortems} onOpen={openVerdict} />
+              </>
+            ) : (
+              <>
+                {streamQuery.isError ? (
+                  <AssistantMessage>
+                    <Text variant="small" color={colors.muted}>刷新失败，先显示上次的结论。</Text>
+                    <Pressable
+                      onPress={() => streamQuery.refetch()}
+                      accessibilityRole="button"
+                      accessibilityLabel="重新刷新"
+                      hitSlop={6}
+                    >
+                      <Text variant="captionStrong" color={colors.green} style={styles.retry}>重试 ›</Text>
+                    </Pressable>
+                  </AssistantMessage>
+                ) : null}
+
+                {heroVerdict ? (
+                  <VerdictMessage
+                    verdict={heroVerdict}
+                    hero
+                    betExists={betIds.has(heroVerdict.id)}
+                    onOpen={openVerdict}
+                    onBet={setBetTarget}
+                    onWhyNot={openWhyNot}
+                    onSeal={setSealTarget}
+                    onParlay={() => router.push({ pathname: "/tools/parlay", params: { date } })}
+                  />
+                ) : null}
+
+                {!focus ? restVerdicts.map((verdict, index) => (
+                  <VerdictMessage
                     key={verdict.id}
+                    delay={Math.min(index * 45, 360)}
                     verdict={verdict}
                     betExists={betIds.has(verdict.id)}
                     onOpen={openVerdict}
@@ -178,29 +483,56 @@ export default function HomeScreen() {
                     onWhyNot={openWhyNot}
                     onSeal={setSealTarget}
                   />
-                ))
-              )}
+                )) : null}
 
-              {streamQuery.hasNextPage ? (
-                <Button
-                  label={streamQuery.isFetchingNextPage ? "加载中…" : "加载更多"}
-                  variant="secondary"
-                  onPress={() => streamQuery.fetchNextPage()}
-                  loading={streamQuery.isFetchingNextPage}
-                  style={styles.more}
-                />
-              ) : null}
+                {!focus && streamQuery.hasNextPage ? (
+                  <LoadMore
+                    loading={streamQuery.isFetchingNextPage}
+                    onPress={() => streamQuery.fetchNextPage()}
+                  />
+                ) : null}
 
-              <AvoidSection items={stream.avoid} onOpen={openWhyNot} />
-              <PostmortemSection items={stream.postmortems} onOpen={openVerdict} />
-              <LegalFooter text={copy.footer} />
-            </>
-          )}
+                <AvoidMessage items={stream.avoid} onOpen={openWhyNot} />
+                <PostmortemMessage items={stream.postmortems} onOpen={openVerdict} />
+              </>
+            )}
+
+            {!streamQuery.isLoading ? <LegalFooter text={copy.footer} /> : null}
+
+            {chatMessages.length > 0 || chat.isPending ? (
+              <View style={styles.chatThread}>
+                {chatMessages.map((message) =>
+                  message.role === "user" ? (
+                    <View key={message.id} style={styles.userRow}>
+                      <View style={styles.userBubble}>
+                        <Text variant="small" color={colors.white}>{message.text}</Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <AssistantMessage key={message.id}>
+                      <ChatCardContent
+                        message={message}
+                        confirmed={confirmedConflicts.includes(message.id)}
+                        savingMemory={saveMemory.isPending}
+                        onOpenVerdict={openVerdict}
+                        onConfirmMemory={(key, value) => confirmMemory(message.id, key, value)}
+                      />
+                    </AssistantMessage>
+                  ),
+                )}
+                {chat.isPending ? <AssistantTyping text={`${meta.name}正在核对数据…`} /> : null}
+              </View>
+            ) : null}
           </View>
         </ScrollView>
 
-        <ChatComposer onPress={() => router.push("/assistant")} />
-      </View>
+        <ChatComposer
+          value={input}
+          onChangeText={setInput}
+          onSend={() => sendChat()}
+          sending={chat.isPending}
+        />
+      </KeyboardAvoidingView>
 
       <MatchPickerSheet
         visible={pickerOpen}
@@ -208,15 +540,33 @@ export default function HomeScreen() {
         verdicts={verdicts}
         streamDate={stream?.tradeDate ?? date}
         onsale={onsale}
-        onSelectVerdict={openVerdict}
-        onSelectMatch={(matchId, tradeDate) =>
-          router.push({
-            pathname: "/match/[id]",
-            params: { id: matchId, date: tradeDate || date },
-          })
-        }
+        onSelectVerdict={(id) => {
+          const verdict = verdicts.find((item) => item.id === id);
+          if (verdict) {
+            trackInteraction("focus_select", { matchId: verdict.matchId, verdictId: verdict.id });
+            setFocus(focusFromVerdict(verdict, stream?.tradeDate ?? date));
+            return;
+          }
+          const match = onsale.find((item) => item.verdictId === id);
+          if (match) {
+            trackInteraction("focus_select", { matchId: match.matchId, verdictId: id });
+            setFocus(focusFromOnSale(match, stream?.tradeDate ?? date));
+          } else openVerdict(id);
+        }}
+        onSelectMatch={(matchId, tradeDate) => {
+          const match = onsale.find((item) => item.matchId === matchId);
+          if (match) {
+            trackInteraction("focus_select", { matchId: match.matchId });
+            setFocus(focusFromOnSale(match, tradeDate || date));
+          } else {
+            router.push({
+              pathname: "/match/[id]",
+              params: { id: matchId, date: tradeDate || date },
+            });
+          }
+        }}
       />
-      <DataStatusSheet visible={dataOpen} onClose={() => setDataOpen(false)} stream={stream} />
+      <DataStatusSheet visible={dataOpen} onClose={() => setDataOpen(false)} stream={stream} pulse={pulseQuery.data} />
       <BetSheet
         visible={Boolean(betTarget)}
         verdict={betTarget}
@@ -236,15 +586,84 @@ export default function HomeScreen() {
   );
 }
 
-function Metrics({ stream }: { stream: ReturnType<typeof flattenStream>["page"] | null }) {
-  const now = useNow(60_000);
-  const total = stream?.stats.total ?? 0;
+function FocusPending({
+  focus,
+  onOpenVerdict,
+  onWhyNot,
+  onOnSale,
+  onSwitch,
+}: {
+  focus: FocusTarget;
+  onOpenVerdict: (id: string) => void;
+  onWhyNot: (matchId: string) => void;
+  onOnSale: () => void;
+  onSwitch: () => void;
+}) {
+  const status =
+    focus.status === "promoted" ? "三关全过"
+      : focus.status === "killed" ? "已砍"
+        : focus.status === "screening" ? "复核中"
+          : "在售";
+  const hasVerdict = Boolean(focus.verdictId);
+  return (
+    <AssistantMessage>
+      <Text variant="h3">{focus.home} vs {focus.away}</Text>
+      <Text variant="caption" color={colors.muted}>
+        {focus.matchNo} · {formatTime(focus.kickoff)} 停售 · {status}
+      </Text>
+      <Text variant="body" color={colors.ink} style={styles.focusText}>
+        {hasVerdict
+          ? "这场还没有完整判决可展示；数据没齐之前，不给你硬凑结论。"
+          : "这场还在售，助理还没算完；先看赛程，别急着下。"}
+      </Text>
+      <View style={styles.focusActions}>
+        {hasVerdict ? (
+          <>
+            <Button
+              label="看完整账"
+              variant="primary"
+              onPress={() => focus.verdictId && onOpenVerdict(focus.verdictId)}
+              style={styles.focusAction}
+            />
+            <Button
+              label="为什么还不出"
+              variant="secondary"
+              onPress={() => onWhyNot(focus.matchId)}
+              style={styles.focusAction}
+            />
+          </>
+        ) : (
+          <>
+            <Button label="看今日在售" variant="primary" onPress={onOnSale} style={styles.focusAction} />
+            <Button label="换一场" variant="secondary" onPress={onSwitch} style={styles.focusAction} />
+          </>
+        )}
+      </View>
+    </AssistantMessage>
+  );
+}
+
+function Metrics({
+  stream,
+  pulse,
+  now,
+}: {
+  stream: ReturnType<typeof flattenStream>["page"] | null;
+  pulse: ReturnType<typeof import("@/domain/focusAdapters").adaptPulse> | null | undefined;
+  now: number;
+}) {
+  const points = pulse?.display.dataPoints ?? 0;
   return (
     <View style={styles.metrics}>
-      <Text variant="captionStrong" color={colors.green}>三关 v3</Text>
-      <Text variant="caption" color={colors.muted}>{total > 0 ? `${total * 3} 次核验` : "等待同步"}</Text>
+      <View style={styles.metricTop}>
+        <StatusDot color={colors.greenAccent} />
+        <Text variant="caption" color={colors.muted}>在线</Text>
+      </View>
+      <Text variant="captionStrong" color={colors.green}>
+        三关 v3 · {points > 0 ? `${points} 个数据点` : "等待同步"}
+      </Text>
       <Text variant="caption" color={colors.subtle}>
-        {stream?.generatedAt ? relativeTime(stream.generatedAt, now) : "实时"}
+        {pulse?.asOf ? relativeTime(pulse.asOf, now) : stream?.generatedAt ? relativeTime(stream.generatedAt, now) : "实时"}
       </Text>
     </View>
   );
@@ -252,11 +671,34 @@ function Metrics({ stream }: { stream: ReturnType<typeof flattenStream>["page"] 
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  scrollContent: { paddingBottom: 140 },
-  content: {
+  scrollContent: { paddingBottom: spacing.x4 },
+  conversation: {
     paddingHorizontal: layout.pagePadding,
+    paddingTop: spacing.sm,
   },
-  pickerHint: { alignSelf: "flex-start", paddingVertical: spacing.xs, marginBottom: spacing.xs },
+  focus: { marginTop: spacing.base },
+  focusHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.base,
+    paddingTop: spacing.xs,
+  },
+  focusLink: { marginLeft: 0 },
+  otherMatches: { alignSelf: "flex-start", paddingVertical: spacing.sm },
+  focusText: { marginTop: spacing.sm, marginBottom: spacing.sm, lineHeight: 22 },
+  focusActions: { flexDirection: "row", gap: spacing.sm },
+  focusAction: { flex: 1 },
+  chatThread: { marginTop: spacing.base },
+  userRow: { alignItems: "flex-end", marginTop: spacing.sm },
+  userBubble: {
+    maxWidth: "82%",
+    backgroundColor: colors.green,
+    borderRadius: 18,
+    borderBottomRightRadius: 6,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+  },
   metrics: { alignItems: "flex-end", gap: 0 },
-  more: { marginTop: spacing.base },
+  metricTop: { flexDirection: "row", alignItems: "center", gap: 5 },
+  retry: { marginTop: spacing.xs },
 });

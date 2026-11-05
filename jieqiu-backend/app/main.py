@@ -1,22 +1,28 @@
 """FastAPI 入口。启动即建表（W2 简化；W4 换 Alembic 迁移）。"""
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 
 from .db import init_db
 from .middleware import RateLimitMiddleware
 from .features.catalog.router import router as catalog_router
+from .features.intel.router import router as intel_router
+from .features.tools.router import router as tools_router
+from .features.persona.router import router as persona_router
+from .features.recommendations.router import router as recommendations_router
 from .routers.api import router
 from .routers.w4 import router as w4_router
 from .routers.w6 import router as w6_router
 from .routers.actions import router as actions_router
 from .routers.w7 import router as w7_router
-from .routers.console import router as console_router
+from .routers.admin_api import router as admin_api_router
 from .routers.w8 import router as w8_router
 from .routers.auth_w5 import router as auth_router
 from .features.assistant.router import router as assistant_router
+from .features.compliance.router import router as compliance_router
 
 app = FastAPI(
-    title="解球 API",
+    title="球多多 API",
     version="0.8.0-w8+assistant",
     description="W8 + AI 助理运行时 P0：事件监控 / 站内信 / 关注 / JPush dry-run",
 )
@@ -32,24 +38,36 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def legacy_console_redirect(request: Request, call_next):
+    """旧 /console 全部下线，统一 302 到新版运营台。"""
+    path = request.url.path
+    if path == "/console" or path.startswith("/console/"):
+        return RedirectResponse("/admin", status_code=302)
+    return await call_next(request)
 # catalog 必须在 api 之前注册：/verdicts/today 不能被 /verdicts/{verdict_id} 抢先匹配。
 app.include_router(catalog_router, tags=["catalog"])
+app.include_router(intel_router)
+app.include_router(tools_router)
+app.include_router(persona_router)
+app.include_router(recommendations_router)
 app.include_router(router, tags=["v0.5"])
 app.include_router(w4_router, tags=["v0.5-w4"])
 app.include_router(w6_router, tags=["v0.5-w6"])
 app.include_router(actions_router, tags=["verdict-actions"])
 app.include_router(w7_router, tags=["v0.5-w7"])
-app.include_router(console_router, tags=["editor-console"])
+app.include_router(admin_api_router, tags=["admin-ui"])
 app.include_router(w8_router, tags=["w8-review"])
 app.include_router(auth_router, tags=["w5-auth"])
 app.include_router(assistant_router, tags=["assistant"])
+app.include_router(compliance_router)
 
 
 def _warm_models() -> None:
     """后台预热 DC 模型（首个 /stream 请求不再等 1–2s 拟合）。"""
     try:
-        import threading
-
         from .config import get_settings
         from .db import SessionLocal
         from .modules.align import Aligner

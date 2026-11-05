@@ -14,12 +14,16 @@ export function ProbabilityBar({
   probs,
   dark = false,
   label = "市场去水概率",
+  pool,
 }: {
   probs: ProbabilityTriple;
   dark?: boolean;
   label?: string;
+  /** 让球盘要标明概率属于让球后的主/平/客，不能直接写主胜。 */
+  pool?: string;
 }) {
   const total = probs.home + probs.draw + probs.away || 1;
+  const prefix = pool === "hhad" ? "让球" : "";
   return (
     <View style={styles.wrap}>
       <View style={styles.legend}>
@@ -27,7 +31,7 @@ export function ProbabilityBar({
           <View key={segment.key} style={styles.legendItem}>
             <View style={[styles.swatch, { backgroundColor: segment.color }]} />
             <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>
-              {segment.label} {pct(probs[segment.key] / total)}
+              {prefix}{segment.label} {pct(probs[segment.key] / total)}
             </Text>
           </View>
         ))}

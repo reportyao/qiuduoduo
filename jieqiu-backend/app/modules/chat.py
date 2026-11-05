@@ -5,12 +5,16 @@ respond() 把意图映射到卡片 + 人设语气文本。
 """
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from ..models import User, Verdict
 from .postmortem import postmortem
 from .users import list_memories, today_cn, user_streak
+
+log = logging.getLogger(__name__)
 
 # 意图关键词（优先级从上到下）
 _INTENT_RULES: list[tuple[str, tuple[str, ...]]] = [
@@ -35,7 +39,8 @@ def route_intent(text: str) -> str:
     return "fallback"
 
 
-def respond(db: Session, user: User | None, text: str) -> dict:
+def respond(db: Session, user: User | None, text: str,
+            session_id: str = "") -> dict:
     """意图 → 卡片 + 文案。所有卡片都是真实数据驱动。"""
     intent = route_intent(text)
     card: dict = {"type": intent}
@@ -142,6 +147,31 @@ def respond(db: Session, user: User | None, text: str) -> dict:
     else:  # fallback
         card["text"] = ("我聊今晚怎么买、为什么不买、你的复盘和记忆。"
                         "试试：今晚买啥 / 为什么不推 / 复盘 / 记住我的主队是曼城。")
+        # 匿名用户固定引导（0 LLM）；登录后跑题/开放问题才进入 fast。
+        if user is not None:
+            from .llm_gateway import complete
+            try:
+                res = complete(
+                    db, "open_chat",
+                    [{"role": "system",
+                      "content": ("你是球多多助理。只聊足球数据、下注成本与风险纪律；"
+                                  "不预测比赛结果、不承诺收益、不引导下注。回答不超过 120 字，"
+                                  "语气克制，事实不确定就直说不知道。")},
+                     {"role": "user", "content": text}],
+                    max_tokens=220, user_id=user.id, session_id=session_id,
+                )
+            except Exception:  # noqa: BLE001 - 网关异常也不能阻塞 /chat
+                log.exception("llm fallback failed")
+                res = None
+            if res is not None and not res.degraded and res.text:
+                from .compliance import scan_text
+                hits = scan_text(res.text)
+                if hits:
+                    card["llm"] = {"filtered": hits}
+                else:
+                    card["text"] = res.text.strip()[:800]
+                    card["llm"] = {"profile": res.profile, "model": res.model,
+                                   "cached": res.cached}
 
     # 保护中的用户：所有回复追加降温尾注（F11 行为面）
     if user:

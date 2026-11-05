@@ -27,7 +27,7 @@ interface AppHeaderProps {
 export function AppHeader({
   title,
   subtitle,
-  showAssistant = true,
+  showAssistant = false,
   onAssistantPress,
   right,
   onBack,

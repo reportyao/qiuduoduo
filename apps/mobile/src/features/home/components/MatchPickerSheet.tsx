@@ -5,7 +5,7 @@ import { countdownText, formatTime, tradeDateCnFromKickoff } from "@/lib/format"
 import { colors, radii, spacing } from "@/theme/tokens";
 import { Chip, Icon, Sheet, StatusDot, Text } from "@/components/ui";
 
-type Filter = "all" | "promoted" | "screening" | "onsale";
+type Filter = "all" | "promoted" | "screening" | "onsale" | "covered";
 
 interface Row {
   matchId: string;
@@ -18,6 +18,7 @@ interface Row {
   status: string;
   gates: VerdictSummary["gates"] | null;
   tradeDate: string;
+  coverage: OnSaleItem["coverage"];
 }
 
 interface MatchPickerSheetProps {
@@ -28,6 +29,7 @@ interface MatchPickerSheetProps {
   onsale: OnSaleItem[];
   onSelectVerdict: (id: string) => void;
   onSelectMatch: (matchId: string, date: string) => void;
+  loading?: boolean;
 }
 
 export function MatchPickerSheet({
@@ -38,6 +40,7 @@ export function MatchPickerSheet({
   onsale,
   onSelectVerdict,
   onSelectMatch,
+  loading = false,
 }: MatchPickerSheetProps) {
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
@@ -56,6 +59,7 @@ export function MatchPickerSheet({
         status: verdict.status,
         gates: verdict.gates,
         tradeDate: streamDate,
+        coverage: null,
       });
     }
     for (const match of onsale) {
@@ -71,6 +75,7 @@ export function MatchPickerSheet({
         status: match.status ?? "onsale",
         gates: match.gates,
         tradeDate: tradeDateCnFromKickoff(match.kickoff),
+        coverage: match.coverage,
       });
     }
     const list = Array.from(byMatch.values());
@@ -78,13 +83,19 @@ export function MatchPickerSheet({
       if (filter === "promoted" && row.status !== "promoted") return false;
       if (filter === "screening" && row.status !== "screening") return false;
       if (filter === "onsale" && row.verdictId !== null) return false;
+      if (filter === "covered" && (row.coverage?.score ?? 0) < 70) return false;
       if (query.trim()) {
         const hay = `${row.home}${row.away}${row.matchNo}`.toLowerCase();
         if (!hay.includes(query.trim().toLowerCase())) return false;
       }
       return true;
     });
-    return filtered.sort((a, b) => a.close.localeCompare(b.close));
+    return filtered.sort((a, b) => {
+      if (a.status === "promoted" && b.status !== "promoted") return -1;
+      if (b.status === "promoted" && a.status !== "promoted") return 1;
+      const coverage = (b.coverage?.score ?? 0) - (a.coverage?.score ?? 0);
+      return coverage !== 0 ? coverage : a.close.localeCompare(b.close);
+    });
   }, [filter, onsale, query, streamDate, verdicts]);
 
   return (
@@ -112,12 +123,15 @@ export function MatchPickerSheet({
         <Chip label="已过三关" selected={filter === "promoted"} onPress={() => setFilter("promoted")} />
         <Chip label="复核中" selected={filter === "screening"} onPress={() => setFilter("screening")} />
         <Chip label="仅在售" selected={filter === "onsale"} onPress={() => setFilter("onsale")} />
+        <Chip label="覆盖足" selected={filter === "covered"} onPress={() => setFilter("covered")} />
       </View>
 
       <View style={styles.list}>
         {rows.length === 0 ? (
           <View style={styles.empty}>
-            <Text variant="small" color={colors.muted}>没有符合条件的比赛。</Text>
+            <Text variant="small" color={colors.muted}>
+              {loading ? "正在同步今日比赛…" : "没有符合条件的比赛。"}
+            </Text>
           </View>
         ) : (
           rows.map((row, index) => (
@@ -146,6 +160,7 @@ export function MatchPickerSheet({
                 </Text>
                 <Text variant="caption" color={colors.muted}>
                   {row.verdictId ? rowStatus(row.status) : `在售 · ${countdownText(row.close)}停售`}
+                  {row.coverage ? ` · 覆盖 ${row.coverage.score}` : ""}
                 </Text>
               </View>
               {row.gates?.price === "pass" ? (

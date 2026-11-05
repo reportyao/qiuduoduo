@@ -1,0 +1,827 @@
+const state = {
+  view: "overview",
+  date: "",
+  recommendationFilter: "all",
+  recommendationQuery: "",
+  recoLimit: 50,
+  recoOffset: 0,
+  recoItems: [],
+  logName: "sync",
+  autoRefresh: true,
+  role: "",
+  auditOffset: 0,
+  cache: {},
+};
+
+const canOperate = () => ["operator", "admin"].includes(state.role);
+const canAdmin = () => state.role === "admin";
+
+const el = (sel) => document.querySelector(sel);
+const els = (sel) => [...document.querySelectorAll(sel)];
+const esc = (value) => String(value ?? "").replace(/[&<>'"]/g, c => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
+}[c]));
+const num = (value, digits = 0) => Number(value ?? 0).toFixed(digits);
+
+function toast(message, type = "success", ms = 3200) {
+  const box = el("#toast");
+  box.textContent = message;
+  box.className = `toast show ${type}`;
+  clearTimeout(box._timer);
+  box._timer = setTimeout(() => box.classList.remove("show"), ms);
+}
+
+function csrfToken() {
+  const match = document.cookie.split("; ").find(item => item.startsWith("admin_csrf="));
+  return match ? decodeURIComponent(match.slice("admin_csrf=".length)) : "";
+}
+
+function ensureCsrf(session) {
+  if (!csrfToken() && session && session.csrf_token) {
+    document.cookie = `admin_csrf=${encodeURIComponent(session.csrf_token)}; path=/; samesite=strict`;
+  }
+}
+
+async function api(path, options = {}) {
+  const headers = {};
+  if (options.body) headers["Content-Type"] = "application/json";
+  const token = csrfToken();
+  if (token) headers["X-CSRF-Token"] = token;
+  const response = await fetch(path, {
+    credentials: "same-origin",
+    headers,
+    ...options,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+  if (response.status === 401) {
+    showLogin();
+    throw new Error("需要控制台登录");
+  }
+  const text = await response.text();
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { detail: text }; }
+  if (!response.ok) throw new Error(data.detail || data.error || `请求失败（${response.status}）`);
+  return data;
+}
+
+async function post(path, body = {}) {
+  return api(path, { method: "POST", body });
+}
+async function put(path, body = {}) {
+  return api(path, { method: "PUT", body });
+}
+async function patch(path, body = {}) {
+  return api(path, { method: "PATCH", body });
+}
+async function del(path) {
+  return api(path, { method: "DELETE" });
+}
+
+function showLogin() {
+  el("#app").hidden = true;
+  el("#login").style.display = "grid";
+}
+
+function showApp() {
+  el("#login").style.display = "none";
+  el("#app").hidden = false;
+}
+
+function applyRole() {
+  els("[data-admin-only]").forEach(item => {
+    item.style.display = canAdmin() ? "" : "none";
+  });
+}
+
+function statusPill(status) {
+  const map = {
+    published: ["green", "已发布"], approved: ["blue", "已过审"],
+    review_failed: ["red", "复核失败"], reviewing: ["amber", "复核中"],
+    draft: ["amber", "草稿"], expired: ["muted", "已过期"],
+    withdrawn: ["muted", "已撤回"], pass: ["green", "通过"],
+    fail: ["red", "失败"], skip: ["amber", "跳过"],
+    ok: ["green", "正常"], degraded: ["red", "降级"],
+    cached: ["blue", "缓存"], blocked: ["amber", "拦截"],
+  };
+  const [cls, label] = map[status] || ["muted", status || "—"];
+  return `<span class="pill ${cls}">${esc(label)}</span>`;
+}
+
+function gatePills(gates = {}) {
+  return ["price", "market", "model"].map(key => {
+    const value = gates[key];
+    const cls = value === "pass" ? "green" : value === "fail" ? "red" : value === "pending_data" ? "amber" : "muted";
+    const label = { price: "价", market: "市", model: "模", pass: "过", fail: "败", pending_data: "待" }[value] || value || "—";
+    return `<span class="pill ${cls}">${key === value ? esc(label) : esc(label)}</span>`;
+  }).join(" ");
+}
+
+function skeleton(count = 3) {
+  return Array.from({ length: count }, () => '<div class="skeleton"></div>').join("");
+}
+
+function modal(title, html) {
+  el("#modal-card").innerHTML = `<h3>${esc(title)}</h3>${html}`;
+  el("#modal").hidden = false;
+}
+function closeModal() {
+  el("#modal").hidden = true;
+  el("#modal-card").innerHTML = "";
+}
+
+function confirmModal(title, message, action) {
+  modal(title, `
+    <p style="margin:0 0 20px;color:var(--ink-2)">${esc(message)}</p>
+    <div class="actions">
+      <button class="btn primary" id="confirm-action">确认执行</button>
+      <button class="btn ghost" id="cancel-action">取消</button>
+    </div>
+  `);
+  el("#confirm-action").onclick = async () => {
+    try {
+      await action();
+      closeModal();
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  };
+  el("#cancel-action").onclick = closeModal;
+}
+
+/* ---------- overview ---------- */
+
+async function loadOverview() {
+  const root = el("#view-overview");
+  root.innerHTML = `<div class="grid cols-4">${skeleton(4)}</div>`;
+  const data = await api("/admin/api/overview");
+  state.cache.overview = data;
+  const c = data.counts;
+  const gatewayRows = data.gateway.rows || [];
+  const totalCost = gatewayRows.reduce((sum, row) => sum + Number(row.cost_cny || 0), 0);
+  const totalCalls = gatewayRows.reduce((sum, row) => sum + Number(row.calls || 0), 0);
+  const published = (c.snapshots.published || 0) + (c.plans.published || 0);
+  root.innerHTML = `
+    <div class="grid cols-4">
+      <div class="kpi green"><div class="kpi-label">今日过三关</div><div class="kpi-value">${c.verdicts_today.promoted}</div><div class="kpi-foot">复核中 ${c.verdicts_today.screening} · 已砍 ${c.verdicts_today.killed}</div></div>
+      <div class="kpi"><div class="kpi-label">今日已发布</div><div class="kpi-value">${published}</div><div class="kpi-foot">snapshot ${c.snapshots.published || 0} · plan ${c.plans.published || 0}</div></div>
+      <div class="kpi ${c.models.degraded ? "amber" : "green"}"><div class="kpi-label">模型池健康</div><div class="kpi-value">${c.models.enabled}/${c.models.total}</div><div class="kpi-foot">降级 ${c.models.degraded} · 未配 Key ${c.models.total - c.models.configured}</div></div>
+      <div class="kpi"><div class="kpi-label">Gateway 今日调用</div><div class="kpi-value">${totalCalls}</div><div class="kpi-foot">成本 ¥${num(totalCost, 4)}</div></div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <div><h2 style="margin:0">今日待办</h2><div class="card-sub" style="margin:0">OPC 只处理会阻塞发布/影响数据的事项</div></div>
+        <div class="filters">
+          <button class="filter active">全部</button>
+          <button class="filter" data-jump="recommendations">推荐主链</button>
+          <button class="filter" data-jump="models">模型池</button>
+        </div>
+      </div>
+      ${(data.actions || []).length ? data.actions.map(action => `
+        <div class="status-item" style="margin-bottom:10px">
+          <div>
+            <div style="display:flex;align-items:center;gap:9px"><b>${esc(action.label)}</b>${statusPill(action.severity === "high" ? "fail" : action.severity === "medium" ? "reviewing" : "skip")}</div>
+            <div class="status-label" style="margin-top:4px">${esc(action.detail)}</div>
+          </div>
+          <button class="btn ${action.severity === "high" ? "primary" : "secondary"} small" data-action-view="${esc(action.view)}" data-action-filter="${esc(action.filter || "all")}">去处理</button>
+        </div>
+      `).join("") : '<div class="empty" style="padding:24px">没有阻塞项。数据/模型/发布都正常。</div>'}
+      <div class="status-item" style="margin-top:6px">
+        <div><b>SP 数据</b><div class="status-label">最新 ${esc(data.sync?.latest || "—")} · lag ${data.sync?.lag_seconds == null ? "—" : data.sync.lag_seconds + "s"}</div></div>
+        ${data.sync?.lag_seconds == null ? statusPill("skip") : data.sync.lag_seconds > 1800 ? statusPill("fail") : statusPill("ok")}
+      </div>
+    </div>
+
+    <div class="grid side">
+      <div class="card">
+        <h2 class="card-title">推荐生命周期</h2>
+        <div class="status-grid">
+          ${["draft", "reviewing", "approved", "review_failed", "published", "expired"].map(key => `
+            <div class="status-item"><div class="status-label">${esc(key)}</div>${statusPill(key)}</div>
+          `).join("")}
+        </div>
+        <div style="margin-top:16px" class="bar-row"><span class="status-label">snapshot</span><div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, (c.snapshots.published || 0) * 20)}%"></div></div><span class="mono">${c.snapshots.published || 0}</span></div>
+        <div class="bar-row"><span class="status-label">plan</span><div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, (c.plans.published || 0) * 20)}%"></div></div><span class="mono">${c.plans.published || 0}</span></div>
+        <div class="bar-row"><span class="status-label">复核通过</span><div class="bar-track"><div class="bar-fill" style="width:${c.reviews.total ? Math.round(c.reviews.passed / c.reviews.total * 100) : 0}%"></div></div><span class="mono">${c.reviews.passed}/${c.reviews.total}</span></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">模型池状态</h2>
+        ${data.models.map(m => `
+          <div class="status-item" style="margin-bottom:10px">
+            <div><b>${esc(m.model)}</b><div class="status-label">P${m.priority} · ${esc(m.key)}</div></div>
+            ${m.enabled ? (m.fail_count >= 3 ? statusPill("fail") : statusPill("ok")) : statusPill("muted")}
+          </div>
+        `).join("") || '<div class="empty">暂无模型</div>'}
+        <div class="detail-list" style="margin-top:14px">
+          <div><b>最近快照：</b>${esc(data.latest.snapshot_created_at || "—")}</div>
+          <div><b>最近事件：</b>${esc(data.latest.event_at || "—")}</div>
+          <div><b>最近判决：</b>${esc(data.latest.verdict_created_at || "—")}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Gateway 今日用量</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>task</th><th>profile</th><th class="num">调用</th><th class="num">缓存</th><th class="num">tokens</th><th class="num">成本</th></tr></thead>
+        <tbody>${gatewayRows.map(row => `
+          <tr><td>${esc(row.task)}</td><td>${esc(row.profile)}</td><td class="num">${row.calls}</td><td class="num">${row.cache_hits}</td><td class="num">${row.input_tokens}/${row.output_tokens}</td><td class="num">¥${num(row.cost_cny, 5)}</td></tr>
+        `).join("") || '<tr><td colspan="6">今日无调用</td></tr>'}</tbody>
+      </table></div>
+    </div>
+  `;
+
+  els("[data-action-view]").forEach(btn => btn.onclick = () => {
+    state.recommendationFilter = btn.dataset.actionFilter || "all";
+    showView(btn.dataset.actionView);
+  });
+  els("[data-jump]").forEach(btn => btn.onclick = () => showView(btn.dataset.jump));
+}
+
+/* ---------- model pool ---------- */
+
+async function loadModels() {
+  const root = el("#view-models");
+  root.innerHTML = '<div class="card"><div class="skeleton" style="height:80px"></div></div>';
+  const data = await api("/admin/api/models");
+  root.innerHTML = `
+    <div class="toolbar">
+      <div><h2 style="margin:0">人设语气模型池</h2><div class="card-sub" style="margin:0">按优先级自动 failover；Key 加密存储，界面只显示配置状态。</div></div>
+      ${canAdmin() ? '<button class="btn primary" id="add-model">添加模型</button>' : ''}
+    </div>
+    <div class="card">${data.models.map(model => `
+      <div class="model-row">
+        <div>
+          <div class="model-title">
+            ${esc(model.model)}
+            ${model.enabled ? statusPill(model.fail_count >= 3 ? "fail" : "ok") : statusPill("muted")}
+            <span class="pill ${model.key === "已配置" ? "green" : "amber"}">${esc(model.key)}</span>
+          </div>
+          <div class="model-meta">
+            <div><b>名称</b> ${esc(model.name)}</div>
+            <div><b>Base URL</b> <span class="mono">${esc(model.base_url)}</span></div>
+            <div><b>优先级</b> ${model.priority}</div>
+            <div><b>max_tokens</b> ${model.max_tokens}</div>
+            <div><b>temperature</b> ${model.temperature}</div>
+            <div><b>timeout</b> ${model.timeout_s}s</div>
+            <div><b>最近成功</b> ${esc(model.last_ok_at || "—")}</div>
+            <div><b>失败次数</b> ${model.fail_count}</div>
+          </div>
+          ${model.last_error ? `<div class="model-error">${esc(model.last_error)}</div>` : ""}
+        </div>
+        <div class="actions" style="flex-direction:column;align-items:stretch;min-width:130px">
+          ${canOperate() ? `<button class="btn secondary small" data-model-test="${model.id}">测试</button>` : ""}
+          ${canAdmin() ? `<button class="btn secondary small" data-model-edit="${model.id}">编辑</button>
+          <button class="btn secondary small" data-model-key="${model.id}">更新 Key</button>
+          <button class="btn ${model.enabled ? "warn" : "primary"} small" data-model-toggle="${model.id}">${model.enabled ? "停用" : "启用"}</button>
+          <button class="btn danger small" data-model-delete="${model.id}">删除</button>` : ""}
+        </div>
+      </div>
+    `).join("") || '<div class="empty">暂无模型</div>'}</div>
+  `;
+  if (el("#add-model")) el("#add-model").onclick = () => openModelModal();
+  els("[data-model-toggle]").forEach(btn => btn.onclick = async () => {
+    const id = btn.dataset.modelToggle;
+    const row = data.models.find(m => String(m.id) === id);
+    await patch(`/admin/api/models/${id}`, { enabled: !row.enabled });
+    toast(row.enabled ? "模型已停用" : "模型已启用");
+    loadModels();
+  });
+  els("[data-model-delete]").forEach(btn => btn.onclick = () => confirmModal("删除模型", "删除后不可恢复，确认继续？", async () => {
+    await del(`/admin/api/models/${btn.dataset.modelDelete}`);
+    toast("模型已删除");
+    loadModels();
+  }));
+  els("[data-model-key]").forEach(btn => btn.onclick = () => openKeyModal(Number(btn.dataset.modelKey)));
+  els("[data-model-edit]").forEach(btn => btn.onclick = () => openModelModal(data.models.find(m => String(m.id) === btn.dataset.modelEdit)));
+  els("[data-model-test]").forEach(btn => btn.onclick = async () => {
+    const id = Number(btn.dataset.modelTest);
+    btn.disabled = true; btn.textContent = "测试中…";
+    try {
+      const result = await post(`/admin/api/models/${id}/test`, { persona: "laopao", text: "今天主看曼城，方向主胜，把握度56%，抽水12.1%。" });
+      modal("模型测试", result.ok ? `
+        <div class="detail-list"><div><b>模型</b> ${esc(result.model)}</div><div><b>延迟</b> ${result.latency_ms}ms</div><div><b>persona</b> ${esc(result.persona)}</div></div>
+        <div class="card" style="margin-top:16px;white-space:pre-wrap">${esc(result.text)}</div>
+      ` : `<div class="model-error">${esc(result.error)}</div>`);
+    } catch (error) {
+      toast(error.message, "error");
+    }
+    btn.disabled = false; btn.textContent = "测试";
+    loadModels();
+  });
+}
+
+function openModelModal(model = null) {
+  modal(model ? `编辑模型：${model.model}` : "添加模型", `
+    <form id="model-form" class="form-grid">
+      <div><label>显示名称</label><input id="mf-name" value="${esc(model?.name || "")}" placeholder="Egg Alpha"></div>
+      <div><label>模型 ID</label><input id="mf-model" value="${esc(model?.model || "")}" placeholder="egg-alpha" ${model ? "" : "required"}></div>
+      <div class="full"><label>Base URL</label><input id="mf-base" value="${esc(model?.base_url || "https://tokenrhythm.studio/v1")}" placeholder="https://..."></div>
+      ${model ? "" : '<div class="full"><label>API Key</label><input id="mf-key" type="password" placeholder="sk_t..."></div>'}
+      <div><label>优先级</label><input id="mf-priority" type="number" min="1" value="${model?.priority || 100}"></div>
+      <div><label>启用</label><select id="mf-enabled"><option value="true" ${!model || model.enabled ? "selected" : ""}>启用</option><option value="false" ${model && !model.enabled ? "selected" : ""}>停用</option></select></div>
+      <div><label>timeout</label><input id="mf-timeout" type="number" min="3" max="120" value="${model?.timeout_s || 20}"></div>
+      <div><label>max_tokens</label><input id="mf-tokens" type="number" min="64" max="4096" value="${model?.max_tokens || 800}"></div>
+      <div><label>temperature</label><input id="mf-temp" type="number" min="0" max="1.5" step="0.05" value="${model?.temperature || 0.4}"></div>
+      <div class="actions full"><button class="btn primary" type="submit">保存</button><button class="btn ghost" type="button" id="mf-cancel">取消</button></div>
+    </form>
+  `);
+  el("#mf-cancel").onclick = closeModal;
+  el("#model-form").onsubmit = async (event) => {
+    event.preventDefault();
+    const body = {
+      name: el("#mf-name").value,
+      base_url: el("#mf-base").value,
+      model: el("#mf-model").value,
+      priority: Number(el("#mf-priority").value),
+      enabled: el("#mf-enabled").value === "true",
+      timeout_s: Number(el("#mf-timeout").value),
+      max_tokens: Number(el("#mf-tokens").value),
+      temperature: Number(el("#mf-temp").value),
+    };
+    try {
+      if (model) await patch(`/admin/api/models/${model.id}`, body);
+      else await post("/admin/api/models", { ...body, api_key: el("#mf-key").value });
+      closeModal(); toast("模型已保存"); loadModels();
+    } catch (error) { toast(error.message, "error"); }
+  };
+}
+
+function openKeyModal(id) {
+  modal("更新模型 Key", `
+    <form id="key-form" class="form-grid"><div class="full"><label>新 API Key</label><input id="new-key" type="password" required></div>
+    <div class="actions full"><button class="btn primary" type="submit">更新</button><button class="btn ghost" type="button" id="key-cancel">取消</button></div></form>
+  `);
+  el("#key-cancel").onclick = closeModal;
+  el("#key-form").onsubmit = async event => {
+    event.preventDefault();
+    await post(`/admin/api/models/${id}/key`, { api_key: el("#new-key").value });
+    closeModal(); toast("Key 已更新"); loadModels();
+  };
+}
+
+/* ---------- personas ---------- */
+
+async function loadPersonas() {
+  const root = el("#view-personas");
+  root.innerHTML = '<div class="skeleton"></div>';
+  const data = await api("/admin/api/personas");
+  root.innerHTML = `
+    <div class="grid side">
+      <div class="card persona-card">
+        <h2 class="card-title">人设 Profile</h2>
+        <div class="card-sub">只控制语气表达，不改变方向、概率、条件与成本。</div>
+        ${data.profiles.map(profile => `
+          <form class="form-grid" data-profile-form="${esc(profile.id)}" style="padding-top:16px;border-top:1px solid var(--line);margin-top:16px">
+            <div><label>名称</label><input name="name" value="${esc(profile.name)}"></div>
+            <div><label>称呼</label><input name="address" value="${esc(profile.address)}"></div>
+            <div><label>语气标签</label><input name="tone" value="${esc(profile.tone)}"></div>
+            <div><label>最大字数</label><input name="max_chars" type="number" min="60" max="600" value="${profile.max_chars}"></div>
+            <div><label>emoji policy</label><select name="emoji_policy">
+              ${["none", "limited", "free"].map(x => `<option value="${x}" ${profile.emoji_policy === x ? "selected" : ""}>${x}</option>`).join("")}
+            </select></div>
+            <div><label>允许 emoji</label><input name="allowed_emoji" value="${esc(profile.allowed_emoji)}"></div>
+            <div class="full"><label>style prompt</label><textarea name="style_prompt">${esc(profile.style_prompt)}</textarea></div>
+            <div class="actions full"><button class="btn primary">保存 Profile</button><span class="pill muted">v${profile.version}</span></div>
+          </form>
+        `).join("")}
+      </div>
+      <div class="card">
+        <h2 class="card-title">文案槽位</h2>
+        <div class="card-sub">作为 LLM 失败时的兜底模板。</div>
+        <div id="slot-editor">${renderSlot(data)}</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2 class="card-title">Persona 翻译测试</h2>
+      <form id="persona-test" class="form-grid">
+        <div><label>persona</label><select id="pt-persona">${data.profiles.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select></div>
+        <div class="full"><label>中性事实文本</label><textarea id="pt-text" placeholder="今天主看曼城，方向主胜，把握度56%，抽水12.1%。"></textarea></div>
+        <div class="actions full"><button class="btn primary" type="submit">调用测试</button></div>
+      </form>
+      <div id="persona-test-result"></div>
+    </div>
+  `;
+
+  els("[data-profile-form]").forEach(form => form.onsubmit = async event => {
+    event.preventDefault();
+    const fd = new FormData(form);
+    const id = form.dataset.profileForm;
+    await put(`/admin/api/personas/${id}`, Object.fromEntries(fd.entries()));
+    toast("Profile 已保存"); loadPersonas();
+  });
+
+  const slotSelect = el("#slot-persona");
+  if (slotSelect) {
+    slotSelect.onchange = () => {
+      const key = el("#slot-key").value;
+      const slot = data.slots.find(s => s.persona_id === slotSelect.value && s.slot_key === key)
+        || data.slots.find(s => s.persona_id === slotSelect.value);
+      el("#slot-template").value = slot ? slot.template : "";
+    };
+    slotSelect.dispatchEvent(new Event("change"));
+  }
+  el("#slot-form").onsubmit = async event => {
+    event.preventDefault();
+    await put(`/admin/api/personas/${el("#slot-persona").value}/slots/${el("#slot-key").value}`, {
+      template: el("#slot-template").value, enabled: true,
+    });
+    toast("槽位已保存"); loadPersonas();
+  };
+
+  el("#persona-test").onsubmit = async event => {
+    event.preventDefault();
+    const box = el("#persona-test-result");
+    box.innerHTML = '<div class="skeleton" style="height:80px"></div>';
+    const result = await post("/admin/api/persona/test", {
+      persona: el("#pt-persona").value, text: el("#pt-text").value,
+    });
+    box.innerHTML = result.ok ? `
+      <div class="card" style="margin-top:16px">
+        <div class="detail-list"><div><b>模型</b> ${esc(result.model)}</div><div><b>延迟</b> ${result.latency_ms}ms</div></div>
+        <p style="white-space:pre-wrap;margin-bottom:0">${esc(result.text)}</p>
+      </div>
+    ` : `<div class="model-error" style="margin-top:16px">${esc(result.error)}</div>`;
+  };
+
+  if (!canAdmin()) {
+    els("[data-profile-form] input, [data-profile-form] textarea, [data-profile-form] select, #slot-form input, #slot-form textarea, #slot-form select")
+      .forEach(item => { item.disabled = true; });
+    els("[data-profile-form] button, #slot-form button").forEach(item => item.remove());
+  }
+  if (!canOperate()) {
+    els("#persona-test input, #persona-test textarea, #persona-test select, #persona-test button")
+      .forEach(item => { item.disabled = true; });
+  }
+}
+
+function renderSlot(data) {
+  return `
+    <form id="slot-form" class="form-grid">
+      <div><label>persona</label><select id="slot-persona">${data.profiles.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select></div>
+      <div><label>slot</label><select id="slot-key">${data.slot_keys.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("")}</select></div>
+      <div class="full"><label>模板</label><textarea id="slot-template"></textarea></div>
+      <div class="actions full"><button class="btn primary">保存槽位</button></div>
+    </form>
+  `;
+}
+
+/* ---------- recommendations ---------- */
+
+async function loadRecommendations(append = false) {
+  const root = el("#view-recommendations");
+  if (!append) root.innerHTML = '<div class="skeleton"></div>';
+  const offset = append ? state.recoOffset : 0;
+  const data = await api(`/admin/api/recommendations?date=${encodeURIComponent(state.date)}&limit=${state.recoLimit}&offset=${offset}`);
+  if (append) {
+    data.snapshots = [...state.recoItems, ...data.snapshots];
+    data.counts.snapshots = data.page.total;
+  }
+  state.recoItems = data.snapshots;
+  state.recoOffset = data.page.next_offset;
+  state.cache.recommendations = data;
+  const query = state.recommendationQuery.trim().toLowerCase();
+  const filtered = data.snapshots.filter(x =>
+    (state.recommendationFilter === "all" || x.status === state.recommendationFilter)
+    && (!query || [x.home, x.away, x.match_no, x.league, x.direction]
+      .join(" ").toLowerCase().includes(query))
+  );
+  const counts = data.counts;
+  root.innerHTML = `
+    <div class="grid cols-4">
+      <div class="kpi green"><div class="kpi-label">已发布</div><div class="kpi-value">${counts.published}</div><div class="kpi-foot">${esc(data.date)}</div></div>
+      <div class="kpi"><div class="kpi-label">Snapshot</div><div class="kpi-value">${counts.snapshots}</div><div class="kpi-foot">含全部版本</div></div>
+      <div class="kpi"><div class="kpi-label">Plan</div><div class="kpi-value">${counts.plans}</div><div class="kpi-foot">含全部版本</div></div>
+      <div class="kpi ${counts.review_failed ? "red" : "green"}"><div class="kpi-label">复核失败</div><div class="kpi-value">${counts.review_failed}</div><div class="kpi-foot">可重试</div></div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <div class="filters">
+          ${["all", "draft", "reviewing", "approved", "review_failed", "published", "expired", "withdrawn"].map(x => `
+            <button class="filter ${state.recommendationFilter === x ? "active" : ""}" data-filter="${x}">${x}</button>`).join("")}
+        </div>
+        <div class="actions">
+          <input id="reco-search" type="search" placeholder="搜场次 / 球队" value="${esc(state.recommendationQuery)}">
+          <input id="reco-date" type="date" value="${esc(data.date)}">
+          ${canOperate() ? `<button class="btn secondary" id="batch-review">全部复核</button>
+          <button class="btn secondary" id="batch-publish">发布已过审</button>
+          <button class="btn primary" id="run-pipeline">运行主链</button>` : ""}
+        </div>
+      </div>
+      <div id="reco-list">${filtered.length ? filtered.map(recoCard).join("") : '<div class="empty">当前筛选暂无 snapshot</div>'}</div>
+      ${data.page?.has_more ? '<div style="text-align:center;margin-top:14px"><button class="btn secondary" id="reco-more">加载更多（已显示 ' + data.snapshots.length + ' / ' + data.page.total + '）</button></div>' : ""}
+    </div>
+
+    <div class="grid side">
+      <div class="card"><h2 class="card-title">参考组合生命周期</h2>${data.plans.map(plan => `
+        <div class="status-item" style="margin-bottom:10px">
+          <div style="flex:1"><b>${esc(plan.label)}</b><div class="status-label">v${plan.version} · ${plan.legs.length} 腿</div>
+            <div class="actions" style="margin-top:8px">
+              <button class="btn secondary small" data-review="${plan.id}">查看复核</button>
+              ${canOperate() && (plan.status === "draft" || plan.status === "review_failed") ? `<button class="btn primary small" data-rereview="${plan.id}" data-type="plan">重新复核</button>` : ""}
+              ${canOperate() && plan.status === "approved" ? `<button class="btn primary small" data-publish="${plan.id}" data-type="plan">发布</button>` : ""}
+              ${canOperate() && ["approved", "published", "review_failed"].includes(plan.status) ? `<button class="btn danger small" data-withdraw="${plan.id}" data-type="plan">撤回</button>` : ""}
+            </div>
+          </div>
+          ${statusPill(plan.status)}
+        </div>`).join("") || '<div class="empty">暂无 plan</div>'}</div>
+      <div class="card"><h2 class="card-title">最近主链事件</h2>${data.events.map(e => `
+        <div class="event-item"><span class="mono">${esc(e.created_at || "")}</span><span class="pill muted">${esc(e.action)}</span><span class="mono ellipsis">${esc(e.subject_id)}</span><span>${esc(e.note || `${e.from_status || "—"} → ${e.to_status || "—"}`)}</span></div>`).join("") || '<div class="empty">暂无事件</div>'}</div>
+    </div>
+  `;
+
+  els("[data-filter]").forEach(btn => btn.onclick = () => {
+    state.recommendationFilter = btn.dataset.filter;
+    state.recoOffset = 0;
+    loadRecommendations();
+  });
+  el("#reco-date").onchange = event => {
+    state.date = event.target.value; state.recoLimit = 50; state.recoOffset = 0; loadRecommendations();
+  };
+  const more = el("#reco-more");
+  if (more) more.onclick = () => { state.recoLimit = 50; loadRecommendations(true); };
+  el("#reco-search").oninput = event => {
+    state.recommendationQuery = event.target.value;
+    const q = state.recommendationQuery.trim().toLowerCase();
+    els("#reco-list .reco-card").forEach(card => {
+      card.style.display = !q || (card.dataset.search || "").includes(q) ? "" : "none";
+    });
+  };
+  if (el("#run-pipeline")) el("#run-pipeline").onclick = async () => {
+    const btn = el("#run-pipeline"); btn.disabled = true; btn.textContent = "运行中…";
+    try {
+      const result = await post("/admin/api/recommendations/run", { date: state.date, stake: 100 });
+      toast(`主链完成：snapshot ${result.snapshots}，published ${result.published}`, "success", 5000);
+      loadRecommendations();
+    } catch (error) { toast(error.message, "error"); }
+    btn.disabled = false; btn.textContent = "运行主链";
+  };
+  if (el("#batch-review")) el("#batch-review").onclick = () => confirmModal("批量复核", "复核今日全部 draft/review_failed？LLM 调用可能耗时。", async () => {
+    const result = await post("/admin/api/recommendations/batch", { action: "review", date: state.date });
+    toast(`批量复核：完成 ${result.done}，跳过 ${result.skipped}，错误 ${result.errors.length}`, result.errors.length ? "warn" : "success", 5000);
+    loadRecommendations();
+  });
+  if (el("#batch-publish")) el("#batch-publish").onclick = () => confirmModal("批量发布", "发布今日全部 approved？", async () => {
+    const result = await post("/admin/api/recommendations/batch", { action: "publish", date: state.date });
+    toast(`批量发布：完成 ${result.done}，跳过 ${result.skipped}，错误 ${result.errors.length}`, result.errors.length ? "warn" : "success", 5000);
+    loadRecommendations();
+  });
+
+  bindSubjectButtons(data);
+}
+
+function recoCard(item) {
+  const title = item.match_no ? `${item.match_no} ${item.home} vs ${item.away}` : item.label;
+  const sub = `${item.league || "联赛待同步"} · ${item.kickoff || "时间待同步"} · v${item.version}`;
+  const searchText = [item.home, item.away, item.match_no, item.league, item.direction]
+    .join(" ").toLowerCase();
+  return `
+    <div class="reco-card ${item.status}" data-search="${esc(searchText)}" style="padding:18px;border:1px solid var(--line);border-radius:14px;background:#fff;margin-bottom:14px">
+      <div class="reco-head">
+        <div><div class="reco-title">${esc(title)}</div><div class="reco-sub">${esc(sub)} · ${esc(item.direction)}</div></div>
+        ${statusPill(item.status)}
+      </div>
+      <div class="detail-list" style="margin-top:12px">
+        <div><b>三关：</b>${gatePills(item.gates)} <b>封存：</b>${item.sealed ? "是" : "否"}</div>
+        <div><b>条件：</b>${esc((item.conditions || []).join("；") || "—")}</div>
+        <div><b>失效：</b>${esc((item.invalidators || []).join("；") || "—")}</div>
+        <div><b>hash：</b><span class="mono">${esc(item.payload_hash.slice(0, 18))}…</span></div>
+      </div>
+      <div class="actions" style="margin-top:14px">
+        <button class="btn secondary small" data-review="${item.id}" data-type="decision">查看复核</button>
+        ${canOperate() && (item.status === "draft" || item.status === "review_failed") ? `<button class="btn primary small" data-rereview="${item.id}" data-type="decision">重新复核</button>` : ""}
+        ${canOperate() && item.status === "approved" ? `<button class="btn primary small" data-publish="${item.id}" data-type="decision">发布</button>` : ""}
+        ${canOperate() && ["approved", "published", "review_failed"].includes(item.status) ? `<button class="btn danger small" data-withdraw="${item.id}" data-type="decision">撤回</button>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function bindSubjectButtons(data) {
+  els("[data-review]").forEach(btn => btn.onclick = () => {
+    const run = data.reviews[btn.dataset.review];
+    if (!run) return toast("暂无复核记录", "warn");
+    modal("AI Review 明细", `
+      <div class="detail-list"><div><b>状态</b> ${statusPill(run.status)}</div><div><b>reviewer</b> ${esc(run.reviewer)}</div><div><b>prompt</b> ${esc(run.prompt_ver)}</div><div><b>LLM</b> ${run.llm_degraded ? "降级/未调用" : "已调用"}</div></div>
+      <div style="margin-top:16px">${(run.layers || []).map(layer => `
+        <div class="review-layer"><div class="review-name">${esc(layer.name)}</div>${statusPill(layer.status)}<div style="color:var(--ink-2);font-size:12px"><pre style="white-space:pre-wrap;margin:0;font:inherit">${esc(JSON.stringify(layer.detail ?? layer, null, 2))}</pre></div></div>`).join("")}
+      </div>
+    `);
+  });
+  els("[data-rereview]").forEach(btn => btn.onclick = async () => {
+    btn.disabled = true; btn.textContent = "复核中…";
+    try {
+      const result = await post(`/admin/api/recommendations/${btn.dataset.type}/${btn.dataset.rereview}/review`);
+      toast(result.review.status === "passed" ? "复核通过" : "复核失败", result.review.status === "passed" ? "success" : "error");
+      loadRecommendations();
+    } catch (error) { toast(error.message, "error"); btn.disabled = false; btn.textContent = "重新复核"; }
+  });
+  els("[data-publish]").forEach(btn => btn.onclick = () => confirmModal("发布内容", "确认发布到用户端？", async () => {
+    await post(`/admin/api/recommendations/${btn.dataset.type}/${btn.dataset.publish}/publish`);
+    toast("已发布"); loadRecommendations();
+  }));
+  els("[data-withdraw]").forEach(btn => btn.onclick = () => modal("撤回内容", `
+    <form id="withdraw-form" class="form-grid"><div class="full"><label>撤回理由</label>
+      <textarea id="withdraw-reason" required placeholder="例如：临场盘口反转，判断失效"></textarea></div>
+      <div class="actions full"><button class="btn danger" type="submit">确认撤回</button>
+      <button class="btn ghost" type="button" id="withdraw-cancel">取消</button></div></form>`));
+  // bind once after modal opens: use event delegation on submit
+  if (el("#withdraw-form")) el("#withdraw-form").onsubmit = async event => {
+    event.preventDefault();
+    const reason = el("#withdraw-reason").value.trim();
+    if (!reason) return;
+    try {
+      await post(`/admin/api/recommendations/${btn.dataset.type}/${btn.dataset.withdraw}/withdraw`, { reason });
+      closeModal(); toast("已撤回"); loadRecommendations();
+    } catch (error) { toast(error.message, "error"); }
+  };
+  if (el("#withdraw-cancel")) el("#withdraw-cancel").onclick = closeModal;
+}
+
+/* ---------- gateway / plans / data / logs ---------- */
+
+async function loadGateway() {
+  const root = el("#view-gateway");
+  root.innerHTML = '<div class="skeleton"></div>';
+  const data = await api("/admin/api/gateway");
+  const rows = data.summary.rows || [];
+  root.innerHTML = `
+    <div class="grid cols-3">
+      ${data.profiles.map(profile => `
+        <div class="kpi ${profile.configured ? "green" : "amber"}"><div class="kpi-label">${esc(profile.name)} profile</div><div class="kpi-value">${profile.configured ? "已配" : "未配"}</div><div class="kpi-foot">${esc(profile.provider)} · ${esc(profile.model)}</div></div>`).join("")}
+    </div>
+    <div class="card"><h2 class="card-title">任务路由</h2><div class="table-wrap"><table><thead><tr><th>task</th><th>profile</th></tr></thead><tbody>
+      ${Object.entries(data.routes || {}).map(([task, profile]) => `<tr><td>${esc(task)}</td><td>${esc(profile)}</td></tr>`).join("")}
+    </tbody></table></div></div>
+    <div class="card"><h2 class="card-title">今日用量</h2><div class="table-wrap"><table><thead><tr><th>task</th><th>profile</th><th class="num">调用</th><th class="num">缓存</th><th class="num">tokens</th><th class="num">成本</th></tr></thead><tbody>
+      ${rows.map(row => `<tr><td>${esc(row.task)}</td><td>${esc(row.profile)}</td><td class="num">${row.calls}</td><td class="num">${row.cache_hits}</td><td class="num">${row.input_tokens}/${row.output_tokens}</td><td class="num">¥${num(row.cost_cny, 5)}</td></tr>`).join("") || '<tr><td colspan="6">今日无调用</td></tr>'}
+    </tbody></table></div></div>
+    <div class="card"><h2 class="card-title">最近调用</h2><div class="table-wrap"><table><thead><tr><th>task</th><th>model</th><th>状态</th><th class="num">延迟</th><th class="num">成本</th></tr></thead><tbody>
+      ${(data.summary.recent || []).map(u => `<tr><td>${esc(u.task)}</td><td>${esc(u.model)}</td><td>${statusPill(u.status)}</td><td class="num">${u.latency_ms}ms</td><td class="num">¥${num(u.cost_cny, 6)}</td></tr>`).join("") || '<tr><td colspan="5">暂无调用</td></tr>'}
+    </tbody></table></div></div>
+  `;
+}
+
+async function loadPlans() {
+  const root = el("#view-plans");
+  root.innerHTML = '<div class="skeleton"></div>';
+  const data = await api(`/admin/api/plans-preview?date=${encodeURIComponent(state.date)}&stake=100`);
+  root.innerHTML = `
+    <div class="card"><div class="toolbar"><div><h2 style="margin:0">确定性组合预览</h2><div class="card-sub" style="margin:0">候选 ${data.candidates} · 仅预览，正式发布需走推荐主链</div></div><button class="btn secondary" id="reload-plans">刷新</button></div>
+      ${data.plans.map(plan => `
+        <div class="reco-card draft" style="margin-bottom:14px">
+          <div class="reco-head"><div><div class="reco-title">${esc(plan.label)} · ${plan.legs.length} 串 1</div><div class="reco-sub">组合赔率 ${plan.check.combo.odds} · 成本 ${plan.check.combo.cost}</div></div>${statusPill("draft")}</div>
+          <div class="detail-list" style="margin-top:12px">${plan.check.legs.map(leg => `<div><b>${esc(leg.match_no)}</b> ${esc(leg.home)} vs ${esc(leg.away)} · ${esc(leg.dir_label)} @${leg.odds} · ${esc(leg.status)}</div>`).join("")}</div>
+          ${plan.note ? `<div class="model-error" style="background:var(--amber-soft);color:var(--amber)">${esc(plan.note)}</div>` : ""}
+        </div>`).join("") || '<div class="empty">今日暂无可配组合</div>'}
+    </div>
+  `;
+  el("#reload-plans").onclick = loadPlans;
+}
+
+async function loadData() {
+  const root = el("#view-data");
+  root.innerHTML = '<div class="skeleton"></div>';
+  const data = await api("/admin/api/data");
+  root.innerHTML = `
+    <div class="grid cols-4">
+      <div class="kpi"><div class="kpi-label">verdict 总量</div><div class="kpi-value">${data.verdicts.total}</div><div class="kpi-foot">今日 ${data.verdicts.today}</div></div>
+      <div class="kpi green"><div class="kpi-label">promoted</div><div class="kpi-value">${data.verdicts.promoted}</div><div class="kpi-foot">screening ${data.verdicts.screening}</div></div>
+      <div class="kpi red"><div class="kpi-label">killed</div><div class="kpi-value">${data.verdicts.killed}</div><div class="kpi-foot">含历史</div></div>
+      <div class="kpi"><div class="kpi-label">SP 快照</div><div class="kpi-value">${data.snapshots.total}</div><div class="kpi-foot">${esc(data.snapshots.latest || "—")}</div></div>
+    </div>
+    <div class="card"><h2 class="card-title">数据同步</h2>
+      <div class="status-grid">
+        <div class="status-item"><div><b>SP 最新快照</b><div class="status-label">采集器 → SFTP → seed</div></div><span class="mono">${esc(data.sync?.latest || "—")}</span></div>
+        <div class="status-item"><div><b>同步延迟</b><div class="status-label">超过 1800s 视为异常</div></div>${data.sync?.lag_seconds == null ? statusPill("skip") : data.sync.lag_seconds > 1800 ? statusPill("fail") : statusPill("ok")}</div>
+      </div>
+    </div>
+    <div class="card"><h2 class="card-title">API-Football</h2><div class="status-grid">${Object.entries(data.api_football || {}).map(([key, value]) => `
+      <div class="status-item"><div class="status-label">${esc(key)}</div><b class="mono">${esc(String(value))}</b></div>`).join("")}</div></div>
+  `;
+}
+
+async function loadLogs() {
+  const root = el("#view-logs");
+  root.innerHTML = `
+    <div class="card">
+      <div class="toolbar"><div><h2 style="margin:0">运行日志</h2><div class="card-sub" style="margin:0">只读最近日志，不做文件遍历</div></div>
+      <select id="log-name">${["sync", "recommendations", "persona", "assistant", "purge", "db_maint", "backtest"].map(x => `<option value="${x}" ${state.logName === x ? "selected" : ""}>${x}.log</option>`).join("")}</select></div>
+      <div id="log-box" class="terminal">加载中…</div>
+    </div>
+  `;
+  const load = async () => {
+    const data = await api(`/admin/api/logs?name=${encodeURIComponent(state.logName)}&lines=300`);
+    el("#log-box").textContent = (data.lines || []).join("") || "日志为空";
+    el("#log-box").scrollTop = el("#log-box").scrollHeight;
+  };
+  el("#log-name").onchange = event => { state.logName = event.target.value; load(); };
+  await load();
+}
+
+/* ---------- shell ---------- */
+
+const views = {
+  overview: { title: "总览", kicker: "Overview", loader: loadOverview },
+  models: { title: "模型池", kicker: "Model Pool", loader: loadModels },
+  gateway: { title: "模型用量", kicker: "LLM Gateway", loader: loadGateway },
+  personas: { title: "人设文案", kicker: "Persona Studio", loader: loadPersonas },
+  recommendations: { title: "推荐主链", kicker: "Decision → Review → Publish", loader: loadRecommendations },
+  plans: { title: "组合预览", kicker: "Parlay Preview", loader: loadPlans },
+  data: { title: "数据源", kicker: "Data Sources", loader: loadData },
+  logs: { title: "运行日志", kicker: "Runtime Logs", loader: loadLogs },
+};
+
+let autoTimer = null;
+const AUTO_VIEWS = new Set(["overview", "recommendations", "gateway", "data", "models"]);
+
+function scheduleAutoRefresh() {
+  clearInterval(autoTimer);
+  if (!state.autoRefresh) return;
+  autoTimer = setInterval(() => {
+    if (document.visibilityState !== "visible") return;
+    if (!el("#modal").hidden) return;
+    if (document.activeElement && ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+    if (!AUTO_VIEWS.has(state.view)) return;
+    showView(state.view);
+  }, 60_000);
+}
+
+async function showView(view) {
+  state.view = view;
+  els(".nav-item").forEach(item => item.classList.toggle("active", item.dataset.view === view));
+  els(".view").forEach(section => section.classList.toggle("active", section.id === `view-${view}`));
+  el("#page-title").textContent = views[view].title;
+  el("#page-kicker").textContent = views[view].kicker;
+  try {
+    await views[view].loader();
+    el("#last-updated").textContent = `更新 ${new Date().toLocaleTimeString("zh-CN", { hour12: false })}`;
+  } catch (error) {
+    if (error.message !== "需要控制台登录") {
+      el(`#view-${view}`).innerHTML = `<div class="empty"><b>加载失败：</b>${esc(error.message)}</div>`;
+      toast(error.message, "error");
+    }
+  }
+  scheduleAutoRefresh();
+}
+
+async function bootstrap() {
+  try {
+    const session = await api("/admin/api/session");
+    if (!session.authenticated) return showLogin();
+    ensureCsrf(session);
+    state.date = session.date || "";
+    el("#current-date").textContent = state.date;
+    state.role = session.role || "";
+    el("#env-pill").textContent = `${session.env} · ${session.role} · ${session.username}`;
+    applyRole();
+    showApp();
+    await showView("overview");
+  } catch (_) { showLogin(); }
+}
+
+el("#login-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = event.target.querySelector("button");
+  button.disabled = true; button.textContent = "验证中…";
+  try {
+    const session = await api("/admin/api/login", {
+      method: "POST",
+      body: {
+        username: el("#username").value,
+        password: el("#password").value,
+      },
+    });
+    ensureCsrf(session);
+    state.date = session.date || "";
+    el("#current-date").textContent = state.date;
+    state.role = session.role || "";
+    el("#env-pill").textContent = `${session.env} · ${session.role} · ${session.username}`;
+    applyRole();
+    showApp();
+    await showView("overview");
+    toast("已进入控制台");
+  } catch (error) {
+    el("#login-error").textContent = error.message;
+  }
+  button.disabled = false; button.textContent = "进入控制台";
+});
+
+el("#refresh").onclick = () => showView(state.view);
+el("#auto-refresh").onclick = () => {
+  state.autoRefresh = !state.autoRefresh;
+  el("#auto-refresh").textContent = `自动 · ${state.autoRefresh ? "开" : "关"}`;
+  scheduleAutoRefresh();
+};
+el("#logout").onclick = async () => {
+  clearInterval(autoTimer);
+  await api("/admin/api/logout", { method: "POST", body: {} });
+  showLogin();
+};
+els(".nav-item").forEach(item => item.onclick = () => showView(item.dataset.view));
+el("#modal").addEventListener("click", event => { if (event.target === el("#modal")) closeModal(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape" && !el("#modal").hidden) closeModal(); });
+
+bootstrap();

@@ -53,6 +53,22 @@ export interface VerdictSummary {
   gates: Partial<Record<GateKey, GateResult>>;
   hash: string | null;
   sealed: boolean;
+  snapshotId?: string;
+  snapshotStatus?: string;
+  direction?: string;
+  confidence?: number | null;
+  conditions?: string[];
+  invalidators?: string[];
+  review?: RecommendationReview | null;
+}
+
+export interface RecommendationReview {
+  status: string;
+  reviewer: string;
+  reviewedAt: string | null;
+  promptVer: string;
+  llmDegraded: boolean;
+  layers: Record<string, unknown>[];
 }
 
 export interface StreamStats {
@@ -75,6 +91,13 @@ export interface AvoidItem {
   verdictId: string;
 }
 
+export interface OnSaleCoverage {
+  score: number;
+  level: string;
+  deepEligible: boolean;
+  missing: string[];
+}
+
 export interface OnSaleItem {
   matchId: string;
   matchNo: string;
@@ -88,6 +111,7 @@ export interface OnSaleItem {
   gates: Partial<Record<GateKey, GateResult>> | null;
   status: VerdictStatus | null;
   verdictId: string | null;
+  coverage: OnSaleCoverage | null;
 }
 
 export interface RestDay {

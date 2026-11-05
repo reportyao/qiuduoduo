@@ -1,10 +1,10 @@
-# 解球 Mobile
+# 球多多 Mobile
 
 Expo React Native + TypeScript 生产前端。MVP 只做 Android，iOS 后续开启。
 
-当前已实现：年龄门 / 首页判决流 / 完整账 / 情报与证据 / 封存验证 / 记一注与 5 秒撤销 / 助理对话 / 8 个工具 / 票单与周报 / 公开账本 / 站内信 / 关注 / 通知设置 / 合规中心 / 人设与偏好 / 手机号登录与游客数据合并 / 分享落地页 `/s/{id}`。
+当前已实现：年龄门 / 首页判决流 / 完整账 / 情报与证据 / 封存验证 / 记一注与 5 秒撤销 / 助理对话 / 8 个工具 / 串关体检 + 组合参谋（未复核预览）/ 票单与周报 / 公开账本 / 站内信 / 关注 / 通知设置 / 合规中心 / 人设与偏好 / 手机号登录与游客数据合并 / 分享落地页 `/s/{id}`。
 
-当前验证：20 个 Vitest、typecheck、ESLint、Android Hermes bundle（约 3.6 MB）通过；真实 Android APK/iOS 原生构建仍需 EAS/本机构建环境。
+当前验证（2026-11-05）：22 个 Vitest、typecheck、ESLint、Android Hermes bundle 通过；真实 Android APK/iOS 原生构建仍需 EAS/本机构建环境。后端当前 251 tests / OpenAPI 128 路径 / 143 方法。
 
 **交接先读 [ARCHITECTURE.md](./ARCHITECTURE.md)**：目录、路由、数据适配、会话合并、已知后端缺口都在那里。
 

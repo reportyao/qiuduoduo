@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, View } from "react-native";
-import { useRouter } from "expo-router";
+import { Animated, Pressable, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { colors, motion, shadows } from "@/theme/tokens";
+import { motion } from "@/theme/tokens";
 import { usePersonaContent } from "@/features/personas/usePersona";
+import { useFloatingStore } from "@/features/assistant/floatingStore";
 import { useReducedMotion } from "@/lib/useReducedMotion";
 import { Avatar } from "./ui/Avatar";
 
@@ -15,13 +15,18 @@ const SIZE = 56;
  */
 export function FloatingAssistant() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const openPicker = useFloatingStore((s) => s.openPicker);
   const { meta } = usePersonaContent();
   const reduced = useReducedMotion();
+  const compact = useFloatingStore((s) => s.compact);
   const float = useRef(new Animated.Value(0)).current;
+  const squeeze = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (reduced) return;
+    if (reduced) {
+      float.setValue(0);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(float, {
@@ -40,16 +45,41 @@ export function FloatingAssistant() {
     return () => loop.stop();
   }, [float, reduced]);
 
+  useEffect(() => {
+    if (reduced) {
+      squeeze.setValue(compact ? 1 : 0);
+      return;
+    }
+    const animation = Animated.timing(squeeze, {
+      toValue: compact ? 1 : 0,
+      duration: 220,
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [compact, reduced, squeeze]);
+
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { top: insets.top + 4 }]}>
+    <Animated.View
+      pointerEvents="box-none"
+      style={[
+        styles.wrap,
+        { top: insets.top + 4 },
+        {
+          transform: [
+            { translateY: squeeze.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) },
+            { scale: squeeze.interpolate({ inputRange: [0, 1], outputRange: [1, 0.72] }) },
+          ],
+        },
+      ]}
+    >
       <Pressable
-        onPress={() => router.push("/assistant")}
+        onPress={openPicker}
         accessibilityRole="button"
-        accessibilityLabel={`${meta.name}，打开助理`}
-        hitSlop={8}
+        accessibilityLabel={`${meta.name}，看今日比赛`}
+        hitSlop={10}
         style={styles.press}
       >
-        <View style={styles.halo} />
         <Animated.View
           style={{
             transform: [
@@ -57,10 +87,10 @@ export function FloatingAssistant() {
             ],
           }}
         >
-          <Avatar source={meta.avatar} size={SIZE} online />
+          <Avatar source={meta.avatar} size={SIZE} online ring={false} bare />
         </Animated.View>
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -72,14 +102,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 30,
   },
-  press: { width: SIZE + 16, height: SIZE + 12, alignItems: "center", justifyContent: "center" },
-  halo: {
-    position: "absolute",
-    width: SIZE + 18,
-    height: SIZE + 18,
-    borderRadius: (SIZE + 18) / 2,
-    backgroundColor: colors.greenSoft,
-    opacity: 0.55,
-    ...shadows.float,
+  press: {
+    width: SIZE + 16,
+    height: SIZE + 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

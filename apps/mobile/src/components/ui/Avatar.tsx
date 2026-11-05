@@ -6,6 +6,8 @@ interface AvatarProps {
   source: ImageSourcePropType;
   size?: number;
   ring?: boolean;
+  /** 透明底：悬浮头像只保留角色本身，不要白色圆盘/阴影。 */
+  bare?: boolean;
   online?: boolean;
   fallbackSource?: ImageSourcePropType;
 }
@@ -14,6 +16,7 @@ export function Avatar({
   source,
   size = 56,
   ring = true,
+  bare = false,
   online = false,
   fallbackSource,
 }: AvatarProps) {
@@ -37,6 +40,7 @@ export function Avatar({
             borderRadius: size / 2,
             borderWidth: ring ? 2 : 0,
           },
+          bare && styles.bare,
         ]}
       >
         <Image
@@ -66,6 +70,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     ...shadows.card,
+  },
+  bare: {
+    backgroundColor: "transparent",
+    borderColor: "transparent",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   online: {
     position: "absolute",

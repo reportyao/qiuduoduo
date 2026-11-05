@@ -4,7 +4,6 @@
 """
 from __future__ import annotations
 
-import pandera.pandas as pa
 from pandera import Check, Column, DataFrameSchema
 
 POOL_VALUES = ["had", "hhad"]

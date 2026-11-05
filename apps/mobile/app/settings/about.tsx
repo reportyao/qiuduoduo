@@ -20,9 +20,9 @@ export default function AboutScreen() {
   const legal = useLegalQuery(me.data?.region ?? "cn");
 
   return (
-    <SettingsPage title="关于解球" subtitle="不预测，只算账" onBack={() => goBackOr(router)}>
+    <SettingsPage title="关于球多多" subtitle="不预测，只算账" onBack={() => goBackOr(router)}>
       <Card tone="green">
-        <Text variant="h2">解球</Text>
+        <Text variant="h2">球多多</Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>
           面向竞彩用户的分析助理。核心不是猜谁赢，而是把这一注的成本、概率和不确定性算清楚。
           没有值得记的场次，就不推。

@@ -13,6 +13,7 @@ interface DetailActionBarProps {
   onWhyNot: () => void;
   onWatch: () => void;
   onShare: () => void;
+  onFocus: () => void;
 }
 
 export function DetailActionBar({
@@ -23,6 +24,7 @@ export function DetailActionBar({
   onWhyNot,
   onWatch,
   onShare,
+  onFocus,
 }: DetailActionBarProps) {
   const insets = useSafeAreaInsets();
   const { copy } = usePersonaContent();
@@ -43,6 +45,11 @@ export function DetailActionBar({
           onPress={promoted ? onBet : onWhyNot}
           disabled={promoted && betExists}
           style={styles.primary}
+        />
+        <IconButton
+          name="chatbubble-ellipses-outline"
+          onPress={onFocus}
+          accessibilityLabel="让助理看这场"
         />
         <IconButton
           name={watching ? "heart" : "heart-outline"}

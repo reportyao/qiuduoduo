@@ -16,15 +16,14 @@ import hashlib
 import json
 from datetime import datetime
 
-import pandas as pd
 from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import ModelRun, SPMatch, SPSnapshot, Verdict, VerdictRevision, utcnow
-from .align import Aligner, normalize
+from .align import Aligner
 from .dc_model import DCModel, add_alias, fit as dc_fit, load_xg, predict as dc_predict, predict_line
-from .gates import (GateResult, breakeven_prob, dynamic_threshold, implied_probs,
+from .gates import (breakeven_prob, dynamic_threshold, implied_probs,
                     market_gate, model_gate, price_gate, shrink_to_market)
 from .intl_odds import sources_for_match
 from .sealchain import link_revision

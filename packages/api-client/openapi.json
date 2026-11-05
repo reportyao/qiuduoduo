@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "解球 API",
+    "title": "球多多 API",
     "description": "W8 + AI 助理运行时 P0：事件监控 / 站内信 / 关注 / JPush dry-run",
     "version": "0.8.0-w8+assistant"
   },
@@ -582,6 +582,445 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MatchLiveResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stats/pulse": {
+      "get": {
+        "tags": [
+          "focus-intel"
+        ],
+        "summary": "Stats Pulse",
+        "description": "公开数据脉搏；只返回聚合，不含用户数据。",
+        "operationId": "stats_pulse_stats_pulse_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PulseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/{match_id}/focus": {
+      "get": {
+        "tags": [
+          "focus-intel"
+        ],
+        "summary": "Match Focus",
+        "description": "单场聚焦：结论/三闸/覆盖率/客观情报/可用动作。",
+        "operationId": "match_focus_matches__match_id__focus_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "persona",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Persona"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FocusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/interactions": {
+      "post": {
+        "tags": [
+          "focus-intel"
+        ],
+        "summary": "Create Interaction",
+        "description": "动作/聚焦漏斗埋点；幂等、白名单、无 PII。",
+        "operationId": "create_interaction_interactions_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractionBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InteractionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/parlay/check": {
+      "post": {
+        "tags": [
+          "tools"
+        ],
+        "summary": "Parlay Check",
+        "description": "四维串关体检：成本 / 信息 / 模型 / 结构；不输出买不买建议。",
+        "operationId": "parlay_check_tools_parlay_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParlayCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParlayCheckResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tools/parlay/plan": {
+      "post": {
+        "tags": [
+          "tools"
+        ],
+        "summary": "Parlay Plan",
+        "description": "帮我配：从当日有明确方向的判决生成保守/均衡/进取参考组合。",
+        "operationId": "parlay_plan_tools_parlay_plan_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParlayPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParlayPlanResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/personas": {
+      "get": {
+        "tags": [
+          "persona"
+        ],
+        "summary": "Personas",
+        "operationId": "personas_personas_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonaConfigResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recommendations/today": {
+      "get": {
+        "tags": [
+          "recommendations"
+        ],
+        "summary": "Recommendations Today",
+        "operationId": "recommendations_today_recommendations_today_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationToday"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recommendations/{snapshot_id}": {
+      "get": {
+        "tags": [
+          "recommendations"
+        ],
+        "summary": "Recommendation Detail",
+        "operationId": "recommendation_detail_recommendations__snapshot_id__get",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotPublic"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recommendations/plans/{plan_id}": {
+      "get": {
+        "tags": [
+          "recommendations"
+        ],
+        "summary": "Recommendation Plan Detail",
+        "operationId": "recommendation_plan_detail_recommendations_plans__plan_id__get",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanPublic"
                 }
               }
             }
@@ -2996,21 +3435,120 @@
         }
       }
     },
-    "/console/login": {
-      "get": {
+    "/admin/api/login": {
+      "post": {
         "tags": [
-          "editor-console"
+          "admin-ui",
+          "admin-ui"
         ],
-        "summary": "Console Login Form",
-        "operationId": "console_login_form_console_login_get",
+        "summary": "Admin Login",
+        "operationId": "admin_login_admin_api_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginBody"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
-              "text/html": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
                 "schema": {
-                  "type": "string"
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/logout": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Logout",
+        "operationId": "admin_logout_admin_api_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/session": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Session",
+        "operationId": "admin_session_admin_api_session_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/overview": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Overview",
+        "operationId": "admin_overview_admin_api_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/models": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Models",
+        "operationId": "admin_models_admin_api_models_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -3018,15 +3556,158 @@
       },
       "post": {
         "tags": [
-          "editor-console"
+          "admin-ui",
+          "admin-ui"
         ],
-        "summary": "Console Login",
-        "operationId": "console_login_console_login_post",
+        "summary": "Admin Create Model",
+        "operationId": "admin_create_model_admin_api_models_post",
         "requestBody": {
           "content": {
-            "application/x-www-form-urlencoded": {
+            "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Body_console_login_console_login_post"
+                "$ref": "#/components/schemas/ModelUpsert"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/models/{model_id}": {
+      "patch": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Update Model",
+        "operationId": "admin_update_model_admin_api_models__model_id__patch",
+        "parameters": [
+          {
+            "name": "model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Model Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Delete Model",
+        "operationId": "admin_delete_model_admin_api_models__model_id__delete",
+        "parameters": [
+          {
+            "name": "model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Model Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/models/{model_id}/key": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Update Model Key",
+        "operationId": "admin_update_model_key_admin_api_models__model_id__key_post",
+        "parameters": [
+          {
+            "name": "model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Model Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeyPatch"
               }
             }
           }
@@ -3053,13 +3734,106 @@
         }
       }
     },
-    "/console/logout": {
+    "/admin/api/models/{model_id}/test": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Test Model",
+        "description": "只测试指定模型本身（不走 failover 池），用于验证单个 Key/模型是否可用。",
+        "operationId": "admin_test_model_admin_api_models__model_id__test_post",
+        "parameters": [
+          {
+            "name": "model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Model Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonaTest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/persona/test": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Persona Test",
+        "operationId": "admin_persona_test_admin_api_persona_test_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonaTest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/personas": {
       "get": {
         "tags": [
-          "editor-console"
+          "admin-ui",
+          "admin-ui"
         ],
-        "summary": "Console Logout",
-        "operationId": "console_logout_console_logout_get",
+        "summary": "Admin Personas",
+        "operationId": "admin_personas_admin_api_personas_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3072,113 +3846,160 @@
         }
       }
     },
-    "/console": {
-      "get": {
+    "/admin/api/personas/{persona_id}": {
+      "put": {
         "tags": [
-          "editor-console"
+          "admin-ui",
+          "admin-ui"
         ],
-        "summary": "Console Daily",
-        "operationId": "console_daily_console_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/console/alerts": {
-      "get": {
-        "tags": [
-          "editor-console"
-        ],
-        "summary": "Console Alerts",
-        "operationId": "console_alerts_console_alerts_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/console/variants": {
-      "get": {
-        "tags": [
-          "editor-console"
-        ],
-        "summary": "Console Variants",
-        "operationId": "console_variants_console_variants_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "editor-console"
-        ],
-        "summary": "Console Variants Mark",
-        "operationId": "console_variants_mark_console_variants_post",
+        "summary": "Admin Update Persona",
+        "operationId": "admin_update_persona_admin_api_personas__persona_id__put",
         "parameters": [
           {
-            "name": "v",
-            "in": "query",
-            "required": false,
+            "name": "persona_id",
+            "in": "path",
+            "required": true,
             "schema": {
               "type": "string",
-              "default": "",
-              "title": "V"
+              "title": "Persona Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/personas/{persona_id}/slots/{slot_key}": {
+      "put": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Update Slot",
+        "operationId": "admin_update_slot_admin_api_personas__persona_id__slots__slot_key__put",
+        "parameters": [
+          {
+            "name": "persona_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Persona Id"
             }
           },
           {
-            "name": "p",
+            "name": "slot_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slot Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlotPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/recommendations": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Recommendations",
+        "operationId": "admin_recommendations_admin_api_recommendations_get",
+        "parameters": [
+          {
+            "name": "date",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "default": "",
-              "title": "P"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
             }
           },
           {
-            "name": "m",
+            "name": "limit",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "default": "",
-              "title": "M"
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
             }
           },
           {
-            "name": "t",
+            "name": "offset",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "default": "",
-              "title": "T"
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
             }
           }
         ],
@@ -3204,20 +4025,39 @@
         }
       }
     },
-    "/console/assistant": {
-      "get": {
+    "/admin/api/recommendations/run": {
+      "post": {
         "tags": [
-          "editor-console"
+          "admin-ui",
+          "admin-ui"
         ],
-        "summary": "Console Assistant",
-        "operationId": "console_assistant_console_assistant_get",
+        "summary": "Admin Run Pipeline",
+        "operationId": "admin_run_pipeline_admin_api_recommendations_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PipelineRun"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
-              "text/html": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
                 "schema": {
-                  "type": "string"
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -3225,20 +4065,40 @@
         }
       }
     },
-    "/console/push": {
-      "get": {
+    "/admin/api/recommendations/batch": {
+      "post": {
         "tags": [
-          "editor-console"
+          "admin-ui",
+          "admin-ui"
         ],
-        "summary": "Console Push",
-        "operationId": "console_push_console_push_get",
+        "summary": "Admin Batch Recommendations",
+        "description": "OPC 批量操作：只处理当前日期、符合状态的 draft/approved。",
+        "operationId": "admin_batch_recommendations_admin_api_recommendations_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchAction"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
-              "text/html": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
                 "schema": {
-                  "type": "string"
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -3246,21 +4106,634 @@
         }
       }
     },
-    "/console/ops": {
-      "get": {
+    "/admin/api/recommendations/{subject_type}/{subject_id}/review": {
+      "post": {
         "tags": [
-          "editor-console"
+          "admin-ui",
+          "admin-ui"
         ],
-        "summary": "Console Ops",
-        "operationId": "console_ops_console_ops_get",
+        "summary": "Admin Review Subject",
+        "operationId": "admin_review_subject_admin_api_recommendations__subject_type___subject_id__review_post",
+        "parameters": [
+          {
+            "name": "subject_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "decision",
+                "plan"
+              ],
+              "type": "string",
+              "title": "Subject Type"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
-              "text/html": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
                 "schema": {
-                  "type": "string"
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/recommendations/{subject_type}/{subject_id}/publish": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Publish Subject",
+        "operationId": "admin_publish_subject_admin_api_recommendations__subject_type___subject_id__publish_post",
+        "parameters": [
+          {
+            "name": "subject_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "decision",
+                "plan"
+              ],
+              "type": "string",
+              "title": "Subject Type"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/recommendations/{subject_type}/{subject_id}/withdraw": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Withdraw Subject",
+        "operationId": "admin_withdraw_subject_admin_api_recommendations__subject_type___subject_id__withdraw_post",
+        "parameters": [
+          {
+            "name": "subject_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "decision",
+                "plan"
+              ],
+              "type": "string",
+              "title": "Subject Type"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubjectAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/plans-preview": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Plans Preview",
+        "operationId": "admin_plans_preview_admin_api_plans_preview_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "stake",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 100,
+              "title": "Stake"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/gateway": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Gateway",
+        "operationId": "admin_gateway_admin_api_gateway_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/data": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Data",
+        "operationId": "admin_data_admin_api_data_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/logs": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Logs",
+        "operationId": "admin_logs_admin_api_logs_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "sync",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "lines",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 120,
+              "title": "Lines"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/football/link": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Football Link",
+        "operationId": "admin_football_link_admin_api_football_link_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FootballLink"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/users": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Users",
+        "operationId": "admin_users_admin_api_users_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Create User",
+        "operationId": "admin_create_user_admin_api_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/users/{user_id}": {
+      "patch": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Update User",
+        "operationId": "admin_update_user_admin_api_users__user_id__patch",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Delete User",
+        "operationId": "admin_delete_user_admin_api_users__user_id__delete",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/users/{user_id}/password": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Reset User Password",
+        "operationId": "admin_reset_user_password_admin_api_users__user_id__password_post",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminPasswordPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/audit": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Audit",
+        "operationId": "admin_audit_admin_api_audit_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/ops": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Ops",
+        "description": "运维聚合：告警、API-Football、封存链、通知、Push、互动与推荐覆盖。",
+        "operationId": "admin_ops_admin_api_ops_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -5020,10 +6493,411 @@
           }
         }
       }
+    },
+    "/compliance/state": {
+      "get": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Compliance State",
+        "operationId": "compliance_state_compliance_state_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gate/verify": {
+      "post": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Gate Verify",
+        "operationId": "gate_verify_gate_verify_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgeGateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me/under18-lock": {
+      "post": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Under18 Lock",
+        "operationId": "under18_lock_me_under18_lock_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Under18Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compliance/self-exclusion": {
+      "post": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Self Exclusion",
+        "operationId": "self_exclusion_compliance_self_exclusion_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExclusionBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compliance/self-assessment": {
+      "post": {
+        "tags": [
+          "compliance"
+        ],
+        "summary": "Self Assessment",
+        "operationId": "self_assessment_compliance_self_assessment_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AdminPasswordPatch": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 8,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "AdminPasswordPatch"
+      },
+      "AdminUserCreate": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 8,
+            "title": "Password"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "viewer",
+              "operator",
+              "admin"
+            ],
+            "title": "Role",
+            "default": "operator"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "AdminUserCreate"
+      },
+      "AdminUserPatch": {
+        "properties": {
+          "role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "viewer",
+                  "operator",
+                  "admin"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "title": "AdminUserPatch"
+      },
+      "AgeGateBody": {
+        "properties": {
+          "adult": {
+            "type": "boolean",
+            "title": "Adult"
+          },
+          "birth_year": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2100.0,
+                "minimum": 1900.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Year"
+          }
+        },
+        "type": "object",
+        "required": [
+          "adult"
+        ],
+        "title": "AgeGateBody"
+      },
+      "AssessmentBody": {
+        "properties": {
+          "score": {
+            "type": "integer",
+            "maximum": 27.0,
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "answers": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Answers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score"
+        ],
+        "title": "AssessmentBody"
+      },
       "AvoidItem": {
         "properties": {
           "verdict_id": {
@@ -5108,6 +6982,41 @@
         ],
         "title": "AvoidListResponse"
       },
+      "BatchAction": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "review",
+              "publish"
+            ],
+            "title": "Action"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 200
+          }
+        },
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "BatchAction"
+      },
       "BetBody": {
         "properties": {
           "verdict_id": {
@@ -5135,17 +7044,6 @@
           "verdict_id"
         ],
         "title": "BetBody"
-      },
-      "Body_console_login_console_login_post": {
-        "properties": {
-          "pw": {
-            "type": "string",
-            "title": "Pw",
-            "default": ""
-          }
-        },
-        "type": "object",
-        "title": "Body_console_login_console_login_post"
       },
       "CalendarDay": {
         "properties": {
@@ -5211,6 +7109,64 @@
         ],
         "title": "CalendarResponse"
       },
+      "Capabilities": {
+        "properties": {
+          "can_bet": {
+            "type": "boolean",
+            "title": "Can Bet"
+          },
+          "bet_requires_confirm": {
+            "type": "boolean",
+            "title": "Bet Requires Confirm"
+          },
+          "can_watch": {
+            "type": "boolean",
+            "title": "Can Watch"
+          },
+          "watching": {
+            "type": "boolean",
+            "title": "Watching"
+          },
+          "can_why_not": {
+            "type": "boolean",
+            "title": "Can Why Not"
+          },
+          "can_view_detail": {
+            "type": "boolean",
+            "title": "Can View Detail"
+          },
+          "can_share": {
+            "type": "boolean",
+            "title": "Can Share"
+          },
+          "can_rest": {
+            "type": "boolean",
+            "title": "Can Rest"
+          },
+          "can_remind_lineup": {
+            "type": "boolean",
+            "title": "Can Remind Lineup"
+          },
+          "can_refresh": {
+            "type": "boolean",
+            "title": "Can Refresh"
+          }
+        },
+        "type": "object",
+        "required": [
+          "can_bet",
+          "bet_requires_confirm",
+          "can_watch",
+          "watching",
+          "can_why_not",
+          "can_view_detail",
+          "can_share",
+          "can_rest",
+          "can_remind_lineup",
+          "can_refresh"
+        ],
+        "title": "Capabilities"
+      },
       "ChatBody": {
         "properties": {
           "text": {
@@ -5218,6 +7174,12 @@
             "maxLength": 2000,
             "minLength": 1,
             "title": "Text"
+          },
+          "session_id": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Session Id",
+            "default": ""
           }
         },
         "type": "object",
@@ -5309,6 +7271,124 @@
         ],
         "title": "ComfortResponse"
       },
+      "CopySlotPublic": {
+        "properties": {
+          "persona_id": {
+            "type": "string",
+            "title": "Persona Id"
+          },
+          "slot_key": {
+            "type": "string",
+            "title": "Slot Key"
+          },
+          "template": {
+            "type": "string",
+            "title": "Template"
+          }
+        },
+        "type": "object",
+        "required": [
+          "persona_id",
+          "slot_key",
+          "template"
+        ],
+        "title": "CopySlotPublic"
+      },
+      "Coverage": {
+        "properties": {
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "level": {
+            "type": "string",
+            "title": "Level"
+          },
+          "deep_eligible": {
+            "type": "boolean",
+            "title": "Deep Eligible"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/CoverageSource"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "minutes_to_close": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes To Close"
+          },
+          "hours_to_kickoff": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hours To Kickoff"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score",
+          "level",
+          "deep_eligible",
+          "missing",
+          "sources"
+        ],
+        "title": "Coverage"
+      },
+      "CoverageSource": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "last_sync": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync"
+          },
+          "coverage": {
+            "type": "number",
+            "title": "Coverage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "status",
+          "coverage"
+        ],
+        "title": "CoverageSource"
+      },
       "DeviceLogin": {
         "properties": {
           "device_token": {
@@ -5364,6 +7444,308 @@
         ],
         "title": "DisciplineBody"
       },
+      "ExclusionBody": {
+        "properties": {
+          "days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3650.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          },
+          "permanent": {
+            "type": "boolean",
+            "title": "Permanent",
+            "default": false
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Reason",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "ExclusionBody"
+      },
+      "FocusAction": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "primary": {
+            "type": "boolean",
+            "title": "Primary"
+          },
+          "requires_auth": {
+            "type": "boolean",
+            "title": "Requires Auth"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "enabled",
+          "primary",
+          "requires_auth"
+        ],
+        "title": "FocusAction"
+      },
+      "FocusMatch": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No"
+          },
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "home": {
+            "type": "string",
+            "title": "Home"
+          },
+          "away": {
+            "type": "string",
+            "title": "Away"
+          },
+          "kickoff": {
+            "type": "string",
+            "title": "Kickoff"
+          },
+          "sale_close": {
+            "type": "string",
+            "title": "Sale Close"
+          },
+          "single": {
+            "type": "boolean",
+            "title": "Single"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id",
+          "match_no",
+          "league",
+          "home",
+          "away",
+          "kickoff",
+          "sale_close",
+          "single"
+        ],
+        "title": "FocusMatch"
+      },
+      "FocusResponse": {
+        "properties": {
+          "match": {
+            "$ref": "#/components/schemas/FocusMatch"
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FocusVerdict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "as_of": {
+            "type": "string",
+            "title": "As Of"
+          },
+          "data_cutoff": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Cutoff"
+          },
+          "seal": {
+            "$ref": "#/components/schemas/Seal"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/Coverage"
+          },
+          "intel": {
+            "$ref": "#/components/schemas/Intel"
+          },
+          "interpretation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interpretation"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/Capabilities"
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/FocusAction"
+            },
+            "type": "array",
+            "title": "Actions"
+          },
+          "persona": {
+            "type": "string",
+            "title": "Persona"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match",
+          "state",
+          "trade_date",
+          "request_id",
+          "as_of",
+          "seal",
+          "coverage",
+          "intel",
+          "capabilities",
+          "actions",
+          "persona"
+        ],
+        "title": "FocusResponse"
+      },
+      "FocusVerdict": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "pick": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pick"
+          },
+          "rake": {
+            "type": "number",
+            "title": "Rake"
+          },
+          "rake_threshold": {
+            "type": "number",
+            "title": "Rake Threshold"
+          },
+          "probs": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Probs"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "gates": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Gates"
+          },
+          "payload_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload Hash"
+          },
+          "sealed": {
+            "type": "boolean",
+            "title": "Sealed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "rake",
+          "rake_threshold",
+          "probs",
+          "gates",
+          "sealed"
+        ],
+        "title": "FocusVerdict"
+      },
       "FollowBody": {
         "properties": {
           "events": {
@@ -5383,6 +7765,27 @@
         },
         "type": "object",
         "title": "FollowBody"
+      },
+      "FootballLink": {
+        "properties": {
+          "fixture_id": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Fixture Id"
+          },
+          "match_id": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Match Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fixture_id",
+          "match_id"
+        ],
+        "title": "FootballLink"
       },
       "HTTPValidationError": {
         "properties": {
@@ -5490,6 +7893,189 @@
         ],
         "title": "InboxResponse"
       },
+      "Intel": {
+        "properties": {
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/IntelFact"
+            },
+            "type": "array",
+            "title": "Facts"
+          },
+          "unknowns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unknowns"
+          }
+        },
+        "type": "object",
+        "required": [
+          "facts",
+          "unknowns"
+        ],
+        "title": "Intel"
+      },
+      "IntelFact": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "default": ""
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "label",
+          "value",
+          "status"
+        ],
+        "title": "IntelFact"
+      },
+      "InteractionBody": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Event"
+          },
+          "event_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 8,
+            "title": "Event Id"
+          },
+          "schema_ver": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Schema Ver",
+            "default": 1
+          },
+          "session_id": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Session Id",
+            "default": ""
+          },
+          "match_id": {
+            "type": "string",
+            "maxLength": 32,
+            "title": "Match Id",
+            "default": ""
+          },
+          "verdict_id": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Verdict Id",
+            "default": ""
+          },
+          "action": {
+            "type": "string",
+            "maxLength": 32,
+            "title": "Action",
+            "default": ""
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event"
+        ],
+        "title": "InteractionBody"
+      },
+      "InteractionResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "duplicate": {
+            "type": "boolean",
+            "title": "Duplicate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "duplicate"
+        ],
+        "title": "InteractionResponse"
+      },
+      "KeyPatch": {
+        "properties": {
+          "api_key": {
+            "type": "string",
+            "title": "Api Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "api_key"
+        ],
+        "title": "KeyPatch"
+      },
       "LiveTimelineItem": {
         "properties": {
           "captured_at": {
@@ -5520,6 +8106,28 @@
           "sp"
         ],
         "title": "LiveTimelineItem"
+      },
+      "LoginBody": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginBody"
       },
       "MatchEvidenceResponse": {
         "properties": {
@@ -6027,6 +8635,172 @@
         ],
         "title": "MemoryWriteResponse"
       },
+      "ModelPatch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 9999.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "timeout_s": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 3.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout S"
+          },
+          "max_tokens": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4096.0,
+                "minimum": 64.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tokens"
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.5,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
+          "reset_failures": {
+            "type": "boolean",
+            "title": "Reset Failures",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "ModelPatch"
+      },
+      "ModelUpsert": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          },
+          "base_url": {
+            "type": "string",
+            "title": "Base Url",
+            "default": ""
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": ""
+          },
+          "api_key": {
+            "type": "string",
+            "title": "Api Key",
+            "default": ""
+          },
+          "priority": {
+            "type": "integer",
+            "maximum": 9999.0,
+            "minimum": 1.0,
+            "title": "Priority",
+            "default": 100
+          },
+          "timeout_s": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 3.0,
+            "title": "Timeout S",
+            "default": 20
+          },
+          "max_tokens": {
+            "type": "integer",
+            "maximum": 4096.0,
+            "minimum": 64.0,
+            "title": "Max Tokens",
+            "default": 800
+          },
+          "temperature": {
+            "type": "number",
+            "maximum": 1.5,
+            "minimum": 0.0,
+            "title": "Temperature",
+            "default": 0.4
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "ModelUpsert"
+      },
       "NotifyBody": {
         "properties": {
           "channels": {
@@ -6177,6 +8951,526 @@
         "type": "object",
         "title": "OkResponse"
       },
+      "ParlayCheckRequest": {
+        "properties": {
+          "legs": {
+            "items": {
+              "$ref": "#/components/schemas/ParlayLegIn"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 2,
+            "title": "Legs"
+          },
+          "stake": {
+            "type": "number",
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Stake",
+            "default": 100
+          }
+        },
+        "type": "object",
+        "required": [
+          "legs"
+        ],
+        "title": "ParlayCheckRequest"
+      },
+      "ParlayCheckResponse": {
+        "properties": {
+          "legs": {
+            "items": {
+              "$ref": "#/components/schemas/ParlayLegOut"
+            },
+            "type": "array",
+            "title": "Legs"
+          },
+          "combo": {
+            "$ref": "#/components/schemas/ParlayCombo"
+          },
+          "scores": {
+            "$ref": "#/components/schemas/ParlayScores"
+          },
+          "risks": {
+            "items": {
+              "$ref": "#/components/schemas/ParlayNote"
+            },
+            "type": "array",
+            "title": "Risks"
+          },
+          "optimizations": {
+            "items": {
+              "$ref": "#/components/schemas/ParlayNote"
+            },
+            "type": "array",
+            "title": "Optimizations"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "as_of": {
+            "type": "string",
+            "title": "As Of"
+          },
+          "data_cutoff": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Cutoff"
+          }
+        },
+        "type": "object",
+        "required": [
+          "legs",
+          "combo",
+          "scores",
+          "risks",
+          "optimizations",
+          "summary",
+          "as_of"
+        ],
+        "title": "ParlayCheckResponse"
+      },
+      "ParlayCombo": {
+        "properties": {
+          "leg_count": {
+            "type": "integer",
+            "title": "Leg Count"
+          },
+          "odds": {
+            "type": "number",
+            "title": "Odds"
+          },
+          "market_prob": {
+            "type": "number",
+            "title": "Market Prob"
+          },
+          "model_prob": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Prob"
+          },
+          "model_edge": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Edge"
+          },
+          "market_return_rate": {
+            "type": "number",
+            "title": "Market Return Rate"
+          },
+          "model_expected_return": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Expected Return"
+          },
+          "market_expected_return": {
+            "type": "number",
+            "title": "Market Expected Return"
+          },
+          "cost": {
+            "type": "number",
+            "title": "Cost"
+          },
+          "cost_pct": {
+            "type": "number",
+            "title": "Cost Pct"
+          },
+          "model_coverage": {
+            "type": "string",
+            "title": "Model Coverage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "leg_count",
+          "odds",
+          "market_prob",
+          "market_return_rate",
+          "market_expected_return",
+          "cost",
+          "cost_pct",
+          "model_coverage"
+        ],
+        "title": "ParlayCombo"
+      },
+      "ParlayLegIn": {
+        "properties": {
+          "verdict_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Verdict Id"
+          },
+          "dir": {
+            "type": "string",
+            "enum": [
+              "home",
+              "draw",
+              "away"
+            ],
+            "title": "Dir"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict_id",
+          "dir"
+        ],
+        "title": "ParlayLegIn"
+      },
+      "ParlayLegOut": {
+        "properties": {
+          "verdict_id": {
+            "type": "string",
+            "title": "Verdict Id"
+          },
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No"
+          },
+          "league": {
+            "type": "string",
+            "title": "League"
+          },
+          "home": {
+            "type": "string",
+            "title": "Home"
+          },
+          "away": {
+            "type": "string",
+            "title": "Away"
+          },
+          "kickoff": {
+            "type": "string",
+            "title": "Kickoff"
+          },
+          "dir": {
+            "type": "string",
+            "title": "Dir"
+          },
+          "dir_label": {
+            "type": "string",
+            "title": "Dir Label"
+          },
+          "odds": {
+            "type": "number",
+            "title": "Odds"
+          },
+          "market_prob": {
+            "type": "number",
+            "title": "Market Prob"
+          },
+          "model_prob": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Prob"
+          },
+          "model_edge": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Edge"
+          },
+          "model_expected_return": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Expected Return"
+          },
+          "model_engine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Engine"
+          },
+          "rake": {
+            "type": "number",
+            "title": "Rake"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "gates": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Gates"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/Coverage"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/IntelFact"
+            },
+            "type": "array",
+            "title": "Facts"
+          },
+          "unknowns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unknowns"
+          },
+          "sealed": {
+            "type": "boolean",
+            "title": "Sealed"
+          },
+          "payload_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload Hash"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdict_id",
+          "match_id",
+          "match_no",
+          "league",
+          "home",
+          "away",
+          "kickoff",
+          "dir",
+          "dir_label",
+          "odds",
+          "market_prob",
+          "rake",
+          "status",
+          "gates",
+          "coverage",
+          "facts",
+          "unknowns",
+          "sealed"
+        ],
+        "title": "ParlayLegOut"
+      },
+      "ParlayNote": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "level": {
+            "type": "string",
+            "title": "Level"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "level",
+          "message"
+        ],
+        "title": "ParlayNote"
+      },
+      "ParlayPlanItem": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "risk_profile": {
+            "type": "string",
+            "title": "Risk Profile"
+          },
+          "legs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Legs"
+          },
+          "check": {
+            "$ref": "#/components/schemas/ParlayCheckResponse"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "risk_profile",
+          "legs",
+          "check"
+        ],
+        "title": "ParlayPlanItem"
+      },
+      "ParlayPlanRequest": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "stake": {
+            "type": "number",
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Stake",
+            "default": 100
+          },
+          "risk_profiles": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "conservative",
+                "balanced",
+                "aggressive"
+              ]
+            },
+            "type": "array",
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Risk Profiles"
+          }
+        },
+        "type": "object",
+        "title": "ParlayPlanRequest"
+      },
+      "ParlayPlanResponse": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "candidates": {
+            "type": "integer",
+            "title": "Candidates"
+          },
+          "plans": {
+            "items": {
+              "$ref": "#/components/schemas/ParlayPlanItem"
+            },
+            "type": "array",
+            "title": "Plans"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "candidates",
+          "plans"
+        ],
+        "title": "ParlayPlanResponse"
+      },
+      "ParlayScores": {
+        "properties": {
+          "cost": {
+            "type": "string",
+            "title": "Cost"
+          },
+          "info": {
+            "type": "string",
+            "title": "Info"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "structure": {
+            "type": "string",
+            "title": "Structure"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cost",
+          "info",
+          "model",
+          "structure"
+        ],
+        "title": "ParlayScores"
+      },
       "PersonaBody": {
         "properties": {
           "persona": {
@@ -6190,6 +9484,78 @@
         ],
         "title": "PersonaBody"
       },
+      "PersonaConfigResponse": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "profiles": {
+            "items": {
+              "$ref": "#/components/schemas/PersonaPublic"
+            },
+            "type": "array",
+            "title": "Profiles"
+          },
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/CopySlotPublic"
+            },
+            "type": "array",
+            "title": "Slots"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "profiles",
+          "slots"
+        ],
+        "title": "PersonaConfigResponse"
+      },
+      "PersonaPublic": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "address": {
+            "type": "string",
+            "title": "Address"
+          },
+          "tone": {
+            "type": "string",
+            "title": "Tone"
+          },
+          "max_chars": {
+            "type": "integer",
+            "title": "Max Chars"
+          },
+          "emoji_policy": {
+            "type": "string",
+            "title": "Emoji Policy"
+          },
+          "allowed_emoji": {
+            "type": "string",
+            "title": "Allowed Emoji"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "address",
+          "tone",
+          "max_chars",
+          "emoji_policy",
+          "allowed_emoji"
+        ],
+        "title": "PersonaPublic"
+      },
       "PersonaResponse": {
         "properties": {
           "persona": {
@@ -6202,6 +9568,547 @@
           "persona"
         ],
         "title": "PersonaResponse"
+      },
+      "PersonaTest": {
+        "properties": {
+          "persona": {
+            "type": "string",
+            "enum": [
+              "zhuanjia",
+              "laopao",
+              "meng"
+            ],
+            "title": "Persona",
+            "default": "zhuanjia"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "PersonaTest"
+      },
+      "PipelineRun": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "stake": {
+            "type": "number",
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Stake",
+            "default": 100
+          }
+        },
+        "type": "object",
+        "title": "PipelineRun"
+      },
+      "PlanPublic": {
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "title": "Plan Id"
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date"
+          },
+          "risk_profile": {
+            "type": "string",
+            "title": "Risk Profile"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "legs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Legs"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "payload_hash": {
+            "type": "string",
+            "title": "Payload Hash"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "check": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Check"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "conditions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Conditions"
+          },
+          "invalidators": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Invalidators"
+          },
+          "review": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_id",
+          "trade_date",
+          "risk_profile",
+          "label",
+          "legs",
+          "status",
+          "version",
+          "payload_hash",
+          "check"
+        ],
+        "title": "PlanPublic"
+      },
+      "ProfilePatch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "tone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tone"
+          },
+          "style_prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Style Prompt"
+          },
+          "max_chars": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 600.0,
+                "minimum": 60.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Chars"
+          },
+          "emoji_policy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "limited",
+                  "free"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emoji Policy"
+          },
+          "allowed_emoji": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Emoji"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "title": "ProfilePatch"
+      },
+      "PulseAllTime": {
+        "properties": {
+          "data_points": {
+            "type": "integer",
+            "title": "Data Points"
+          },
+          "matches": {
+            "type": "integer",
+            "title": "Matches"
+          },
+          "sealed": {
+            "type": "integer",
+            "title": "Sealed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data_points",
+          "matches",
+          "sealed"
+        ],
+        "title": "PulseAllTime"
+      },
+      "PulseCounts": {
+        "properties": {
+          "matches": {
+            "type": "integer",
+            "title": "Matches"
+          },
+          "sp_snapshots": {
+            "type": "integer",
+            "title": "Sp Snapshots"
+          },
+          "intl_odds": {
+            "type": "integer",
+            "title": "Intl Odds"
+          },
+          "model_runs": {
+            "type": "integer",
+            "title": "Model Runs"
+          },
+          "verdicts": {
+            "type": "integer",
+            "title": "Verdicts"
+          },
+          "revisions": {
+            "type": "integer",
+            "title": "Revisions"
+          },
+          "intel_items": {
+            "type": "integer",
+            "title": "Intel Items"
+          },
+          "sealed_links": {
+            "type": "integer",
+            "title": "Sealed Links"
+          },
+          "lineups": {
+            "type": "integer",
+            "title": "Lineups"
+          },
+          "injuries": {
+            "type": "integer",
+            "title": "Injuries"
+          },
+          "standings": {
+            "type": "integer",
+            "title": "Standings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matches",
+          "sp_snapshots",
+          "intl_odds",
+          "model_runs",
+          "verdicts",
+          "revisions",
+          "intel_items",
+          "sealed_links",
+          "lineups",
+          "injuries",
+          "standings"
+        ],
+        "title": "PulseCounts"
+      },
+      "PulseDisplay": {
+        "properties": {
+          "data_points": {
+            "type": "integer",
+            "title": "Data Points"
+          },
+          "factor": {
+            "type": "number",
+            "title": "Factor"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data_points",
+          "factor",
+          "unit"
+        ],
+        "title": "PulseDisplay"
+      },
+      "PulseOutcomes": {
+        "properties": {
+          "promoted": {
+            "type": "integer",
+            "title": "Promoted"
+          },
+          "screening": {
+            "type": "integer",
+            "title": "Screening"
+          },
+          "killed": {
+            "type": "integer",
+            "title": "Killed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "promoted",
+          "screening",
+          "killed"
+        ],
+        "title": "PulseOutcomes"
+      },
+      "PulseResponse": {
+        "properties": {
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date"
+          },
+          "as_of": {
+            "type": "string",
+            "title": "As Of"
+          },
+          "stale_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale Seconds"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/PulseCounts"
+          },
+          "data_points": {
+            "type": "integer",
+            "title": "Data Points"
+          },
+          "display": {
+            "$ref": "#/components/schemas/PulseDisplay"
+          },
+          "all_time": {
+            "$ref": "#/components/schemas/PulseAllTime"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/PulseStage"
+            },
+            "type": "array",
+            "title": "Stages"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/PulseSource"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "outcomes": {
+            "$ref": "#/components/schemas/PulseOutcomes"
+          },
+          "excluded": {
+            "type": "integer",
+            "title": "Excluded"
+          },
+          "definition": {
+            "type": "string",
+            "title": "Definition"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trade_date",
+          "as_of",
+          "counts",
+          "data_points",
+          "display",
+          "all_time",
+          "stages",
+          "sources",
+          "outcomes",
+          "excluded",
+          "definition"
+        ],
+        "title": "PulseResponse"
+      },
+      "PulseSource": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "last_sync": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync"
+          },
+          "coverage": {
+            "type": "number",
+            "title": "Coverage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "status",
+          "coverage"
+        ],
+        "title": "PulseSource"
+      },
+      "PulseStage": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "count",
+          "status"
+        ],
+        "title": "PulseStage"
       },
       "PushHealthResponse": {
         "properties": {
@@ -6420,6 +10327,60 @@
         ],
         "title": "ReadAllResponse"
       },
+      "RecommendationToday": {
+        "properties": {
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date"
+          },
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "snapshots": {
+            "items": {
+              "$ref": "#/components/schemas/SnapshotPublic"
+            },
+            "type": "array",
+            "title": "Snapshots"
+          },
+          "plans": {
+            "items": {
+              "$ref": "#/components/schemas/PlanPublic"
+            },
+            "type": "array",
+            "title": "Plans"
+          },
+          "verdicts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Verdicts"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trade_date",
+          "generated_at",
+          "snapshots",
+          "plans",
+          "verdicts"
+        ],
+        "title": "RecommendationToday"
+      },
       "RefreshBody": {
         "properties": {
           "refresh_token": {
@@ -6564,6 +10525,41 @@
           "items"
         ],
         "title": "SPMovementResponse"
+      },
+      "Seal": {
+        "properties": {
+          "hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hash"
+          },
+          "sealed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sealed At"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision"
+        ],
+        "title": "Seal"
       },
       "SendBody": {
         "properties": {
@@ -6778,6 +10774,167 @@
         ],
         "title": "ShareCardResponse"
       },
+      "SlotPatch": {
+        "properties": {
+          "template": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Template"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "template"
+        ],
+        "title": "SlotPatch"
+      },
+      "SnapshotPublic": {
+        "properties": {
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id"
+          },
+          "trade_date": {
+            "type": "string",
+            "title": "Trade Date"
+          },
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "payload_hash": {
+            "type": "string",
+            "title": "Payload Hash"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "verdict": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Verdict"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction",
+            "default": "观望"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "prob_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prob Low"
+          },
+          "prob_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prob High"
+          },
+          "conditions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Conditions"
+          },
+          "invalidators": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Invalidators"
+          },
+          "review": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review"
+          }
+        },
+        "type": "object",
+        "required": [
+          "snapshot_id",
+          "trade_date",
+          "match_id",
+          "status",
+          "version",
+          "payload_hash",
+          "verdict"
+        ],
+        "title": "SnapshotPublic"
+      },
+      "SubjectAction": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Reason",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "SubjectAction"
+      },
       "TrueCostResponse": {
         "properties": {
           "match_id": {
@@ -6884,6 +11041,19 @@
           "note"
         ],
         "title": "TrueCostResponse"
+      },
+      "Under18Body": {
+        "properties": {
+          "locked": {
+            "type": "boolean",
+            "title": "Locked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "locked"
+        ],
+        "title": "Under18Body"
       },
       "UnreadResponse": {
         "properties": {

@@ -95,12 +95,23 @@ def llm_available() -> bool:
     return False
 
 
-def generate_stream(v: Verdict, persona: str = "zhuanjia"):
-    """产出 (kind, data) 序列：("delta", text)... ("done", meta)。任何异常走模板兜底。"""
+def generate_stream(v: Verdict, persona: str = "zhuanjia", db=None):
+    """产出 (kind, data) 序列：("delta", text)... ("done", meta)。
+
+    用户请求只读预生成缓存；缓存未命中走模板，绝不同步等 LLM。
+    """
     try:
-        if llm_available():
-            raise NotImplementedError  # v1.5 接入；当前必然走模板
-        text, tid = build_narration(v, persona)
+        text = None
+        tid = None
+        if db is not None and v.payload_hash:
+            from .persona_llm import get_cached
+            cached = get_cached(db, f"verdict:{v.id}", v.payload_hash, persona)
+            if cached is not None:
+                text, tid = cached.text, f"{persona}.llm_cache"
+        if text is None:
+            if llm_available():
+                raise NotImplementedError  # v1.5 接入；当前必然走模板
+            text, tid = build_narration(v, persona)
     except Exception:
         try:
             text, tid = build_narration(v, "zhuanjia")  # 兜底人设再兜底

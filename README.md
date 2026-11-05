@@ -1,17 +1,17 @@
-# 解球 Monorepo
+# 球多多 Monorepo
 
-产品：不预测赢家，只算清下注真实成本的体育数据分析助手。当前生产前端是 `apps/mobile/`（Expo RN，Android 先发），生产后端仍在 `jieqiu-backend/`（FastAPI），接口契约由 `packages/api-client/` 生成。
+产品：有判断、有参考组合的赛前决策助手；Decision Snapshot → AI Review → Publish 主链已接，`/admin` 运营台已上线，付费与外部合规接入待做，不承诺结果。当前生产前端是 `apps/mobile/`（Expo RN，Android 先发），生产后端仍在 `jieqiu-backend/`（FastAPI），接口契约由 `packages/api-client/` 生成。
 
-| 事实 | 当前值（2026-11-04） |
+| 事实 | 当前值（2026-11-05） |
 |---|---|
 | 版本 | `0.8.0-w8+assistant` |
-| OpenAPI | 94 路径 / 107 方法 |
-| 后端测试 | 182 passed |
-| 前端测试 | 20 passed + typecheck/lint/bundle |
+| OpenAPI | 128 路径 / 143 方法 |
+| 后端测试 | 251 passed |
+| 前端测试 | 22 passed + typecheck/lint/bundle |
 | 数据库 | 境内 PostgreSQL 16（云托管优先 / 自建兜底，ADR-0004）；未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite |
-| Alembic head | `20261104_04` |
+| Alembic head | `20261105_12` |
 
-工程入口见 [AGENTS.md](./AGENTS.md)，完整文档索引见 [docs/README.md](./docs/README.md)，最新全栈审查见 [docs/reviews/2026-11-04-full-stack.md](./docs/reviews/2026-11-04-full-stack.md)。
+工程入口见 [AGENTS.md](./AGENTS.md)，完整文档索引见 [docs/README.md](./docs/README.md)，2026-11-04 全栈审查（历史快照）见 [docs/reviews/2026-11-04-full-stack.md](./docs/reviews/2026-11-04-full-stack.md)。首页聚焦导航已实现（选中比赛→回首页聚焦）；后端 focus/pulse/interactions 已实现，前端数据脉搏首屏与 `intel_items`/`match_coverage`/`pulse_daily` 情报表仍为设计稿。详见 [docs/focused-decision-flow.md](./docs/focused-decision-flow.md)；新口径下的赛前判断/串关参谋/审核发布见 [docs/recommendation-product.md](./docs/recommendation-product.md)；多模型 fast/deep 路由见 [docs/llm-gateway.md](./docs/llm-gateway.md)（Phase 1 已实现：登录用户 open_chat→fast；匿名 0 LLM；deep/解读待做）。
 
 当前结构：`jieqiu-backend/`（FastAPI 后端，过渡期目录）、`apps/mobile/`（Expo RN）、`packages/api-client/`（OpenAPI 生成 client）、`sp-collector/`（竞彩 SP 采集器）。下文描述仓库内的 SP 采集器。
 

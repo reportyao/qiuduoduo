@@ -15,8 +15,8 @@ import paramiko
 HOST = os.environ.get("JQ_DEPLOY_HOST", "43.128.24.244")
 USER = os.environ.get("JQ_DEPLOY_USER", "ubuntu")
 PWD = os.environ.get("JQ_DEPLOY_PASSWORD", "")
-CONSOLE_PASSWORD = os.environ.get("JQ_CONSOLE_PASSWORD", "")
-CONSOLE_IP_WHITELIST = os.environ.get("JQ_CONSOLE_IP_WHITELIST", "")
+ADMIN_PASSWORD = (os.environ.get("JQ_ADMIN_PASSWORD")
+                  or os.environ.get("JQ_CONSOLE_PASSWORD", ""))
 ROOT = "/home/ubuntu/jieqiu-backend"
 DATA = "/home/ubuntu/jieqiu-data"   # 数据与代码分离：部署清代码目录绝不清数据
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -27,6 +27,22 @@ if PROD_DB_URL.startswith("postgres://"):
     PROD_DB_URL = "postgresql://" + PROD_DB_URL[len("postgres://"):]
 DB_ENV = f"JQ_DATABASE_URL={shlex.quote(PROD_DB_URL)}"
 ENV_FILE = "/etc/jieqiu-backend.env"
+# 可选功能密钥：只从部署者显式导出的环境变量写入，不从仓库文件读取；
+# 未设置的项不会出现在 EnvironmentFile，功能按自身降级路径运行。
+OPTIONAL_ENV_KEYS = (
+    "JQ_ADMIN_COOKIE_SECURE",
+    "JQ_ADMIN_PASSWORD",
+    "JQ_LLM_FAST_PROVIDER", "JQ_LLM_FAST_BASE_URL", "JQ_LLM_FAST_MODEL",
+    "JQ_LLM_FAST_API_KEY", "JQ_LLM_DEEP_PROVIDER", "JQ_LLM_DEEP_BASE_URL",
+    "JQ_LLM_DEEP_MODEL", "JQ_LLM_DEEP_API_KEY", "JQ_LLM_DAILY_BUDGET_CNY",
+    "JQ_LLM_TASK_BUDGET_CNY", "JQ_LLM_USER_DAILY_CALLS",
+    "JQ_PERSONA_LLM_BASE_URL", "JQ_PERSONA_LLM_API_KEY", "JQ_PERSONA_LLM_ENC_KEY",
+    "JQ_PERSONA_LLM_MAX_TOKENS", "JQ_PERSONA_LLM_TEMPERATURE",
+    "JQ_API_FOOTBALL_KEY", "JQ_API_FOOTBALL_BASE_URL", "JQ_ODDS_API_KEY",
+    "JQ_SMS_PROVIDER", "JQ_EMAIL_PROVIDER", "JQ_RESEND_API_KEY",
+    "JQ_WECHAT_APP_ID", "JQ_WECHAT_APP_SECRET", "JQ_GOOGLE_CLIENT_ID",
+    "JQ_APPLE_CLIENT_ID",
+)
 
 
 def _clean(value: str, label: str) -> str:
@@ -60,7 +76,7 @@ def run(ssh: paramiko.SSHClient, cmd: str, timeout: int = 600) -> tuple[int, str
 def run_sudo(ssh: paramiko.SSHClient, cmd: str, password: str,
              timeout: int = 600) -> tuple[int, str]:
     """把 sudo 密码从 stdin 送入，不把密码放进远端命令行（避免 ps 泄露）。"""
-    stdin, out, err = ssh.exec_command(f"sudo -S {cmd}", timeout=timeout)
+    stdin, out, err = ssh.exec_command(f"sudo -S -p '' sh -c {shlex.quote(cmd)}", timeout=timeout)
     stdin.write(password + "\n")
     stdin.flush()
     stdin.channel.shutdown_write()
@@ -72,11 +88,16 @@ def run_sudo(ssh: paramiko.SSHClient, cmd: str, password: str,
 
 
 def make_tar() -> bytes:
+    def _skip_cache(info: tarfile.TarInfo):
+        if "__pycache__" in info.name or info.name.endswith(".pyc"):
+            return None
+        return info
+
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
         for rel in ("app", "requirements.txt", "README.md", "alembic.ini", "migrations"):
             full = os.path.join(APP_DIR, rel)
-            tar.add(full, arcname=f"jieqiu-backend/{rel}")
+            tar.add(full, arcname=f"jieqiu-backend/{rel}", filter=_skip_cache)
         # DC 模型底座（xG 历史数据）随包上传
         xg = os.path.abspath(os.path.join(APP_DIR, "..", "w1-validation", "xg_matches.csv"))
         if os.path.exists(xg):
@@ -86,10 +107,10 @@ def make_tar() -> bytes:
 
 
 def main() -> None:
-    if not PWD or not CONSOLE_PASSWORD:
-        raise SystemExit("请设置 JQ_DEPLOY_PASSWORD 与 JQ_CONSOLE_PASSWORD（不要把密码写进代码）")
+    if not PWD:
+        raise SystemExit("请设置 JQ_DEPLOY_PASSWORD（不要把密码写进代码）")
     _clean(PWD, "JQ_DEPLOY_PASSWORD")
-    _clean(CONSOLE_PASSWORD, "JQ_CONSOLE_PASSWORD")
+    _clean(ADMIN_PASSWORD, "JQ_ADMIN_PASSWORD")
     _clean(PROD_DB_URL, "JQ_PROD_DATABASE_URL")
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -141,16 +162,24 @@ def main() -> None:
         PWD,
     )
     jwt_secret = ""
+    remote_env: dict[str, str] = {}
     for line in out.splitlines():
         line = line.strip()
+        if line.startswith("JQ_") and "=" in line:
+            key, value = line.split("=", 1)
+            remote_env[key] = value.strip().strip('"')
         if line.startswith("JQ_JWT_SECRET="):
             jwt_secret = line.split("=", 1)[1].strip().strip('"')
-            break
     print("[jwt] secret", "kept" if jwt_secret else "generated")
     if not jwt_secret:
         jwt_secret = _secrets.token_hex(32)
+    admin_password = (ADMIN_PASSWORD or remote_env.get("JQ_ADMIN_PASSWORD", "")
+                      or remote_env.get("JQ_CONSOLE_PASSWORD", ""))
+    if not admin_password:
+        raise SystemExit("远端无管理员密码且未设置 JQ_ADMIN_PASSWORD")
 
     # 密钥放 0600 的 EnvironmentFile，不再写进 world-readable 的 unit 文件。
+    # 远端已有可选密钥默认保留，避免一次未导出 env 的部署把 LLM/API-Football 配置清空。
     env_text = "".join(_env_line(k, v) for k, v in (
         ("JQ_DATABASE_URL", PROD_DB_URL),
         ("JQ_ENV", "prod"),
@@ -158,11 +187,16 @@ def main() -> None:
         ("JQ_XG_EXTRA_DIR", f"{DATA}/xg_dumps"),
         ("JQ_FREEZE_BASELINE", f"{DATA}/freeze_baseline.json"),
         ("JQ_JWT_SECRET", jwt_secret),
-        ("JQ_CONSOLE_PASSWORD", CONSOLE_PASSWORD),
-        ("JQ_CONSOLE_IP_WHITELIST", CONSOLE_IP_WHITELIST),
+        ("JQ_ADMIN_PASSWORD", admin_password),
         ("JQ_AUTH_STUB", "false"),
         ("JQ_CORS_EXTRA_ORIGINS", "http://43[.]128[.]24[.]244:8899"),
     ))
+    for key in OPTIONAL_ENV_KEYS:
+        if key == "JQ_ADMIN_PASSWORD":
+            continue
+        value = os.environ.get(key) or remote_env.get(key, "")
+        if value:
+            env_text += _env_line(key, value)
     with sftp.file("/tmp/jieqiu-backend.env", "w") as f:
         f.write(env_text)
     # 先收紧权限再 sudo install，避免 /tmp 上的短暂可读窗口。
@@ -197,7 +231,11 @@ WantedBy=multi-user.target
     envs = (f"{DB_ENV} JQ_DB_STATEMENT_TIMEOUT_MS=0 "
             f"JQ_XG_DATA_PATH={ROOT}/xg_matches.csv JQ_XG_EXTRA_DIR={DATA}/xg_dumps")
     cron = (f"*/30 * * * * cd {ROOT} && {envs} "
-            f"venv/bin/python -m app.seed /home/ubuntu/jieqiu-sp/sp_data.db >> {ROOT}/sync.log 2>&1\n"
+            f"venv/bin/python -m app.seed /home/ubuntu/jieqiu-sp/sp_data.db >> {ROOT}/sync.log 2>&1 && "
+            fr"venv/bin/python -m app.recommendations_cli run >> {ROOT}/recommendations.log 2>&1" + "\n"
+            # 每日 19:05 预生成三套人设文案；用户请求只读缓存
+            f"5 19 * * * cd {ROOT} && {envs} "
+            fr"venv/bin/python -m app.persona_cli warm --date $(date +\%F) >> {ROOT}/persona.log 2>&1" + "\n"
             # 每周一 06:10 校准回测（校准数据周更，防腐烂）
             f"10 6 * * 1 cd {ROOT} && {envs} "
             f"venv/bin/python -m app.backtest_cli weekly >> {ROOT}/backtest.log 2>&1\n"
@@ -210,6 +248,10 @@ WantedBy=multi-user.target
             # 数据保留：每周日 04:10 清理可再生日志；判决/账本/SP 快照永不自动删除
             f"10 4 * * 0 cd {ROOT} && {envs} "
             f"venv/bin/python -m app.db_maint --apply --json >> {ROOT}/db_maint.log 2>&1\n")
+    if os.environ.get("JQ_API_FOOTBALL_KEY") or remote_env.get("JQ_API_FOOTBALL_KEY"):
+        # 免费档每日一次 fixtures；未配 key 的部署不装这条，避免无意义失败日志。
+        cron += (f"15 6 * * * cd {ROOT} && {envs} "
+                 rf"venv/bin/python -m app.api_football_cli sync --date $(date +\%F) >> {ROOT}/api_football.log 2>&1" + "\n")
     # 用 SFTP 写 cron 文件，避免 echo 双引号把数据库密码里的 $/反引号做 shell 展开。
     with sftp.file("/tmp/jqcron", "w") as f:
         f.write(cron)
@@ -226,6 +268,10 @@ WantedBy=multi-user.target
     print("[5/6] seed on server:\n", out.strip())
     _require(code == 0, f"种子导入失败：{out[-1200:]}")
 
+    # freeze_baseline 由服务进程写入；旧部署曾以 root 创建导致 /review/freeze/adopt 500。
+    run_sudo(ssh, f"install -d -o ubuntu -g ubuntu {DATA} && "
+                  f"touch {DATA}/freeze_baseline.json && "
+                  f"chown ubuntu:ubuntu {DATA}/freeze_baseline.json", PWD)
     code, out = run_sudo(
         ssh,
         "systemctl daemon-reload && systemctl enable jieqiu-backend && "

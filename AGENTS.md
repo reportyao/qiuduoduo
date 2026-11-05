@@ -1,8 +1,8 @@
-# AGENTS.md · 解球工程协作约定
+# AGENTS.md · 球多多工程协作约定
 
 本文件是 AI 与人类协作开发的**仓库级上下文入口**。任何 AI/开发者在改动代码前必须先读本文件；提交前必须按 Definition of Done 自检。
 
-当前事实（2026-11-04）：生产代码仍在 `jieqiu-backend/`，OpenAPI **94 路径 / 107 方法**，后端 **182 tests**；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。文档索引见 [docs/README.md](./docs/README.md)。
+当前事实（2026-11-05）：生产代码仍在 `jieqiu-backend/`，OpenAPI **128 路径 / 143 方法**，后端 **251 tests**；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。文档索引见 [docs/README.md](./docs/README.md)。
 
 ## 1. 架构地图
 
@@ -10,7 +10,7 @@
 apps/
   mobile/        Expo React Native + TypeScript（Android 先发，iOS 后补；交接见 apps/mobile/ARCHITECTURE.md）
   web/           Next.js 落地页 / 公开账本 / 分享页（规划中）
-  admin/         管理后台（规划中；当前旧控制台在 jieqiu-backend/app/routers/console.py）
+  admin/         管理后台（规划中；当前实现是 jieqiu-backend/app/routers/admin_api.py + app/static/admin/）
 packages/
   api-client/    OpenAPI 生成的 TS client，禁止手写接口类型
   ui/            设计 tokens / 基础组件（规划中）
@@ -111,13 +111,14 @@ app/features/<feature>/
 - AI 不得把业务逻辑放进 router 或 UI 组件。
 - AI 提交前必须运行 `just api-test` 和相关前端测试。
 
-## 7. 禁区
+## 7. 产品内容规则（2026-11-05 修订）
 
-- 不实现“稳赚/回本/推荐买”类文案；
-- 不在推送/锁屏出现赔率、投注、赛事结果字样；
-- 不收集未成年人数据；
-- 不绕过自排除/连败保护/年龄确认；
-- 不向第三方上传用户原始下注数据。
+- 允许经审核的方向判断、参考组合、参考预算；不承诺收益。
+- 公开文案使用“倾向/关注/参考组合/把握度”等委婉表述；付费详情必须写明方向、条件、失效条件与成本。
+- 推荐观点与组合必须经 `decision_snapshots` / `recommendation_plans` → `review_runs`（L1 规则/事实、L2 数字、L3 人设、L4 对抗、L5 发布门）→ `published` 后才能作为正式内容；Today Hero 只读 `/recommendations/today` 的 published。`/tools/parlay/plan` 仍是**preview**，UI 必须标注“参考·未复核”，不得进入付费区。
+- 推送/锁屏只写“今日判断已更新”等中性提示，不写具体赔率、投注或赛事结果。
+- 保留年龄确认、自排除、连败保护作为支付/上架合规能力，不是内容禁区。
+- 不收集未成年人数据；不向第三方上传用户原始下注数据。
 
 ## 8. 目录迁移说明
 

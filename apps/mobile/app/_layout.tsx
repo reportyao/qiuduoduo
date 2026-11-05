@@ -9,6 +9,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { useAuthStore } from "@/features/auth/authStore";
 import { useMeQuery } from "@/features/account/queries";
 import { useComplianceStore, isExcluded } from "@/features/compliance/complianceStore";
+import { useComplianceSync } from "@/features/compliance/useComplianceSync";
 import { usePrefsStore } from "@/features/preferences/prefsStore";
 import { makeQueryClient } from "@/lib/queryClient";
 import { useNow } from "@/lib/useNow";
@@ -78,6 +79,7 @@ export default function RootLayout() {
             {booted ? (
               <>
                 <ProfileSync />
+                <ComplianceSync />
                 <RouteGuard />
               </>
             ) : (
@@ -122,6 +124,11 @@ function RouteGuard() {
     }
   }, [ageDecision, excluded, pathname, router]);
 
+  return null;
+}
+
+function ComplianceSync() {
+  useComplianceSync();
   return null;
 }
 

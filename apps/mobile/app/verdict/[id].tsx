@@ -17,6 +17,7 @@ import {
   useWatchMatchMutation,
 } from "@/features/verdict/queries";
 import { buildIntelReport } from "@/domain/intel";
+import { focusFromDetail, useFocusStore } from "@/features/home/focusStore";
 import { errorText } from "@/lib/errors";
 import { api } from "@/lib/api";
 import { formatDate, pct } from "@/lib/format";
@@ -37,6 +38,7 @@ export default function VerdictDetailScreen() {
   const session = useAuthStore((s) => s.session);
   const [betOpen, setBetOpen] = useState(false);
   const [sealOpen, setSealOpen] = useState(false);
+  const setFocus = useFocusStore((s) => s.setFocus);
 
   const detailQuery = useVerdictDetailQuery(id);
   const detail = detailQuery.data;
@@ -177,6 +179,10 @@ export default function VerdictDetailScreen() {
           }
         }}
         onShare={share}
+        onFocus={() => {
+          setFocus(focusFromDetail(detail));
+          router.navigate("/(tabs)");
+        }}
       />
 
       <BetSheet

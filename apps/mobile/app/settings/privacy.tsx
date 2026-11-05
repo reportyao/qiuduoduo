@@ -69,7 +69,7 @@ export default function PrivacyScreen() {
     <SettingsPage title="隐私与数据" subtitle="你能拿走，也能删掉" onBack={() => goBackOr(router)}>
       <Card tone="green">
         <Text variant="small" color={colors.muted} style={styles.note}>
-          解球不卖用户数据、不上传通讯录、不收集出生日期。下注金额只有你自己看得到，公开账本只展示判断本身。
+          球多多不卖用户数据、不上传通讯录、不收集出生日期。下注金额只有你自己看得到，公开账本只展示判断本身。
         </Text>
       </Card>
 

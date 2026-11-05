@@ -82,6 +82,14 @@ export default function ComplianceScreen() {
               void callApi(
                 api.client.PUT("/me/notify-settings", { body: { paused: true } }),
               ).catch(() => {});
+              // 服务端同步：多设备/重装后仍拦截；本地已强制生效，网络失败不回滚。
+              void callApi(api.client.POST("/compliance/self-exclusion", {
+                body: {
+                  days: choice === "permanent" ? null : choice,
+                  permanent: choice === "permanent",
+                  reason: "user_self_exclusion",
+                },
+              })).catch(() => {});
               toast.show("自排除已生效", "warning");
               router.replace("/paused");
             })();
@@ -96,7 +104,7 @@ export default function ComplianceScreen() {
       <Card tone="green">
         <Text variant="h3">先照顾你这个人。</Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>
-          解球不卖彩票、不代购，也不靠你多下注赚钱。这里的功能永远免费，也不会出现在任何营销里。
+          球多多不卖彩票、不代购，也不靠你多下注赚钱。这里的功能永远免费，也不会出现在任何营销里。
         </Text>
       </Card>
 
@@ -152,6 +160,9 @@ export default function ComplianceScreen() {
             }
             setSubmitted(true);
             setPgsi(score);
+            void callApi(api.client.POST("/compliance/self-assessment", {
+              body: { score, answers: Object.fromEntries(answers.map((value, index) => [String(index + 1), value])) },
+            })).catch(() => {});
           }}
           variant="secondary"
           fullWidth

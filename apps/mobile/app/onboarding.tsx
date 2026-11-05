@@ -3,6 +3,8 @@ import { Image, Pressable, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePrefsStore } from "@/features/preferences/prefsStore";
+import { api } from "@/lib/api";
+import { callApi } from "@/lib/callApi";
 import { Button, Card, Icon, Text } from "@/components/ui";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 
@@ -15,10 +17,12 @@ export default function OnboardingScreen() {
 
   const chooseAdult = () => {
     setAgeDecision("adult");
+    void callApi(api.client.POST("/gate/verify", { body: { adult: true } })).catch(() => {});
     setStep("intro");
   };
   const chooseMinor = () => {
     setAgeDecision("minor");
+    void callApi(api.client.POST("/gate/verify", { body: { adult: false } })).catch(() => {});
     router.replace("/minor");
   };
   const enter = () => router.replace("/(tabs)");
@@ -28,7 +32,7 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={["top", "bottom", "left", "right"]}>
       <View style={styles.brandRow}>
-        <Text variant="h2">解球</Text>
+        <Text variant="h2">球多多</Text>
         <Text variant="caption" color={colors.muted}>AI 竞彩分析助理</Text>
       </View>
 
@@ -46,7 +50,7 @@ export default function OnboardingScreen() {
           <Text variant="overline" color={colors.green}>开始之前</Text>
           <Text variant="display" style={styles.title}>先确认一件事</Text>
           <Text variant="body" color={colors.muted} style={styles.lead}>
-            解球只做数据分析，不卖彩票、不代购。未满 18 周岁不能购买彩票，也不能使用判断与记录功能。
+            球多多只做数据分析，不卖彩票、不代购。未满 18 周岁不能购买彩票，也不能使用判断与记录功能。
           </Text>
 
           <Card style={styles.note}>
@@ -71,7 +75,7 @@ export default function OnboardingScreen() {
         </View>
       ) : (
         <View style={styles.body}>
-          <Text variant="overline" color={colors.green}>解球怎么用</Text>
+          <Text variant="overline" color={colors.green}>球多多怎么用</Text>
           <Text variant="display" style={styles.title}>先把账算清楚。</Text>
           <Text variant="body" color={colors.muted} style={styles.lead}>
             不猜谁赢。每一场先算抽水、市场分歧和模型置信；算不清的，直接不碰。

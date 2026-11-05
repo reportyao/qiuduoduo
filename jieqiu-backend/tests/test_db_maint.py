@@ -1,8 +1,8 @@
 """数据库保留策略：dry-run 不动数据，apply 只删运行日志/过期令牌。"""
 from datetime import datetime, timedelta, timezone
 
-from app.models import (Event, ModelRun, Notification, RefreshToken, UserEvent,
-                        VerificationCode)
+from app.models import (Event, LLMCache, LLMUsage, ModelRun, Notification,
+                        PersonaCopyCache, RefreshToken, UserEvent, VerificationCode)
 from app import db_maint
 
 
@@ -35,12 +35,21 @@ def test_retention_dry_run_then_apply(db, monkeypatch):
                             expires_at=OLD, created_at=OLD))
     db.add(RefreshToken(user_id="u1", token_hash="old-refresh", family_id="f",
                         expires_at=OLD, created_at=OLD))
+    db.add(LLMUsage(request_id="r1", task="open_chat", profile="fast",
+                    created_at=OLD))
+    db.add(LLMCache(cache_key="old-cache", task="open_chat", profile="fast",
+                    response_json={}, expires_at=OLD, created_at=OLD))
+    db.add(PersonaCopyCache(source_key="verdict:v1", source_hash="h",
+                            persona="laopao", text="old", created_at=OLD))
     db.commit()
 
     plan = db_maint.plan(db)
     assert plan["events"] == 2
     assert plan["notifications"] == 2  # pending 不删；suppressed 删
     assert plan["refresh_tokens"] == 1
+    assert plan["llm_usage"] == 1
+    assert plan["llm_cache"] == 1
+    assert plan["persona_copy_cache"] == 1
 
     deleted = db_maint.apply(db)
     assert deleted["events"] == 2
@@ -48,6 +57,9 @@ def test_retention_dry_run_then_apply(db, monkeypatch):
     assert db.query(Event).filter_by(id=e3.id).count() == 1  # 仍被引用，保留
     assert db.query(Notification).filter_by(status="pending").count() == 1
     assert db.query(RefreshToken).count() == 0
+    assert db.query(LLMUsage).count() == 0
+    assert db.query(LLMCache).count() == 0
+    assert db.query(PersonaCopyCache).count() == 0
 
     # 通知清掉后的下一轮才回收该事件，避免 event_id 复用污染去重。
     second = db_maint.apply(db)

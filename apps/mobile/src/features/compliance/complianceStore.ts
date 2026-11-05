@@ -21,6 +21,13 @@ interface ComplianceState extends PersistedCompliance {
   exclude: (choice: ExclusionChoice) => Promise<boolean>;
   setPgsi: (score: number) => void;
   clearPgsi: () => void;
+  applyServerState: (state: {
+    excludedUntil: number | null;
+    excludedAt: number | null;
+    excludedPermanent: boolean;
+    pgsiScore: number | null;
+    pgsiAt: number | null;
+  }) => void;
 }
 
 const DEFAULTS: PersistedCompliance = {
@@ -102,6 +109,18 @@ export const useComplianceStore = create<ComplianceState>((set, get) => ({
     set({ lastPgsiScore: null, lastPgsiAt: null });
     persist(get());
   },
+
+  applyServerState: (state) => {
+    set({
+      excludedUntil: state.excludedUntil,
+      excludedAt: state.excludedAt,
+      excludedPermanent: state.excludedPermanent,
+      lastPgsiScore: state.pgsiScore,
+      lastPgsiAt: state.pgsiAt,
+      storageError: false,
+    });
+    persist(get());
+  },
 }));
 
 export function isExcluded(until: number | null, now = Date.now()): boolean {
@@ -109,8 +128,8 @@ export function isExcluded(until: number | null, now = Date.now()): boolean {
 }
 
 /**
- * 自排除为「本机强制拦截」：后端合规接口尚未上线，因此在服务端同步之前，
- * 本机必须真实拦住首页/记录/记注，而不是只改一个开关。多设备同步列为上线前阻塞项。
+ * 自排除：本机立即强制拦截；登录后 useComplianceSync 用服务端状态覆盖本机，
+ * 服务端 /bets 与 focus.capabilities 同步硬拦截，重装/换设备不能绕过。
  */
 export function useExcluded(): boolean {
   const until = useComplianceStore((s) => s.excludedUntil);

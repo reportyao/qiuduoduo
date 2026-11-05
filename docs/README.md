@@ -1,6 +1,6 @@
-# 解球文档索引
+# 球多多文档索引
 
-最后对账：2026-11-04。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **94 路径 / 107 方法**，后端 **182 tests**，前端 **20 tests**，Alembic head `20261104_04`。
+最后对账：2026-11-05。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **128 路径 / 143 方法**，后端 **251 tests**，前端 **22 tests**，Alembic head `20261105_12`。
 
 ## 先读
 
@@ -9,8 +9,14 @@
 | [AGENTS.md](../AGENTS.md) | 工程协作规则、目录约定、Definition of Done |
 | [README.md](../README.md) | monorepo 入口 + SP 采集器说明 |
 | [architecture.md](./architecture.md) | 目标架构与迁移阶段 |
+| [persona-system.md](./persona-system.md) | **三种人设语气配置**：profiles/copy slots/模型池/AI 复核/后台编辑（部分实现） |
+| [recommendation-product.md](./recommendation-product.md) | **赛前判断 / 串关参谋 / AI 复核发布**：新红线、免费付费、帮我配、组合卡、AI 复核流水线（snapshot/review/publish 主链已实现；组合页 published 优先、preview 回退；付费待做） |
+| [focused-decision-flow.md](./focused-decision-flow.md) | **聚焦决策流 / 数据脉搏 / 情报层**：前端聚焦、focus/pulse/interactions API、后台 `/admin` 的数据源/运维/模型用量/人设文案/推荐主链/组合预览页已实现；intel 表/数据脉搏首屏/LLM 深读仍待做 |
+| [llm-gateway.md](./llm-gateway.md) | **LLM Gateway / 多模型路由**：fast/deep、任务矩阵、预算/缓存、`llm_*` 表、后台 `/admin` 模型用量页、审核任务与 persona 传输统一（Phase 1 已实现，deep 解读待做） |
+| [api-football.md](./api-football.md) | **API-Football 免费档接入**：fixtures/lineups/injuries/standings、免费额度、队名链接、focus 集成、后台页面 |
 | [database-architecture.md](./database-architecture.md) | 境内 Postgres（云托管优先/自建兜底）、连接池、索引、保留、备份/PITR 落地、切换 |
-| [operations-runbook.md](./operations-runbook.md) | 当前部署、cron、健康检查、控制台、回滚与事故排查 |
+| [operations-runbook.md](./operations-runbook.md) | 当前部署、cron、健康检查、`/admin` 后台、回滚与事故排查 |
+| [open-source-watchlist.md](./open-source-watchlist.md) | 开源引用/候选清单：维护状态、许可证、采纳/降级结论 |
 
 ## 决策记录（ADR）
 
@@ -49,10 +55,10 @@
 
 | 文档 | 内容 |
 |---|---|
-| [2026-11-04-code-review-pass2.md](./reviews/2026-11-04-code-review-pass2.md) | **最新代码复审**：并发/事务/采集器/前端清理；182 tests |
-| [2026-11-04-full-stack.md](./reviews/2026-11-04-full-stack.md) | 第一轮全栈深审与修复；残余风险 |
-| [2026-11-04-docs-review.md](./reviews/2026-11-04-docs-review.md) | **最新文档审查**：过期事实、状态标注、索引与链接校验 |
-| [2026-11-04-api-audit.md](./reviews/2026-11-04-api-audit.md) | API 全量对账与补全（历史快照；路径数已被 full-stack 更新为 94/107） |
+| [2026-11-04-code-review-pass2.md](./reviews/2026-11-04-code-review-pass2.md) | 第二轮代码复审（历史快照）：并发/事务/采集器/前端清理；当时 182 tests |
+| [2026-11-04-full-stack.md](./reviews/2026-11-04-full-stack.md) | 第一轮全栈深审与修复（历史快照）；残余风险 |
+| [2026-11-04-docs-review.md](./reviews/2026-11-04-docs-review.md) | 文档审查（历史快照）：过期事实、状态标注、索引与链接校验 |
+| [2026-11-04-api-audit.md](./reviews/2026-11-04-api-audit.md) | API 全量对账与补全（历史快照；当时 100/113，当前 128/143） |
 | [2026-11-04-database.md](./reviews/2026-11-04-database.md) | 数据库深审（历史测试数 166） |
 | [2026-11-04-mobile-frontend.md](./reviews/2026-11-04-mobile-frontend.md) | 移动端验收（历史测试数 159） |
 | [2026-11-04-monorepo-base-review.md](./reviews/2026-11-04-monorepo-base-review.md) | monorepo 基座审查（历史 71 路径） |

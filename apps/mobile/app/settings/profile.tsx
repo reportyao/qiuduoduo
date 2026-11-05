@@ -177,7 +177,7 @@ export default function ProfileScreen() {
       <Button label="保存" onPress={save} loading={patchMe.isPending} fullWidth />
       <Button label="取消" variant="secondary" onPress={() => router.back()} fullWidth />
       <Text variant="caption" color={colors.subtle} center style={styles.note}>
-        解球不会收集你的出生日期，也不会上传通讯录。
+        球多多不会收集你的出生日期，也不会上传通讯录。
       </Text>
     </SettingsPage>
   );

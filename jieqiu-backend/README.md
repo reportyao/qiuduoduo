@@ -1,4 +1,4 @@
-# 解球后端 · W8 + Assistant（当前实现；W8 冻结基线需随 API 变更重新采纳）
+# 球多多后端 · W8 + Assistant（当前实现；W8 冻结基线需随 API 变更重新采纳）
 
 认证（方案 B·自建）：
 `/auth/sms/send|verify`（CN 手机号）· `/auth/wechat/callback|bind-phone`（微信后强制绑手机）·
@@ -8,7 +8,7 @@
 
 ---
 
-# 2026-11-04 API 补全（当前 94 路径 / 107 方法）
+# 2026-11-04 API 补全（当前 128 路径 / 143 方法）
 
 补齐 Feature-API-Mapping 中有数据支撑但未暴露的接口：`/matches`、`/verdicts/today`、
 `/matches/{id}/cost|evidence|live`、`/avoid-list`、`/water-rank`、`/calendar`、`/sp/movements`、
@@ -16,18 +16,28 @@
 `/devices`、`/push/preferences|health`、`/matches/{id}/follow`、`/memories`、`/me/persona` 兼容别名。
 完整对账与未实现项见 [docs/reviews/2026-11-04-api-audit.md](../docs/reviews/2026-11-04-api-audit.md)。
 
+**聚焦决策流（后端已实现）**：`GET /stats/pulse`、`GET /matches/{id}/focus`、`POST /interactions`，以及 `interaction_events` 表；`GET /matches/on-sale` 已带逐场 `coverage`；管理后台 `/admin`（数据源/运维/模型用量/人设文案/推荐主链/组合预览）已接入。`intel_items`/`match_coverage`/`pulse_daily` 仍是后续表。
+
+**串关四维体检（已实现）**：`POST /tools/parlay/check`，2–4 腿返回成本/信息/模型/结构、逐腿 facts/coverage/unknowns、组合模型概率（仅全腿覆盖时）、风险与结构优化项；移动端串关页已接入，缺模型不伪造组合概率。
+
+**赛前判断/串关参谋（部分实现）**：`POST /tools/parlay/plan` 已实现确定性 2–3 腿组合，移动端已接，但属于**未复核预览**；`recommendation_drafts`/`recommendation_plans`、AI 审核队列、`GET /recommendations/today`、发布/付费仍待开发。正式推荐必须审核后发布。见 [docs/recommendation-product.md](../docs/recommendation-product.md)。
+
+**API-Football（已接入，默认关闭）**：fixtures/lineups/injuries/standings 同步、免费额度持久化、队名/开赛时间自动链接与后台人工链接；未配置 `JQ_API_FOOTBALL_KEY` 时保持 missing，不伪造。见 [docs/api-football.md](../docs/api-football.md)。
+
+**LLM Gateway Phase 1（已实现）**：`open_chat` fallback → fast，`llm_usage`/`llm_cache`/`llm_budgets`、原子预算、PII 脱敏与 `/admin` 模型用量页只读看板；deep 分析与 focus 解读待 Phase 2。见 [docs/llm-gateway.md](../docs/llm-gateway.md)。当前 OpenAPI 为 128/143。
+
 > **W8 冻结纪律**：新增路由后需用控制台登录调用 `POST /review/freeze/adopt` 重新采纳基线，
 > 否则 `/review/freeze` 会把本次新增路由报为违规。这是预期行为，不是运行时 bug。
 
 ---
 
-# 解球后端 · W8（提审基建）
+# 球多多后端 · W8（提审基建）
 
 W8 提审基建：`/review/checklist` 提审检查单（自动聚合）· `/review/banned-words/scan` 即席文案扫描 · `/legal/disclosure` 隐私+SDK+权限契约 · `/app/version` OTA · `/review/freeze` 功能冻结（基线以最近一次 `/review/freeze/adopt` 为准，新增即违规）。禁用词 21 词表 + 反空格/标点/全角绕过，后端库扫描零命中。
 
 ---
 
-# 解球后端 · W7
+# 球多多后端 · W7
 
 FastAPI 模块化单体。W2-W4：流/判决三关/封存链/账本/叙述/校准。W6：用户域（保护/归因/记忆/路由）。**W7：F20 分享体系 · F18 双区域 · 数据导出 · 注销清除**。
 
@@ -46,7 +56,7 @@ FastAPI 模块化单体。W2-W4：流/判决三关/封存链/账本/叙述/校�
 
 登录分流：`POST /auth/device` 带 `region: cn|global`（非法 422）。
 
-## API 全景（94 路径 / 107 方法）· 测试 182
+## API 全景（128 路径 / 143 方法）· 测试 251
 
 W8 + assistant 的实际契约以 `packages/api-client/openapi.json` 为准；新增目录/成本/日历/哨兵/实况与兼容别名见上节。
 
@@ -65,16 +75,16 @@ uvicorn app.main:app --port 8100
 ```bash
 # 密码不再写进代码；部署前导出
 export JQ_DEPLOY_PASSWORD='...'
-export JQ_CONSOLE_PASSWORD='...'
-# 可选：控制台 IP 白名单（逗号分隔，支持 CIDR）
-export JQ_CONSOLE_IP_WHITELIST='1.2.3.4'
+export JQ_ADMIN_PASSWORD='...'          # /admin 初始管理员密码
+export JQ_ADMIN_COOKIE_SECURE=true      # HTTPS 部署建议开启
 # 可选：切境内 Postgres（云托管优先 / 自建兜底；不设则继续旧 SQLite）
 export JQ_PROD_DATABASE_URL='postgresql+psycopg2://jieqiu:...@10.0.0.5:5432/jieqiu'
+# 说明：deploy.py 读取 JQ_PROD_DATABASE_URL，写入服务的 JQ_DATABASE_URL；本地直接运行只认 JQ_DATABASE_URL。
 
-python deploy.py   # VPS：数据代码分离；cron：同步/回测/purge/助理 worker/每周日数据保留
+python deploy.py   # VPS：数据代码分离；cron：同步/回测/purge/助理 worker/人设预生成/每周日数据保留
 ```
 
-生产认证默认 fail-closed：`deploy.py` 写入 `JQ_ENV=prod`、`JQ_AUTH_STUB=false`；未配置真实短信/邮件/OAuth 时认证端点返回 503，不会再回显 `dev_code`。控制台密码/白名单/JWT 密钥写入 `/etc/jieqiu-backend.env`（0600），unit 只引用 EnvironmentFile。
+生产认证默认 fail-closed：`deploy.py` 写入 `JQ_ENV=prod`、`JQ_AUTH_STUB=false`；未配置真实短信/邮件/OAuth 时认证端点返回 503，不会再回显 `dev_code`。管理员初始密码/JWT 密钥写入 `/etc/jieqiu-backend.env`（0600），unit 只引用 EnvironmentFile。
 
 ---
 

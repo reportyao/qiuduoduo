@@ -9,12 +9,11 @@ import sqlite3
 from dataclasses import dataclass
 
 import pandas as pd
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..contracts import validate_matches, validate_snapshots
 from ..models import SPMatch, SPSnapshot
-from .align import Aligner, normalize, seed_aliases
+from .align import Aligner, seed_aliases
 
 
 @dataclass

@@ -1,0 +1,707 @@
+"""聚焦卡 / 数据脉搏 / 客观情报的只读聚合。
+
+原则：
+- 只读现有表，不伪造数据；没有的源明确写 missing/unknown。
+- 统计与闸门数字来自 verdict/model_runs；LLM 解读为 None（当前未接）。
+- 展示系数只乘“数据点”，raw 永远保留。
+"""
+from __future__ import annotations
+
+import uuid
+from datetime import datetime, timezone
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from ...config import get_settings
+from ...models import (ApiFootballFixture, Bet, IntlOdds, MatchInjury,
+                       MatchLineup, MatchResult, ModelRun, SPMatch, SPSnapshot,
+                       TeamStanding, User, Verdict, VerdictRevision, WatchTarget)
+from ...modules.intl_odds import sources_for_match
+from ...modules.timeutil import CN, trade_date_from_kickoff, trade_date_now, trade_window
+from ...modules.users import user_streak
+from ..compliance import service as compliance_service
+
+PERSONAS = {"zhuanjia", "laopao", "meng"}
+
+
+def _now() -> datetime:
+    return datetime.now(CN)
+
+
+def _parse_cn(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    text = str(value)
+    try:
+        dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        if dt.tzinfo is not None:
+            return dt.astimezone(CN)
+        return dt.replace(tzinfo=CN)
+    except (TypeError, ValueError):
+        pass
+    try:
+        return datetime.strptime(text[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=CN)
+    except (TypeError, ValueError):
+        return None
+
+
+def _in_window(value: str | None, date: str) -> bool:
+    dt = _parse_cn(value)
+    if dt is None:
+        return False
+    start, end = trade_window(date)
+    lo, hi = _parse_cn(start), _parse_cn(end)
+    return bool(lo and hi and lo <= dt <= hi)
+
+
+def _minutes_until(value: str | None, now: datetime) -> int | None:
+    dt = _parse_cn(value)
+    if dt is None:
+        return None
+    return max(0, int((dt - now).total_seconds() // 60))
+
+
+def _hours_until(value: str | None, now: datetime) -> int | None:
+    dt = _parse_cn(value)
+    if dt is None:
+        return None
+    return max(0, int((dt - now).total_seconds() // 3600))
+
+
+def _matches_for_date(db: Session, date: str) -> list[SPMatch]:
+    start, end = trade_window(date)
+    return list(db.scalars(
+        select(SPMatch).where(SPMatch.kickoff >= start, SPMatch.kickoff <= end)
+        .order_by(SPMatch.kickoff)
+    ).all())
+
+
+def _latest_verdict(db: Session, match_id: str, date: str | None = None) -> Verdict | None:
+    q = select(Verdict).where(Verdict.match_id == match_id)
+    if date:
+        q = q.where(Verdict.trade_date == date)
+    return db.scalar(q.order_by(Verdict.trade_date.desc()).limit(1))
+
+
+def _gate_results(v: Verdict) -> dict:
+    return {k: (g.get("result") if isinstance(g, dict) else str(g))
+            for k, g in (v.gates or {}).items()}
+
+
+def _card(v: Verdict) -> dict:
+    return {
+        "id": v.id, "status": v.status, "pick": v.pick,
+        "rake": v.rake, "rake_threshold": v.rake_threshold,
+        "probs": {"home": v.p_home, "draw": v.p_draw, "away": v.p_away},
+        "model": (v.payload or {}).get("model"),
+        "gates": _gate_results(v),
+        "payload_hash": v.payload_hash,
+        "sealed": v.sealed_at is not None,
+    }
+
+
+def _form(db: Session, team: str, limit: int = 5) -> dict:
+    rows = list(db.scalars(
+        select(MatchResult).where((MatchResult.home == team) | (MatchResult.away == team))
+        .order_by(MatchResult.match_date.desc()).limit(limit)
+    ).all())
+    results = []
+    for r in rows:
+        if r.home == team:
+            results.append("W" if r.goals_home > r.goals_away else "D" if r.goals_home == r.goals_away else "L")
+        else:
+            results.append("W" if r.goals_away > r.goals_home else "D" if r.goals_away == r.goals_home else "L")
+    return {"matches": len(results), "results": results,
+            "source": rows[0].source if rows else None,
+            "captured_at": rows[0].retrieved_at if rows else None}
+
+
+def _h2h(db: Session, home: str, away: str, limit: int = 5) -> dict:
+    rows = list(db.scalars(
+        select(MatchResult).where(
+            ((MatchResult.home == home) & (MatchResult.away == away))
+            | ((MatchResult.home == away) & (MatchResult.away == home))
+        ).order_by(MatchResult.match_date.desc()).limit(limit)
+    ).all())
+    return {"matches": len(rows), "source": "football-data",
+            "captured_at": rows[0].retrieved_at if rows else None,
+            "items": [f"{r.match_date} {r.home} {r.goals_home}-{r.goals_away} {r.away}" for r in rows]}
+
+
+def _rest_days(db: Session, team: str, kickoff: str) -> int | None:
+    current = _parse_cn(kickoff)
+    if current is None:
+        return None
+    prev = db.scalar(
+        select(SPMatch).where(
+            ((SPMatch.home == team) | (SPMatch.away == team)),
+            SPMatch.kickoff < kickoff,
+        ).order_by(SPMatch.kickoff.desc()).limit(1)
+    )
+    if prev is None:
+        return None
+    prev_dt = _parse_cn(prev.kickoff)
+    return max(0, int((current - prev_dt).total_seconds() // 86400)) if prev_dt else None
+
+
+def _latest_snapshot(db: Session, match_id: str) -> SPSnapshot | None:
+    return db.scalar(
+        select(SPSnapshot).where(SPSnapshot.match_id == match_id)
+        .order_by(SPSnapshot.captured_at.desc()).limit(1)
+    )
+
+
+def _has_model(v: Verdict | None) -> bool:
+    if v is None:
+        return False
+    if v.pick:
+        return True
+    model = (v.payload or {}).get("model") or {}
+    return bool(model.get("shrunk") or model.get("raw") or model.get("pick"))
+
+
+def _model_covered(db: Session, match_id: str, date: str, v: Verdict | None) -> bool:
+    if _has_model(v):
+        return True
+    row = db.scalar(
+        select(ModelRun).where(ModelRun.match_id == match_id,
+                               ModelRun.run_date == date,
+                               ModelRun.gate == "model")
+        .order_by(ModelRun.id.desc()).limit(1)
+    )
+    return bool(row and row.result != "pending_data")
+
+
+def _age_seconds(value: str | None, now: datetime) -> int | None:
+    dt = _parse_cn(value)
+    if dt is None:
+        return None
+    return max(0, int((now - dt).total_seconds()))
+
+
+def _age_utc(value: str | None, now: datetime) -> int | None:
+    """DB DateTime 按项目约定存 naive UTC；API-Football synced_at 用这个。"""
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return max(0, int((now.astimezone(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds()))
+
+
+def _af_fixture(db: Session, match_id: str) -> ApiFootballFixture | None:
+    return db.scalar(select(ApiFootballFixture)
+                     .where(ApiFootballFixture.match_id == match_id)
+                     .order_by(ApiFootballFixture.kickoff_utc.desc()).limit(1))
+
+
+def _lineups(db: Session, match_id: str) -> list[MatchLineup]:
+    return list(db.scalars(select(MatchLineup)
+                           .where(MatchLineup.match_id == match_id)
+                           .order_by(MatchLineup.side)).all())
+
+
+def _injuries(db: Session, match_id: str) -> list[MatchInjury]:
+    return list(db.scalars(select(MatchInjury)
+                           .where(MatchInjury.match_id == match_id)
+                           .order_by(MatchInjury.team_name, MatchInjury.player_name)).all())
+
+
+def _standings(db: Session, fixture: ApiFootballFixture | None) -> list[TeamStanding]:
+    if fixture is None:
+        return []
+    ids = [fixture.home_team_id, fixture.away_team_id]
+    return list(db.scalars(select(TeamStanding).where(
+        TeamStanding.league_id == fixture.league_id,
+        TeamStanding.season == fixture.season,
+        TeamStanding.team_id.in_(ids))).all())
+
+
+def _coverage(db: Session, match: SPMatch, date: str, v: Verdict | None,
+              snap: SPSnapshot | None, intl: list[IntlOdds], now: datetime) -> dict:
+    model_ok = _model_covered(db, match.match_id, date, v)
+    price_present = bool(snap or v)
+    schedule_ok = bool(match.kickoff)
+    price_age = _age_seconds(snap.captured_at, now) if snap else None
+    market_age = min((_age_seconds(r.retrieved_at, now) for r in intl
+                      if _age_seconds(r.retrieved_at, now) is not None), default=None)
+    price_ok = price_present and price_age is not None and price_age <= 15 * 60
+    market_ok = bool(intl) and market_age is not None and market_age <= 15 * 60
+    fixt = _af_fixture(db, match.match_id)
+    lineups = _lineups(db, match.match_id)
+    lineups_ok = len({r.side for r in lineups if r.starters and r.side in ("home", "away")}) == 2
+    lineup_age = min((_age_utc(r.synced_at.isoformat(), now) for r in lineups
+                      if r.synced_at is not None), default=None)
+    lineups_ok = lineups_ok and lineup_age is not None and lineup_age <= 6 * 3600
+    standings = _standings(db, fixt)
+    standings_ids = {r.team_id for r in standings}
+    standings_ok = bool(fixt and {fixt.home_team_id, fixt.away_team_id}.issubset(standings_ids))
+    standings_age = min((_age_utc(r.synced_at.isoformat(), now) for r in standings
+                         if r.synced_at is not None), default=None)
+    standings_ok = standings_ok and standings_age is not None and standings_age <= 24 * 3600
+    score = (25 if price_ok else 0) + (20 if market_ok else 0) +             (25 if model_ok else 0) + (10 if schedule_ok else 0) +             (15 if lineups_ok else 0) + (5 if standings_ok else 0)
+    missing = []
+    if not price_ok:
+        missing.append("price")
+    if not model_ok:
+        missing.append("model")
+    if not market_ok:
+        missing.append("market")
+    if not lineups_ok:
+        missing.append("lineups")
+    if not standings_ok:
+        missing.append("standings")
+    level = "full" if score >= 70 else "partial" if score >= 50 else "insufficient"
+    minutes = _minutes_until(match.kickoff, now)
+    hours = _hours_until(match.kickoff, now)
+    # 没有阵容数据时，距开赛 >=12h 才允许带“首发未知”做深读。
+    deep = (price_ok and market_ok and model_ok and score >= 70
+            and minutes is not None and minutes >= 30
+            and (lineups_ok or (hours is not None and hours >= 12)))
+    sources = [
+        {"key": "price",
+         "status": "ok" if price_ok else "stale" if price_present else "missing",
+         "last_sync": snap.captured_at if snap else None,
+         "coverage": 1.0 if price_ok else 0.0},
+        {"key": "market",
+         "status": "ok" if market_ok else "stale" if intl else "missing",
+         "last_sync": max((r.retrieved_at for r in intl), default=None),
+         "coverage": 1.0 if market_ok else 0.0},
+        {"key": "model", "status": "ok" if model_ok else "missing",
+         "last_sync": None, "coverage": 1.0 if model_ok else 0.0},
+        {"key": "lineups",
+         "status": "ok" if lineups_ok else "stale" if lineups else "missing",
+         "last_sync": max((r.synced_at.isoformat() for r in lineups
+                           if r.synced_at is not None), default=None),
+         "coverage": 1.0 if lineups_ok else 0.0},
+        {"key": "schedule", "status": "ok" if schedule_ok else "missing",
+         "last_sync": match.kickoff, "coverage": 1.0 if schedule_ok else 0.0},
+        {"key": "standings",
+         "status": "ok" if standings_ok else "stale" if standings else "missing",
+         "last_sync": max((r.synced_at.isoformat() for r in standings
+                           if r.synced_at is not None), default=None),
+         "coverage": 1.0 if standings_ok else 0.0},
+    ]
+    return {"score": score, "level": level, "deep_eligible": deep,
+            "missing": missing, "sources": sources,
+            "minutes_to_close": minutes, "hours_to_kickoff": hours}
+
+
+def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | None,
+           intl: list[IntlOdds], now: datetime) -> tuple[list[dict], list[str]]:
+    facts: list[dict] = []
+    unknowns: list[str] = []
+    if snap:
+        facts.append({
+            "id": "price", "kind": "price", "label": "竞彩官方 SP",
+            "value": f"{snap.sp_h:.2f} / {snap.sp_d:.2f} / {snap.sp_a:.2f}",
+            "detail": f"让球线 {snap.goal_line}" if snap.goal_line else "胜平负",
+            "source": "sporttery", "captured_at": snap.captured_at,
+            "status": "stale" if ((_age_seconds(snap.captured_at, now) or 0) > 15 * 60) else "confirmed",
+            "confidence": 1.0,
+        })
+    if intl:
+        r = intl[0]
+        facts.append({
+            "id": "market", "kind": "market", "label": f"国际盘 · {r.source}",
+            "value": f"{r.sp_h:.2f} / {r.sp_d:.2f} / {r.sp_a:.2f}",
+            "detail": f"拉取 {r.retrieved_at}", "source": r.source,
+            "captured_at": r.retrieved_at,
+            "status": "stale" if ((_age_seconds(r.retrieved_at, now) or 0) > 15 * 60) else "confirmed",
+            "confidence": 0.9,
+        })
+    if _has_model(v):
+        pick = v.pick or {}
+        model_payload = (v.payload or {}).get("model") or {}
+        prob = pick.get("prob")
+        facts.append({
+            "id": "model", "kind": "model", "label": "模型判断",
+            "value": f"{pick.get('dir') or '待定'} · {round(float(prob or 0) * 100, 1)}%",
+            "detail": "Dixon-Coles 收缩后概率；不是预测承诺",
+            "source": model_payload.get("engine") or "DC v1.1",
+            "captured_at": (v.payload or {}).get("data_cutoff"),
+            "status": "inferred", "confidence": prob,
+        })
+    for side, team in (("home", match.home), ("away", match.away)):
+        form = _form(db, team)
+        if form["matches"]:
+            facts.append({
+                "id": f"form_{side}", "kind": "form", "label": f"{team} 近 {form['matches']} 场",
+                "value": " ".join(form["results"]),
+                "detail": "近期正式比赛战绩；样本小，只作参考",
+                "source": form["source"] or "football-data",
+                "captured_at": form["captured_at"], "status": "confirmed", "confidence": 0.8,
+            })
+    home_rest = _rest_days(db, match.home, match.kickoff)
+    away_rest = _rest_days(db, match.away, match.kickoff)
+    if home_rest is not None or away_rest is not None:
+        facts.append({
+            "id": "schedule", "kind": "schedule", "label": "休息天数",
+            "value": f"{match.home} {home_rest if home_rest is not None else '—'}d · "
+                     f"{match.away} {away_rest if away_rest is not None else '—'}d",
+            "detail": "按竞彩赛程中的上一场计算", "source": "sporttery",
+            "captured_at": match.updated_at.isoformat() if match.updated_at else None,
+            "status": "confirmed", "confidence": 0.9,
+        })
+    h2h = _h2h(db, match.home, match.away)
+    if h2h["matches"]:
+        facts.append({
+            "id": "h2h", "kind": "h2h", "label": "近期交锋",
+            "value": f"{h2h['matches']} 场",
+            "detail": "；".join(h2h["items"][:3]), "source": h2h["source"],
+            "captured_at": h2h["captured_at"], "status": "confirmed", "confidence": 0.7,
+        })
+    fixt = _af_fixture(db, match.match_id)
+    lineups = _lineups(db, match.match_id)
+    injuries = _injuries(db, match.match_id)
+    standings = _standings(db, fixt)
+    valid_lines = [r for r in lineups if r.starters]
+    if valid_lines:
+        sides = {r.side: r for r in valid_lines if r.side in ("home", "away")}
+        home_line = sides.get("home")
+        away_line = sides.get("away")
+        starters = []
+        for row in (home_line, away_line):
+            if row and row.starters:
+                names = [p.get("name") for p in row.starters[:4] if p.get("name")]
+                starters.append(f"{row.team_name or row.side}: " + "、".join(names))
+        age = min((_age_utc(r.synced_at.isoformat(), now) for r in valid_lines
+                   if r.synced_at is not None), default=None)
+        facts.append({
+            "id": "lineups", "kind": "lineup", "label": "首发",
+            "value": f"{home_line.formation if home_line else '—'} / "
+                     f"{away_line.formation if away_line else '—'}",
+            "detail": "；".join(starters) or "首发已同步",
+            "source": "API-Football",
+            "captured_at": max((r.synced_at.isoformat() for r in valid_lines
+                                if r.synced_at is not None), default=None),
+            "status": "stale" if age is None or age > 6 * 3600 else "confirmed",
+            "confidence": 0.9,
+        })
+    else:
+        unknowns.append("首发未公布" if lineups else
+                        "首发未同步" if fixt else "首发/伤停未接入")
+    if injuries:
+        names = "、".join(f"{r.player_name}({r.type or r.reason})" for r in injuries[:6])
+        age = min((_age_utc(r.synced_at.isoformat(), now) for r in injuries
+                   if r.synced_at is not None), default=None)
+        facts.append({
+            "id": "injuries", "kind": "injury", "label": "伤停",
+            "value": f"{len(injuries)} 人",
+            "detail": names, "source": "API-Football",
+            "captured_at": max((r.synced_at.isoformat() for r in injuries
+                                if r.synced_at is not None), default=None),
+            "status": "stale" if age is None or age > 6 * 3600 else "confirmed",
+            "confidence": 0.85,
+        })
+    elif fixt and fixt.injuries_synced_at is not None:
+        age = _age_utc(fixt.injuries_synced_at.isoformat(), now)
+        facts.append({
+            "id": "injuries", "kind": "injury", "label": "伤停",
+            "value": "无新增" if age is not None and age <= 6 * 3600 else "上次同步无记录",
+            "detail": "API-Football 当前无伤停记录", "source": "API-Football",
+            "captured_at": fixt.injuries_synced_at.isoformat(),
+            "status": "stale" if age is None or age > 6 * 3600 else "confirmed",
+            "confidence": 0.8,
+        })
+    else:
+        unknowns.append("伤停未同步")
+    if standings:
+        parts = []
+        for row in standings:
+            parts.append(f"{row.team_name} 第{row.rank} · {row.points}分 · {row.form or '—'}")
+        age = min((_age_utc(r.synced_at.isoformat(), now) for r in standings
+                   if r.synced_at is not None), default=None)
+        facts.append({
+            "id": "standings", "kind": "standing", "label": "积分榜",
+            "value": " / ".join(parts),
+            "detail": "联赛排名、积分与近况；只作背景", "source": "API-Football",
+            "captured_at": max((r.synced_at.isoformat() for r in standings
+                                if r.synced_at is not None), default=None),
+            "status": "stale" if age is None or age > 24 * 3600 else "confirmed",
+            "confidence": 0.85,
+        })
+    else:
+        unknowns.append("积分榜未同步")
+    if v is None or not v.pick:
+        unknowns.append("模型未覆盖或未给出方向")
+    if not intl:
+        unknowns.append("国际盘未覆盖")
+    return facts, unknowns
+
+
+def _caps_and_actions(db: Session, user: User | None, v: Verdict | None,
+                      match: SPMatch, now: datetime, watch: bool) -> tuple[dict, list[dict]]:
+    bet = db.scalar(select(Bet).where(Bet.user_id == user.id, Bet.verdict_id == v.id)) \
+        if (user and v) else None
+    closed = match.kickoff <= now.strftime("%Y-%m-%d %H:%M:%S")
+    settled = bool(v and v.settled)
+    promoted = bool(v and v.status == "promoted")
+    protection = user_streak(db, user) if user else None
+    block = compliance_service.bet_block_reason(user)
+    reason = block if block in ("under18", "self_excluded", "rested") else None
+    can_bet = bool(user and v and promoted and not settled and not closed
+                   and not bet and block is None)
+    if v and promoted:
+        if not user:
+            reason = "login_required"
+        elif settled:
+            reason = "settled"
+        elif closed:
+            reason = "sale_closed"
+        elif bet:
+            reason = "already_bet"
+    caps = {
+        "can_bet": can_bet,
+        "bet_requires_confirm": bool(protection and protection.get("active")),
+        "can_watch": bool(user), "watching": watch,
+        "can_why_not": bool(v and v.status != "promoted"),
+        "can_view_detail": bool(v), "can_share": bool(v),
+        "can_rest": bool(user),
+        "can_remind_lineup": bool(user and v and not settled and not closed),
+        "can_refresh": True,
+    }
+    actions: list[dict] = []
+    if promoted:
+        actions.append({"id": "bet", "enabled": can_bet, "primary": True,
+                        "requires_auth": True, "reason": reason})
+        actions.append({"id": "detail", "enabled": True, "primary": False,
+                        "requires_auth": False, "reason": None})
+    elif v:
+        actions.append({"id": "why_not", "enabled": True, "primary": True,
+                        "requires_auth": False, "reason": None})
+        actions.append({"id": "detail", "enabled": True, "primary": False,
+                        "requires_auth": False, "reason": None})
+    else:
+        actions.append({"id": "open_match", "enabled": True, "primary": True,
+                        "requires_auth": False, "reason": None})
+    if caps["can_share"]:
+        actions.append({"id": "share", "enabled": True, "primary": False,
+                        "requires_auth": False, "reason": None})
+    if caps["can_remind_lineup"]:
+        actions.append({"id": "remind_lineup", "enabled": True, "primary": False,
+                        "requires_auth": True, "reason": None if user else "login_required"})
+    actions.append({"id": "watch", "enabled": bool(user), "primary": False,
+                    "requires_auth": True, "reason": None if user else "login_required"})
+    actions.append({"id": "switch", "enabled": True, "primary": False,
+                    "requires_auth": False, "reason": None})
+    if user:
+        actions.append({"id": "rest", "enabled": True, "primary": False,
+                        "requires_auth": False, "reason": None})
+    return caps, actions
+
+
+def _state(match: SPMatch, v: Verdict | None, now: datetime) -> str:
+    if v is not None and v.settled:
+        return "settled"
+    if match.kickoff <= now.strftime("%Y-%m-%d %H:%M:%S"):
+        return "locked"
+    if v is None:
+        return "on_sale"
+    return v.status if v.status in ("promoted", "screening", "killed") else "screening"
+
+
+def build_pulse(db: Session, date: str | None = None) -> dict:
+    now = _now()
+    d = date or trade_date_now(now)
+    matches = _matches_for_date(db, d)
+    ids = [m.match_id for m in matches]
+    snapshots = [s for s in (db.scalars(
+        select(SPSnapshot).where(SPSnapshot.match_id.in_(ids))).all() if ids else [])
+        if _in_window(s.captured_at, d)]
+    intl = [r for m in matches for r in sources_for_match(db, m)]
+    model_runs = list(db.scalars(
+        select(ModelRun).where(ModelRun.run_date == d, ModelRun.match_id.in_(ids))
+    ).all()) if ids else []
+    verdicts = list(db.scalars(select(Verdict).where(
+        Verdict.trade_date == d, Verdict.match_id.in_(ids))).all()) if ids else []
+    lineups = list(db.scalars(select(MatchLineup)
+                              .where(MatchLineup.match_id.in_(ids))).all()) if ids else []
+    injuries = list(db.scalars(select(MatchInjury)
+                               .where(MatchInjury.match_id.in_(ids))).all()) if ids else []
+    linked_fixtures = list(db.scalars(select(ApiFootballFixture)
+                                      .where(ApiFootballFixture.match_id.in_(ids))).all()) if ids else []
+    standing_rows: list[TeamStanding] = []
+    for f in linked_fixtures:
+        standing_rows += _standings(db, f)
+    vids = [v.id for v in verdicts]
+    revisions = db.scalar(select(func.count()).select_from(VerdictRevision)
+                          .where(VerdictRevision.verdict_id.in_(vids))) if vids else 0
+    evidence_count = sum(len((v.payload or {}).get("evidence", [])) for v in verdicts)
+    lineup_sides: dict[str, set[str]] = {}
+    for row in lineups:
+        if row.starters and row.side in ("home", "away"):
+            lineup_sides.setdefault(row.match_id, set()).add(row.side)
+    lineup_matches = sum(1 for sides in lineup_sides.values()
+                         if {"home", "away"}.issubset(sides))
+    lineup_age = min((_age_utc(r.synced_at.isoformat(), now) for r in lineups
+                      if r.synced_at is not None), default=None)
+    standings_age = min((_age_utc(r.synced_at.isoformat(), now) for r in standing_rows
+                         if r.synced_at is not None), default=None)
+    linked_count = len({f.match_id for f in linked_fixtures if f.match_id})
+    lineup_status = ("missing" if not lineups else
+                     "stale" if lineup_age is None or lineup_age > 6 * 3600 else
+                     "ok" if matches and lineup_matches >= len(matches) else "partial")
+    standings_status = ("missing" if not standing_rows else
+                        "stale" if standings_age is None or standings_age > 24 * 3600 else
+                        "ok" if linked_count and len(standing_rows) >= linked_count * 2
+                        else "partial")
+    model_matches = {r.match_id for r in model_runs
+                     if r.gate == "model" and r.result != "pending_data"}
+    model_matches |= {v.match_id for v in verdicts if _has_model(v)}
+    clean = [m for m in matches if m.kickoff and m.home and m.away]
+    sealed = [v for v in verdicts if v.sealed_at is not None]
+    outcomes = {
+        "promoted": sum(1 for v in verdicts if v.status == "promoted"),
+        "screening": sum(1 for v in verdicts if v.status == "screening"),
+        "killed": sum(1 for v in verdicts if v.status == "killed"),
+    }
+    raw_points = (len(snapshots) * 3 + len(intl) * 3 + len(model_runs)
+                  + evidence_count + len(lineups) + len(injuries)
+                  + len(standing_rows))
+    factor = float(get_settings().pulse_display_factor)
+    last_snaps = max((s.captured_at for s in snapshots), default=None)
+    last_intl = max((r.retrieved_at for r in intl), default=None)
+    stale = None
+    for value in (last_snaps, last_intl):
+        dt = _parse_cn(value)
+        if dt is not None:
+            stale = max(stale or 0, int((now - dt).total_seconds()))
+    results_count = db.scalar(select(func.count()).select_from(MatchResult)) or 0
+    all_snap = db.scalar(select(func.count()).select_from(SPSnapshot)) or 0
+    all_intl = db.scalar(select(func.count()).select_from(IntlOdds)) or 0
+    all_model = db.scalar(select(func.count()).select_from(ModelRun)) or 0
+    all_verdicts = db.scalar(select(func.count()).select_from(Verdict)) or 0
+    all_lineups = db.scalar(select(func.count()).select_from(MatchLineup)) or 0
+    all_injuries = db.scalar(select(func.count()).select_from(MatchInjury)) or 0
+    all_standings = db.scalar(select(func.count()).select_from(TeamStanding)) or 0
+    all_points = (all_snap * 3 + all_intl * 3 + all_model + all_verdicts
+                  + all_lineups + all_injuries + all_standings)
+    snap_age = _age_seconds(last_snaps, now)
+    intl_age = _age_seconds(last_intl, now)
+    sources = [
+        {"key": "sporttery", "label": "竞彩官方",
+         "status": "ok" if snapshots and (snap_age is None or snap_age <= 35 * 60)
+         else "stale" if snapshots else "missing",
+         "last_sync": last_snaps, "coverage": 1.0 if snapshots else 0.0},
+        {"key": "intl", "label": "国际盘",
+         "status": ("ok" if intl and len(intl) >= len(matches)
+                    else "partial" if intl else "missing")
+         if intl_age is None or intl_age <= 35 * 60 else "stale" if intl else "missing",
+         "last_sync": last_intl,
+         "coverage": min(1.0, len(intl) / len(matches)) if matches else 0.0},
+        {"key": "xg", "label": "xG 模型",
+         "status": "ok" if matches and len(model_matches) >= len(matches) else "partial" if model_matches else "missing",
+         "last_sync": None,
+         "coverage": (len(model_matches) / len(matches)) if matches else 0.0},
+        {"key": "lineups", "label": "阵容/伤停",
+         "status": lineup_status,
+         "last_sync": max((r.synced_at.isoformat() for r in lineups
+                           if r.synced_at is not None), default=None),
+         "coverage": (lineup_matches / len(matches)) if matches else 0.0},
+        {"key": "schedule", "label": "赛程", "status": "ok" if matches else "missing",
+         "last_sync": None, "coverage": 1.0 if matches else 0.0},
+        {"key": "results", "label": "赛果", "status": "ok" if results_count else "missing",
+         "last_sync": None, "coverage": 1.0 if results_count else 0.0},
+        {"key": "standings", "label": "积分榜",
+         "status": standings_status,
+         "last_sync": max((r.synced_at.isoformat() for r in standing_rows
+                           if r.synced_at is not None), default=None),
+         "coverage": min(1.0, len(standing_rows) / (linked_count * 2)) if linked_count else 0.0},
+    ]
+    return {
+        "trade_date": d, "as_of": now.isoformat(timespec="seconds"),
+        "stale_seconds": stale,
+        "counts": {"matches": len(matches), "sp_snapshots": len(snapshots),
+                   "intl_odds": len(intl), "model_runs": len(model_runs),
+                   "verdicts": len(verdicts), "revisions": int(revisions),
+                   "intel_items": evidence_count + len(lineups) + len(injuries) + len(standing_rows),
+                   "sealed_links": len(sealed), "lineups": len(lineups),
+                   "injuries": len(injuries), "standings": len(standing_rows)},
+        "data_points": raw_points,
+        "display": {"data_points": int(round(raw_points * factor)), "factor": factor, "unit": "数据点"},
+        "all_time": {"data_points": all_points,
+                     "matches": db.scalar(select(func.count()).select_from(SPMatch)) or 0,
+                     "sealed": db.scalar(select(func.count()).select_from(Verdict)
+                                         .where(Verdict.sealed_at.isnot(None))) or 0},
+        "stages": [
+            {"key": "ingest", "label": "接入", "count": len(matches),
+             "status": "ok" if matches else "missing"},
+            {"key": "clean", "label": "清洗", "count": len(clean),
+             "status": "ok" if clean else "missing"},
+            {"key": "align", "label": "对齐", "count": len(clean),
+             "status": "ok" if clean else "missing"},
+            {"key": "model", "label": "模型", "count": len(model_matches),
+             "status": "ok" if model_matches else "missing"},
+            {"key": "gate", "label": "三闸", "count": len(verdicts),
+             "status": "ok" if verdicts else "missing"},
+            {"key": "seal", "label": "封存", "count": len(sealed),
+             "status": "ok" if sealed else "missing"},
+        ],
+        "sources": sources, "outcomes": outcomes, "excluded": outcomes["killed"],
+        "definition": "data_points = sp_snapshots*3 + intl_odds*3 + model_runs + intel_items; "
+                      "display = data_points × factor；不乘场次/封存/准确率",
+    }
+
+
+def build_coverage_brief(db: Session, match: SPMatch, date: str,
+                         v: Verdict | None = None,
+                         now: datetime | None = None) -> dict:
+    """在售列表用的轻量覆盖摘要；与 focus.coverage 同一套判定，避免两处口径漂移。"""
+    now = now or _now()
+    v = v or _latest_verdict(db, match.match_id, date) or _latest_verdict(db, match.match_id)
+    snap = _latest_snapshot(db, match.match_id)
+    intl = sources_for_match(db, match)
+    return _coverage(db, match, date, v, snap, intl, now)
+
+
+def build_focus(db: Session, match_id: str, date: str | None = None,
+                persona: str | None = None, user: User | None = None) -> dict | None:
+    if date:
+        trade_window(date)  # 非法日期 → ValueError → 422
+    match = db.get(SPMatch, match_id)
+    if match is None:
+        return None
+    now = _now()
+    d = date or trade_date_from_kickoff(match.kickoff) or trade_date_now(now)
+    v = _latest_verdict(db, match_id, date) or _latest_verdict(db, match_id)
+    if v is not None:
+        d = v.trade_date
+    snap = _latest_snapshot(db, match_id)
+    intl = sources_for_match(db, match)
+    facts, unknowns = _facts(db, match, v, snap, intl, now)
+    coverage = _coverage(db, match, d, v, snap, intl, now)
+    watch = bool(user and db.scalar(select(WatchTarget).where(
+        WatchTarget.user_id == user.id, WatchTarget.target_type == "match",
+        WatchTarget.target_id == match_id)))
+    caps, actions = _caps_and_actions(db, user, v, match, now, watch)
+    revisions = db.scalar(select(func.count()).select_from(VerdictRevision)
+                          .where(VerdictRevision.verdict_id == v.id)) if v else 0
+    persona = persona if persona in PERSONAS else (
+        user.persona if user and user.persona in PERSONAS else "zhuanjia")
+    return {
+        "match": {"match_id": match.match_id, "match_no": match.match_no,
+                  "league": match.league, "home": match.home, "away": match.away,
+                  "kickoff": match.kickoff, "sale_close": match.kickoff,
+                  "single": bool(match.single_flag)},
+        "verdict": _card(v) if v else None,
+        "state": _state(match, v, now),
+        "trade_date": d,
+        "request_id": uuid.uuid4().hex,
+        "as_of": now.isoformat(timespec="seconds"),
+        "data_cutoff": ((v.payload or {}).get("data_cutoff") if v else None)
+                       or (snap.captured_at if snap else None),
+        "seal": {"hash": v.payload_hash if v else None,
+                 "sealed_at": v.sealed_at.isoformat() if v and v.sealed_at else None,
+                 "revision": int(revisions)},
+        "coverage": coverage,
+        "intel": {"facts": facts, "unknowns": unknowns},
+        "interpretation": None,
+        "capabilities": caps,
+        "actions": actions,
+        "persona": persona,
+    }

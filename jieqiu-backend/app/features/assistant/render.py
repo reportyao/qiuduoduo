@@ -38,7 +38,7 @@ def render_notification(event: Event, channel: str = "inapp") -> dict:
     if t in ("verdict_promoted", "verdict_change", "verdict_killed"):
         status = STATUS_LABEL.get(p.get("status", ""), "有更新")
         if channel == "push":
-            return {"title": "解球 · 比赛更新",
+            return {"title": "球多多 · 比赛更新",
                     "body": "你关注的比赛结论有更新，点开看详情。",
                     "deeplink": deeplink}
         pick = p.get("pick") or {}
@@ -56,7 +56,7 @@ def render_notification(event: Event, channel: str = "inapp") -> dict:
     if t == "close_soon":
         mins = p.get("minutes")
         if channel == "push":
-            return {"title": "解球 · 停售提醒",
+            return {"title": "球多多 · 停售提醒",
                     "body": "你关注的比赛即将停售，点开看最后结论。",
                     "deeplink": deeplink}
         return {"title": "停售提醒",
@@ -66,7 +66,7 @@ def render_notification(event: Event, channel: str = "inapp") -> dict:
     if t == "final":
         score = p.get("score", "")
         if channel == "push":
-            return {"title": "解球 · 终场",
+            return {"title": "球多多 · 终场",
                     "body": "你关注的比赛已终场，点开看结果。",
                     "deeplink": deeplink}
         return {"title": "终场", "body": f"{match} 终场 {score}".strip(),
@@ -75,7 +75,7 @@ def render_notification(event: Event, channel: str = "inapp") -> dict:
     if t == "settled":
         result = p.get("result", "")
         if channel == "push":
-            return {"title": "解球 · 结算",
+            return {"title": "球多多 · 结算",
                     "body": "你记录的比赛已结算，点开看归因。",
                     "deeplink": deeplink}
         return {"title": "结算与归因", "body": f"{match} 已结算：{result}".strip(),
@@ -84,11 +84,11 @@ def render_notification(event: Event, channel: str = "inapp") -> dict:
     if t == "daily_brief":
         total, promoted = p.get("total", 0), p.get("promoted", 0)
         if channel == "push":
-            return {"title": "解球 · 今日简报",
+            return {"title": "球多多 · 今日简报",
                     "body": "今天的比赛结论已更新，点开看今日简报。",
                     "deeplink": "jieqiu://today"}
         return {"title": "今日简报",
                 "body": f"今天 {total} 场，过三关 {promoted} 场。点开看今天值得看的场次。",
                 "deeplink": "jieqiu://today"}
 
-    return {"title": "解球", "body": "有一条新消息，点开看详情。", "deeplink": deeplink}
+    return {"title": "球多多", "body": "有一条新消息，点开看详情。", "deeplink": deeplink}

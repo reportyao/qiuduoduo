@@ -9,7 +9,7 @@
 
 > AI 助理运行时（主动监控 / 推送 / 记忆）的差距分析与 Android MVP 排期见 `Assistant-Runtime-v1.0.md`。
 
-> 2026-11-04 当前状态：后端 **182 tests**、OpenAPI **94 路径 / 107 方法**；events/notifications/watch/inbox/push/worker/控制台助理页已落地，移动端 inbox/关注/通知设置已接；随后又完成目录/成本/日历/哨兵/实况等 API 补全。W8 冻结基线需重新 `POST /review/freeze/adopt`。真实 Android JPush、支付、服务端合规同步仍待外部/后续版本。详见 `docs/reviews/2026-11-04-full-stack.md`。
+> 2026-11-05 当前状态：后端 **251 tests**、OpenAPI **128 路径 / 143 方法**、Alembic head `20261105_12`；events/notifications/watch/inbox/push/worker/控制台助理页、目录/成本/日历/哨兵/实况、focus/pulse/interactions、API-Football、串关体检/组合参谋均已落地。`/tools/parlay/plan` 保留 preview 入口；Decision Snapshot → L1–L5 AI Review → Publish/Expire/Withdraw 主链已落地。付费、完整发布 UI、真实 Android JPush、服务端合规同步仍待后续。W8 冻结基线需重新 `POST /review/freeze/adopt`。历史审查见 `docs/reviews/2026-11-04-full-stack.md`。
 
 ---
 
@@ -80,7 +80,7 @@ W1 主体注册 ──→ W2-3 软著申请 ──→ W3-5 APP 备案 ──→ 
 | F20 分享体系 | v1.0 W7 | 素材工厂 | 分享卡编号可验 | share_pressed |
 | F18 账户按国家配置 | v1.0 W7 | market profile | 两区域登录回归通过 | auth_done |
 | **v1.0 上架** | W8 | 证照四件套 | 商店过审 + 合规扫描零命中 | — |
-| F8 串关体检旗舰 | v1.5 W9–10 | 腿级数据 | 健康分复算对拍 20/20 | parlay_built / report_viewed / plan_c_chosen |
+| F8 串关体检旗舰 | ✅ 已上线（体检 + 组合预览；正式审核发布待做） | 腿级数据 | 健康分复算对拍 20/20 | parlay_built / report_viewed / plan_c_chosen |
 | F9 vision 三用 | v1.5 W10 | RapidOCR + GLM-4V | 低置信回退率监控 | ticket_scanned / screenshot_checked |
 | F16 设置组+合规中心 | v1.5 W11 | — | 自排除全链演练 | paywall_shown / subscribed |
 | F19 人设×3 | v1.5 W11–12 | 变体池/编辑台 | 出戏率<10%（盲评） | persona_switched / feedback_thumb |
@@ -112,7 +112,7 @@ W1 主体注册 ──→ W2-3 软著申请 ──→ W3-5 APP 备案 ──→ 
 | W5 | 买了流程 + 推送 + 实况卡 + 连败保护 · **自建认证 ✅ 已上线（CN 手机号+验证码 / 微信后强制绑手机；GL Email+Google/Apple；JWT 15min + refresh 30d 轮换/复用检测；15 测试为当周快照；生产通道未配时 503 fail-loud）**；推送/关注已接，实况只到赛果+SP 快照 | 影子模式 + 真实 live feed · **SQLite→腾讯云 PG 迁移（方案 B）** | **ICP 备案** · 商户号 |
 | W6 | 归因/记忆/卡片路由/非比赛日（✅ 已上线·两轮 review 后：F11 连败保护（回放 8 序列 100%）+ 保护期加注 423/confirm；F12 归因四类 + 流内复盘卡（跨日可见·非比赛日也挂）；F13 记忆（冲突 409 + chat 直接落地必问）；F15 意图路由 16 用例 100% + chat 记忆写入；F7 非比赛日 + /me/rest；PATCH /me 设置；DELETE /me 注销（410 冷静期 + 同令牌撤回）；/bets/{id}/postmortem；周报口径统一 CN 时区 7 天；84 测试全绿）| 归因 + what-if（✅ killed 结局对称披露·7 天口径）| ICP 跟进 |
 | W7 | 分享 + 账户双区域 + 内测回归（✅ 已上线：F20 素材工厂三卡（判决/周报/连败），分享编号=content_hash 前 12 位可验（幂等·篡改即暴露·深链 jieqiu://share/），线上双向验证通过；F18 双区域 cn/global 登录回归 + market-profile（CN 热线/CNY vs BeGambleAware/USD）；/me/export（令牌不导出）；注销期满 purge_cli + 每日 03:00 cron；当周 99 测试全绿）| 稳定性打磨 | 商店资料准备 |
-| W8 | **W8 提审基线已建立；2026-11-04 完成 API 补全（94 路径），新增路由需重新采纳 freeze 基线** | 监控值班（✅ /console/alerts：断链/延迟/源未配自动告警）| **提审**（✅ 代码侧：禁用词扫描/checklist/legal disclosure/SDK 清单/OTA/文案扫描；当前 182 测试。待外部：四证/推送/支付/崩溃率上报）|
+| W8 | **W8 提审基线已建立；2026-11-04 完成 API 补全（当时 94 路径，当前 123），新增路由需重新采纳 freeze 基线** | 监控值班（✅ /admin 运维页：断链/延迟/源未配自动告警）| **提审**（✅ 代码侧：禁用词扫描/checklist/legal disclosure/SDK 清单/OTA/文案扫描；当前 251 测试。待外部：四证/推送/支付/崩溃率上报）|
 
 ---
 

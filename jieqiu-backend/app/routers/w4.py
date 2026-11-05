@@ -103,7 +103,7 @@ def ledger_page(db: Session = Depends(get_db)):
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>解球 · 公开账本</title>
+<title>球多多 · 公开账本</title>
 <style>
 body{{font-family:"PingFang SC",system-ui,sans-serif;max-width:960px;margin:0 auto;padding:24px;color:#1D2026;background:#F4F3EF}}
 h1{{font-size:20px}} .stats{{display:flex;gap:18px;margin:12px 0 18px;font-size:13px;color:#73787F}}
@@ -115,7 +115,7 @@ th{{background:#E9F3EE;color:#0B6B4F;font-weight:600}}
 a{{color:#0B6B4F}}
 .note{{font-size:11px;color:#73787F;margin-top:14px;line-height:1.7}}
 </style></head><body>
-<h1>解球 · 公开账本</h1>
+<h1>球多多 · 公开账本</h1>
 <div class="stats">
 <span>已推 <b>{stats['promoted_total']}</b></span>
 <span>已结算 <b>{stats['settled']}</b></span>
@@ -161,7 +161,6 @@ def anchor_by_date(date: str, db: Session = Depends(get_db)):
 
 def _anchor_payload(db: Session, a: DailyAnchor) -> dict:
     """锚点 + 全部链节哈希：外部验证者可完全离线重算 root（F14 gate：独立核验 10/10）。"""
-    from ..models import VerdictRevision
     from ..modules.sealchain import _day_revisions
 
     revs = _day_revisions(db, a.date)
@@ -192,7 +191,7 @@ def narration_stream(verdict_id: str, persona: str = "zhuanjia",
         persona = "zhuanjia"
 
     def gen():
-        for kind, data in generate_stream(v, persona):
+        for kind, data in generate_stream(v, persona, db=db):
             if kind == "delta":
                 yield f"data: {data}\n\n"
             else:

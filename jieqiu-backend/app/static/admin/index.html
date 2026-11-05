@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>球多多 · 运营控制台</title>
+  <link rel="stylesheet" href="/admin/assets/admin.css">
+  <meta name="robots" content="noindex">
+</head>
+<body>
+  <div id="login" class="login-screen">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="brand-mark">球</div>
+        <h1>球多多运营台</h1>
+        <p>Decision Snapshot · AI Review · Publish</p>
+      </div>
+      <form id="login-form">
+        <label for="username">账号</label>
+        <input id="username" name="username" type="text" autocomplete="username" value="admin" required>
+        <label for="password" style="margin-top:12px">密码</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button type="submit" class="btn primary full">进入控制台</button>
+        <div id="login-error" class="login-error"></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="app" class="app" hidden>
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark">球</div>
+        <div>
+          <strong>球多多</strong>
+          <span>运营控制台</span>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="overview"><span>总览</span></button>
+        <button class="nav-item" data-view="models"><span>模型池</span></button>
+        <button class="nav-item" data-view="gateway"><span>模型用量</span></button>
+        <button class="nav-item" data-view="personas"><span>人设文案</span></button>
+        <button class="nav-item" data-view="recommendations"><span>推荐主链</span></button>
+        <button class="nav-item" data-view="plans"><span>组合预览</span></button>
+        <button class="nav-item" data-view="data"><span>数据源</span></button>
+        <button class="nav-item" data-view="ops"><span>运维</span></button>
+        <button class="nav-item" data-view="users" data-admin-only><span>账号</span></button>
+        <button class="nav-item" data-view="audit" data-admin-only><span>审计</span></button>
+        <button class="nav-item" data-view="logs"><span>运行日志</span></button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="env-pill" id="env-pill">—</div>
+        <button id="logout" class="btn ghost small">退出</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <div class="topbar-kicker" id="page-kicker">Operations</div>
+          <h1 id="page-title">总览</h1>
+        </div>
+        <div class="topbar-actions">
+          <div class="date-pill" id="current-date">—</div>
+          <div class="date-pill" id="last-updated">未刷新</div>
+          <button id="auto-refresh" class="btn secondary">自动 · 开</button>
+          <button id="refresh" class="btn secondary">刷新</button>
+        </div>
+      </header>
+
+      <div id="toast" class="toast"></div>
+      <div id="modal" class="modal-backdrop" hidden><div class="modal" id="modal-card"></div></div>
+
+      <section id="view-overview" class="view active"></section>
+      <section id="view-models" class="view"></section>
+      <section id="view-gateway" class="view"></section>
+      <section id="view-personas" class="view"></section>
+      <section id="view-recommendations" class="view"></section>
+      <section id="view-plans" class="view"></section>
+      <section id="view-data" class="view"></section>
+      <section id="view-ops" class="view"></section>
+      <section id="view-users" class="view"></section>
+      <section id="view-audit" class="view"></section>
+      <section id="view-logs" class="view"></section>
+    </main>
+  </div>
+
+  <script src="/admin/assets/admin.js"></script>
+  <script src="/admin/assets/admin_extra.js"></script>
+</body>
+</html>

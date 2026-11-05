@@ -48,9 +48,9 @@ export default function LegalScreen() {
 function Terms() {
   return (
     <>
-      <Text variant="h2" style={styles.title}>解球是什么</Text>
+      <Text variant="h2" style={styles.title}>球多多是什么</Text>
       <Text variant="body" color={colors.muted} style={styles.paragraph}>
-        解球是一个竞彩数据分析工具。它展示抽水、市场概率、模型置信和不确定性，帮助你在下注前把成本算清楚。
+        球多多是一个竞彩数据分析工具。它展示抽水、市场概率、模型置信和不确定性，帮助你在下注前把成本算清楚。
       </Text>
       <Section title="不做什么">
         <Text variant="body" color={colors.muted} style={styles.paragraph}>

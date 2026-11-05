@@ -39,7 +39,7 @@ export default function ToolsScreen() {
     <AppScreen bottom={false}>
       <AppHeader
         title="工具箱"
-        subtitle="解球 · AI 助理"
+        subtitle="球多多 · AI 助理"
         showAssistant={false}
         right={<Chip label="8 个工具" tone="green" />}
       />

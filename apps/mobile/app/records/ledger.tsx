@@ -135,7 +135,7 @@ export default function LedgerScreen() {
         visible={verifyOpen}
         onClose={() => setVerifyOpen(false)}
         title="如何独立验证"
-        subtitle="不需要相信解球，自己算。"
+        subtitle="不需要相信球多多，自己算。"
         footer={
           <Button
             label="复制验证命令"

@@ -1,9 +1,6 @@
 """W8 测试：禁用词扫描器、法律披露、提审检查单、冻结机制、OTA/UK 回归。"""
-import pytest
-
-from app.modules.compliance import (BANNED_WORDS, freeze_report, normalize_text,
-                                    scan_dir, scan_text, write_freeze_baseline)
-from tests.conftest import today_cn
+from app.modules.compliance import BANNED_WORDS, scan_dir, scan_text
+from tests.conftest import admin_login, today_cn
 from tests.test_deep import _mini, _promotable_match
 
 
@@ -52,7 +49,6 @@ def test_legal_text_both_regions(client):
 # ---------- 检查单 ----------
 
 def test_review_checklist_aggregates(db, client, monkeypatch):
-    from app.modules import verdict as vz
     _mini(monkeypatch)
     _promotable_match(db, "2060001", "周六001")
     from app.modules.verdict import build_verdicts
@@ -63,7 +59,7 @@ def test_review_checklist_aggregates(db, client, monkeypatch):
     fastapi_app.dependency_overrides[_g] = lambda: (yield SessionLocal())
     try:
         with TestClient(fastapi_app) as c:
-            c.post("/console/login", data={"pw": "dev"})
+            admin_login(c)
             body = c.get("/review/checklist").json()
     finally:
         fastapi_app.dependency_overrides.clear()
@@ -84,7 +80,7 @@ def test_review_checklist_aggregates(db, client, monkeypatch):
 
 def test_freeze_adopt_and_violation_detection(client, monkeypatch, tmp_path):
     monkeypatch.setenv("JQ_FREEZE_BASELINE", str(tmp_path / "fz.json"))
-    client.post("/console/login", data={"pw": "dev"})
+    admin_login(client)
     # 采纳基线
     r = client.post("/review/freeze/adopt").json()
     assert r["adopted"] is True and r["routes"] > 30

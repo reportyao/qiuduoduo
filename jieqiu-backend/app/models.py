@@ -192,6 +192,410 @@ class MatchResult(Base):
     retrieved_at: Mapped[str] = mapped_column(String(32), default="")
 
 
+class ApiFootballFixture(Base):
+    """API-Football fixture 快照；match_id 为空表示未链接到竞彩场次。"""
+
+    __tablename__ = "api_football_fixtures"
+    __table_args__ = (
+        Index("ix_af_fixtures_kickoff", "kickoff_utc"),
+        Index("ix_af_fixtures_league_season", "league_id", "season"),
+        Index("ix_af_fixtures_match", "match_id"),
+    )
+
+    fixture_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    match_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    league_id: Mapped[int] = mapped_column(Integer, default=0)
+    league_name: Mapped[str] = mapped_column(String(128), default="")
+    season: Mapped[int] = mapped_column(Integer, default=0)
+    home_team_id: Mapped[int] = mapped_column(Integer, default=0)
+    home_name: Mapped[str] = mapped_column(String(128), default="")
+    away_team_id: Mapped[int] = mapped_column(Integer, default=0)
+    away_name: Mapped[str] = mapped_column(String(128), default="")
+    kickoff_utc: Mapped[str] = mapped_column(String(32), default="")
+    status_short: Mapped[str] = mapped_column(String(8), default="")
+    status_long: Mapped[str] = mapped_column(String(32), default="")
+    venue: Mapped[str] = mapped_column(String(128), default="")
+    link_method: Mapped[str] = mapped_column(String(16), default="none")  # auto/manual/none
+    link_confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    lineups_synced_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    injuries_synced_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    raw: Mapped[dict] = mapped_column(JSON, default=dict)
+    synced_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class MatchLineup(Base):
+    """API-Football 首发/替补；side=home/away 便于 focus 直接展示。"""
+
+    __tablename__ = "match_lineups"
+    __table_args__ = (
+        UniqueConstraint("fixture_id", "team_id", name="uq_lineup_fixture_team"),
+        Index("ix_lineups_match", "match_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    fixture_id: Mapped[int] = mapped_column(Integer, index=True)
+    match_id: Mapped[str] = mapped_column(String(32))
+    team_id: Mapped[int] = mapped_column(Integer, default=0)
+    team_name: Mapped[str] = mapped_column(String(128), default="")
+    side: Mapped[str] = mapped_column(String(8), default="")  # home/away
+    formation: Mapped[str] = mapped_column(String(16), default="")
+    coach: Mapped[str] = mapped_column(String(128), default="")
+    starters: Mapped[list] = mapped_column(JSON, default=list)
+    subs: Mapped[list] = mapped_column(JSON, default=list)
+    synced_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class MatchInjury(Base):
+    """API-Football 伤停；同一 fixture/player/type 幂等。"""
+
+    __tablename__ = "match_injuries"
+    __table_args__ = (
+        UniqueConstraint("fixture_id", "player_id", "type", name="uq_injury_fixture_player_type"),
+        Index("ix_injuries_match", "match_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    fixture_id: Mapped[int] = mapped_column(Integer, index=True)
+    match_id: Mapped[str] = mapped_column(String(32))
+    team_id: Mapped[int] = mapped_column(Integer, default=0)
+    team_name: Mapped[str] = mapped_column(String(128), default="")
+    side: Mapped[str] = mapped_column(String(8), default="")
+    player_id: Mapped[int] = mapped_column(Integer, default=0)
+    player_name: Mapped[str] = mapped_column(String(128), default="")
+    type: Mapped[str] = mapped_column(String(32), default="")
+    reason: Mapped[str] = mapped_column(String(256), default="")
+    status: Mapped[str] = mapped_column(String(32), default="")
+    synced_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class TeamStanding(Base):
+    """API-Football 积分榜快照（联赛/赛季/球队唯一）。"""
+
+    __tablename__ = "team_standings"
+    __table_args__ = (
+        UniqueConstraint("league_id", "season", "team_id", name="uq_standing_league_season_team"),
+        Index("ix_standings_league_season", "league_id", "season"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    league_id: Mapped[int] = mapped_column(Integer, default=0)
+    season: Mapped[int] = mapped_column(Integer, default=0)
+    team_id: Mapped[int] = mapped_column(Integer, default=0)
+    team_name: Mapped[str] = mapped_column(String(128), default="")
+    rank: Mapped[int] = mapped_column(Integer, default=0)
+    points: Mapped[int] = mapped_column(Integer, default=0)
+    played: Mapped[int] = mapped_column(Integer, default=0)
+    wins: Mapped[int] = mapped_column(Integer, default=0)
+    draws: Mapped[int] = mapped_column(Integer, default=0)
+    losses: Mapped[int] = mapped_column(Integer, default=0)
+    goals_for: Mapped[int] = mapped_column(Integer, default=0)
+    goals_against: Mapped[int] = mapped_column(Integer, default=0)
+    form: Mapped[str] = mapped_column(String(16), default="")
+    synced_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class ApiFootballUsage(Base):
+    """API-Football 免费档每日请求计数；按 day+endpoint 原子累加。"""
+
+    __tablename__ = "api_football_usage"
+    __table_args__ = (
+        UniqueConstraint("day", "endpoint", name="uq_af_usage_day_endpoint"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    day: Mapped[str] = mapped_column(String(10), index=True)
+    endpoint: Mapped[str] = mapped_column(String(64), default="")
+    count: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class LLMUsage(Base):
+    """LLM 调用账本：任务/模型/tokens/成本/延迟/降级原因；Key 永不落库。"""
+
+    __tablename__ = "llm_usage"
+    __table_args__ = (
+        Index("ix_llm_usage_user_created", "user_id", "created_at"),
+        Index("ix_llm_usage_task_created", "task", "created_at"),
+        Index("ix_llm_usage_created", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    request_id: Mapped[str] = mapped_column(String(32), index=True)
+    user_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    session_id: Mapped[str] = mapped_column(String(64), default="")
+    task: Mapped[str] = mapped_column(String(32))
+    profile: Mapped[str] = mapped_column(String(16))
+    provider: Mapped[str] = mapped_column(String(32), default="")
+    model: Mapped[str] = mapped_column(String(96), default="")
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cost_cny: Mapped[float] = mapped_column(Float, default=0.0)
+    price_version: Mapped[str] = mapped_column(String(32), default="")
+    latency_ms: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(16), default="ok")
+    cache_hit: Mapped[bool] = mapped_column(Boolean, default=False)
+    error_class: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class LLMCache(Base):
+    """LLM 响应缓存；user_private 作用域的 key 必须带用户/会话，禁止跨用户命中。"""
+
+    __tablename__ = "llm_cache"
+    __table_args__ = (
+        Index("ix_llm_cache_expires", "expires_at"),
+        Index("ix_llm_cache_task", "task"),
+    )
+
+    cache_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    task: Mapped[str] = mapped_column(String(32))
+    profile: Mapped[str] = mapped_column(String(16))
+    model: Mapped[str] = mapped_column(String(96), default="")
+    prompt_ver: Mapped[str] = mapped_column(String(32), default="")
+    scope: Mapped[str] = mapped_column(String(16), default="public")
+    input_hash: Mapped[str] = mapped_column(String(64), default="")
+    response_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    hit_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class LLMBudget(Base):
+    """按日/任务/profile 的原子预算；reserved + spent 不允许超过 limit。"""
+
+    __tablename__ = "llm_budgets"
+    __table_args__ = (
+        UniqueConstraint("day", "task", "profile", name="uq_llm_budget_day_task_profile"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    day: Mapped[str] = mapped_column(String(10), index=True)
+    task: Mapped[str] = mapped_column(String(32))
+    profile: Mapped[str] = mapped_column(String(16))
+    limit_cny: Mapped[float] = mapped_column(Float, default=0.0)
+    reserved_cny: Mapped[float] = mapped_column(Float, default=0.0)
+    spent_cny: Mapped[float] = mapped_column(Float, default=0.0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class PersonaLLMModel(Base):
+    """人设语气翻译模型池；key 加密存储，后台只显示是否配置。"""
+
+    __tablename__ = "persona_llm_models"
+    __table_args__ = (
+        UniqueConstraint("base_url", "model", name="uq_persona_llm_base_model"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(64), default="")
+    base_url: Mapped[str] = mapped_column(String(256), default="")
+    model: Mapped[str] = mapped_column(String(96), default="")
+    api_key_enc: Mapped[str] = mapped_column(Text, default="")
+    priority: Mapped[int] = mapped_column(Integer, default=100, index=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    timeout_s: Mapped[int] = mapped_column(Integer, default=20)
+    max_tokens: Mapped[int] = mapped_column(Integer, default=800)
+    temperature: Mapped[float] = mapped_column(Float, default=0.4)
+    fail_count: Mapped[int] = mapped_column(Integer, default=0)
+    last_error: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    last_error_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_ok_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class PersonaCopyCache(Base):
+    """人设翻译结果缓存：同一 source/hash/persona 只生成一次。"""
+
+    __tablename__ = "persona_copy_cache"
+    __table_args__ = (
+        UniqueConstraint("source_key", "source_hash", "persona",
+                         name="uq_persona_copy_source_hash_persona"),
+        Index("ix_persona_copy_created", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source_key: Mapped[str] = mapped_column(String(128), default="")
+    source_hash: Mapped[str] = mapped_column(String(64), default="")
+    persona: Mapped[str] = mapped_column(String(16), default="zhuanjia")
+    text: Mapped[str] = mapped_column(Text, default="")
+    model: Mapped[str] = mapped_column(String(96), default="")
+    latency_ms: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class PersonaProfile(Base):
+    """人设语气配置：只改表达，不改事实；风格 prompt 可后台编辑。"""
+
+    __tablename__ = "persona_profiles"
+
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)
+    name: Mapped[str] = mapped_column(String(32), default="")
+    address: Mapped[str] = mapped_column(String(16), default="")
+    tone: Mapped[str] = mapped_column(String(64), default="")
+    style_prompt: Mapped[str] = mapped_column(Text, default="")
+    max_chars: Mapped[int] = mapped_column(Integer, default=220)
+    emoji_policy: Mapped[str] = mapped_column(String(16), default="none")
+    allowed_emoji: Mapped[str] = mapped_column(String(32), default="")
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class PersonaCopySlot(Base):
+    """前端文案槽位兜底模板（预留）；当前运行时尚未消费，回退在 narrate.py。"""
+
+    __tablename__ = "persona_copy_slots"
+    __table_args__ = (
+        UniqueConstraint("persona_id", "slot_key", name="uq_persona_slot"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    persona_id: Mapped[str] = mapped_column(String(16), index=True)
+    slot_key: Mapped[str] = mapped_column(String(32))
+    template: Mapped[str] = mapped_column(Text, default="")
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class DecisionSnapshot(Base):
+    """面向推荐/组合/付费/复盘的不可变决策快照。
+
+    verdict 仍是三闸与封存事实源；snapshot 把“这次要对外表达的判断”固定成
+    canonical payload，并承载发布生命周期。任何消费端只认 snapshot_id。
+    """
+
+    __tablename__ = "decision_snapshots"
+    __table_args__ = (
+        UniqueConstraint("trade_date", "match_id", "version",
+                         name="uq_decision_snapshot_version"),
+        Index("ix_decision_snapshots_trade_status", "trade_date", "status"),
+        Index("ix_decision_snapshots_match_trade", "match_id", "trade_date"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    trade_date: Mapped[str] = mapped_column(String(10), index=True)
+    match_id: Mapped[str] = mapped_column(String(32), index=True)
+    match_no: Mapped[str] = mapped_column(String(16), default="")
+    verdict_id: Mapped[str] = mapped_column(String(40), index=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(24), default="draft", index=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+    payload_hash: Mapped[str] = mapped_column(String(64), index=True)
+    source_hash: Mapped[str] = mapped_column(String(64), index=True)
+    review_run_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class RecommendationPlan(Base):
+    """组合参谋的 canonical 快照；legs 只存 verdict_id，check 为同一套 4D 体检结果。"""
+
+    __tablename__ = "recommendation_plans"
+    __table_args__ = (
+        UniqueConstraint("trade_date", "risk_profile", "version",
+                         name="uq_recommendation_plan_version"),
+        Index("ix_recommendation_plans_trade_status", "trade_date", "status"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    trade_date: Mapped[str] = mapped_column(String(10), index=True)
+    risk_profile: Mapped[str] = mapped_column(String(16), index=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(24), default="draft", index=True)
+    label: Mapped[str] = mapped_column(String(32), default="")
+    legs: Mapped[list] = mapped_column(JSON, default=list)
+    payload: Mapped[dict] = mapped_column(JSON)
+    payload_hash: Mapped[str] = mapped_column(String(64), index=True)
+    source_hash: Mapped[str] = mapped_column(String(64), index=True)
+    review_run_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class ReviewRun(Base):
+    """AI/规则复核运行记录：每层结果、模型、prompt 版本全部留档。"""
+
+    __tablename__ = "review_runs"
+    __table_args__ = (
+        Index("ix_review_runs_subject", "subject_type", "subject_id"),
+        Index("ix_review_runs_created", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subject_type: Mapped[str] = mapped_column(String(16), index=True)
+    subject_id: Mapped[str] = mapped_column(String(32), index=True)
+    status: Mapped[str] = mapped_column(String(16), default="failed", index=True)
+    layers: Mapped[list] = mapped_column(JSON, default=list)
+    reviewer: Mapped[str] = mapped_column(String(64), default="rules")
+    prompt_ver: Mapped[str] = mapped_column(String(32), default="review-v1")
+    llm_degraded: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class RecommendationEvent(Base):
+    """推荐主链审计：build/review/publish/expire/withdraw。"""
+
+    __tablename__ = "recommendation_events"
+    __table_args__ = (Index("ix_recommendation_events_subject", "subject_type", "subject_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subject_type: Mapped[str] = mapped_column(String(16), index=True)
+    subject_id: Mapped[str] = mapped_column(String(32), index=True)
+    action: Mapped[str] = mapped_column(String(24))
+    from_status: Mapped[str] = mapped_column(String(24), default="")
+    to_status: Mapped[str] = mapped_column(String(24), default="")
+    actor: Mapped[str] = mapped_column(String(64), default="pipeline")
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class AdminUser(Base):
+    """管理后台账号：OPC 可先单账号，后续多人按角色授权。"""
+
+    __tablename__ = "admin_users"
+    __table_args__ = (
+        UniqueConstraint("username", name="uq_admin_users_username"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(Text)
+    role: Mapped[str] = mapped_column(String(16), default="operator")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class AdminAudit(Base):
+    """管理后台写操作审计：谁、何时、对什么、改前/改后。"""
+
+    __tablename__ = "admin_audit"
+    __table_args__ = (
+        Index("ix_admin_audit_created", "created_at"),
+        Index("ix_admin_audit_actor", "actor"),
+        Index("ix_admin_audit_action", "action"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    actor: Mapped[str] = mapped_column(String(64), default="")
+    role: Mapped[str] = mapped_column(String(16), default="")
+    action: Mapped[str] = mapped_column(String(32), default="")
+    target_type: Mapped[str] = mapped_column(String(32), default="")
+    target_id: Mapped[str] = mapped_column(String(64), default="")
+    before_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    after_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    ip: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class ModelEval(Base):
     """模型评估（校准 + 回测框架产物）。"""
 
@@ -223,6 +627,14 @@ class User(Base):
     persona: Mapped[str] = mapped_column(String(16), default="zhuanjia")
     discipline_on: Mapped[bool] = mapped_column(Boolean, default=True)   # 连败保护开关
     rested_until: Mapped[str] = mapped_column(String(10), default="")    # CN 日期，空=未休息
+    # 合规：年龄门/未成年锁定/自排除（服务端强制，不只靠本机）
+    age_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    birth_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    under18_locked: Mapped[bool] = mapped_column(Boolean, default=False)
+    self_exclusion_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    self_exclusion_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    self_exclusion_reason: Mapped[str] = mapped_column(String(128), default="")
+    compliance_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     odds_format: Mapped[str] = mapped_column(String(12), default="decimal")
     locale: Mapped[str] = mapped_column(String(8), default="zh")
     region: Mapped[str] = mapped_column(String(8), default="cn")   # cn / global（F18 双区域）
@@ -402,6 +814,29 @@ class UserEvent(Base):
     target_id: Mapped[str] = mapped_column(String(64), default="")
     metadata_json: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+
+class InteractionEvent(Base):
+    """聚焦/动作/自由提问漏斗事件；匿名只存随机 session_id。"""
+
+    __tablename__ = "interaction_events"
+    __table_args__ = (
+        Index("ix_interaction_events_event_created", "event", "created_at"),
+        Index("ix_interaction_events_match_created", "match_id", "created_at"),
+        Index("ix_interaction_events_user_created", "user_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    schema_ver: Mapped[int] = mapped_column(Integer, default=1)
+    user_id: Mapped[str | None] = mapped_column(String(40), nullable=True, index=True)
+    session_id: Mapped[str] = mapped_column(String(64), default="")
+    event: Mapped[str] = mapped_column(String(32))
+    match_id: Mapped[str] = mapped_column(String(32), default="")
+    verdict_id: Mapped[str] = mapped_column(String(40), default="")
+    action: Mapped[str] = mapped_column(String(32), default="")
+    metadata_json: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
 class ShareCard(Base):

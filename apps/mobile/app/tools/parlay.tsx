@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { goBackOr } from "@/lib/navigation";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
@@ -13,14 +14,15 @@ import {
   Text,
   useToast,
 } from "@/components/ui";
-import { useStreamQuery } from "@/features/home/queries";
+import { useRecommendationsTodayQuery, useStreamQuery } from "@/features/home/queries";
 import { useOddsFormat } from "@/features/preferences/prefsStore";
 import { DateStrip } from "@/features/home/components/HomeSections";
-import { parlayMath } from "@/features/tools/calc";
-import { FormulaNote, ResultPanel, ResultRow } from "@/features/tools/ToolLayout";
+import { ParlayReport } from "@/features/tools/ParlayReport";
+import { ParlayPlans } from "@/features/tools/ParlayPlans";
+import { useParlayCheckMutation, useParlayPlanMutation, type ParlayCheck, type ParlayPlan } from "@/features/tools/queries";
 import type { VerdictSummary } from "@/domain/types";
 import { errorText } from "@/lib/errors";
-import { currentTradeDateCn, decimalToFormat, money, oddsFormatLabel, pct, pickDirectionLabel, shiftDateCn } from "@/lib/format";
+import { currentTradeDateCn, decimalToFormat, oddsFormatLabel, pct, pickDirectionLabel, shiftDateCn } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 
@@ -32,11 +34,23 @@ const DIR_KEY: Record<Dir, "h" | "d" | "a"> = { home: "h", draw: "d", away: "a" 
 
 export default function ParlayToolScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ date?: string }>();
+  const insets = useSafeAreaInsets();
   const toast = useToast();
   const oddsFormat = useOddsFormat();
   const [selection, setSelection] = useState<Selection>({});
+  const [reportOpen, setReportOpen] = useState(false);
+  const [report, setReport] = useState<ParlayCheck | null>(null);
+  const [planData, setPlanData] = useState<ParlayPlan | null>(null);
+  const [planReviewed, setPlanReviewed] = useState(false);
   const [stake, setStake] = useState(100);
-  const [date, setDate] = useState(currentTradeDateCn());
+  const check = useParlayCheckMutation();
+  const plan = useParlayPlanMutation();
+  const scrollRef = useRef<ScrollView>(null);
+  const reportY = useRef(0);
+  const pendingScroll = useRef(false);
+  const checkSeq = useRef(0);
+  const [date, setDate] = useState(params.date || currentTradeDateCn());
   const [manualDate, setManualDate] = useState(false);
   const now = useNow(60_000);
   const today = currentTradeDateCn(now);
@@ -48,6 +62,7 @@ export default function ParlayToolScreen() {
     setManualDate(next !== currentTradeDateCn());
   };
   const streamQuery = useStreamQuery(date);
+  const recommendationsQuery = useRecommendationsTodayQuery(date);
   const stream = streamQuery.data?.pages[0];
 
   const matches = useMemo(
@@ -73,10 +88,69 @@ export default function ParlayToolScreen() {
         .filter((leg): leg is { match: VerdictSummary; dir: Dir; odds: number; rake: number } => leg !== null),
     [matches, selection],
   );
-  const result = legs.length > 0 ? parlayMath(legs.map((leg) => ({ odds: leg.odds, rake: leg.rake })), stake) : null;
-  const hasPendingLeg = legs.some((leg) => leg.match.status !== "promoted");
+  const modelCovered = legs.filter((leg) => {
+    const shrunk = leg.match.model?.shrunk;
+    return Array.isArray(shrunk) && shrunk.length === 3;
+  }).length;
+
+  const resetReport = () => {
+    checkSeq.current += 1;
+    setReportOpen(false);
+    setReport(null);
+    check.reset();
+  };
+
+  const generatePlan = () => {
+    setPlanData(null);
+    setPlanReviewed(false);
+    plan.mutate({ stake, date }, {
+      onSuccess: (data) => {
+        setPlanData(data);
+        setPlanReviewed(false);
+      },
+      onError: (error) => toast.show(errorText(error), "warning"),
+    });
+  };
+
+  const autoPlanDate = useRef("");
+  useEffect(() => {
+    if (autoPlanDate.current === date) return;
+    autoPlanDate.current = date;
+    // 进入页面/切日期自动配一次；失败保留按钮重试。
+    if (recommendationsQuery.isSuccess && recommendationsQuery.data.plans.length > 0) return;
+    plan.mutate({ stake, date }, {
+      onSuccess: (data) => {
+        setPlanData(data);
+        setPlanReviewed(false);
+      },
+      onError: (error) => toast.show(errorText(error), "warning"),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date]);
+
+  useEffect(() => {
+    if (!recommendationsQuery.isSuccess || recommendationsQuery.data.plans.length === 0) return;
+    const published = recommendationsQuery.data.plans;
+    setPlanData({
+      date,
+      candidates: published.length,
+      plans: published.map((item) => ({
+        label: item.label,
+        risk_profile: item.riskProfile,
+        legs: item.legs,
+        check: item.check as unknown as ParlayCheck,
+        note: item.note,
+        conditions: item.conditions,
+        invalidators: item.invalidators,
+        review: item.review,
+      })),
+      message: null,
+    });
+    setPlanReviewed(true);
+  }, [date, recommendationsQuery.data, recommendationsQuery.isSuccess]);
 
   const toggle = (verdict: VerdictSummary, dir: Dir) => {
+    resetReport();
     setSelection((prev) => {
       const next = { ...prev };
       if (next[verdict.id] === dir) {
@@ -92,6 +166,40 @@ export default function ParlayToolScreen() {
     });
   };
 
+  const scrollToReport = () => {
+    scrollRef.current?.scrollTo({ y: Math.max(0, reportY.current - 12), animated: true });
+  };
+
+  const runCheck = () => {
+    const seq = ++checkSeq.current;
+    setReportOpen(true);
+    setReport(null);
+    pendingScroll.current = true;
+    check.mutate(
+      { legs: legs.map((leg) => ({ verdict_id: leg.match.id, dir: leg.dir })), stake },
+      {
+        onSuccess: (data) => {
+          if (seq === checkSeq.current) setReport(data);
+        },
+        onError: (error) => {
+          if (seq === checkSeq.current) toast.show(errorText(error), "warning");
+        },
+      },
+    );
+  };
+
+  const startReport = () => {
+    if (legs.length < 2) {
+      toast.show("串关至少选 2 场，先再选一场", "warning");
+      return;
+    }
+    if (reportOpen && report) {
+      scrollToReport();
+      return;
+    }
+    runCheck();
+  };
+
   const copy = async () => {
     const text = legs
       .map((leg) => {
@@ -104,18 +212,35 @@ export default function ParlayToolScreen() {
     toast.show("组合账单已复制", "success");
   };
 
+  const modelSummary = (match: VerdictSummary) => {
+    const shrunk = match.model?.shrunk;
+    if (!Array.isArray(shrunk) || shrunk.length !== 3) return "模型未覆盖";
+    const idx = shrunk.indexOf(Math.max(...shrunk));
+    const dir = (["home", "draw", "away"] as Dir[])[idx];
+    return `模型 ${DIR_LABEL[dir]} ${pct(shrunk[idx])}`;
+  };
+  const gateSummary = (match: VerdictSummary) =>
+    (["price", "market", "model"] as const)
+      .map((key) => {
+        const result = match.gates[key];
+        const mark = result === "pass" ? "✓" : result === "fail" ? "✕" : "○";
+        return `${key === "price" ? "价" : key === "market" ? "市" : "模"}${mark}`;
+      })
+      .join(" ");
+
   return (
     <AppScreen bottom={false}>
       <AppHeader title="串关体检" showAssistant={false} onBack={() => goBackOr(router)} />
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text variant="overline" color={colors.green}>串关 · 本地计算器</Text>
-        <Text variant="display" style={styles.title}>别让串关把账搅浑。</Text>
+        <Text variant="overline" color={colors.green}>串关参谋 · 帮我配</Text>
+        <Text variant="display" style={styles.title}>先看组合，再自己改。</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
-          选 2–4 场，自己选方向。工具会算组合赔率、按市场概率的期望返还，以及每一腿的抽水成本。
+          从今日有明确方向的场次生成参考组合；也可以往下自己选 2–4 场做四维体检。
           当前显示：{oddsFormatLabel(oddsFormat)}。
         </Text>
         <DateStrip
@@ -124,8 +249,27 @@ export default function ParlayToolScreen() {
             if (next === date) return; // 重复点当前日期不应清空已选腿
             chooseDate(next);
             setSelection({});
+            resetReport();
+            setPlanData(null);
+            plan.reset();
           }}
         />
+
+        <View style={styles.planBox}>
+          <Text variant="captionStrong" color={colors.muted}>帮我配</Text>
+          <Text variant="small" color={colors.muted}>
+            从今日有方向的场次生成保守/均衡/进取参考组合；没有足够腿就不硬配。
+          </Text>
+          <Button
+            label={plan.isPending ? "生成中…" : "生成参考组合"}
+            variant="secondary"
+            disabled={plan.isPending}
+            onPress={generatePlan}
+          />
+          {planData ? <ParlayPlans data={planData} oddsFormat={oddsFormat} reviewed={planReviewed} /> : null}
+        </View>
+
+        <Text variant="captionStrong" color={colors.muted} style={styles.label}>或者自己选一场</Text>
 
         {streamQuery.isLoading ? (
           <CardSkeleton />
@@ -154,6 +298,9 @@ export default function ParlayToolScreen() {
                     <Text variant="caption" color={colors.muted}>
                       {match.matchNo}{match.goalLine ? ` · 让球 ${match.goalLine}` : ""} · 抽水 {pct(match.rake)} · {match.status === "promoted" ? "三关全过" : "复核中"}
                     </Text>
+                    <Text variant="caption" color={colors.muted}>
+                      {modelSummary(match)} · 三闸 {gateSummary(match)}
+                    </Text>
                   </View>
                   {match.pick?.dir ? (
                     <Text variant="caption" color={colors.green}>
@@ -178,7 +325,7 @@ export default function ParlayToolScreen() {
                         ]}
                       >
                         <Text variant="caption" color={selected ? colors.white : colors.muted}>
-                          {DIR_LABEL[dir]}
+                          {match.pool === "hhad" ? "让球" : ""}{DIR_LABEL[dir]}
                         </Text>
                         <Text variant="bodyStrong" color={selected ? colors.white : colors.ink}>
                           {decimalToFormat(match.sp[DIR_KEY[dir]], oddsFormat)}
@@ -193,49 +340,82 @@ export default function ParlayToolScreen() {
         )}
 
         <Text variant="captionStrong" color={colors.muted} style={styles.label}>单注金额</Text>
-        <Stepper value={stake} onChange={setStake} min={10} max={10000} step={10} />
+        <Stepper
+          value={stake}
+          onChange={(next) => {
+            setStake(next);
+            resetReport();
+            setPlanData(null);
+            plan.reset();
+          }}
+          min={10}
+          max={10000}
+          step={10}
+        />
 
-        {result ? (
-          <>
-            <ResultPanel title={`${legs.length} 腿组合 · 本金 ${money(stake)}`}>
-              <ResultRow label="组合赔率" value={`${decimalToFormat(result.comboOdds, oddsFormat)}（${oddsFormatLabel(oddsFormat)}）`} strong />
-              <ResultRow label="组合隐含胜率" value={pct(result.impliedProbability, 2)} />
-              <ResultRow label="理论返还率" value={pct(result.theoreticalReturnRate, 2)} tone="green" />
-              <ResultRow label="期望返还" value={money(result.expectedReturn, 2)} strong tone={result.expectedReturn >= stake ? "green" : "danger"} />
-              <ResultRow label="期望损耗" value={money(result.expectedLoss, 2)} tone="danger" />
-            </ResultPanel>
-            <FormulaNote>
-              组合赔率 = Π 单腿赔率；组合隐含胜率 = 1 / 组合赔率；
-              理论返还率 = Π(1 − 单腿抽水)；期望返还 = 本金 × 理论返还率。
-              这是按市场概率的数学期望，不是真实命中率。
-            </FormulaNote>
-            {hasPendingLeg ? (
-              <Text variant="small" color={colors.amber} style={styles.warning}>
-                你选了复核中的场次。它们的模型置信还没齐，组合期望只代表官方赔率，不代表已过三关。
-              </Text>
+        {reportOpen ? (
+          <View
+            style={styles.report}
+            onLayout={(event) => {
+              reportY.current = event.nativeEvent.layout.y;
+              if (pendingScroll.current) {
+                pendingScroll.current = false;
+                requestAnimationFrame(scrollToReport);
+              }
+            }}
+          >
+            {check.isPending ? (
+              <CardSkeleton />
+            ) : check.isError ? (
+              <ErrorState message={errorText(check.error)} onRetry={runCheck} />
+            ) : report ? (
+              <>
+                <ParlayReport data={report} oddsFormat={oddsFormat} />
+                <View style={styles.actions}>
+                  <Button label="复制组合账单" variant="secondary" icon="copy-outline" onPress={copy} fullWidth />
+                  <Button label="去今日在售" variant="ghost" onPress={() => router.push("/tools/on-sale")} fullWidth />
+                </View>
+              </>
             ) : null}
-            {legs.length >= 4 ? (
-              <Text variant="small" color={colors.amber} style={styles.warning}>
-                4 腿组合的方差很高：单腿 60% 的判断，四腿全中只有约 13%。这是结构，不是运气。
-              </Text>
-            ) : null}
-            <View style={styles.actions}>
-              <Button label="复制组合账单" variant="secondary" icon="copy-outline" onPress={copy} fullWidth />
-              <Button label="去今日在售" variant="ghost" onPress={() => router.push("/tools/on-sale")} fullWidth />
-            </View>
-          </>
+          </View>
         ) : (
           <Text variant="small" color={colors.muted} style={styles.hint}>
-            至少选 1 腿才会出现结果。建议从 2–3 腿开始。
+            {legs.length === 0
+              ? "先选 2–4 场，再点底部「开始体检」。"
+              : legs.length < 2
+                ? "再选 1 场，底部按钮就会亮起。"
+                : `已选好，${modelCovered}/${legs.length} 腿有模型；点底部「开始体检」。`}
           </Text>
         )}
       </ScrollView>
+
+      <View style={[styles.ctaBar, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
+        <View style={styles.ctaInfo}>
+          <Text variant="captionStrong">已选 {legs.length} / 4 腿</Text>
+          <Text variant="caption" color={colors.muted}>
+            {legs.length < 2
+              ? `至少 2 腿，还差 ${2 - legs.length} 场`
+              : check.isPending
+                ? "正在做四维体检…"
+                : report
+                  ? `${modelCovered}/${legs.length} 腿有模型`
+                  : "成本 / 信息 / 模型 / 结构"}
+          </Text>
+        </View>
+        <Button
+          label={legs.length < 2 ? "再选一场" : check.isPending ? "体检中…" : report ? "查看结果" : "开始体检"}
+          variant="primary"
+          disabled={legs.length < 2 || check.isPending}
+          onPress={startReport}
+          style={styles.ctaButton}
+        />
+      </View>
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.md, paddingBottom: spacing.x7 },
+  content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.md, paddingBottom: 120 },
   title: { marginTop: spacing.xs },
   lead: { marginTop: spacing.sm, lineHeight: 22 },
   list: { gap: spacing.sm, marginTop: spacing.x4 },
@@ -264,9 +444,29 @@ const styles = StyleSheet.create({
   oddsSelected: { backgroundColor: colors.green, borderColor: colors.green },
   pressed: { opacity: 0.7 },
   label: { marginTop: spacing.x4, marginBottom: spacing.xs },
+  planBox: { gap: spacing.sm, marginTop: spacing.base, padding: spacing.base,
+    borderRadius: radii.lg, borderWidth: 1, borderColor: colors.line,
+    backgroundColor: colors.surface },
   warning: { marginTop: spacing.sm, lineHeight: 18 },
   actions: { marginTop: spacing.base, gap: spacing.sm },
-  hint: { marginTop: spacing.base },
+  hint: { marginTop: spacing.base, lineHeight: 19 },
+  report: { marginTop: spacing.x4, gap: spacing.xs },
+  ctaBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingHorizontal: layout.pagePadding,
+    paddingTop: spacing.sm,
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+  },
+  ctaInfo: { flex: 1, gap: 1 },
+  ctaButton: { minWidth: 132 },
   empty: { lineHeight: 22 },
   emptyBox: { marginTop: spacing.x4, gap: spacing.base, alignItems: "flex-start" },
 });

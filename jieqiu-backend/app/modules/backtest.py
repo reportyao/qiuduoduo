@@ -27,7 +27,6 @@ def evaluate(df: pd.DataFrame, as_of_start: str, as_of_end: str,
     end = pd.Timestamp(as_of_end).date()
 
     losses, hits, n = [], 0, 0
-    buckets: dict[int, list[int]] = {i: [0, 0] for i in range(10)}  # [predicted_sum_hits? -> (sum_pred, n, sum_actual)]
     cal = {i: [0.0, 0, 0] for i in range(10)}  # sum_pred, n, sum_actual
 
     for d in sorted({x for x in day.unique() if start <= x <= end}):

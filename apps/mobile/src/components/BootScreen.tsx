@@ -27,7 +27,7 @@ export function BootScreen() {
           resizeMode="cover"
         />
       </Animated.View>
-      <Text variant="h3" style={styles.title}>解球</Text>
+      <Text variant="h3" style={styles.title}>球多多</Text>
       <Text variant="small" color={colors.muted}>正在校准今日数据…</Text>
     </View>
   );

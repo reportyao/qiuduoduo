@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ...config import get_settings
-from ...models import (AssistantState, Event, MatchResult, SPMatch, Verdict,
+from ...models import (AssistantState, MatchResult, SPMatch, Verdict,
                       VerdictRevision)
 from .events import emit_event
 

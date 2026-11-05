@@ -6,7 +6,7 @@
 
 迁移顺序：
 
-1. ~~完成 Alembic baseline~~ **已完成**：`migrations/versions/71af760b1e99_baseline_w8_assistant_runtime.py` 覆盖当前 24 张表，`20261104_02_bet_sp.py` 增加注单赔率快照、`20261104_03_hot_path_indexes.py` 增加热路径与部分唯一索引、`20261104_04_settled_index.py` 增加结算扫描索引；当前 head 为 `20261104_04`，已在空库验证 `upgrade head`、`downgrade base` 往返与 `alembic check`；
+1. ~~完成 Alembic baseline~~ **已完成**：baseline `71af760b1e99` 覆盖 W8 时点 24 张表；后续 `20261104_02`–`20261105_12` 增加注单赔率快照、热路径索引、结算索引、interaction_events、API-Football 5 表、LLM 3 表、人设 4 表、推荐主链 4 表、管理账号/审计 2 表。当前 head 为 `20261105_12`，ORM 共 43 张表；已在空库验证 `upgrade head`、`downgrade base` 往返与 `alembic check`；
 2. 将 `jieqiu-backend/app` 迁到 `services/api/app`；
 3. 保留 deploy/worker/cron 配置；
 4. 旧目录保留一个 release 周期后删除。
@@ -20,6 +20,6 @@
 当前实现事实（2026-11-04）：
 
 - 运行目录仍是 `jieqiu-backend/`；`services/api/` 是迁移目标，不是当前生产路径。
-- OpenAPI 94 路径 / 107 方法；后端测试 182。
+- OpenAPI 128 路径 / 143 方法；后端测试 245；Alembic head `20261105_12`。
 - 生产默认切 Postgres 仍需设置 `JQ_PROD_DATABASE_URL`；未设置时是旧 SQLite 兼容模式。
-- 全栈深审记录：[docs/reviews/2026-11-04-full-stack.md](../docs/reviews/2026-11-04-full-stack.md)。
+- 全栈深审记录（历史快照）：[docs/reviews/2026-11-04-full-stack.md](../docs/reviews/2026-11-04-full-stack.md)。

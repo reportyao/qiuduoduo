@@ -216,6 +216,7 @@ export function adaptStream(value: unknown): StreamResponse {
         gates: item.gates ? gateMap(item.gates) : null,
         status: nullableString(item.status),
         verdictId: nullableString(item.verdict_id),
+        coverage: item.coverage ? adaptCoverage(item.coverage) : null,
       };
     }),
     postmortems: array(raw.postmortems).map((entry): PostmortemSummary => {
@@ -350,8 +351,19 @@ export function adaptOnSale(value: unknown): OnSaleItem[] {
       gates: item.gates ? gateMap(item.gates) : null,
       status: nullableString(item.status),
       verdictId: nullableString(item.verdict_id),
+      coverage: item.coverage ? adaptCoverage(item.coverage) : null,
     };
   });
+}
+
+function adaptCoverage(value: unknown): OnSaleItem["coverage"] {
+  const raw = record(value);
+  return {
+    score: Number(raw.score ?? 0),
+    level: string(raw.level ?? "unknown"),
+    deepEligible: Boolean(raw.deep_eligible),
+    missing: stringArray(raw.missing),
+  };
 }
 
 export function adaptStringList(value: unknown): string[] {

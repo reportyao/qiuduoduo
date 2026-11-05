@@ -1,12 +1,12 @@
 """W8 端点：法律披露 / 提审检查单 / 冻结基线 / App 版本(OTA)。"""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from .console import require_console
+from ..models import AdminAudit
+from ..modules import admin_auth
 from ..modules.compliance import (DISCLOSURE, freeze_report, review_checklist,
                                   scan_text, write_freeze_baseline)
 
@@ -32,7 +32,6 @@ def legal_text(region: str = "cn"):
 @router.get("/app/version")
 def app_version():
     """OTA/最低版本判定（App 启动时调用）。"""
-    from ..config import get_settings
     return {
         "api": "0.8.0-w8+assistant",
         "min_app_version": "0.5.0",
@@ -44,13 +43,13 @@ def app_version():
 
 @router.get("/review/checklist")
 def review_checklist_api(request: Request, db: Session = Depends(get_db),
-                         _: None = Depends(require_console)):
+                         _: admin_auth.AdminPrincipal = Depends(admin_auth.require_role("viewer"))):
     from ..main import app as fastapi_app
     return review_checklist(db, fastapi_app)
 
 
 @router.get("/review/banned-words/scan")
-def review_scan_text(text: str, _: None = Depends(require_console)):
+def review_scan_text(text: str, _: admin_auth.AdminPrincipal = Depends(admin_auth.require_role("viewer"))):
     """即席扫描：给一段商店文案，返回是否可提交（提审前自检工具）。"""
     hits = scan_text(text)
     return {"ok": not hits, "hits": hits,
@@ -58,15 +57,21 @@ def review_scan_text(text: str, _: None = Depends(require_console)):
 
 
 @router.post("/review/freeze/adopt")
-def freeze_adopt(_: None = Depends(require_console)):
+def freeze_adopt(request: Request, db: Session = Depends(get_db),
+                 principal: admin_auth.AdminPrincipal = Depends(admin_auth.require_role("admin"))):
     """采纳当前路由集合为冻结基线（W8 开始时执行一次）。"""
     from ..main import app as fastapi_app
     n = write_freeze_baseline(fastapi_app)
+    db.add(AdminAudit(actor=principal.username, role=principal.role,
+                      action="freeze.adopt", target_type="freeze",
+                      target_id="baseline", after_json={"routes": n},
+                      ip=request.client.host if request.client else ""))
+    db.commit()
     return {"adopted": True, "routes": n,
             "note": "冻结期新增端点将被 /review/freeze 标记为违规"}
 
 
 @router.get("/review/freeze")
-def freeze_status(_: None = Depends(require_console)):
+def freeze_status(_: admin_auth.AdminPrincipal = Depends(admin_auth.require_role("viewer"))):
     from ..main import app as fastapi_app
     return freeze_report(fastapi_app)

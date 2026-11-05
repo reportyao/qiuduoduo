@@ -40,7 +40,7 @@ export function adaptMe(value: unknown): MeProfile | null {
   const streak = record(raw.streak);
   return {
     userId,
-    displayName: string(raw.display_name ?? raw.displayName, "解球用户"),
+    displayName: string(raw.display_name ?? raw.displayName, "球多多用户"),
     persona: normalizePersona(raw.persona),
     oddsFormat: oddsFormat(raw.odds_format ?? raw.oddsFormat),
     locale: string(raw.locale, "zh"),

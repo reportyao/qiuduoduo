@@ -1,4 +1,4 @@
-# 「解球」技术开发文档 v2.1 · 整合定稿
+# 「球多多」技术开发文档 v2.1 · 整合定稿（技术标识仍为 jieqiu）
 
 | 项目 | 内容 |
 |---|---|
@@ -9,6 +9,10 @@
 > 情报层（全量事实卡 / 情报简报 / AI 研判 / 点播与配额）的完整设计见 [Intelligence-Layer-v1.0.md](Intelligence-Layer-v1.0.md)。
 
 > AI 助理运行时（监控/推送/记忆）P0 已实现：events / notifications / watch_targets / push_tokens / notify_settings / inbox / worker / 控制台助理页；详见 [Assistant-Runtime-v1.0.md](Assistant-Runtime-v1.0.md) §18。
+
+> 2026-11-05 产品口径修订：允许经 AI 复核的方向判断/参考组合/串关参谋；免费付费、AI 复核流水线与文案规则见 [docs/recommendation-product.md](docs/recommendation-product.md)。
+>
+> 2026-11-04 目标补充：首页“数据脉搏 → 选一场 → 聚焦一场 → 客观情报 → 动作按钮”的交互与 focus/pulse/interactions API、数据表、管理后台设计见 [docs/focused-decision-flow.md](docs/focused-decision-flow.md)；多模型 fast/deep 路由、预算与 `/console/ai` 见 [docs/llm-gateway.md](docs/llm-gateway.md)。前端“选中→回首页聚焦”已实现；后端 focus/pulse/interactions 已实现，情报表仍为设计稿；当前 OpenAPI 为 123/138。
 
 ---
 
@@ -86,20 +90,18 @@ Expo App ──HTTPS──> 腾讯云 VPS: uvicorn(api) ──localhost──> P
 ### 3.1 结构（Expo Router：底部四 Tab，三端同构）
 
 ```
-apps/app (Expo)
-  app/(tabs)/home.tsx          # 首页=判决流
-  app/(tabs)/tools.tsx         # 工具宫格（9 项）
-  app/(tabs)/records.tsx       # 记录（票单/周报/账本/记忆/导出）
-  app/(tabs)/me.tsx            # 我的（设置六组）
-  app/verdict/[id].tsx  app/matches/[id]/cost|why-not|evidence
-  app/parlay/[step].tsx        # 体检流程 build→report→plans→confirm
-  app/matches/[id]/live.tsx    # 实况卡
-  app/gate.tsx  app/auth/login.tsx  app/me/{persona,compliance,subscription,privacy}
+apps/mobile (Expo)
+  app/(tabs)/{index,tools,records,me}.tsx   # 首页流 / 工具 / 记录 / 我的
+  app/verdict/[id].tsx  app/match/[id].tsx
+  app/tools/{parlay,on-sale,why-not,rake,stake,odds,break-even}.tsx
+  app/settings/{persona,compliance,preferences,notifications,privacy,profile,about,memories}.tsx
+  app/{assistant,inbox,watch,onboarding,legal,minor,paused}.tsx
+  app/records/{ledger,weekly}.tsx  app/share/[id].tsx  app/auth/login.tsx
   components/                  # 设计系统（下表）
   lib/{api,auth,rc,jpush,i18n,money,odds,time}/
 packages/web (Next.js 静态)      # 公开账本 + 落地页 + 免费工具
 ```
-**跨端约定**：本 HTML 演示（jieqiu-app/index.html，**已部署 http://43.128.24.244:8899**，独立 systemd 服务 jieqiu-static，静态目录 /var/www/jieqiu）= 三端唯一 UI 规格基准；RN 按 1:1 组件映射；底部 TabBar 用 Expo Router `(tabs)` + 平台 safe-area；图标/间距/圆角令牌与 H5 共用一份 tokens.json。**吉祥物资产 `mascot-gen.png`（2048×1152 三联生成图）三端共用**：CSS sprite `--sx` 0/50/100% 切人设，正式版替换为三张透明 PNG。
+**跨端约定**：旧 HTML 演示（jieqiu-app/index.html）只作设计参考，不再作为验收基准；当前生产前端是 `apps/mobile/`，以 Expo Router 路由与 `src/theme/tokens.ts` 为准。底部 TabBar 用 Expo Router `(tabs)` + 平台 safe-area。**吉祥物资产 `mascot-gen.png`（2048×1152 三联生成图）三端共用**：CSS sprite `--sx` 0/50/100% 切人设，正式版替换为三张透明 PNG。
 
 ### 3.2 设计系统组件（19 个）
 
@@ -135,12 +137,12 @@ next-intl 等价物 `i18n-js`+ICU；三语言解耦（UI/内容/球队名）；�
 
 ## 4. 后端模块（FastAPI）
 
-`auth(SMS 层) / users / ingest / align / model / market / verdict(封存结算) / narrate(变体池) / messaging(卡片+消息工厂) / push(JPush·Expo·Email 适配+频控) / billing(RC webhook+微信) / compliance / i18n(glossary) / risk(防薅/水印) / audit(哈希链) / **collector**(竞彩 SP 采集，已上线·本机家宽运行) / **moderation**(UGC+截图审核) / **reconciliation**(支付对账) / **leaderboard**(公开账本聚合+周报) / **feature_flags**(PostHog 封装) / **editor_console**(编辑台 API：变体池 CRUD+精选工单+日报)`
+`auth(SMS 层) / users / ingest / align / model / market / verdict(封存结算) / narrate(模板+人设缓存) / persona_llm(模型池/翻译) / persona_registry(profile/slots) / messaging(卡片+消息工厂) / push(JPush·Expo·Email 适配+频控) / billing(RC webhook+微信) / compliance / i18n(glossary) / risk(防薅/水印) / audit(哈希链) / **collector**(竞彩 SP 采集，已上线·本机家宽运行) / **moderation**(UGC+截图审核) / **reconciliation**(支付对账) / **leaderboard**(公开账本聚合+周报) / **feature_flags**(PostHog 封装) / **editor_console**(编辑台 API：变体池 CRUD+精选工单+日报)`
 
 关键管道：
 
 - **settle 管道**：逐腿判定 → 归因 → `match_facts`（含 what-if 穷举 N≤4）→ 消息工厂（模板+槽位）→ messages 落库 → push 队列
-- **变体池**：每晚 LLM 批量生成人设变体（~几百次调用），数字白名单+术语校验，兜底纯模板；用户渲染=哈希选变体+填槽
+- **人设文案**：当前 `persona_cli warm` 每日 19:05 按日预生成三套 persona 到 `persona_copy_cache`；narrate 读缓存，miss 回退模板。`narrative_pool` 的 10×30×10 变体池仍是目标态，未建。
 - **实况卡**：live feed → timeline 追加；卡片可见期 30s 轮询 + 关键事件 silent push（不亮屏不锁屏不计频控）
 
 ---
@@ -155,7 +157,7 @@ next-intl 等价物 `i18n-js`+ICU；三语言解耦（UI/内容/球队名）；�
 > `/console/variants`（三人设模板 + A/Q/X 精选状态机，进程内存，v1.5 换 narrative_pool 表）·
 > `/console/ops`（环境/数据源/cron 日志指引/快捷命令）。
 > 后端硬化同批上线：令牌桶限流（读 120/min、写 30/min/IP，429+Retry-After）、X-Request-ID + JSON 访问日志、
-> python-multipart 依赖补齐。当前全量 **182 tests**，git 版本控制就位。
+> python-multipart 依赖补齐。当前全量 **245 tests**，git 版本控制就位。
 
 ### 分层架构
 
@@ -263,9 +265,9 @@ reconciliation(id, provider, external_id, amount NUMERIC, status, checked_at TIM
 
 ---
 
-## 6. API（v1 设计清单 41 个；当前实现 94 路径 / 107 方法）
+## 6. API（v1 设计清单 41 个；当前实现 123 路径 / 138 方法）
 
-> 2026-11-04 对账：本节是 v1 设计清单，不是当前完整契约。当前契约以 `packages/api-client/openapi.json` 为准；已实现目录/成本/证据/避雷/水位/日历/SP 异动/哨兵/`/me/comfort`/`/verdicts/{id}/react`/`/share/card` 等。仍未实现：parlay 服务端、vision OCR、compliance/gate/under18、billing/subscription、真实 live feed 与 goal-alert、console JSON 工单。详见 `docs/reviews/2026-11-04-api-audit.md`。
+> 2026-11-05 对账：本节是 v1 设计清单，不是当前完整契约。当前契约以 `packages/api-client/openapi.json` 为准；已实现目录/成本/证据/避雷/水位/日历/SP 异动/哨兵/`/me/comfort`/`/verdicts/{id}/react`/`/share/card`、串关四维体检 `/tools/parlay/check`、组合参谋 `/tools/parlay/plan`、`/personas` 与 `/console/plans|personas`。仍未实现：出票/确认、vision OCR、compliance/gate/under18、billing/subscription、真实 live feed 与 goal-alert、console JSON 工单。详见 `docs/reviews/2026-11-04-api-audit.md`。
 
 **Auth/账户（9）**：`POST /auth/sms/code` · `POST /auth/login` · `POST /auth/oauth/{google,apple}` · `POST /auth/refresh|logout` · `POST /gate/verify` · `GET|PATCH /me` · `GET /me/export` · `DELETE /me` · `POST /devices`
 
@@ -275,7 +277,7 @@ reconciliation(id, provider, external_id, amount NUMERIC, status, checked_at TIM
 **用户数据（6）**：`POST|GET|DELETE /memories` · `GET /bets|/bets/{id}/postmortem` · `GET /weekly-report` · `PATCH /me/persona`（人设切换）
 
 **实时与交互补全（本次审计新增 9 个）**：`GET /matches/{id}/live`（实况卡：timeline+走盘计算）· `POST /matches/{id}/goal-alert`（进球提醒开关）· `GET /parlay/{id}/plans`（方案对比）· `POST /parlay/{id}/confirm`（拆单出票）· `POST /me/rest`（今天不看了）· `PATCH /me/discipline`（连败保护/连败关切）· `GET /analysis-log?match_id=`（分析日志弹层）· `POST /me/under18-lock`（未成年锁定）· `GET /me/comfort`（买后安抚卡内容，也可流内推）
-**编辑台（当前实现：密码 + HttpOnly cookie + 可选 IP 白名单；HTML 页面，非 JWT JSON API）**：`GET /console/variants` · `POST /console/variants`（A/X/Q，进程内）· `GET /console`（日报）· `GET /console/alerts`；`/console/daily`、`/console/tickets`、`/console/variants/{id}/decide` 仍是 v1.5 目标，未实现。
+**编辑台（当前实现：密码 + HttpOnly cookie + 可选 IP 白名单；HTML 页面，非 JWT JSON API）**：`GET /console/variants` · `POST /console/variants`（A/X/Q，进程内）· `GET /console`（日报）· `GET /console/alerts` · `GET /console/personas`（模型池/人设/槽位）· `GET /console/plans`（组合预览）；`/console/daily`、`/console/tickets`、`/console/variants/{id}/decide`、`/console/recommendations` 仍是 v1.5 目标，未实现。
 **商业化/合规（8）**：`POST /billing/rc/webhook|wechat/notify` · `GET /subscription` · `POST /compliance/{self-exclusion,self-assessment,limits}` · `POST /push/preferences` · `GET /push/health`（权限状态）
 
 **规范**：RFC 7807；`Idempotency-Key` 全 POST；免登录白名单（cost/evidence/why-not/ledger/stream.public/gate/on-sale）；限速 chat 20/h、验证码 5/h/IP；**深链路由表随构建配置发布（§3.6）**；错误码→UI 映射：每个 problem+json 类型对应一个预置文案与重试动作，未登记类型兜底"出了点问题，正在修"。
@@ -290,7 +292,7 @@ reconciliation(id, provider, external_id, amount NUMERIC, status, checked_at TIM
 | 结论发布 | T-3h 动态（用户关注联赛最早停售）；调度器按用户时区分桶 |
 | 静默推送 | JPush/Expo content-available；唤醒刷新实况卡；不计频控 |
 | 频控 | messages 触达层统一执行：追人 ≤2/日、静默时段、类型 opt-out、(user,kind,match) 唯一 |
-| 变体池 | narrate 每晚批跑：10 模板×30 场×10 变体 ×3 人设（理性专家/感性老炮/萌妹萝莉），temperature 0.7–0.9 仅用于灵魂层；白名单+术语校验，兜底模板；变体按 (template, match, locale, persona) 缓存 |
+| 人设文案 | **当前**：`persona_cli warm` 每日 19:05 对当日 verdict 生成三种 persona 文案，写 `persona_copy_cache`；narrate 读缓存，miss 走模板。**目标态**：10 模板×30 场×10 变体 ×3 人设的 `narrative_pool` 尚未建 |
 | 人设卡 | 每人设一张 prompt 卡（称呼/口头禅库/情绪规则/必含/禁区/长度 + **3–5 条人手写 few-shot 金句**——灵魂来自示例不是指令）；结构层（数字/结论）与灵魂层（说法）分离：LLM 自由度只在"怎么说" |
 | 梗库 | `memes(id, text, persona, scene[], expires_at, score, source)`——梗带 TTL（3 个月无好评自动退役）、用户评分、注入 prompt；与禁用词扫描联动 |
 | 编辑台 | 每晚生成→四道闸（白名单/禁用词/出戏检测 LLM 盲评/查重 embedding）→**人工精选 ~120 条入池（OPC 每晚约 10 分钟，编辑台工单）**——品味即护城河 |

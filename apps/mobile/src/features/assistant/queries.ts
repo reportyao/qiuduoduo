@@ -4,11 +4,16 @@ import { callApi } from "@/lib/callApi";
 import { adaptChat } from "@/domain/accountAdapters";
 import type { ChatCard } from "@/domain/types";
 
+// 进程内匿名会话：只用于 LLM 私有缓存隔离，不落盘、不含设备标识。
+const CHAT_SESSION = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
 export function useChatMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (text: string): Promise<ChatCard> => {
-      const raw = await callApi(api.client.POST("/chat", { body: { text } }));
+      const raw = await callApi(api.client.POST("/chat", {
+        body: { text, session_id: CHAT_SESSION },
+      }));
       return adaptChat(raw);
     },
     onSuccess: (card) => {

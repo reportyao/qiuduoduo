@@ -1,5 +1,7 @@
 # 全项目代码复审第二轮（2026-11-04）
 
+> **历史快照（2026-11-04）**：本文的测试数/路径数/结论反映当时状态，不是当前事实。当前事实见 [docs/README.md](../README.md)：251 tests / 128 路径 / 143 方法 / Alembic `20261105_12`。
+
 范围：`jieqiu-backend`、`apps/mobile`、`packages/api-client`、`sp-collector`；在上一轮全栈深审之后继续修剩余并发/资源/边界问题。
 
 ## 本轮修复
@@ -29,8 +31,8 @@
 
 ## 验证
 
-- 后端：**182 passed**
-- Alembic：空库 `upgrade head` 到 `20261104_04`，`alembic check` 无漂移
+- 当时后端：**182 passed**（当前 246）
+- 当时 Alembic：空库 `upgrade head` 到 `20261104_04`，`alembic check` 无漂移
 - 前端：typecheck / ESLint / **20 Vitest** 通过
 - Android Hermes bundle：**3.61 MB `.hbc`** 成功
 

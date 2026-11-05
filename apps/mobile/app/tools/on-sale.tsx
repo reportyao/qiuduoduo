@@ -23,7 +23,7 @@ import { countdownText, formatTime, pct, tradeDateCnFromKickoff } from "@/lib/fo
 import { useNow } from "@/lib/useNow";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 
-type Filter = "all" | "single" | "promoted" | "screening";
+type Filter = "all" | "single" | "promoted" | "screening" | "covered";
 
 export default function OnSaleScreen() {
   const router = useRouter();
@@ -42,6 +42,7 @@ export default function OnSaleScreen() {
       if (filter === "single") return item.single;
       if (filter === "promoted") return item.status === "promoted";
       if (filter === "screening") return item.status === "screening";
+      if (filter === "covered") return (item.coverage?.score ?? 0) >= 70;
       return true;
     });
   }, [filter, query.data]);
@@ -93,6 +94,7 @@ export default function OnSaleScreen() {
             ["single", "单关"],
             ["promoted", "过三关"],
             ["screening", "复核中"],
+            ["covered", "覆盖足"],
           ] as [Filter, string][]).map(([key, label]) => (
             <Chip key={key} label={label} selected={filter === key} onPress={() => setFilter(key)} />
           ))}
@@ -131,6 +133,7 @@ export default function OnSaleScreen() {
                   <View style={styles.metaRow}>
                     <Text variant="caption" color={colors.muted}>
                       {countdownText(item.saleClose, now)}停售 · {item.rake != null ? `抽水 ${pct(item.rake)}` : "尚未复核"}
+                      {item.coverage ? ` · 覆盖 ${item.coverage.score}` : ""}
                     </Text>
                     {item.single ? <Chip label="单关" tone="green" /> : null}
                   </View>

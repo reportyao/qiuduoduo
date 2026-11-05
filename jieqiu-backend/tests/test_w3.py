@@ -18,6 +18,7 @@ from app.modules.gates import (best_pick, breakeven_prob, divergence,
                                model_gate, price_gate, shrink_to_market)
 from app.modules.verdict import build_verdicts
 from tests.conftest import future_kickoff, today_cn
+from app.modules.timeutil import trade_date_now
 
 NOW = "2026-11-03 19:02:00"
 
@@ -145,7 +146,7 @@ def test_full_promotion_pipeline(db, client, monkeypatch, tmp_path):
                       retrieved_at=today_cn() + "T12:00:00+00:00"))
     db.commit()
 
-    vs = build_verdicts(db, today_cn(), NOW)
+    vs = build_verdicts(db, trade_date_now(), NOW)
     assert len(vs) == 1
     v = vs[0]
     assert v.gates["price"]["result"] == "pass"
@@ -160,7 +161,7 @@ def test_full_promotion_pipeline(db, client, monkeypatch, tmp_path):
     assert any("DC v1.1" in e["t"] for e in ev)
 
     # /stream 出 promoted；why-not 报 promoted
-    body = client.get("/stream").json()
+    body = client.get("/stream", params={"date": trade_date_now()}).json()
     assert body["stats"]["promoted"] == 1 and len(body["verdicts"]) == 1
     r = client.get(f"/matches/2042801/why-not").json()
     assert r["status"] == "promoted"
@@ -206,6 +207,6 @@ def test_market_gate_pending_without_intl(db, client):
                         sp_h=2.10, sp_d=3.30, sp_a=3.60,
                         captured_at=today_cn() + "T12:00:00+08:00"))
     db.commit()
-    vs = build_verdicts(db, today_cn(), NOW)
+    vs = build_verdicts(db, trade_date_now(), NOW)
     assert vs[0].status == "screening"  # 价过 · 市单源 pending · 模 pending
     assert vs[0].gates["market"]["result"] == "pending_data"

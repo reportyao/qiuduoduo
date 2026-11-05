@@ -14,35 +14,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
-import { Avatar, Button, Card, Chip, Icon, Text, useToast } from "@/components/ui";
-import type { ChatCard } from "@/domain/types";
+import { Chip, Icon, Text, useToast } from "@/components/ui";
 import { useChatMutation } from "@/features/assistant/queries";
+import { ChatCardContent, type ChatMessage } from "@/features/assistant/components/ChatCardContent";
 import { useMemoryMutations } from "@/features/account/queries";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { errorText } from "@/lib/errors";
 import { colors, fontFamily, layout, radii, shadows, spacing } from "@/theme/tokens";
 
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  card?: ChatCard;
-  error?: boolean;
-}
-
 const SUGGESTIONS = ["今晚买啥", "为什么不推", "复盘", "记住我的主队是曼城"];
-const INTENT_LABEL: Record<string, string> = {
-  buy_tonight: "今日结论",
-  why_not: "死因",
-  postmortem: "复盘",
-  memory_write: "记忆",
-  memory_query: "记忆",
-  rest: "休息",
-  protection: "连败保护",
-  lookup_team: "球队查询",
-  lookup_match: "比赛查询",
-  fallback: "可以这样问",
-};
 
 export default function AssistantScreen() {
   const router = useRouter();
@@ -124,13 +104,10 @@ export default function AssistantScreen() {
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.greeting}>
-            <Avatar source={meta.avatar} size={36} />
-            <View style={styles.greetingBubble}>
-              <Text variant="small" color={colors.ink} style={styles.bubbleText}>
-                {copy.chatGreeting}
-              </Text>
-            </View>
+          <View style={styles.greetingBubble}>
+            <Text variant="small" color={colors.ink} style={styles.bubbleText}>
+              {copy.chatGreeting}
+            </Text>
           </View>
 
           <View style={styles.chips}>
@@ -147,13 +124,13 @@ export default function AssistantScreen() {
                 </View>
               </View>
             ) : (
-              <AssistantBubble
-                key={message.id}
-                message={message}
-                confirmed={confirmedConflicts.includes(message.id)}
-                savingMemory={saveMemory.isPending}
-                onOpenVerdict={(id) => router.push({ pathname: "/verdict/[id]", params: { id } })}
-                onConfirmMemory={(key, value) => {
+              <View key={message.id} style={styles.assistantBubble}>
+                <ChatCardContent
+                  message={message}
+                  confirmed={confirmedConflicts.includes(message.id)}
+                  savingMemory={saveMemory.isPending}
+                  onOpenVerdict={(id) => router.push({ pathname: "/verdict/[id]", params: { id } })}
+                  onConfirmMemory={(key, value) => {
                   if (saveMemory.isPending) return;
                   saveMemory.mutate(
                     { key, value, confirm: true },
@@ -175,8 +152,9 @@ export default function AssistantScreen() {
                       onError: (e) => toast.show(errorText(e), "error"),
                     },
                   );
-                }}
-              />
+                  }}
+                />
+              </View>
             ),
           )}
 
@@ -221,97 +199,10 @@ export default function AssistantScreen() {
   );
 }
 
-function AssistantBubble({
-  message,
-  confirmed,
-  savingMemory,
-  onOpenVerdict,
-  onConfirmMemory,
-}: {
-  message: ChatMessage;
-  confirmed: boolean;
-  savingMemory: boolean;
-  onOpenVerdict: (id: string) => void;
-  onConfirmMemory: (key: string, value: string) => void;
-}) {
-  const card = message.card;
-  return (
-    <View style={styles.assistantRow}>
-      <View style={styles.assistantBubble}>
-        {card?.type ? (
-          <Text variant="overline" color={colors.green}>{INTENT_LABEL[card.type] ?? "解球"}</Text>
-        ) : null}
-        <Text
-          variant="small"
-          color={message.error ? colors.danger : colors.ink}
-          style={styles.bubbleText}
-        >
-          {message.text}
-        </Text>
-
-        {card?.memories && card.memories.length > 0 ? (
-          <View style={styles.inner}>
-            {card.memories.map((memory) => (
-              <View key={memory.key} style={styles.memoryRow}>
-                <Text variant="caption" color={colors.muted}>{memory.key}</Text>
-                <Text variant="captionStrong" style={styles.flex}>{memory.value}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
-
-        {card?.protection ? (
-          <Chip
-            label={`连败 ${card.protection.streak} 场 · ${card.protection.active ? "保护中" : "未触发"}`}
-            tone={card.protection.active ? "danger" : "green"}
-          />
-        ) : null}
-
-        {card?.deadGate ? <Chip label={`死因：${card.deadGate}`} tone="amber" /> : null}
-
-        {card?.conflict && !confirmed ? (
-          <Card tone="amber" style={styles.conflict}>
-            <Text variant="caption" color={colors.amber}>
-              我记的是「{card.conflict.existing}」，你现在说是「{card.conflict.incoming}」。
-            </Text>
-            <Button
-              label="确认覆盖"
-              variant="secondary"
-              size="sm"
-              loading={savingMemory}
-              disabled={savingMemory}
-              onPress={() => onConfirmMemory(card.conflict!.key, card.conflict!.incoming)}
-            />
-          </Card>
-        ) : null}
-
-        {card?.postmortem ? (
-          <Card tone="green" style={styles.postmortem}>
-            <Text variant="captionStrong" color={colors.green}>{card.postmortem.attribution?.class ?? "复盘"}</Text>
-            <Text variant="caption" color={colors.muted}>{card.postmortem.attribution?.note ?? card.postmortem.whatIf}</Text>
-          </Card>
-        ) : null}
-
-        {card?.verdictId ? (
-          <Button
-            label="看完整账"
-            variant="secondary"
-            size="sm"
-            onPress={() => onOpenVerdict(card.verdictId!)}
-            style={styles.cardButton}
-          />
-        ) : null}
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.sm, paddingBottom: spacing.base },
-  greeting: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
   greetingBubble: {
-    flex: 1,
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
     borderTopLeftRadius: 6,
@@ -330,7 +221,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
   },
-  assistantRow: { alignItems: "flex-start", marginTop: spacing.sm },
   assistantBubble: {
     maxWidth: "92%",
     backgroundColor: colors.surface,
@@ -341,16 +231,6 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     gap: spacing.xs,
   },
-  inner: {
-    backgroundColor: colors.bgElevated,
-    borderRadius: radii.sm,
-    padding: spacing.sm,
-    gap: 3,
-  },
-  memoryRow: { flexDirection: "row", gap: spacing.sm },
-  conflict: { padding: spacing.sm, gap: spacing.xs, borderColor: colors.amberLine },
-  postmortem: { padding: spacing.sm, gap: 2 },
-  cardButton: { alignSelf: "flex-start", marginTop: 2 },
   typing: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.base },
   inputBar: {
     flexDirection: "row",

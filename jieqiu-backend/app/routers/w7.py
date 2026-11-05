@@ -130,18 +130,18 @@ def share_page(share_id: str, db: Session = Depends(get_db)):
     return HTMLResponse(
         "<!DOCTYPE html><html lang=zh><head><meta charset=utf-8>"
         "<meta name=viewport content='width=device-width,initial-scale=1'>"
-        f"<title>解球分享卡 · {html.escape(share_id)}</title>"
+        f"<title>球多多分享卡 · {html.escape(share_id)}</title>"
         "<style>body{font-family:system-ui,sans-serif;max-width:680px;margin:0 auto;"
         "padding:28px;color:#1D2026;background:#F4F3EF;line-height:1.7}"
         "h1{font-size:20px}code,pre{font-family:ui-monospace,monospace;font-size:11px;"
         "white-space:pre-wrap;word-break:break-all;background:#fff;padding:12px;"
         "border-radius:10px;border:1px solid #E7E4DC}a{color:#0B6B4F}</style></head><body>"
-        f"<h1>解球 · 分享卡</h1><p>{text}</p>"
+        f"<h1>球多多 · 分享卡</h1><p>{text}</p>"
         f"<p><b>{html.escape(ok)}</b></p>"
         f"<p>编号 <code>{html.escape(share_id)}</code> · 算法 "
         f"{html.escape(str(verified.get('algorithm', 'sha256')))}</p>"
         f"<pre>{payload}</pre>"
-        "<p><a href='/'>解球公开账本</a> · 数据分析结果，不构成投注建议。</p>"
+        "<p><a href='/'>球多多公开账本</a> · 数据分析结果，不构成投注建议。</p>"
         "</body></html>"
     )
 

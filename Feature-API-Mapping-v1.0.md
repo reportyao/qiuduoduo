@@ -1,5 +1,7 @@
 # 前端功能 ↔ 后端接口 ↔ 数据流 完整映射 v1.0
 
+> **2026-11-05 对账：本文件是 v1 设计映射，不是当前实现清单。** 实际路径/方法以 `packages/api-client/openapi.json` 为准。已知路径迁移：`POST /parlay/check` → `POST /tools/parlay/check`；`POST /tools/parlay/plan` 已实现但为未复核预览。已实现 focus/pulse/interactions、新闻/情报动态覆盖、API-Football、人设模型池/`GET /personas`、推荐主链 `decision_snapshots/review_runs/publish`、`/admin 组合预览页|personas|recommendations`；`/parlay/{id}/report|plans|confirm`、vision、billing、compliance、goal-alert 等仍是设计。逐项状态见本文件末尾“2026-11-04 聚焦决策流接口（部分实现）”。
+
 | 项目 | 内容 |
 |---|---|
 | 范围 | UI 演示 23 视图 × 50 交互 × 46 功能点，逐项映射到后端 API / 数据表 / 后端模块 |
@@ -154,7 +156,7 @@
 | 通知设置 | 设置页 | `GET/PUT /me/notify-settings` | notify_settings | ✅ |
 | 推送注册 | Android 启动 | `POST /push/register` | push_tokens | ✅ |
 | 推送解绑 | 退出登录 | `POST /push/unregister` | push_tokens | ✅ |
-| 事件/推送运维 | 管理后台 | `GET /console/assistant`、`/console/push` | events/notifications/push_tokens | ✅ |
+| 事件/推送运维 | 管理后台 | `/admin` 运维页（事件/通知/Push） | events/notifications/push_tokens | ✅ |
 | 前端接 inbox/关注 | 首页/我的 | 上述接口 | — | ✅ 已接（mobile） |
 | 真实 JPush 厂商通道 | Android 包 | provider | push_tokens | ⏳ 凭证 |
 
@@ -178,12 +180,12 @@
 - ✅ `GET /matches/on-sale`（提前自 W3 落地，数据现成）
 - ✅ `GET /verdicts/{id}` + `/seal`（封存哈希独立复算验证通过）
 - ⏳ `GET /matches/{id}/why-not`（F6 属 W3，随三道闸引擎一起上）
-- ⏳ 其余 v0.5补 用户态 API（me/rest、under18-lock 等）待 W5 auth 后开
+- ✅ `me/rest` 与 `me/under18-lock` 已实现；服务端在 `/bets` 与 focus capabilities 强制拦截
 - 采集管道已原子上传（tmp+rename）+ seed 读前拷贝，消除 SFTP 并发半截文件风险
 
 ---
 
-*Feature-API-Mapping v1.0 原始设计口径：46 功能点 × 41 API × 20 表。当前实现以 OpenAPI 快照为准（94 路径 / 107 方法）。*
+*Feature-API-Mapping v1.0 原始设计口径：46 功能点 × 41 API × 20 表。当前实现以 OpenAPI 快照为准（128 路径 / 143 方法）。*
 
 ---
 
@@ -202,6 +204,43 @@
 
 ## 2026-11-04 API 全量补全
 
-OpenAPI 从 72 路径补到 **94 路径 / 107 方法**（含后续 `/s/{id}` 分享页与 `/console/logout`），新增：`/matches`、`/verdicts/today`、`/matches/{id}/cost|evidence|live`、`/avoid-list`、`/water-rank`、`/calendar`、`/sp/movements`、`/agents/sentinel/feed`、`/me/comfort`、`/verdicts/{id}/react`、`/share/card`，以及 `/devices`、`/push/preferences|health`、`/matches/{id}/follow`、`/memories`、`/me/persona` 兼容别名。
+OpenAPI 从 72 路径补到 **128 路径 / 143 方法**（含后续 `/s/{id}` 分享页与 `/admin/api/logout`），新增：`/matches`、`/verdicts/today`、`/matches/{id}/cost|evidence|live`、`/avoid-list`、`/water-rank`、`/calendar`、`/sp/movements`、`/agents/sentinel/feed`、`/me/comfort`、`/verdicts/{id}/react`、`/share/card`、`/tools/parlay/check`、`/tools/parlay/plan`、`/admin` 组合预览页、`/admin` 人设文案页 模型池、`/recommendations/today`、`/admin` 推荐主链页，以及 `/devices`、`/push/preferences|health`、`/matches/{id}/follow`、`/memories`、`/me/persona` 兼容别名。
 
-仍未实现的是 v1.5/外部依赖项：串关服务端、vision OCR、合规中心服务端同步、支付/订阅、真实 live feed 与进球提醒、编辑台持久化。完整审查见 [docs/reviews/2026-11-04-api-audit.md](docs/reviews/2026-11-04-api-audit.md)。
+仍未实现的是 v1.5/外部依赖项：串关服务端下注/出票（体检已实现）、vision OCR、支付/订阅、真实 live feed 与进球提醒、编辑台持久化。合规中心服务端同步已落地（年龄门/未成年/自排除/PGSI）。完整审查见 [docs/reviews/2026-11-04-api-audit.md](docs/reviews/2026-11-04-api-audit.md)。
+
+---
+
+## 2026-11-04 聚焦决策流接口（部分实现）
+
+> 目标交互与完整契约见 [docs/focused-decision-flow.md](docs/focused-decision-flow.md)。**前端“选中比赛→回首页聚焦”已实现**；`/stats/pulse`、`/matches/{id}/focus`、`/interactions` 与 后台 `/admin` 数据源/运维/模型用量/人设/推荐主链/组合预览 已实现；以下未标 ✅ 的仍为设计。当前 OpenAPI 为 **128 路径 / 143 方法**。
+
+| 功能 | 前端交互 | 目标 API | 数据表 | 状态 |
+|---|---|---|---|---|
+| 数据脉搏 | 首页顶部实时计数 | `GET /stats/pulse?date=` | sp_matches/sp_snapshots/intl_odds/model_runs/verdicts | ✅ |
+| 选比赛→首页聚焦 | 头像/选择器选中后回首页，不跳详情 | 前端 focusStore + 现有 `/matches/on-sale` | — | ✅ |
+| 单场聚焦卡 | 一次请求拿结论/闸门/情报/覆盖/动作 | `GET /matches/{id}/focus?date=` | verdicts + evidence（动态覆盖） | ✅ |
+| 选择器覆盖徽章 | 显示模型/盘口/阵容覆盖 | `GET /matches/on-sale` 已返回 `coverage`（与 focus 同一判定） | 动态覆盖（verdict/证据/lineups/standings） | ✅（前端徽章待接） |
+| 动作漏斗 | 点击/展开/自由提问上报 | `POST /interactions` | interaction_events | ✅ |
+| 串关四维体检 | 2–4 腿：成本/信息/模型/结构 | `POST /tools/parlay/check` | verdicts + focus 动态覆盖 | ✅（后端+移动端） |
+| 今日主看/方向判断 | 首页 1 条完整试读；付费其余未做 | `GET /recommendations/today`（published） | decision_snapshots + review_runs | ✅ 主链已实现；付费待做 |
+| 串关参谋·帮我配 | 保守/均衡/进取 2–3 腿组合 | `POST /tools/parlay/plan`（preview）；published plans 在 `/recommendations/today` | recommendation_plans + review_runs | ✅ 主链；组合页 published 优先，preview 回退 |
+| 推荐AI 复核流水线 | 观点/组合 AI 复核后发布 | `/admin` 推荐主链页 | decision_snapshots/recommendation_plans/review_runs | ✅ L1–L5 + 可选 LLM |
+| 付费墙/权益 | 免费 1 条；付费组合/临场/复盘 | 订阅权益（规划） | users/subscriptions | 🧩 设计 |
+| 客观情报 | 事实+来源+时间+confirmed/inferred/unknown/stale | 由 focus 动态返回 | evidence + model_runs + match_results + API-Football lineups/injuries/standings | ✅（动态） |
+| 深读解读 | 仅 eligible 场次异步生成 | `analysis_jobs` + `ai_analyses` | 新表 | ❌ |
+| 数据运营 | 覆盖率/源状态/未对齐/重跑 | `/admin` 数据源页 | 聚合 | ✅（只读） |
+| API-Football 同步 | fixtures/lineups/injuries/standings | CLI `python -m app.api_football_cli sync`；后台人工链接 | api_football_* / match_lineups / match_injuries / team_standings | ✅ |
+| API-Football 后台 | 额度/fixture 链接/数据计数 | `/admin` 运维页 | 聚合 | ✅（只读+人工链接） |
+| 聚焦漏斗 | 选择→动作→记注/WAV | `/admin` 运维页 | interaction_events | ✅（聚合） |
+| 情报审核 | 事实/推断/未知、发布/过期 | `/admin` 运维页 | 动态覆盖 | ✅（只读） |
+| 模型路由 | fast/deep、预算、用量 | `/admin` 模型用量页（只读） | llm_usage/llm_cache/llm_budgets | ✅（Phase 1；路由/熔断编辑待做） |
+| 人设翻译模型池 | 添加/排序/启停/测试/failover | `/admin` 人设文案页 | persona_llm_models / persona_copy_cache | ✅（Key 加密，预生成 CLI） |
+| 人设 profile/槽位 | 称呼/风格/字数/emoji/兜底模板 | `/admin` 人设文案页 + `GET /personas` | persona_profiles / persona_copy_slots | ✅ 表/后台；运行时回退未接 |
+| 多模型 Gateway | 登录用户 open_chat fallback → fast | 内部 `LLMGateway`；详见 [docs/llm-gateway.md](docs/llm-gateway.md) | llm_usage/llm_cache/llm_budgets | ✅（Phase 1；deep/解读待做） |
+
+**兼容约定**：
+
+- `/stream`、`/verdicts/{id}`、`/matches/{id}/why-not`、`/bets`、`/me/watch`、`/me/rest` 保持不变；focus 只做聚合，不替代详情。
+- 选中比赛不再直接跳 `/verdict/[id]` 或 `/match/[id]`；由首页 focus 承载，详情动作再跳转。
+- 新增路由后必须重新采纳 W8 freeze 基线；新增表走 Alembic，更新 `docs/database-architecture.md`。
+- 数据脉搏必须来自真实 SQL 计数；禁止前端/后端伪造。

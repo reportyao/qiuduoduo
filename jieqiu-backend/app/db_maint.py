@@ -21,7 +21,8 @@ from sqlalchemy import delete, exists, func, select
 
 from .config import get_settings
 from .db import SessionLocal
-from .models import (Event, ModelRun, Notification, RefreshToken, UserEvent,
+from .models import (Event, InteractionEvent, LLMCache, LLMUsage, ModelRun,
+                     Notification, PersonaCopyCache, RefreshToken, UserEvent,
                      VerificationCode)
 
 NOW = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -63,6 +64,19 @@ def plan(db) -> dict[str, int]:
         "user_events": _count(
             db, UserEvent,
             UserEvent.created_at < _cutoff(st.user_event_retention_days),
+        ),
+        "interaction_events": _count(
+            db, InteractionEvent,
+            InteractionEvent.created_at < _cutoff(st.interaction_retention_days),
+        ),
+        "llm_usage": _count(
+            db, LLMUsage,
+            LLMUsage.created_at < _cutoff(st.llm_usage_retention_days),
+        ),
+        "llm_cache": _count(db, LLMCache, LLMCache.expires_at < NOW),
+        "persona_copy_cache": _count(
+            db, PersonaCopyCache,
+            PersonaCopyCache.created_at < _cutoff(st.persona_copy_retention_days),
         ),
         "verification_codes": _count(
             db, VerificationCode,
@@ -112,9 +126,17 @@ def apply(db) -> dict[str, int]:
     for key, model, cutoff in (
         ("model_runs", ModelRun, st.model_run_retention_days),
         ("user_events", UserEvent, st.user_event_retention_days),
+        ("interaction_events", InteractionEvent, st.interaction_retention_days),
+        ("llm_usage", LLMUsage, st.llm_usage_retention_days),
+        ("persona_copy_cache", PersonaCopyCache, st.persona_copy_retention_days),
         ("verification_codes", VerificationCode, st.verification_code_retention_days),
     ):
         deleted[key] = _delete_batches(db, model, model.created_at < _cutoff(cutoff))
+
+    # cache_key 是主键、没有 id 列；过期缓存直接删，不参与分批。
+    cache_res = db.execute(delete(LLMCache).where(LLMCache.expires_at < NOW))
+    deleted["llm_cache"] = int(cache_res.rowcount or 0)
+    db.commit()
 
     deleted["refresh_tokens"] = _delete_batches(
         db, RefreshToken, RefreshToken.expires_at < NOW

@@ -120,6 +120,13 @@ _REQUIRED_COLUMNS = {
         "phone_verified": "BOOLEAN",
         "email_verified": "BOOLEAN",
         "deleted_at": "TIMESTAMP",
+        "age_verified": "BOOLEAN",
+        "birth_year": "INTEGER",
+        "under18_locked": "BOOLEAN",
+        "self_exclusion_until": "TIMESTAMP",
+        "self_exclusion_at": "TIMESTAMP",
+        "self_exclusion_reason": "TEXT",
+        "compliance_json": "JSON",
     },
     "memories": {
         "category": "VARCHAR(16) DEFAULT 'preference'",

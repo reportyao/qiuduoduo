@@ -62,18 +62,42 @@ def client(db):
 
 
 def today_cn() -> str:
-    return datetime.now(CN).strftime("%Y-%m-%d")
+    """当前竞彩日（05:00 前算前一日），不是日历日。"""
+    now = datetime.now(CN)
+    if now.hour < 5:
+        now -= timedelta(days=1)
+    return now.strftime("%Y-%m-%d")
 
 
 def future_kickoff(day: str, hour: int = 21, minute: int = 55) -> str:
-    """给一个比赛日 + 时间，返回 kickoff 字符串。
+    """给一个比赛日 + 时间，返回当前竞彩窗口内的未来 kickoff。
 
-    若该时刻已过，回落到次日 02:00，而不是同一时刻 +1 天：
-    竞彩日窗口是「当日 00:00 ~ 次日 04:59」，次日 21:55 会落到窗口外，
-    导致 21:55 之后跑测试时 /stream 误判 rest_day（墙钟依赖）。
+    竞彩日窗口是「当日 00:00 ~ 次日 04:59」。00:00–04:59 属于前一日窗口，
+    此时不能再返回当天 21:55（会落到窗口外），要落在今天 02:00–04:59 内。
     """
+    now = datetime.now(CN)
+    today = today_cn()
+    if day == today and now.hour < 5:
+        two = now.replace(hour=2, minute=0, second=0, microsecond=0)
+        late = now.replace(hour=4, minute=50, second=0, microsecond=0)
+        if now < two:
+            target = two
+        elif now < late:
+            target = late
+        else:
+            target = now + timedelta(minutes=1)
+        return target.strftime("%Y-%m-%d %H:%M:%S")
     d = datetime.strptime(day, "%Y-%m-%d").replace(hour=hour, minute=minute, tzinfo=CN)
-    if d <= datetime.now(CN):
-        d = (datetime.now(CN) + timedelta(days=1)).replace(
+    if d <= now:
+        d = (d + timedelta(days=1)).replace(
             hour=2, minute=0, second=0, microsecond=0)
     return d.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def admin_login(client, username: str = "admin", password: str = "dev"):
+    """登录并给 TestClient 装上 CSRF 头；后台写操作现在强制 CSRF。"""
+    response = client.post("/admin/api/login", json={
+        "username": username, "password": password})
+    assert response.status_code == 200, response.text
+    client.headers["x-csrf-token"] = response.json()["csrf_token"]
+    return response

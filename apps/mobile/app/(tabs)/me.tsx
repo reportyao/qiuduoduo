@@ -94,7 +94,7 @@ export default function MeScreen() {
     <AppScreen bottom={false}>
       <AppHeader
         title="我的"
-        subtitle="解球 · AI 助理"
+        subtitle="球多多 · AI 助理"
         showAssistant={false}
         right={
           <View>
@@ -114,7 +114,7 @@ export default function MeScreen() {
         <Card onPress={() => router.push("/settings/profile")} accessibilityLabel="编辑个人资料" style={styles.profile}>
           <Avatar source={avatarUri ? { uri: avatarUri } : meta.avatar} fallbackSource={meta.avatar} size={62} online />
           <View style={styles.profileText}>
-            <Text variant="h2">{me?.displayName || session?.displayName || "解球用户"}</Text>
+            <Text variant="h2">{me?.displayName || session?.displayName || "球多多用户"}</Text>
             <Text variant="caption" color={colors.muted}>
               {loggedIn ? me?.phone ?? me?.email ?? "手机号已绑定" : "设备账户 · 绑定手机可跨设备"}
             </Text>
@@ -206,7 +206,7 @@ export default function MeScreen() {
             onPress={() => router.push("/settings/privacy")}
           />
           <SettingsRow
-            title="关于解球"
+            title="关于球多多"
             subtitle="版本、法律文本、数据来源"
             icon="information-circle-outline"
             onPress={() => router.push("/settings/about")}

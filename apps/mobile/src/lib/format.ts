@@ -222,10 +222,12 @@ export function oddsFormatLabel(format: OddsFormat): string {
 
 export function pickDirectionLabel(pool: string, dir: string | null | undefined): string {
   if (!dir) return "未给方向";
+  // 后端接口用中文方向（主胜/平局/客胜），早期前端测试用 home/draw/away；两种都认。
+  const key = ({ 主胜: "home", 平: "draw", 平局: "draw", 客胜: "away" } as Record<string, string>)[dir] ?? dir;
   const isHhad = pool === "hhad";
-  if (dir === "home") return isHhad ? "让球主胜" : "主胜";
-  if (dir === "draw") return isHhad ? "让球平" : "平局";
-  if (dir === "away") return isHhad ? "让球客胜" : "客胜";
+  if (key === "home") return isHhad ? "让球主胜" : "主胜";
+  if (key === "draw") return isHhad ? "让球平" : "平局";
+  if (key === "away") return isHhad ? "让球客胜" : "客胜";
   return dir;
 }
 

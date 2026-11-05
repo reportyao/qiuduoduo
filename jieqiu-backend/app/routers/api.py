@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..db import get_db
+from ..features.intel import service as intel_service
 from ..models import ModelRun, SPMatch, SPSnapshot, TeamAlias, Verdict
-from ..modules.messaging import build_stream, build_stream_cached
-from ..modules.timeutil import trade_date_now, trade_window
+from ..modules.messaging import build_stream_cached
+from ..modules.timeutil import (trade_date_from_kickoff, trade_date_now,
+                                trade_window)
 
 router = APIRouter()
 
@@ -67,7 +69,7 @@ def stream(date: str | None = None, cursor: str | None = None, limit: int = 50,
            authorization: str | None = Header(default=None),
            db: Session = Depends(get_db)):
     """判决流。date 缺省 = 今天（CN）；cursor 游标分页；带 token 时附 you 块（F7/F11）。"""
-    d = date or cn_now().strftime("%Y-%m-%d")
+    d = date or trade_date_now(cn_now())
     try:
         parsed = datetime.strptime(d, "%Y-%m-%d")
     except ValueError:
@@ -86,7 +88,7 @@ def stream(date: str | None = None, cursor: str | None = None, limit: int = 50,
 def analysis_log(date: str | None = None, match_id: str | None = None,
                  limit: int = 100, db: Session = Depends(get_db)):
     """引擎分析日志（UI「引擎状态」弹层）：当日各场各闸最新一次结果，按时间倒序。"""
-    d = date or cn_now().strftime("%Y-%m-%d")
+    d = date or trade_date_now(cn_now())
     try:
         parsed = datetime.strptime(d, "%Y-%m-%d")
     except ValueError:
@@ -143,8 +145,10 @@ def matches_on_sale(db: Session = Depends(get_db)):
             latest[v.match_id] = v
     verdicts = latest
     matches = []
+    now_dt = cn_now()
     for m in rows:
         v = verdicts.get(m.match_id)
+        trade_date = v.trade_date if v else trade_date_from_kickoff(m.kickoff) or today
         matches.append({
             "match_id": m.match_id,
             "match_no": m.match_no, "league": m.league, "home": m.home, "away": m.away,
@@ -153,6 +157,8 @@ def matches_on_sale(db: Session = Depends(get_db)):
             "gates": {k: g["result"] for k, g in v.gates.items()} if v else None,
             "status": v.status if v else None,
             "verdict_id": v.id if v else None,
+            "coverage": intel_service.build_coverage_brief(
+                db, m, trade_date, v, now_dt),
         })
     return {"date": today, "count": len(rows), "matches": matches}
 
@@ -195,7 +201,7 @@ def verdict_evidence(verdict_id: str, db: Session = Depends(get_db)):
 @router.get("/matches/{match_id}/why-not")
 def why_not(match_id: str, date: str | None = None, db: Session = Depends(get_db)):
     """为什么不推（F6）：死因完全由闸门日志/判决 gates 派生，可对拍 model_runs。"""
-    d = date or cn_now().strftime("%Y-%m-%d")
+    d = date or trade_date_now(cn_now())
     m = db.get(SPMatch, match_id)
     if m is None:
         raise HTTPException(404, "match not found")

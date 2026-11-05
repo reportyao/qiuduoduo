@@ -20,7 +20,7 @@ export default function MinorScreen() {
         <Text variant="overline" color={colors.green}>未成年模式</Text>
         <Text variant="display" center style={styles.title}>只看，不参与。</Text>
         <Text variant="body" color={colors.muted} center style={styles.lead}>
-          未满 18 周岁不能购买彩票。解球只开放公开账本给你了解分析怎么做，不展示记注和个性化判断。
+          未满 18 周岁不能购买彩票。球多多只开放公开账本给你了解分析怎么做，不展示记注和个性化判断。
         </Text>
       </View>
 
@@ -51,7 +51,7 @@ export default function MinorScreen() {
         <Text variant="smallStrong">如果你在为难</Text>
         <Text variant="small" color={colors.muted} style={styles.helpText}>
           可以联系信任的成年人，或拨打当地心理援助热线。
-          {legal.data?.helpline ? ` 解球记录的求助热线：${legal.data.helpline}。` : ""}
+          {legal.data?.helpline ? ` 球多多记录的求助热线：${legal.data.helpline}。` : ""}
         </Text>
       </Card>
       <Text variant="caption" color={colors.subtle} center style={styles.footer}>

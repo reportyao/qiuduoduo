@@ -90,8 +90,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if st.env == "test":  # 测试自身要打大量请求
             request.state.request_id = uuid.uuid4().hex[:12]
             return await call_next(request)
-        if request.url.path.startswith("/console"):  # 控制台自带认证与防爆破
-            return await call_next(request)
 
         ip = request.client.host if request.client else "?"
         is_write = request.method not in ("GET", "HEAD", "OPTIONS")

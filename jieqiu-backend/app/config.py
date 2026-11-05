@@ -21,11 +21,16 @@ class Settings(BaseSettings):
     notification_retention_days: int = Field(default=180, ge=1, le=3650)
     model_run_retention_days: int = Field(default=365, ge=1, le=3650)
     user_event_retention_days: int = Field(default=180, ge=1, le=3650)
+    interaction_retention_days: int = Field(default=180, ge=1, le=3650)
+    llm_usage_retention_days: int = Field(default=180, ge=1, le=3650)
+    persona_copy_retention_days: int = Field(default=30, ge=1, le=3650)
     verification_code_retention_days: int = Field(default=7, ge=1, le=3650)
     # 时区：竞彩全部按中国标准时间
     tz_offset_hours: int = 8
     # 流里避雷展示条数
     avoid_top_n: int = 3
+    # 数据脉搏展示系数：只乘“数据点”，不乘场次/封存/准确率；营销口径可查
+    pulse_display_factor: float = Field(default=3.0, ge=1.0, le=5.0)
     # 环境标签
     env: str = "dev"
     warmup: bool = True              # 启动时后台预热模型/缓存
@@ -51,6 +56,42 @@ class Settings(BaseSettings):
     odds_api_key: str = ""
     odds_sports: str = "soccer_epl,soccer_spain_la_liga,soccer_germany_bundesliga,soccer_italy_serie_a,soccer_france_ligue_one,soccer_uefa_champs_league"
     odds_sync_min_interval_hours: float = 6.0
+    # API-Football（免费档 100 请求/日；默认留 10 次给人工排查）
+    api_football_key: str = ""
+    api_football_base_url: str = "https://v3.football.api-sports.io"
+    api_football_timeout_s: int = Field(default=20, ge=3, le=60)
+    api_football_daily_limit: int = Field(default=90, ge=1, le=100)
+    api_football_lineup_hours: int = Field(default=6, ge=1, le=24)
+    api_football_max_requests_per_run: int = Field(default=20, ge=1, le=100)
+
+    # ---- LLM Gateway（fast=免费/低成本；deep=DeepSeek；未配置 → 模板兜底）----
+    llm_fast_provider: str = "glm"
+    llm_fast_base_url: str = "https://open.bigmodel.cn/api/paas/v4"
+    llm_fast_model: str = "glm-4-flash"
+    llm_fast_api_key: str = ""
+    llm_fast_input_price_cny_per_m: float = Field(default=0.0, ge=0)
+    llm_fast_output_price_cny_per_m: float = Field(default=0.0, ge=0)
+    llm_deep_provider: str = "deepseek"
+    llm_deep_base_url: str = "https://api.deepseek.com/v1"
+    llm_deep_model: str = "deepseek-chat"
+    llm_deep_api_key: str = ""
+    llm_deep_input_price_cny_per_m: float = Field(default=2.0, ge=0)
+    llm_deep_output_price_cny_per_m: float = Field(default=8.0, ge=0)
+    llm_timeout_s: int = Field(default=20, ge=3, le=120)
+    llm_max_retries: int = Field(default=1, ge=0, le=2)
+    llm_daily_budget_cny: float = Field(default=50.0, ge=0)
+    llm_task_budget_cny: float = Field(default=20.0, ge=0)
+    llm_user_daily_calls: int = Field(default=50, ge=1, le=10000)
+    llm_cache_ttl_seconds: int = Field(default=1800, ge=0, le=86400)
+
+    # 人设语气翻译专用模型池（OpenAI-compatible；后台可增删/排序）
+    persona_llm_base_url: str = "https://tokenrhythm.studio/v1"
+    persona_llm_api_key: str = ""
+    persona_llm_enc_key: str = ""
+    persona_llm_timeout_s: int = Field(default=20, ge=3, le=120)
+    persona_llm_max_tokens: int = Field(default=800, ge=64, le=4096)
+    persona_llm_temperature: float = Field(default=0.4, ge=0, le=1.5)
+    persona_llm_cooldown_s: int = Field(default=120, ge=10, le=3600)
 
     # ---- W5 认证（方案 B：自建 JWT + 验证码 + 第三方 OAuth）----
     jwt_secret: str = ""              # 生产必填（未配置则认证端点 fail-closed）
@@ -69,10 +110,11 @@ class Settings(BaseSettings):
     wechat_app_secret: str = ""
     google_client_id: str = ""
     apple_client_id: str = ""
-    # 编辑台（管理后台）：密码/白名单支持 .env 与 systemd EnvironmentFile
+    # /admin 初始管理员密码（仅首次建号）；为空时回退旧 JQ_CONSOLE_PASSWORD
+    admin_password: str = ""
+    admin_cookie_secure: bool = False
+    # 旧部署兼容：仅作为 admin_password 的回退读取，不再有独立登录入口
     console_password: str = ""
-    console_ip_whitelist: str = ""
-    console_cookie_secure: bool = False
 
     model_config = {"env_prefix": "JQ_", "env_file": ".env", "extra": "ignore"}
 

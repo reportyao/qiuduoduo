@@ -11,12 +11,11 @@
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
 
-from datetime import datetime, timezone
+from datetime import timezone
 
 from ..config import get_settings
 
@@ -110,7 +109,7 @@ DISCLOSURE = {
     "permissions_minimal": {
         "camera": "仅拍票记账/截图鉴别时使用，照片本地处理不上传",
         "notifications": "仅赛前/进球/复盘提醒，通知文案不含投注字样",
-        "network": "访问解球 API 与公开数据源",
+        "network": "访问球多多 API 与公开数据源",
     },
     "age": "未满 18 周岁禁止购买彩票；App 内置未成年受限模式与年龄门",
 }
@@ -194,23 +193,17 @@ def freeze_report(app) -> dict:
 
 def review_checklist(db, app) -> dict:
     """聚合 Release-plan §六 检查单 —— 每项给状态与证据。"""
-    from sqlalchemy import select
-    from ..models import Verdict
-
     # 1 禁用词扫描（扫后端自身文案层）
     scan = scan_dir(os.path.join(os.path.dirname(__file__), ".."))
     # 2 链健康
     from .sealchain import latest_chain_status
     chain = latest_chain_status(db)
-    # 3 结算闭环（判决应有归因能力）
-    n_promoted = len(db.scalars(select(Verdict).where(Verdict.status == "promoted")).all())
     # 4 冻结状态
     frz = freeze_report(app)
     # 5 UK 合规注入（F18 profile 双区域）
     from .share import MARKET_PROFILES
     uk_ok = ("begambleaware" in MARKET_PROFILES["global"]["helpline"].lower()
              and "18+" in MARKET_PROFILES["global"]["compliance"])
-    st = get_settings()
     items = [
         {"id": "certificates", "name": "主体/软著/APP 备案/ICP 四证",
          "ok": None, "note": "外部证照流（非代码）——由运营确认", "owner": "你"},

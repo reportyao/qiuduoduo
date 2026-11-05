@@ -1,9 +1,9 @@
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import type { AvoidItem, PostmortemSummary, RestDay, StreamResponse } from "@/domain/types";
+import { ScrollView, StyleSheet, View } from "react-native";
+import type { Pulse } from "@/domain/focusAdapters";
+import type { StreamResponse } from "@/domain/types";
 import { currentTradeDateCn, formatDate, formatTime, shiftDateCn } from "@/lib/format";
-import { colors, radii, spacing } from "@/theme/tokens";
-import { Button, Card, Chip, Icon, Sheet, Text } from "@/components/ui";
-import { gateTone } from "@/features/verdict/components/Gates";
+import { colors, spacing } from "@/theme/tokens";
+import { Chip, Sheet, Text } from "@/components/ui";
 
 export function DateStrip({
   value,
@@ -39,168 +39,33 @@ export function DateStrip({
   );
 }
 
-export function FeedSummary({ stream }: { stream: StreamResponse }) {
-  return (
-    <View style={styles.feedHead}>
-      <View style={styles.flex}>
-        <Text variant="captionStrong" color={colors.muted}>
-          {stream.generatedAt ? `更新于 ${formatTime(stream.generatedAt)}` : "今日结论"}
-        </Text>
-        <Text variant="small" color={colors.muted} style={styles.feedStats}>
-          复核 {stream.stats.total} 场 · 过三关 {stream.stats.promoted} 场 · 复核中 {stream.stats.screening} 场
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-export function RestDayCard({ rest, onOpenLedger }: { rest: RestDay; onOpenLedger: () => void }) {
-  return (
-    <Card style={styles.block}>
-      <View style={styles.blockHead}>
-        <View style={styles.iconCircle}><Icon name="moon-outline" size={18} color={colors.green} /></View>
-        <Text variant="bodyStrong" style={styles.flex}>今天没有竞彩足球场次</Text>
-      </View>
-      <Text variant="small" color={colors.muted} style={styles.paragraph}>{rest.message}</Text>
-      {rest.course.title ? (
-        <View style={styles.lesson}>
-          <Text variant="captionStrong" color={colors.green}>2 分钟 · {rest.course.title}</Text>
-          <Text variant="small" style={styles.paragraph}>{rest.course.body}</Text>
-        </View>
-      ) : null}
-      <Button label="看公开账本" variant="secondary" size="sm" onPress={onOpenLedger} style={styles.blockAction} />
-    </Card>
-  );
-}
-
-export function EmptyDayCard({
-  copyTitle,
-  copyBody,
-  onYesterday,
-  onOnSale,
-}: {
-  copyTitle: string;
-  copyBody: string;
-  onYesterday: () => void;
-  onOnSale: () => void;
-}) {
-  return (
-    <Card style={styles.block}>
-      <Text variant="h3">{copyTitle}</Text>
-      <Text variant="small" color={colors.muted} style={styles.paragraph}>{copyBody}</Text>
-      <View style={styles.rowActions}>
-        <Button label="看昨日复盘" variant="secondary" size="sm" onPress={onYesterday} style={styles.flex} />
-        <Button label="今日在售" variant="primary" size="sm" onPress={onOnSale} style={styles.flex} />
-      </View>
-    </Card>
-  );
-}
-
-export function AvoidSection({
-  items,
-  onOpen,
-}: {
-  items: AvoidItem[];
-  onOpen: (matchId: string) => void;
-}) {
-  if (items.length === 0) return null;
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHead}>
-        <Text variant="h3">今天不碰</Text>
-        <Text variant="caption" color={colors.muted}>死因完全公开</Text>
-      </View>
-      <Card padded={false}>
-        {items.map((item, index) => {
-          const tone = gateTone(item.gate === "price" || item.gate === "market" || item.gate === "model" ? "fail" : "unknown");
-          return (
-            <Pressable
-              key={item.verdictId}
-              onPress={() => onOpen(item.matchId)}
-              accessibilityRole="button"
-              accessibilityLabel={`${item.home} 对 ${item.away}，${item.why}`}
-              style={({ pressed }) => [
-                styles.avoidRow,
-                index < items.length - 1 && styles.rowLine,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View style={[styles.gateDot, { backgroundColor: tone.color }]} />
-              <View style={styles.flex}>
-                <Text variant="smallStrong" numberOfLines={1}>
-                  {item.home} <Text variant="caption" color={colors.muted}>vs</Text> {item.away}
-                </Text>
-                <Text variant="caption" color={colors.muted} numberOfLines={1}>{item.why}</Text>
-              </View>
-              <Chip label={item.gate === "price" ? "价" : item.gate === "market" ? "市" : "模"} tone="danger" />
-            </Pressable>
-          );
-        })}
-      </Card>
-    </View>
-  );
-}
-
-export function PostmortemSection({
-  items,
-  onOpen,
-}: {
-  items: PostmortemSummary[];
-  onOpen: (verdictId: string) => void;
-}) {
-  if (items.length === 0) return null;
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHead}>
-        <Text variant="h3">最近复盘</Text>
-        <Text variant="caption" color={colors.muted}>输赢都写</Text>
-      </View>
-      <Card padded={false}>
-        {items.map((item, index) => (
-          <Pressable
-            key={item.verdictId}
-            onPress={() => onOpen(item.verdictId)}
-            accessibilityRole="button"
-            accessibilityLabel={`${item.match} 复盘`}
-            style={({ pressed }) => [
-              styles.avoidRow,
-              index < items.length - 1 && styles.rowLine,
-              pressed && styles.pressed,
-            ]}
-          >
-            <View style={styles.flex}>
-              <Text variant="smallStrong">{item.match}</Text>
-              <Text variant="caption" color={colors.muted}>
-                {item.resultScore ?? "待结算"} · {item.attribution ?? "未归因"}
-              </Text>
-            </View>
-            <Text variant="captionStrong" color={item.settled === "win" ? colors.green : colors.danger}>
-              {item.settled === "win" ? "✓ 中" : item.settled === "lose" ? "× 未中" : "待定"}
-            </Text>
-          </Pressable>
-        ))}
-      </Card>
-    </View>
-  );
-}
-
 export function DataStatusSheet({
   visible,
   onClose,
   stream,
+  pulse,
 }: {
   visible: boolean;
   onClose: () => void;
   stream: StreamResponse | null;
+  pulse?: Pulse | null;
 }) {
   const marketPending = stream?.watch.some((v) => v.gates.market === "pending_data") ?? false;
   const modelPending = stream?.watch.some((v) => v.gates.model === "pending_data") ?? false;
-  const rows = [
-    { name: "竞彩官方 SP", status: "已接入", ok: true },
-    { name: "国际盘口", status: marketPending ? "部分未覆盖" : "已接入", ok: !marketPending },
-    { name: "xG 强度模型", status: modelPending ? "部分未覆盖" : "已接入", ok: !modelPending },
-    { name: "赛程 / 停售", status: "已同步", ok: true },
-  ];
+  const rows = pulse?.sources?.length
+    ? pulse.sources.map((source) => ({
+        name: source.label,
+        status: source.status === "ok"
+          ? "已同步"
+          : source.status === "stale" ? "数据偏旧" : "未覆盖",
+        ok: source.status === "ok",
+      }))
+    : [
+        { name: "竞彩官方 SP", status: "已接入", ok: true },
+        { name: "国际盘口", status: marketPending ? "部分未覆盖" : "已接入", ok: !marketPending },
+        { name: "xG 强度模型", status: modelPending ? "部分未覆盖" : "已接入", ok: !modelPending },
+        { name: "赛程 / 停售", status: "已同步", ok: true },
+      ];
   return (
     <Sheet visible={visible} onClose={onClose} title="数据状态" subtitle="每条判断都带来源与截止时间。">
       <Text variant="small" color={colors.muted} style={styles.paragraph}>
@@ -218,8 +83,9 @@ export function DataStatusSheet({
         ))}
       </View>
       <Text variant="caption" color={colors.subtle} style={styles.paragraph}>
-        未覆盖的数据不会被编造，相关场次会显示「等数据」。最近更新：
-        {stream?.generatedAt ? formatTime(stream.generatedAt) : "待同步"}。
+        未覆盖的数据不会被编造，相关场次会显示「等数据」。
+        {pulse ? ` 今日 ${pulse.counts.matches} 场、${pulse.dataPoints} 个数据点，更新于 ${formatTime(pulse.asOf)}。` : ""}
+        {!pulse && stream?.generatedAt ? ` 最近更新：${formatTime(stream.generatedAt)}。` : ""}
       </Text>
     </Sheet>
   );
@@ -235,49 +101,9 @@ export function LegalFooter({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   dateStrip: { gap: spacing.xs, alignItems: "center", paddingVertical: spacing.sm },
   dateLabel: { marginLeft: spacing.xs },
-  feedHead: { marginTop: spacing.x4, marginBottom: spacing.xs },
-  feedStats: { marginTop: 2 },
-  block: { marginTop: spacing.base, gap: spacing.sm },
-  blockHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  iconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: colors.greenSoft,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   paragraph: { lineHeight: 20 },
-  lesson: {
-    backgroundColor: colors.bgElevated,
-    borderRadius: radii.md,
-    padding: spacing.base,
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  blockAction: { alignSelf: "flex-start", marginTop: spacing.xs },
-  rowActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
-  section: { marginTop: spacing.x4 },
-  sectionHead: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
-  },
-  avoidRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.base,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.base,
-    minHeight: 56,
-  },
-  rowLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
-  pressed: { backgroundColor: colors.bgElevated },
-  gateDot: { width: 7, height: 7, borderRadius: 4 },
   sourceList: { marginTop: spacing.base, gap: spacing.xs },
   sourceRow: {
     flexDirection: "row",
@@ -288,5 +114,6 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   sourceStatus: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  gateDot: { width: 7, height: 7, borderRadius: 4 },
   footer: { marginTop: spacing.x4, paddingHorizontal: spacing.x4, lineHeight: 18 },
 });

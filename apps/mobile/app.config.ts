@@ -1,7 +1,7 @@
 import type { ExpoConfig } from "expo/config";
 
 const config: ExpoConfig = {
-  name: "解球",
+  name: "球多多",
   slug: "jieqiu",
   version: "0.1.0",
   orientation: "portrait",
@@ -38,7 +38,7 @@ const config: ExpoConfig = {
     [
       "expo-image-picker",
       {
-        photosPermission: "解球需要访问相册，仅用于选择你的个人头像；照片只保存在本机。",
+        photosPermission: "球多多需要访问相册，仅用于选择你的个人头像；照片只保存在本机。",
         cameraPermission: false,
         microphonePermission: false,
       },
