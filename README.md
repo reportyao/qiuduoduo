@@ -15,7 +15,7 @@
 | 版本 | `0.8.0-w8+assistant` |
 | OpenAPI | 128 路径 / 143 方法 |
 | 后端测试 | 271 passed |
-| 前端测试 | 27 passed + typecheck / ESLint / Android Hermes bundle |
+| 前端测试 | 30 passed + typecheck / ESLint / Android Hermes bundle |
 | 生产数据库 | **当前 SQLite + WAL（过渡，单写者）**；目标境内 PostgreSQL 16（云托管优先 / 自建兜底，ADR-0004） |
 | Alembic head | `20261105_13`（CLV 收盘价字段；升级/降级已验证） |
 | W8 冻结基线 | 145 路由（新增路由后须重新采纳） |

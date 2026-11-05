@@ -1,7 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import type { GateDetail, GateKey, GateResult } from "@/domain/types";
 import { colors, radii, spacing } from "@/theme/tokens";
-import { pct } from "@/lib/format";
+import { gateDetailText } from "@/features/verdict/gateText";
 import { Text } from "@/components/ui";
 
 export function gateTone(result: GateResult | undefined): {
@@ -57,28 +57,6 @@ export function GateStrip({
   );
 }
 
-function humanizeReason(reason: string): string {
-  if (reason.includes("the-odds-api") || reason.includes("国际盘源不足")) {
-    return "国际盘还没覆盖这场，等数据源接入后会自动重评。";
-  }
-  if (reason.includes("xG") || reason.includes("队名未入")) {
-    return "模型还没有这场的足够数据，暂不参与判断。";
-  }
-  return reason;
-}
-
-function detailText(gate: GateKey, detail: Record<string, unknown>): string {
-  if (gate === "price") {
-    const rake = typeof detail.rake === "number" ? detail.rake : null;
-    const threshold = typeof detail.threshold === "number" ? detail.threshold : null;
-    return `${rake != null ? pct(rake) : "待同步"} / 阈值 ${threshold != null ? pct(threshold) : "待同步"}`;
-  }
-  if (gate === "market") {
-    const sources = Array.isArray(detail.sources) ? detail.sources.join("、") : "单源";
-    return typeof detail.reason === "string" ? humanizeReason(detail.reason) : `来源：${sources}`;
-  }
-  return typeof detail.reason === "string" ? humanizeReason(detail.reason) : "模型数据未覆盖";
-}
 
 export function GateDetailRow({
   gate,
@@ -101,7 +79,7 @@ export function GateDetailRow({
           <Text variant="captionStrong" color={tone.color}>{tone.label}</Text>
         </View>
         <Text variant="caption" color={colors.muted} style={styles.rowDetail}>
-          {detailText(gate, entry?.detail ?? {})}
+          {gateDetailText(gate, entry?.detail ?? {})}
         </Text>
       </View>
     </View>
