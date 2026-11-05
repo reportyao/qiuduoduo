@@ -137,6 +137,7 @@ def weekly_report(db: Session, user_id: str | None = None) -> dict:
     for v in settled:
         a = attribute(v)["class"]
         attr[a] = attr.get(a, 0) + 1
+    clv_rows = [v for v in settled if v.clv is not None]
     out = {
         "range_days": 7,
         "verdicts_total": len(recent),
@@ -145,6 +146,12 @@ def weekly_report(db: Session, user_id: str | None = None) -> dict:
         "wins": sum(1 for v in settled if v.settled == "win"),
         "attribution": attr,
         "killed": killed_outcomes(db),
+        "clv": {
+            "n": len(clv_rows),
+            "avg": round(sum(v.clv for v in clv_rows) / len(clv_rows), 6)
+            if clv_rows else None,
+            "positive": sum(1 for v in clv_rows if v.clv > 0),
+        },
     }
     if user_id:
         from .users import bet_pnl
@@ -154,10 +161,17 @@ def weekly_report(db: Session, user_id: str | None = None) -> dict:
         bets = [b for b in all_bets if b.verdict_id in vmap]
         settled_bets = [(b, vmap[b.verdict_id]) for b in bets if vmap[b.verdict_id].settled]
         pnl = sum((bet_pnl(b, v) or 0) for b, v in settled_bets)
+        bet_clv = []
+        for bet, verdict in settled_bets:
+            if (verdict.clv is not None
+                    and (bet.pick_dir or "") == ((verdict.pick or {}).get("dir") or "")):
+                bet_clv.append(verdict.clv)
         out["you"] = {
             "bets": len(bets),
             "settled_bets": len(settled_bets),
             "pnl": round(pnl, 2),
+            "clv_n": len(bet_clv),
+            "clv_avg": round(sum(bet_clv) / len(bet_clv), 6) if bet_clv else None,
             "attribution": {a: sum(1 for _, v in settled_bets
                                    if v.settled == "lose" and attribute(v)["class"] == a)
                             for a in set(attribute(v)["class"] for _, v in settled_bets

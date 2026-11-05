@@ -162,6 +162,42 @@ def scan_close_soon(db: Session, now_cn: datetime | None = None,
     return made
 
 
+def scan_prematch(db: Session, now_cn: datetime | None = None,
+                  minutes_before: int = 180, event_type: str = "prematch_t3h",
+                  window_min: int = 5) -> int:
+    """停售前 T-3h / T-30m 提醒：只对已 promoted 且未停售的场次发一次。"""
+    now = now_cn or cn_now()
+    start = (now + timedelta(minutes=minutes_before - window_min)).strftime("%Y-%m-%d %H:%M:%S")
+    end = (now + timedelta(minutes=minutes_before + 1)).strftime("%Y-%m-%d %H:%M:%S")
+    rows = db.scalars(select(SPMatch).where(
+        SPMatch.kickoff >= start, SPMatch.kickoff <= end)).all()
+    made = 0
+    for m in rows:
+        try:
+            ko = datetime.strptime(m.kickoff, "%Y-%m-%d %H:%M:%S").replace(tzinfo=CN)
+        except ValueError:
+            continue
+        v = db.scalar(select(Verdict).where(
+            Verdict.match_id == m.match_id, Verdict.kickoff == m.kickoff,
+            Verdict.status == "promoted").order_by(Verdict.id.desc()).limit(1))
+        if v is None or v.settled is not None:
+            continue
+        minutes = max(1, int((ko - now).total_seconds() // 60))
+        kickoff_utc = ko.astimezone(timezone.utc).replace(tzinfo=None)
+        _, created = emit_event(
+            db, type=event_type,
+            dedupe_key=f"{event_type}:{m.match_id}:{m.kickoff}",
+            severity=2, match_id=m.match_id,
+            payload={"verdict_id": v.id, "match_id": m.match_id,
+                     "match_no": m.match_no, "home": m.home, "away": m.away,
+                     "kickoff": m.kickoff, "minutes": minutes},
+            data_cutoff=now.strftime("%Y-%m-%d %H:%M:%S"),
+            expires_at=kickoff_utc,
+        )
+        made += int(created)
+    return made
+
+
 def scan_final(db: Session, now_cn: datetime | None = None) -> int:
     """终场事件：用赛果反查判决；没有 live feed 时作为终场事实源。"""
     now = now_cn or cn_now()
@@ -247,6 +283,10 @@ def run_monitors(db: Session, backfill: bool = False) -> dict:
     return {
         "verdict": scan_verdict_changes(db, backfill=backfill),
         "close": scan_close_soon(db),
+        "prematch_t3h": scan_prematch(db, minutes_before=180,
+                                      event_type="prematch_t3h"),
+        "prematch_t30m": scan_prematch(db, minutes_before=30,
+                                       event_type="prematch_t30m"),
         "final": scan_final(db),
         "settled": scan_settlements(db),
         "daily": scan_daily_brief(db),

@@ -53,6 +53,17 @@ def render_notification(event: Event, channel: str = "inapp") -> dict:
             body = f"{match}：{status}。{extra}".strip()
         return {"title": "比赛结论更新", "body": body or f"{match} 有更新。", "deeplink": deeplink}
 
+    if t in ("prematch_t3h", "prematch_t30m"):
+        mins = p.get("minutes")
+        hours = max(1, round((mins or 0) / 60))
+        if channel == "push":
+            return {"title": "球多多 · 赛前提醒",
+                    "body": "你关注的比赛临近停售，点开看最新结论。",
+                    "deeplink": deeplink}
+        label = f"{hours} 小时后" if t == "prematch_t3h" else "30 分钟后"
+        return {"title": "赛前提醒", "body": f"{match} 将在{label}停售。" if match
+                else "你关注的比赛临近停售。", "deeplink": deeplink}
+
     if t == "close_soon":
         mins = p.get("minutes")
         if channel == "push":

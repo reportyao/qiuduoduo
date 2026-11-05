@@ -45,6 +45,7 @@ import {
   LoadMore,
   PostmortemMessage,
   RestMessage,
+  UnattendedMessage,
   VerdictMessage,
 } from "@/features/home/components/ConversationMessages";
 import { BetSheet } from "@/features/verdict/components/BetSheet";
@@ -457,6 +458,7 @@ export default function HomeScreen() {
                 ) : null}
                 <AvoidMessage items={stream.avoid} onOpen={openWhyNot} />
                 <PostmortemMessage items={stream.postmortems} onOpen={openVerdict} />
+                <UnattendedMessage items={stream.unattended} onOpen={openVerdict} />
               </>
             ) : (
               <>
@@ -509,6 +511,7 @@ export default function HomeScreen() {
 
                 <AvoidMessage items={stream.avoid} onOpen={openWhyNot} />
                 <PostmortemMessage items={stream.postmortems} onOpen={openVerdict} />
+                <UnattendedMessage items={stream.unattended} onOpen={openVerdict} />
               </>
             )}
 

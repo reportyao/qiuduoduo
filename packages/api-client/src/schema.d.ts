@@ -3812,6 +3812,12 @@ export interface components {
             prob_low?: number | null;
             /** Prob High */
             prob_high?: number | null;
+            /** Interval Status */
+            interval_status?: string | null;
+            /** Interval N */
+            interval_n?: number | null;
+            /** Interval Method */
+            interval_method?: string | null;
             /** Conditions */
             conditions?: string[];
             /** Invalidators */

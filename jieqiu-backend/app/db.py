@@ -106,6 +106,11 @@ _REQUIRED_COLUMNS = {
         "settled": "TEXT",
         "settled_at": "TIMESTAMP",
         "result_score": "TEXT",
+        "closing_sp_h": "FLOAT",
+        "closing_sp_d": "FLOAT",
+        "closing_sp_a": "FLOAT",
+        "closing_at": "TIMESTAMP",
+        "clv": "FLOAT",
     },
     "verdict_revisions": {
         "chain_prev": "TEXT",

@@ -152,7 +152,7 @@ llm_budgets             -- ✅ 已实现（global 行 task='*', profile='*'）
 迁移建议：
 
 - `20261104_07_llm_gateway.py`：已落 `llm_usage`/`llm_cache`/`llm_budgets`；
-- 聚焦/情报表（`intel_items`/`match_coverage`/`pulse_daily`）：待落，用下一个可用迁移号（当前 head `20261105_12`）；
+- 聚焦/情报表（`intel_items`/`match_coverage`/`pulse_daily`）：待落，用下一个可用迁移号（当前 head `20261105_13`）；
 - 都要求 up/down；生产只 `alembic upgrade head`。
 
 ### 预算必须原子

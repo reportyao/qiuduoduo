@@ -12,11 +12,11 @@ import os
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..models import MatchResult, Verdict, utcnow
+from ..models import MatchResult, SPSnapshot, Verdict, utcnow
 from .align import Aligner
 
 CN = timezone(timedelta(hours=get_settings().tz_offset_hours))
@@ -129,6 +129,39 @@ def _outcome_handicap(gh: int, ga: int, line_val: float) -> str:
     return "主胜" if adj > 0 else ("平局" if adj == 0 else "客胜")
 
 
+def _closing_snapshot(db: Session, v: Verdict) -> SPSnapshot | None:
+    """停售前最后一条同池 SP 快照；没有则 CLV 留空，不猜。
+
+    直接在 SQL 里截断到秒级本地时间，避免“先取最近 50 条再在 Python 过滤”
+    在赛后隔天结算、快照很多时漏掉真正的收盘快照。
+    """
+    captured = func.substr(func.replace(SPSnapshot.captured_at, "T", " "), 1, 19)
+    return db.scalar(
+        select(SPSnapshot).where(SPSnapshot.match_id == v.match_id,
+                                 SPSnapshot.pool == v.pool,
+                                 captured <= v.kickoff)
+        .order_by(SPSnapshot.captured_at.desc()).limit(1))
+
+
+def _fill_clv(db: Session, v: Verdict) -> None:
+    snap = _closing_snapshot(db, v)
+    if snap is None:
+        return
+    v.closing_sp_h, v.closing_sp_d, v.closing_sp_a = snap.sp_h, snap.sp_d, snap.sp_a
+    try:
+        v.closing_at = datetime.strptime(str(snap.captured_at)[:19].replace("T", " "),
+                                         "%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError):
+        v.closing_at = None
+    direction = (v.pick or {}).get("dir")
+    entry = (v.pick or {}).get("sp")
+    closing = {"主胜": snap.sp_h, "home": snap.sp_h,
+               "平局": snap.sp_d, "draw": snap.sp_d,
+               "客胜": snap.sp_a, "away": snap.sp_a}.get(direction)
+    if entry and closing and float(entry) > 1 and float(closing) > 1:
+        v.clv = round((1.0 / float(closing)) - (1.0 / float(entry)), 6)
+
+
 def settle_verdicts(db: Session, trade_date: str | None = None) -> int:
     """对有 pick 且未结算的判决结算。返回结算条数。
 
@@ -170,6 +203,7 @@ def settle_verdicts(db: Session, trade_date: str | None = None) -> int:
         v.settled = "win" if actual == v.pick.get("dir") else "lose"
         v.result_score = f"{result.goals_home}-{result.goals_away}"
         v.settled_at = utcnow()
+        _fill_clv(db, v)
         n += 1
     db.commit()
     return n

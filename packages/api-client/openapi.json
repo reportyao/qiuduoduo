@@ -10884,6 +10884,39 @@
             ],
             "title": "Prob High"
           },
+          "interval_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Status"
+          },
+          "interval_n": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval N"
+          },
+          "interval_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Method"
+          },
           "conditions": {
             "items": {
               "type": "string"

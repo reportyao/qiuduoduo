@@ -104,6 +104,12 @@ class Verdict(Base):
     settled: Mapped[str | None] = mapped_column(String(8), nullable=True)  # win / lose / null
     settled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     result_score: Mapped[str | None] = mapped_column(String(12), nullable=True)  # "2-1"
+    # CLV：入场 SP vs 停售前最后一条同池快照；clv = 收盘隐含概率 - 入场隐含概率
+    closing_sp_h: Mapped[float | None] = mapped_column(Float, nullable=True)
+    closing_sp_d: Mapped[float | None] = mapped_column(Float, nullable=True)
+    closing_sp_a: Mapped[float | None] = mapped_column(Float, nullable=True)
+    closing_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    clv: Mapped[float | None] = mapped_column(Float, nullable=True)
     # 状态与闸门
     status: Mapped[str] = mapped_column(String(16), default="screening", index=True)
     gates: Mapped[dict] = mapped_column(JSON, default=dict)  # {"price": {...}, "market": {...}, "model": {...}}

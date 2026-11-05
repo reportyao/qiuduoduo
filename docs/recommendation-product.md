@@ -6,7 +6,9 @@
 > `/admin` 推荐主链页可运行主链、复核、发布、撤回；Today Hero 已优先消费 published snapshot，
 > 旧后端 404 才回退 stream；persona 模型请求已统一走 Gateway 传输层。
 >
-> 待开发：`recommendation_copies` 三套人设文案、付费墙/权益、完整发布 UI（组合页已优先 published，preview 仅回退）、复盘/CLV 消费层。
+> 2026-11-05 P0 补强：CLV 结算落库 + 周报、概率经验区间（样本不足不编造）、
+> “看完未跟”未采纳复盘、赛前 T-3h/T-30m 提醒已进 worker。
+> 待开发：`recommendation_copies` 三套人设文案、付费墙/权益、完整发布 UI（组合页已优先 published，preview 仅回退）、临场更新的真实推送客户端。
 
 ## 1. 定位
 
@@ -273,7 +275,7 @@ AI 复核徽章对用户展示：
 - 付费墙 + 订阅（待做）
 
 **Phase 3**
-- 临场更新/失效提醒
-- 复盘/CLV
+- 临场更新/失效提醒（✅ 后端 T-3h/T-30m 监控；真实推送待客户端）
+- 复盘/CLV（✅ 结算落库 + 周报 + 移动端基础展示；完整消费层待做）
 - 参考预算/仓位
 - A/B 定价

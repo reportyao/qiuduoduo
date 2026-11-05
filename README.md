@@ -12,10 +12,10 @@
 |---|---|
 | 版本 | `0.8.0-w8+assistant` |
 | OpenAPI | 128 路径 / 143 方法 |
-| 后端测试 | 261 passed |
+| 后端测试 | 265 passed |
 | 前端测试 | 22 passed + typecheck / ESLint / Android Hermes bundle |
 | 数据库 | 境内 PostgreSQL 16（云托管优先 / 自建兜底，ADR-0004）；未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite |
-| Alembic head | `20261105_12` |
+| Alembic head | `20261105_13` |
 | W8 冻结基线 | 145 路由（新增路由后须重新采纳） |
 
 工程入口见 [AGENTS.md](./AGENTS.md)，完整文档索引见 [docs/README.md](./docs/README.md)，运维手册见 [docs/operations-runbook.md](./docs/operations-runbook.md)。
@@ -28,6 +28,8 @@
 |---|---|
 | 推荐主链 | `decision_snapshots` + `recommendation_plans` + `review_runs` + `recommendation_events`；build → L1–L5 复核 → publish → expire/withdraw；`GET /recommendations/today` 只返回 published |
 | 公开推荐契约 | snapshot/plan 返回方向、把握度、成立条件、失效条件、AI 复核徽章（状态/复核人/时间/各层结果）；Today Hero 与组合卡已消费 |
+| 概率经验区间 | `calibration.interval` 用已结算 promoted 判决的残差经验分布给 `prob_low/prob_high`；样本 <20 标 `accumulating`，不编造区间；移动端已展示 |
+| 赛后归因 / CLV | 结算时锁定停售前最后一条同池 SP，写 `closing_sp_*`/`closing_at`/`clv`；周报展示平均 CLV 与正 CLV 占比；移动端展示“看完未跟”的未采纳复盘 |
 | 首页聚焦 | 选中比赛 → 回首页聚焦；`/matches/{id}/focus` 覆盖率/事实/未知项/可用动作真实接入 |
 | 数据脉搏 | `/stats/pulse` 真实计数 + 展示系数；首页指标与数据状态页已接，不再前端拼数 |
 | 在售与选择器 | `coverage` 覆盖分、"覆盖足"筛选、promoted → 覆盖 → 停售排序 |
@@ -37,7 +39,7 @@
 | 管理后台 | `/admin`：总览/模型池/用量/人设/推荐主链（逐条+批量+plan 操作+撤回理由）/组合/数据/运维/账号/审计/日志；RBAC + CSRF + 会话撤销 + 审计 |
 | 认证 | 设备令牌 + CN 手机号/微信、GL Email/Google/Apple；JWT 轮换 + refresh 复用检测；生产 fail-closed |
 | 封存与信任 | 判决哈希封存链、公开账本、分享编号可验（`/s/{id}`）、周报/复盘 |
-| 推送骨架 | 事件监控 → 扇出 → 站内信/推送（JPush 未配置时 dry-run）；通知设置/收件箱/关注已通 |
+| 推送骨架 | 事件监控（含赛前 T-3h/T-30m）→ 扇出 → 站内信/推送（JPush 未配置时 dry-run）；通知设置/收件箱/关注已通；真实 JPush 客户端待接 |
 | 人设语气 | 三套 profile + 槽位 + 模型池（Key 加密/failover/缓存/预生成）；后台可改 |
 | LLM Gateway | Phase 1：登录用户 `open_chat → fast`，预算/缓存/PII 脱敏/用量账本；匿名 0 LLM |
 | API-Football | fixtures/lineups/injuries/standings 同步、免费额度、自动/人工链接；配 key 的部署自动装每日 cron |
@@ -64,7 +66,7 @@ just api-install          # pip install -r jieqiu-backend/requirements.txt
 just db-up                # 本地 Postgres（docker compose，端口 5433）
 just db-migrate           # alembic upgrade head
 just api-run              # uvicorn app.main:app --port 8100
-just api-test             # pytest（261 tests）
+just api-test             # pytest（265 tests）
 
 # 前端（Node 22 自带 corepack；仓库 .npmrc 固定 node-linker=hoisted）
 just install              # corepack pnpm install

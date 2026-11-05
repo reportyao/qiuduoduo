@@ -104,6 +104,17 @@ venv/bin/python -m app.odds_cli status
 - 若模型闸仍 `pending_data`：看 `/admin` 推荐主链的 `model` 闸 `reason`；要提升覆盖率/质量，需要 **API-Football 付费 key** 或可用的当前 xG 源（Understat 直连已被拦截）。
 - 2026-11-05 实测：国际盘覆盖 11/12，市闸 pass 10 / fail 1 / pending 1，模型闸 pass 1 / fail 1 / pending 10，已产出首条 published（水晶宫 vs 霍芬海姆，hhad 客胜）。
 
+### 赛后归因 / 未采纳复盘 / 赛前提醒（P0 已实现）
+
+- **CLV**：`settle_verdicts` 结算时取停售前最后一条同池 `SPSnapshot`（`captured_at <= kickoff`），写 `verdicts.closing_sp_h/d/a`、`closing_at`、`clv = 1/收盘 - 1/入场`。没有同池快照时留空，不猜。迁移 `20261105_13`。
+- **周报**：`app.modules.postmortem` 增加 `clv` 汇总（样本数/均值/正 CLV 占比）与 `you.clv_n/you.clv_avg`；只统计有收盘快照的已结算判决。
+- **概率区间**：`app.modules.calibration.interval` 用已结算 promoted 判决的预测残差做经验分桶；样本 <20 返回 `interval_status="accumulating"`，不返回伪造区间。`SnapshotPublic` 暴露 `prob_low/prob_high/interval_status/interval_n/interval_method`。
+- **未采纳复盘**：`GET /stream`（登录）的 `unattended` 返回“看过判决但没下注”的已结算场次；移动端首页用独立卡片展示，文案只做事实复盘，不诱导下注。
+- **赛前提醒**：`assistant/monitors.py::scan_prematch` 在 T-3h / T-30m 扫描 promoted 判决，按 `dedupe_key` 去重；`run_monitors` 返回 `prematch_t3h` / `prematch_t30m`，`render.py` 使用中性文案（不写赔率/投注/结果），`fanout.py` 已加入默认事件。
+- **验证**：`tests/test_calibration.py`、`tests/test_unattended.py`、`tests/test_assistant.py::test_prematch_reminders_dedupe`、`tests/test_w4.py` 的 CLV 断言。
+
+真实推送仍缺客户端与厂商凭证：JPush AppKey/Master Secret、华为/小米/OPPO/vivo 通道、Android 原生或 EAS 构建、客户端 token 注册/通知权限/点击深链。后端 dry-run 和站内信已可用，不会因未配置 JPush 阻塞判决发布。
+
 ## 6. 管理后台
 
 - **入口**：`/admin`（新版运营台，当前唯一推荐入口）；登录 `POST /admin/api/login`，会话 cookie `admin_t`，HttpOnly + SameSite=strict。

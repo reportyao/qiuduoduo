@@ -1,6 +1,6 @@
 # 球多多文档索引
 
-最后对账：2026-11-05。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **128 路径 / 143 方法**，后端 **261 tests**，前端 **22 tests**，Alembic head `20261105_12`。
+最后对账：2026-11-05。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **128 路径 / 143 方法**，后端 **265 tests**，前端 **22 tests**，Alembic head `20261105_13`。
 
 ## 先读
 
@@ -10,7 +10,7 @@
 | [README.md](../README.md) | monorepo 入口 + SP 采集器说明 |
 | [architecture.md](./architecture.md) | 目标架构与迁移阶段 |
 | [persona-system.md](./persona-system.md) | **三种人设语气配置**：profiles/copy slots/模型池/AI 复核/后台编辑（部分实现） |
-| [recommendation-product.md](./recommendation-product.md) | **赛前判断 / 串关参谋 / AI 复核发布**：新红线、免费付费、帮我配、组合卡、AI 复核流水线（snapshot/review/publish 主链已实现；组合页 published 优先、preview 回退；付费待做） |
+| [recommendation-product.md](./recommendation-product.md) | **赛前判断 / 串关参谋 / AI 复核发布**：新红线、免费付费、帮我配、组合卡、AI 复核流水线（snapshot/review/publish 主链、CLV/经验区间、未采纳复盘已实现；组合页 published 优先、preview 回退；付费待做） |
 | [focused-decision-flow.md](./focused-decision-flow.md) | **聚焦决策流 / 数据脉搏 / 情报层**：前端聚焦、focus/pulse/interactions API、首页真实脉搏/聚焦面板/覆盖筛选/埋点、后台 `/admin` 的数据源/运维/模型用量/人设文案/推荐主链/组合预览页已实现；intel 表/LLM 深读仍待做 |
 | [llm-gateway.md](./llm-gateway.md) | **LLM Gateway / 多模型路由**：fast/deep、任务矩阵、预算/缓存、`llm_*` 表、后台 `/admin` 模型用量页、审核任务与 persona 传输统一（Phase 1 已实现，deep 解读待做） |
 | [api-football.md](./api-football.md) | **API-Football 免费档接入**：fixtures/lineups/injuries/standings、免费额度、队名链接、focus 集成、后台页面 |

@@ -218,3 +218,30 @@ def test_assistant_blocks_deleted_user_and_push_token_takeover(db, client):
     r = client.post("/push/register", headers={"Authorization": "Bearer " + b["token"]},
                     json={"platform": "android", "provider": "jpush", "token": "jpush-shared"})
     assert r.status_code == 409
+
+
+def test_prematch_reminders_dedupe(db):
+    from app.features.assistant.monitors import scan_prematch
+    from app.models import SPMatch, Verdict
+    now = datetime(2026, 11, 5, 15, 0, tzinfo=CN)
+    db.merge(SPMatch(match_id="prem-1", match_no="周四991", league="英超",
+                     home_raw="曼城", away_raw="曼联", home="曼城", away="曼联",
+                     kickoff="2026-11-05 18:00:00", single_flag=True))
+    db.merge(Verdict(
+        id="v-prem-1", trade_date="2026-11-05", match_id="prem-1",
+        match_no="周四991", league="英超", home="曼城", away="曼联",
+        kickoff="2026-11-05 18:00:00", pool="had", goal_line="",
+        sp_h=1.80, sp_d=3.50, sp_a=4.20, rake=0.121,
+        p_home=0.52, p_draw=0.27, p_away=0.21,
+        pick={"dir": "主胜", "prob": 0.56, "sp": 1.80},
+        rake_threshold=0.13, status="promoted",
+        gates={"price": {"result": "pass"}, "market": {"result": "pass"},
+               "model": {"result": "pass"}},
+        payload={"data_cutoff": "2026-11-05T14:00:00+08:00"},
+        payload_hash="e" * 64,
+    ))
+    db.commit()
+    assert scan_prematch(db, now_cn=now, minutes_before=180,
+                         event_type="prematch_t3h") == 1
+    assert scan_prematch(db, now_cn=now, minutes_before=180,
+                         event_type="prematch_t3h") == 0

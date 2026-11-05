@@ -1,6 +1,6 @@
 # 球多多 · 聚焦决策流 / 数据脉搏 / 情报层
 
-> **状态：部分实现。** 前端已实现 `focusStore`、头像/首页选择器选中后回首页聚焦、聚焦卡（复用现有判决）、详情页“让助理看这场”；**后端 `/stats/pulse`、`/matches/{id}/focus`、`/interactions` 已实现**；`intel_items`/`match_coverage`/`pulse_daily` 仍未建表；前端已接 `/stats/pulse`、`/matches/{id}/focus` 与在售 coverage；`GET /matches/on-sale` 已带 `coverage`。当前 OpenAPI 为 **128 路径 / 143 方法**、Alembic head `20261105_12`。
+> **状态：部分实现。** 前端已实现 `focusStore`、头像/首页选择器选中后回首页聚焦、聚焦卡（复用现有判决）、详情页“让助理看这场”；**后端 `/stats/pulse`、`/matches/{id}/focus`、`/interactions` 已实现**；`intel_items`/`match_coverage`/`pulse_daily` 仍未建表；前端已接 `/stats/pulse`、`/matches/{id}/focus` 与在售 coverage；`GET /matches/on-sale` 已带 `coverage`。当前 OpenAPI 为 **128 路径 / 143 方法**、Alembic head `20261105_13`。
 >
 > 目标：把首页从“12 张判决卡 + 常驻输入框”改成 **数据脉搏 + 一场聚焦 + 客观情报 + 动作按钮**；用户点头像选比赛，选中后回首页围绕这一场展开，而不是跳详情页。
 >
@@ -369,7 +369,7 @@ admin_audit
 - `pulse_daily` 用于“累计/历史”脉搏；当日实时计数仍可实时算，后台可重算。
 - `admin_audit` 记录展示系数、路由、预算、情报发布等后台变更。
 - 迁移需可 up/down；Postgres 生产只走 Alembic。
-- 已落迁移：`20261104_05_interaction_events.py`（head 从 `20261104_04` 前进到 `20261104_05`），随后 `20261104_06_api_football.py` 把 head 推进到 `20261104_06`；`20261104_07_llm_gateway.py` 再推进到 `20261104_07`；`20261104_08_persona_llm.py` 推进到 `20261104_08`；`20261104_09_persona_profiles.py` 推进到 `20261104_09`；`20261105_10_recommendation_pipeline.py` 推进到 `20261105_10`；`20261105_11_admin_rbac_audit.py`（admin_users/admin_audit）推进到 `20261105_11`；`20261105_12_user_compliance.py`（users 合规列）推进到 `20261105_12`（当前 head）。intel 表仍待后续迁移。
+- 已落迁移：`20261104_05_interaction_events.py`（head 从 `20261104_04` 前进到 `20261104_05`），随后 `20261104_06_api_football.py` 把 head 推进到 `20261104_06`；`20261104_07_llm_gateway.py` 再推进到 `20261104_07`；`20261104_08_persona_llm.py` 推进到 `20261104_08`；`20261104_09_persona_profiles.py` 推进到 `20261104_09`；`20261105_10_recommendation_pipeline.py` 推进到 `20261105_10`；`20261105_11_admin_rbac_audit.py`（admin_users/admin_audit）推进到 `20261105_11`；`20261105_12_user_compliance.py`（users 合规列）推进到 `20261105_12`；`20261105_13_verdict_clv.py`（收盘 SP + CLV）推进到 `20261105_13`（当前 head）。intel 表仍待后续迁移。
 
 ### 3.3 覆盖率与数据点口径
 

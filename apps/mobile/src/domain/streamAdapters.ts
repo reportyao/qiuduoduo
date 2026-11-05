@@ -219,19 +219,8 @@ export function adaptStream(value: unknown): StreamResponse {
         coverage: item.coverage ? adaptCoverage(item.coverage) : null,
       };
     }),
-    postmortems: array(raw.postmortems).map((entry): PostmortemSummary => {
-      const item = record(entry);
-      return {
-        verdictId: string(item.verdict_id),
-        matchNo: string(item.match_no),
-        match: string(item.match),
-        tradeDate: string(item.trade_date),
-        settled: item.settled === "win" || item.settled === "lose" ? item.settled : null,
-        resultScore: nullableString(item.result_score),
-        attribution: nullableString(item.attribution),
-        note: string(item.note),
-      };
-    }),
+    postmortems: array(raw.postmortems).map(adaptPostmortem),
+    unattended: array(raw.unattended).map(adaptPostmortem),
     restDay: adaptRest(raw.rest_day),
     you: adaptYou(raw.you),
   };
@@ -368,4 +357,19 @@ function adaptCoverage(value: unknown): OnSaleItem["coverage"] {
 
 export function adaptStringList(value: unknown): string[] {
   return stringArray(value);
+}
+
+function adaptPostmortem(entry: unknown): PostmortemSummary {
+  const item = record(entry);
+  return {
+    verdictId: string(item.verdict_id),
+    matchNo: string(item.match_no),
+    match: string(item.match),
+    tradeDate: string(item.trade_date),
+    settled: item.settled === "win" || item.settled === "lose" ? item.settled : null,
+    resultScore: nullableString(item.result_score),
+    attribution: nullableString(item.attribution),
+    note: string(item.note),
+    viewedAt: nullableString(item.viewed_at),
+  };
 }

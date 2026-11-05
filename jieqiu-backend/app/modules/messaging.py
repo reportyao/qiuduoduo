@@ -6,11 +6,12 @@ next_cursor=null 表示到底。
 from __future__ import annotations
 
 import base64
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ..models import SPMatch, Verdict
+from ..models import Bet, InteractionEvent, SPMatch, Verdict
 
 LESSONS = [
     {"id": "l1", "title": "为什么抽水 13% 的场次长期必亏", "minutes": 2,
@@ -241,6 +242,46 @@ def build_stream_cached(db: Session, trade_date: str, cursor: str | None = None,
     return payload
 
 
+def _recent_unattended(db: Session, user, limit: int = 3) -> list[dict]:
+    """看过但没记注、且已结算的场次：给用户一个不追损的复盘入口。"""
+    from .postmortem import attribute as _attr
+    since = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=14)
+    events = list(db.scalars(
+        select(InteractionEvent).where(
+            InteractionEvent.user_id == user.id,
+            InteractionEvent.event == "verdict_viewed",
+            InteractionEvent.verdict_id != "",
+            InteractionEvent.created_at >= since)
+        .order_by(InteractionEvent.created_at.desc()).limit(200)).all())
+    ordered: list[str] = []
+    viewed_at: dict[str, datetime] = {}
+    for event in events:
+        if event.verdict_id not in viewed_at:
+            viewed_at[event.verdict_id] = event.created_at
+            ordered.append(event.verdict_id)
+    if not ordered:
+        return []
+    bet_ids = set(db.scalars(select(Bet.verdict_id).where(
+        Bet.user_id == user.id, Bet.verdict_id.in_(ordered))).all())
+    rows = {v.id: v for v in db.scalars(select(Verdict).where(
+        Verdict.id.in_(ordered), Verdict.settled.isnot(None))).all()}
+    out: list[dict] = []
+    for vid in ordered:
+        v = rows.get(vid)
+        if v is None or vid in bet_ids:
+            continue
+        out.append({
+            "verdict_id": v.id, "match_no": v.match_no,
+            "match": f"{v.home} vs {v.away}", "trade_date": v.trade_date,
+            "settled": v.settled, "result_score": v.result_score,
+            "attribution": _attr(v)["class"], "note": _attr(v)["note"],
+            "viewed_at": viewed_at[vid].isoformat() if viewed_at[vid] else None,
+        })
+        if len(out) >= limit:
+            break
+    return out
+
+
 def _attach_you(db: Session, payload: dict, user) -> None:
     """登录用户的个性化块：休息状态 + 连败保护（F7/F11 行为面）。"""
     if user is None:
@@ -255,3 +296,4 @@ def _attach_you(db: Session, payload: dict, user) -> None:
         "streak": st["streak"],
         "discipline_on": st["discipline_on"],
     }
+    payload["unattended"] = _recent_unattended(db, user)

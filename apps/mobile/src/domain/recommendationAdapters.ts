@@ -14,6 +14,9 @@ export interface RecommendationSnapshot {
   verdict: VerdictSummary | null;
   direction: string;
   confidence: number | null;
+  probLow: number | null;
+  probHigh: number | null;
+  intervalStatus: string | null;
   conditions: string[];
   invalidators: string[];
   review: RecommendationReview | null;
@@ -62,6 +65,9 @@ export function adaptRecommendationToday(value: unknown): RecommendationToday {
       verdict: adaptVerdictSummary(item.verdict),
       direction: string(item.direction ?? "观望"),
       confidence: typeof item.confidence === "number" ? item.confidence : null,
+      probLow: typeof item.prob_low === "number" ? item.prob_low : null,
+      probHigh: typeof item.prob_high === "number" ? item.prob_high : null,
+      intervalStatus: nullableString(item.interval_status),
       conditions: array(item.conditions).map(String),
       invalidators: array(item.invalidators).map(String),
       review: adaptReview(item.review),
@@ -95,6 +101,9 @@ export function adaptRecommendationToday(value: unknown): RecommendationToday {
       snapshotStatus: item.status,
       direction: item.direction,
       confidence: item.confidence,
+      probLow: item.probLow,
+      probHigh: item.probHigh,
+      intervalStatus: item.intervalStatus,
       conditions: item.conditions,
       invalidators: item.invalidators,
       review: item.review,

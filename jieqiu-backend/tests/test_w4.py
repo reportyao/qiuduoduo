@@ -114,6 +114,11 @@ def test_settlement_1x2_and_handicap(db, monkeypatch):
     _mini(monkeypatch)
     _seed_match(db, "2044005", "周四005", "霸主", "弱旅")  # pick → 主胜
     build_verdicts(db, today_cn(), NOW)
+    # 入场后、停售前最后一条 SP：用作 closing，验证 CLV 计算
+    db.merge(SPSnapshot(match_id="2044005", pool="had", goal_line="",
+                        sp_h=1.70, sp_d=4.40, sp_a=7.00,
+                        captured_at=today_cn() + "T13:00:00+08:00"))
+    db.commit()
     kick = future_kickoff(today_cn())
     ko = datetime.strptime(kick, "%Y-%m-%d %H:%M:%S")
     euro_date = (ko - timedelta(days=1)).strftime("%Y-%m-%d")  # 欧洲晚场 → 北京次日凌晨
@@ -126,6 +131,8 @@ def test_settlement_1x2_and_handicap(db, monkeypatch):
     assert n == 1
     v = db.scalars(select(Verdict)).first()
     assert v.settled == "win" and v.result_score == "2-0"
+    assert v.closing_sp_h == 1.70
+    assert v.clv is not None and v.clv < 0  # 入场 1.40 差于收盘 1.70 → 负 CLV
 
 
 def test_handicap_settlement_math():
@@ -311,12 +318,19 @@ def test_hhad_settlement_e2e(db, monkeypatch):
     db.merge(SPMatch(match_id="2044014", match_no="周四014", league="英超",
                      home_raw="霸主", away_raw="弱旅", home="霸主", away="弱旅",
                      kickoff=kick, single_flag=False))
+    ko = datetime.strptime(kick, "%Y-%m-%d %H:%M:%S")
+    open_at = (ko - timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M:%S+08:00")
+    close_at = (ko - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%S+08:00")
     db.merge(SPSnapshot(match_id="2044014", pool="hhad", goal_line="-1",
                         sp_h=1.90, sp_d=3.80, sp_a=4.20,
-                        captured_at=today_cn() + "T12:00:00+08:00"))
+                        captured_at=open_at))
     db.commit()
     build_verdicts(db, today_cn(), NOW)
-    ko = datetime.strptime(kick, "%Y-%m-%d %H:%M:%S")
+    # 建议发出后临场降赔：收盘 1.70，用于验证 CLV 取停售前最后一条快照。
+    db.merge(SPSnapshot(match_id="2044014", pool="hhad", goal_line="-1",
+                        sp_h=1.70, sp_d=4.10, sp_a=4.60,
+                        captured_at=close_at))
+    db.commit()
     euro_date = (ko - timedelta(days=1)).strftime("%Y-%m-%d")
     db.merge(MatchResult(source="football-data", league="英超",
                          home_raw="霸主", away_raw="弱旅", home="霸主", away="弱旅",
@@ -326,4 +340,6 @@ def test_hhad_settlement_e2e(db, monkeypatch):
     assert settle_verdicts(db, today_cn()) == 1
     v = db.scalars(select(Verdict)).first()
     assert v.settled == "win" and v.result_score == "2-0"
+    assert v.closing_sp_h == 1.70
+    assert v.clv is not None and v.clv > 0  # 入场 1.90 优于收盘 1.70 → 正 CLV
     assert v.pick["dir"] == "主胜"  # 让球主胜口径

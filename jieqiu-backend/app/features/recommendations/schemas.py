@@ -18,6 +18,9 @@ class SnapshotPublic(BaseModel):
     confidence: float | None = None
     prob_low: float | None = None
     prob_high: float | None = None
+    interval_status: str | None = None
+    interval_n: int | None = None
+    interval_method: str | None = None
     conditions: list[str] = Field(default_factory=list)
     invalidators: list[str] = Field(default_factory=list)
     review: dict | None = None

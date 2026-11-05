@@ -20,7 +20,8 @@ from .render import render_notification
 CN = timezone(timedelta(hours=get_settings().tz_offset_hours))
 
 DEFAULT_EVENTS = ["verdict_promoted", "verdict_change", "verdict_killed",
-                  "close_soon", "final", "settled", "daily_brief"]
+                  "prematch_t3h", "prematch_t30m", "close_soon", "final",
+                  "settled", "daily_brief"]
 
 
 def _now_cn() -> datetime:

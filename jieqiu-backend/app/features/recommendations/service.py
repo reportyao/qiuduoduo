@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from ...models import (DecisionSnapshot, RecommendationEvent, RecommendationPlan,
                        ReviewRun, Verdict, utcnow)
 from ...config import get_settings
-from ...modules import llm_gateway
+from ...modules import calibration, llm_gateway
 from ...modules.compliance import scan_text
 from ...modules.timeutil import CN, trade_date_now
 from ..tools import service as parlay_service
@@ -594,6 +594,8 @@ def _public_snapshot(db: Session, row: DecisionSnapshot,
     verdict = payload.get("verdict") or {}
     pick = verdict.get("pick") or {}
     confidence = pick.get("prob") if isinstance(pick, dict) else None
+    prob_low, prob_high, interval_status, interval_n, interval_method = (
+        calibration.interval(db, float(confidence) if confidence is not None else None))
     return {
         "snapshot_id": row.id,
         "trade_date": row.trade_date,
@@ -606,8 +608,11 @@ def _public_snapshot(db: Session, row: DecisionSnapshot,
         "verdict": verdict,
         "direction": payload.get("direction") or "观望",
         "confidence": float(confidence) if confidence is not None else None,
-        "prob_low": None,
-        "prob_high": None,
+        "prob_low": prob_low,
+        "prob_high": prob_high,
+        "interval_status": interval_status,
+        "interval_n": interval_n,
+        "interval_method": interval_method,
         "conditions": payload.get("conditions") or [],
         "invalidators": payload.get("invalidators") or [],
         "review": _review_public(db, SUBJECT_DECISION, row.id, row.review_run_id,

@@ -57,6 +57,9 @@ export interface VerdictSummary {
   snapshotStatus?: string;
   direction?: string;
   confidence?: number | null;
+  probLow?: number | null;
+  probHigh?: number | null;
+  intervalStatus?: string | null;
   conditions?: string[];
   invalidators?: string[];
   review?: RecommendationReview | null;
@@ -137,6 +140,7 @@ export interface PostmortemSummary {
   resultScore: string | null;
   attribution: string | null;
   note: string;
+  viewedAt?: string | null;
 }
 
 export interface StreamResponse {
@@ -150,6 +154,7 @@ export interface StreamResponse {
   avoid: AvoidItem[];
   onsale: OnSaleItem[];
   postmortems: PostmortemSummary[];
+  unattended: PostmortemSummary[];
   restDay: RestDay | null;
   you: YouState | null;
 }

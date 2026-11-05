@@ -203,6 +203,9 @@ export const VerdictMessage = memo(function VerdictMessage({
             <Text variant="small" color={sub}>
               方向：{verdict.direction}
               {verdict.confidence != null ? ` · 把握度 ${pct(verdict.confidence)}` : ""}
+              {verdict.probLow != null && verdict.probHigh != null
+                ? ` · 参考区间 ${pct(verdict.probLow)}–${pct(verdict.probHigh)}`
+                : verdict.intervalStatus === "accumulating" ? " · 区间样本积累中" : ""}
             </Text>
           ) : null}
           {(verdict.conditions ?? []).slice(0, 2).map((line) => (
@@ -349,6 +352,53 @@ export function PostmortemMessage({
             onPress={() => onOpen(item.verdictId)}
             accessibilityRole="button"
             accessibilityLabel={`${item.match} 复盘`}
+            style={({ pressed }) => [
+              styles.listRow,
+              index < items.length - 1 && styles.rowLine,
+              pressed && styles.pressed,
+            ]}
+          >
+            <View style={styles.flex}>
+              <Text variant="smallStrong">{item.match}</Text>
+              <Text variant="caption" color={colors.muted}>
+                {item.resultScore ?? "待结算"} · {item.attribution ?? "未归因"}
+              </Text>
+            </View>
+            <Text
+              variant="captionStrong"
+              color={item.settled === "win" ? colors.green : item.settled === "lose" ? colors.danger : colors.muted}
+            >
+              {item.settled === "win" ? "✓ 中" : item.settled === "lose" ? "× 未中" : "待定"}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </AssistantMessage>
+  );
+}
+
+/** 未采纳复盘：当时看过、没有记注的已结算场次。 */
+export function UnattendedMessage({
+  items,
+  onOpen,
+}: {
+  items: PostmortemSummary[];
+  onOpen: (verdictId: string) => void;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <AssistantMessage>
+      <Text variant="overline" color={colors.green}>你当时看过</Text>
+      <Text variant="small" color={colors.muted} style={styles.paragraph}>
+        这些场次你打开过、但没有记注。赛后结果如下，只作复盘，不追损。
+      </Text>
+      <View style={styles.list}>
+        {items.map((item, index) => (
+          <Pressable
+            key={item.verdictId}
+            onPress={() => onOpen(item.verdictId)}
+            accessibilityRole="button"
+            accessibilityLabel={`${item.match} 未采纳复盘`}
             style={({ pressed }) => [
               styles.listRow,
               index < items.length - 1 && styles.rowLine,
