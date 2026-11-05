@@ -355,7 +355,7 @@ def admin_overview(db: Session = Depends(get_db), _: None = Depends(admin_auth.r
                         "view": "data", "filter": "all"})
     if unconfigured_profiles:
         actions.append({"kind": "keys", "severity": "low",
-                        "label": f"{len(unconfigured_profiles)} 个 Gateway profile 未配 Key",
+                        "label": f"{len(unconfigured_profiles)} 个模型配置未配 Key",
                         "detail": "未配置时该任务会自动降级到模板/固定引导",
                         "view": "gateway", "filter": "all"})
     return {

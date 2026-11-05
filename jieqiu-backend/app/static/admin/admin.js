@@ -108,12 +108,13 @@ function statusPill(status) {
 }
 
 function gatePills(gates = {}) {
-  return ["price", "market", "model"].map(key => {
+  const names = { price: "价", market: "市", model: "模" };
+  const labels = { pass: "过", fail: "败", pending_data: "待" };
+  return `<span class="gate-row">${["price", "market", "model"].map(key => {
     const value = gates[key];
-    const cls = value === "pass" ? "green" : value === "fail" ? "red" : value === "pending_data" ? "amber" : "muted";
-    const label = { price: "价", market: "市", model: "模", pass: "过", fail: "败", pending_data: "待" }[value] || value || "—";
-    return `<span class="pill ${cls}">${key === value ? esc(label) : esc(label)}</span>`;
-  }).join(" ");
+    const cls = value === "pass" ? "pass" : value === "fail" ? "fail" : value === "pending_data" ? "pending" : "";
+    return `<span class="gate ${cls}"><span class="gate-key">${names[key]}</span><span class="gate-val">${esc(labels[value] || "—")}</span></span>`;
+  }).join("")}</span>`;
 }
 
 function skeleton(count = 3) {
@@ -152,7 +153,7 @@ function confirmModal(title, message, action) {
 
 async function loadOverview() {
   const root = el("#view-overview");
-  root.innerHTML = `<div class="grid cols-4">${skeleton(4)}</div>`;
+  root.innerHTML = `<div class="kpi-grid">${skeleton(4)}</div>`;
   const data = await api("/admin/api/overview");
   state.cache.overview = data;
   const c = data.counts;
@@ -160,71 +161,100 @@ async function loadOverview() {
   const totalCost = gatewayRows.reduce((sum, row) => sum + Number(row.cost_cny || 0), 0);
   const totalCalls = gatewayRows.reduce((sum, row) => sum + Number(row.calls || 0), 0);
   const published = (c.snapshots.published || 0) + (c.plans.published || 0);
+  const stageCount = key => (c.snapshots[key] || 0) + (c.plans[key] || 0);
+  const stages = [
+    ["draft", "草稿"],
+    ["reviewing", "复核中"],
+    ["approved", "已过审"],
+    ["published", "已发布"],
+  ];
+  const reviewFailed = stageCount("review_failed");
   root.innerHTML = `
-    <div class="grid cols-4">
-      <div class="kpi green"><div class="kpi-label">今日过三关</div><div class="kpi-value">${c.verdicts_today.promoted}</div><div class="kpi-foot">复核中 ${c.verdicts_today.screening} · 已砍 ${c.verdicts_today.killed}</div></div>
+    <div class="kpi-grid">
+      <div class="kpi green accent"><div class="kpi-label">今日过三关</div><div class="kpi-value">${c.verdicts_today.promoted}</div><div class="kpi-foot">复核中 ${c.verdicts_today.screening} · 已砍 ${c.verdicts_today.killed}</div></div>
       <div class="kpi"><div class="kpi-label">今日已发布</div><div class="kpi-value">${published}</div><div class="kpi-foot">snapshot ${c.snapshots.published || 0} · plan ${c.plans.published || 0}</div></div>
       <div class="kpi ${c.models.degraded ? "amber" : "green"}"><div class="kpi-label">模型池健康</div><div class="kpi-value">${c.models.enabled}/${c.models.total}</div><div class="kpi-foot">降级 ${c.models.degraded} · 未配 Key ${c.models.total - c.models.configured}</div></div>
-      <div class="kpi"><div class="kpi-label">Gateway 今日调用</div><div class="kpi-value">${totalCalls}</div><div class="kpi-foot">成本 ¥${num(totalCost, 4)}</div></div>
+      <div class="kpi"><div class="kpi-label">模型调用（今日）</div><div class="kpi-value">${totalCalls}</div><div class="kpi-foot">成本 ¥${num(totalCost, 4)}</div></div>
     </div>
 
     <div class="card">
       <div class="toolbar">
-        <div><h2 style="margin:0">今日待办</h2><div class="card-sub" style="margin:0">OPC 只处理会阻塞发布/影响数据的事项</div></div>
+        <div><h2 style="margin:0">今日待办</h2><div class="card-sub" style="margin:0">只处理会阻塞发布或影响数据的事项</div></div>
         <div class="filters">
-          <button class="filter active">全部</button>
           <button class="filter" data-jump="recommendations">推荐主链</button>
           <button class="filter" data-jump="models">模型池</button>
         </div>
       </div>
       ${(data.actions || []).length ? data.actions.map(action => `
-        <div class="status-item" style="margin-bottom:10px">
+        <div class="status-item">
           <div>
-            <div style="display:flex;align-items:center;gap:9px"><b>${esc(action.label)}</b>${statusPill(action.severity === "high" ? "fail" : action.severity === "medium" ? "reviewing" : "skip")}</div>
+            <div style="display:flex;align-items:center;gap:8px"><b>${esc(action.label)}</b>${statusPill(action.severity === "high" ? "fail" : action.severity === "medium" ? "reviewing" : "skip")}</div>
             <div class="status-label" style="margin-top:4px">${esc(action.detail)}</div>
           </div>
           <button class="btn ${action.severity === "high" ? "primary" : "secondary"} small" data-action-view="${esc(action.view)}" data-action-filter="${esc(action.filter || "all")}">去处理</button>
         </div>
-      `).join("") : '<div class="empty" style="padding:24px">没有阻塞项。数据/模型/发布都正常。</div>'}
-      <div class="status-item" style="margin-top:6px">
+      `).join("") : '<div class="empty">没有阻塞项。数据、模型和发布都正常。</div>'}
+      <div class="status-item">
         <div><b>SP 数据</b><div class="status-label">最新 ${esc(data.sync?.latest || "—")} · lag ${data.sync?.lag_seconds == null ? "—" : data.sync.lag_seconds + "s"}</div></div>
         ${data.sync?.lag_seconds == null ? statusPill("skip") : data.sync.lag_seconds > 1800 ? statusPill("fail") : statusPill("ok")}
       </div>
     </div>
 
-    <div class="grid side">
-      <div class="card">
-        <h2 class="card-title">推荐生命周期</h2>
-        <div class="status-grid">
-          ${["draft", "reviewing", "approved", "review_failed", "published", "expired"].map(key => `
-            <div class="status-item"><div class="status-label">${esc(key)}</div>${statusPill(key)}</div>
-          `).join("")}
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">今日主链</h2>
+          <div class="card-sub">从草稿到用户可见，按状态计数</div>
         </div>
-        <div style="margin-top:16px" class="bar-row"><span class="status-label">snapshot</span><div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, (c.snapshots.published || 0) * 20)}%"></div></div><span class="mono">${c.snapshots.published || 0}</span></div>
-        <div class="bar-row"><span class="status-label">plan</span><div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, (c.plans.published || 0) * 20)}%"></div></div><span class="mono">${c.plans.published || 0}</span></div>
-        <div class="bar-row"><span class="status-label">复核通过</span><div class="bar-track"><div class="bar-fill" style="width:${c.reviews.total ? Math.round(c.reviews.passed / c.reviews.total * 100) : 0}%"></div></div><span class="mono">${c.reviews.passed}/${c.reviews.total}</span></div>
+        <button class="btn ghost small" data-jump="recommendations">查看全部</button>
       </div>
+      <div class="pipeline">
+        ${stages.map(([key, label], index) => `
+          <button class="pipeline-step ${key}" data-jump="recommendations" data-jump-filter="${key}">
+            <span class="pipeline-index">0${index + 1}</span>
+            <span class="pipeline-name">${label}</span>
+            <span class="pipeline-count">${stageCount(key)}</span>
+          </button>
+        `).join("")}
+      </div>
+      <div class="pipeline-meta">
+        <span>复核通过 <b>${c.reviews.passed}/${c.reviews.total}</b></span>
+        <span>复核失败 <b>${reviewFailed}</b></span>
+        <span>当前发布 <b>${published}</b></span>
+      </div>
+    </div>
 
+    <div class="grid side">
       <div class="card">
         <h2 class="card-title">模型池状态</h2>
         ${data.models.map(m => `
-          <div class="status-item" style="margin-bottom:10px">
+          <div class="status-item">
             <div><b>${esc(m.model)}</b><div class="status-label">P${m.priority} · ${esc(m.key)}</div></div>
             ${m.enabled ? (m.fail_count >= 3 ? statusPill("fail") : statusPill("ok")) : statusPill("muted")}
           </div>
         `).join("") || '<div class="empty">暂无模型</div>'}
-        <div class="detail-list" style="margin-top:14px">
+        <div class="detail-list" style="margin-top:16px">
           <div><b>最近快照：</b>${esc(data.latest.snapshot_created_at || "—")}</div>
           <div><b>最近事件：</b>${esc(data.latest.event_at || "—")}</div>
           <div><b>最近判决：</b>${esc(data.latest.verdict_created_at || "—")}</div>
         </div>
       </div>
+
+      <div class="card">
+        <h2 class="card-title">今日运行</h2>
+        <div class="status-grid">
+          <div class="status-item"><span class="status-label">环境</span><b class="mono">${esc(data.env || "—")}</b></div>
+          <div class="status-item"><span class="status-label">日期</span><b class="mono">${esc(data.date || "—")}</b></div>
+          <div class="status-item"><span class="status-label">复核通过</span><b class="mono">${c.reviews.passed}/${c.reviews.total}</b></div>
+          <div class="status-item"><span class="status-label">复核失败</span><b class="mono">${c.reviews.failed || 0}</b></div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
-      <h2 class="card-title">Gateway 今日用量</h2>
+      <h2 class="card-title">模型调用（今日）</h2>
       <div class="table-wrap"><table>
-        <thead><tr><th>task</th><th>profile</th><th class="num">调用</th><th class="num">缓存</th><th class="num">tokens</th><th class="num">成本</th></tr></thead>
+        <thead><tr><th>任务</th><th>配置</th><th class="num">调用</th><th class="num">缓存</th><th class="num">Tokens</th><th class="num">成本</th></tr></thead>
         <tbody>${gatewayRows.map(row => `
           <tr><td>${esc(row.task)}</td><td>${esc(row.profile)}</td><td class="num">${row.calls}</td><td class="num">${row.cache_hits}</td><td class="num">${row.input_tokens}/${row.output_tokens}</td><td class="num">¥${num(row.cost_cny, 5)}</td></tr>
         `).join("") || '<tr><td colspan="6">今日无调用</td></tr>'}</tbody>
@@ -236,7 +266,10 @@ async function loadOverview() {
     state.recommendationFilter = btn.dataset.actionFilter || "all";
     showView(btn.dataset.actionView);
   });
-  els("[data-jump]").forEach(btn => btn.onclick = () => showView(btn.dataset.jump));
+  els("[data-jump]").forEach(btn => btn.onclick = () => {
+    if (btn.dataset.jumpFilter) state.recommendationFilter = btn.dataset.jumpFilter;
+    showView(btn.dataset.jump);
+  });
 }
 
 /* ---------- model pool ---------- */
@@ -270,7 +303,7 @@ async function loadModels() {
           </div>
           ${model.last_error ? `<div class="model-error">${esc(model.last_error)}</div>` : ""}
         </div>
-        <div class="actions" style="flex-direction:column;align-items:stretch;min-width:130px">
+        <div class="actions" style="flex-direction:column;align-items:stretch;min-width:128px">
           ${canOperate() ? `<button class="btn secondary small" data-model-test="${model.id}">测试</button>` : ""}
           ${canAdmin() ? `<button class="btn secondary small" data-model-edit="${model.id}">编辑</button>
           <button class="btn secondary small" data-model-key="${model.id}">更新 Key</button>
@@ -488,19 +521,24 @@ async function loadRecommendations(append = false) {
       .join(" ").toLowerCase().includes(query))
   );
   const counts = data.counts;
+  const filterLabels = {
+    all: "全部", draft: "草稿", reviewing: "复核中", approved: "已过审",
+    review_failed: "复核失败", published: "已发布", expired: "已过期",
+    withdrawn: "已撤回",
+  };
   root.innerHTML = `
-    <div class="grid cols-4">
-      <div class="kpi green"><div class="kpi-label">已发布</div><div class="kpi-value">${counts.published}</div><div class="kpi-foot">${esc(data.date)}</div></div>
+    <div class="kpi-grid">
+      <div class="kpi green accent"><div class="kpi-label">已发布</div><div class="kpi-value">${counts.published}</div><div class="kpi-foot">${esc(data.date)}</div></div>
       <div class="kpi"><div class="kpi-label">Snapshot</div><div class="kpi-value">${counts.snapshots}</div><div class="kpi-foot">含全部版本</div></div>
       <div class="kpi"><div class="kpi-label">Plan</div><div class="kpi-value">${counts.plans}</div><div class="kpi-foot">含全部版本</div></div>
       <div class="kpi ${counts.review_failed ? "red" : "green"}"><div class="kpi-label">复核失败</div><div class="kpi-value">${counts.review_failed}</div><div class="kpi-foot">可重试</div></div>
     </div>
 
     <div class="card">
-      <div class="toolbar">
+      <div class="toolbar reco-toolbar">
         <div class="filters">
-          ${["all", "draft", "reviewing", "approved", "review_failed", "published", "expired", "withdrawn"].map(x => `
-            <button class="filter ${state.recommendationFilter === x ? "active" : ""}" data-filter="${x}">${x}</button>`).join("")}
+          ${Object.entries(filterLabels).map(([value, label]) => `
+            <button class="filter ${state.recommendationFilter === value ? "active" : ""}" data-filter="${value}">${label}</button>`).join("")}
         </div>
         <div class="actions">
           <input id="reco-search" type="search" placeholder="搜场次 / 球队" value="${esc(state.recommendationQuery)}">
@@ -511,12 +549,12 @@ async function loadRecommendations(append = false) {
         </div>
       </div>
       <div id="reco-list">${filtered.length ? filtered.map(recoCard).join("") : '<div class="empty">当前筛选暂无 snapshot</div>'}</div>
-      ${data.page?.has_more ? '<div style="text-align:center;margin-top:14px"><button class="btn secondary" id="reco-more">加载更多（已显示 ' + data.snapshots.length + ' / ' + data.page.total + '）</button></div>' : ""}
+      ${data.page?.has_more ? '<div style="text-align:center;margin-top:16px"><button class="btn secondary" id="reco-more">加载更多（已显示 ' + data.snapshots.length + ' / ' + data.page.total + '）</button></div>' : ""}
     </div>
 
     <div class="grid side">
       <div class="card"><h2 class="card-title">参考组合生命周期</h2>${data.plans.map(plan => `
-        <div class="status-item" style="margin-bottom:10px">
+        <div class="status-item">
           <div style="flex:1"><b>${esc(plan.label)}</b><div class="status-label">v${plan.version} · ${plan.legs.length} 腿</div>
             <div class="actions" style="margin-top:8px">
               <button class="btn secondary small" data-review="${plan.id}">查看复核</button>
@@ -578,7 +616,7 @@ function recoCard(item) {
   const searchText = [item.home, item.away, item.match_no, item.league, item.direction]
     .join(" ").toLowerCase();
   return `
-    <div class="reco-card ${item.status}" data-search="${esc(searchText)}" style="padding:18px;border:1px solid var(--line);border-radius:14px;background:#fff;margin-bottom:14px">
+    <div class="reco-card ${item.status}" data-search="${esc(searchText)}">
       <div class="reco-head">
         <div><div class="reco-title">${esc(title)}</div><div class="reco-sub">${esc(sub)} · ${esc(item.direction)}</div></div>
         ${statusPill(item.status)}
@@ -589,7 +627,7 @@ function recoCard(item) {
         <div><b>失效：</b>${esc((item.invalidators || []).join("；") || "—")}</div>
         <div><b>hash：</b><span class="mono">${esc(item.payload_hash.slice(0, 18))}…</span></div>
       </div>
-      <div class="actions" style="margin-top:14px">
+      <div class="actions" style="margin-top:16px">
         <button class="btn secondary small" data-review="${item.id}" data-type="decision">查看复核</button>
         ${canOperate() && (item.status === "draft" || item.status === "review_failed") ? `<button class="btn primary small" data-rereview="${item.id}" data-type="decision">重新复核</button>` : ""}
         ${canOperate() && item.status === "approved" ? `<button class="btn primary small" data-publish="${item.id}" data-type="decision">发布</button>` : ""}
@@ -648,17 +686,17 @@ async function loadGateway() {
   const data = await api("/admin/api/gateway");
   const rows = data.summary.rows || [];
   root.innerHTML = `
-    <div class="grid cols-3">
+    <div class="kpi-grid cols-3">
       ${data.profiles.map(profile => `
-        <div class="kpi ${profile.configured ? "green" : "amber"}"><div class="kpi-label">${esc(profile.name)} profile</div><div class="kpi-value">${profile.configured ? "已配" : "未配"}</div><div class="kpi-foot">${esc(profile.provider)} · ${esc(profile.model)}</div></div>`).join("")}
+        <div class="kpi ${profile.configured ? "green" : "amber"}"><div class="kpi-label">${esc(profile.name)} 配置</div><div class="kpi-value">${profile.configured ? "已配" : "未配"}</div><div class="kpi-foot">${esc(profile.provider)} · ${esc(profile.model)}</div></div>`).join("")}
     </div>
-    <div class="card"><h2 class="card-title">任务路由</h2><div class="table-wrap"><table><thead><tr><th>task</th><th>profile</th></tr></thead><tbody>
+    <div class="card"><h2 class="card-title">任务路由</h2><div class="table-wrap"><table><thead><tr><th>任务</th><th>配置</th></tr></thead><tbody>
       ${Object.entries(data.routes || {}).map(([task, profile]) => `<tr><td>${esc(task)}</td><td>${esc(profile)}</td></tr>`).join("")}
     </tbody></table></div></div>
-    <div class="card"><h2 class="card-title">今日用量</h2><div class="table-wrap"><table><thead><tr><th>task</th><th>profile</th><th class="num">调用</th><th class="num">缓存</th><th class="num">tokens</th><th class="num">成本</th></tr></thead><tbody>
+    <div class="card"><h2 class="card-title">今日用量</h2><div class="table-wrap"><table><thead><tr><th>任务</th><th>配置</th><th class="num">调用</th><th class="num">缓存</th><th class="num">Tokens</th><th class="num">成本</th></tr></thead><tbody>
       ${rows.map(row => `<tr><td>${esc(row.task)}</td><td>${esc(row.profile)}</td><td class="num">${row.calls}</td><td class="num">${row.cache_hits}</td><td class="num">${row.input_tokens}/${row.output_tokens}</td><td class="num">¥${num(row.cost_cny, 5)}</td></tr>`).join("") || '<tr><td colspan="6">今日无调用</td></tr>'}
     </tbody></table></div></div>
-    <div class="card"><h2 class="card-title">最近调用</h2><div class="table-wrap"><table><thead><tr><th>task</th><th>model</th><th>状态</th><th class="num">延迟</th><th class="num">成本</th></tr></thead><tbody>
+    <div class="card"><h2 class="card-title">最近调用</h2><div class="table-wrap"><table><thead><tr><th>任务</th><th>模型</th><th>状态</th><th class="num">延迟</th><th class="num">成本</th></tr></thead><tbody>
       ${(data.summary.recent || []).map(u => `<tr><td>${esc(u.task)}</td><td>${esc(u.model)}</td><td>${statusPill(u.status)}</td><td class="num">${u.latency_ms}ms</td><td class="num">¥${num(u.cost_cny, 6)}</td></tr>`).join("") || '<tr><td colspan="5">暂无调用</td></tr>'}
     </tbody></table></div></div>
   `;
@@ -671,10 +709,10 @@ async function loadPlans() {
   root.innerHTML = `
     <div class="card"><div class="toolbar"><div><h2 style="margin:0">确定性组合预览</h2><div class="card-sub" style="margin:0">候选 ${data.candidates} · 仅预览，正式发布需走推荐主链</div></div><button class="btn secondary" id="reload-plans">刷新</button></div>
       ${data.plans.map(plan => `
-        <div class="reco-card draft" style="margin-bottom:14px">
+        <div class="reco-card draft">
           <div class="reco-head"><div><div class="reco-title">${esc(plan.label)} · ${plan.legs.length} 串 1</div><div class="reco-sub">组合赔率 ${plan.check.combo.odds} · 成本 ${plan.check.combo.cost}</div></div>${statusPill("draft")}</div>
           <div class="detail-list" style="margin-top:12px">${plan.check.legs.map(leg => `<div><b>${esc(leg.match_no)}</b> ${esc(leg.home)} vs ${esc(leg.away)} · ${esc(leg.dir_label)} @${leg.odds} · ${esc(leg.status)}</div>`).join("")}</div>
-          ${plan.note ? `<div class="model-error" style="background:var(--amber-soft);color:var(--amber)">${esc(plan.note)}</div>` : ""}
+          ${plan.note ? `<div class="model-error warn">${esc(plan.note)}</div>` : ""}
         </div>`).join("") || '<div class="empty">今日暂无可配组合</div>'}
     </div>
   `;
@@ -688,20 +726,37 @@ async function loadData() {
   const supply = data.supply || {};
   const gate = supply.market_gate || {};
   const intl = supply.intl_odds || {};
+  const published = supply.published ?? 0;
   root.innerHTML = `
-    ${supply.blocked_reason ? `<div class="card" style="border-color:var(--red)"><b style="color:var(--red)">内容供给受阻：${esc(supply.blocked_reason)}</b><div class="card-sub" style="margin-top:6px">场次 ${supply.matches ?? 0} · 判决 ${supply.verdicts?.total ?? 0} · 市闸 pending ${gate.pending_data ?? 0} · 国际盘 ${intl.total ?? 0}（覆盖 ${intl.covered_matches ?? 0}/${supply.matches ?? 0} 场）</div></div>` : ""}
-    <div class="grid cols-4">
-      <div class="kpi"><div class="kpi-label">verdict 总量</div><div class="kpi-value">${data.verdicts.total}</div><div class="kpi-foot">今日 ${data.verdicts.today}</div></div>
-      <div class="kpi green"><div class="kpi-label">promoted</div><div class="kpi-value">${data.verdicts.promoted}</div><div class="kpi-foot">screening ${data.verdicts.screening}</div></div>
-      <div class="kpi red"><div class="kpi-label">killed</div><div class="kpi-value">${data.verdicts.killed}</div><div class="kpi-foot">含历史</div></div>
+    ${supply.blocked_reason ? `<div class="card notice"><b>内容供给受阻：${esc(supply.blocked_reason)}</b><div class="card-sub" style="margin-top:8px">场次 ${supply.matches ?? 0} · 判决 ${supply.verdicts?.total ?? 0} · 市闸 pending ${gate.pending_data ?? 0} · 国际盘 ${intl.total ?? 0}（覆盖 ${intl.covered_matches ?? 0}/${supply.matches ?? 0} 场）</div></div>` : ""}
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">判决总量</div><div class="kpi-value">${data.verdicts.total}</div><div class="kpi-foot">今日 ${data.verdicts.today}</div></div>
+      <div class="kpi green accent"><div class="kpi-label">已过三关</div><div class="kpi-value">${data.verdicts.promoted}</div><div class="kpi-foot">复核中 ${data.verdicts.screening}</div></div>
+      <div class="kpi red"><div class="kpi-label">已砍</div><div class="kpi-value">${data.verdicts.killed}</div><div class="kpi-foot">含历史</div></div>
       <div class="kpi"><div class="kpi-label">SP 快照</div><div class="kpi-value">${data.snapshots.total}</div><div class="kpi-foot">${esc(data.snapshots.latest || "—")}</div></div>
     </div>
-    <div class="card"><h2 class="card-title">内容供给漏斗</h2>
-      <div class="grid cols-4">
-        <div class="kpi"><div class="kpi-label">今日场次 / SP</div><div class="kpi-value">${supply.matches ?? 0} / ${supply.sp_snapshots ?? 0}</div><div class="kpi-foot">SP 快照行数</div></div>
-        <div class="kpi ${intl.configured ? "green" : "red"}"><div class="kpi-label">国际盘</div><div class="kpi-value">${intl.total ?? 0}</div><div class="kpi-foot">${intl.configured ? "已配置" : "未配置"} · 覆盖 ${intl.covered_matches ?? 0}/${supply.matches ?? 0} 场</div></div>
-        <div class="kpi ${gate.pending_data ? "amber" : "green"}"><div class="kpi-label">市闸</div><div class="kpi-value">${gate.pass ?? 0} 过 / ${gate.pending_data ?? 0} 待</div><div class="kpi-foot">fail ${gate.fail ?? 0}</div></div>
-        <div class="kpi ${supply.published ? "green" : "amber"}"><div class="kpi-label">已发布</div><div class="kpi-value">${supply.published ?? 0}</div><div class="kpi-foot">snapshot ${supply.snapshots?.published ?? 0} · plan ${supply.plans?.published ?? 0}</div></div>
+    <div class="card"><h2 class="card-title">内容供给</h2>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-index">01</div><div class="flow-label">今日场次</div>
+          <div class="flow-value">${supply.matches ?? 0}</div>
+          <div class="flow-meta">SP 快照 ${supply.sp_snapshots ?? 0} 行</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-index">02</div><div class="flow-label">国际盘</div>
+          <div class="flow-value">${intl.total ?? 0}</div>
+          <div class="flow-meta">${intl.configured ? "已配置" : "未配置"} · 覆盖 ${intl.covered_matches ?? 0}/${supply.matches ?? 0} 场</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-index">03</div><div class="flow-label">市闸</div>
+          <div class="flow-value">${gate.pass ?? 0} 过</div>
+          <div class="flow-meta">${gate.pending_data ?? 0} 待 · ${gate.fail ?? 0} 败</div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-index">04</div><div class="flow-label">已发布</div>
+          <div class="flow-value">${published}</div>
+          <div class="flow-meta">snapshot ${supply.snapshots?.published ?? 0} · plan ${supply.plans?.published ?? 0}</div>
+        </div>
       </div>
     </div>
     <div class="card"><h2 class="card-title">数据同步</h2>
@@ -736,14 +791,14 @@ async function loadLogs() {
 /* ---------- shell ---------- */
 
 const views = {
-  overview: { title: "总览", kicker: "Overview", loader: loadOverview },
-  models: { title: "模型池", kicker: "Model Pool", loader: loadModels },
-  gateway: { title: "模型用量", kicker: "LLM Gateway", loader: loadGateway },
-  personas: { title: "人设文案", kicker: "Persona Studio", loader: loadPersonas },
-  recommendations: { title: "推荐主链", kicker: "Decision → Review → Publish", loader: loadRecommendations },
-  plans: { title: "组合预览", kicker: "Parlay Preview", loader: loadPlans },
-  data: { title: "数据源", kicker: "Data Sources", loader: loadData },
-  logs: { title: "运行日志", kicker: "Runtime Logs", loader: loadLogs },
+  overview: { title: "总览", kicker: "今日运营", loader: loadOverview },
+  models: { title: "模型池", kicker: "人设模型", loader: loadModels },
+  gateway: { title: "模型用量", kicker: "调用与成本", loader: loadGateway },
+  personas: { title: "人设文案", kicker: "文案语气", loader: loadPersonas },
+  recommendations: { title: "推荐主链", kicker: "判断发布", loader: loadRecommendations },
+  plans: { title: "组合预览", kicker: "风险组合", loader: loadPlans },
+  data: { title: "数据源", kicker: "数据供给", loader: loadData },
+  logs: { title: "运行日志", kicker: "运行输出", loader: loadLogs },
 };
 
 let autoTimer = null;
@@ -824,7 +879,7 @@ el("#login-form").addEventListener("submit", async event => {
 el("#refresh").onclick = () => showView(state.view);
 el("#auto-refresh").onclick = () => {
   state.autoRefresh = !state.autoRefresh;
-  el("#auto-refresh").textContent = `自动 · ${state.autoRefresh ? "开" : "关"}`;
+  el("#auto-refresh").textContent = `自动刷新 · ${state.autoRefresh ? "开" : "关"}`;
   scheduleAutoRefresh();
 };
 el("#logout").onclick = async () => {
