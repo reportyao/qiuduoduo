@@ -8,7 +8,9 @@ from __future__ import annotations
 import io
 import os
 import shlex
+import sqlite3
 import tarfile
+import tempfile
 
 import paramiko
 
@@ -95,6 +97,30 @@ def run_sudo(ssh: paramiko.SSHClient, cmd: str, password: str,
     code = out.channel.recv_exit_status()
     return code, (o + ("\n[stderr] " + e if e.strip() else ""))
 
+
+
+def sqlite_snapshot(src: str) -> str:
+    """用 SQLite backup API 复制一致性快照，避免 SFTP 传输正在写入的 DB。"""
+    fd, path = tempfile.mkstemp(prefix="jq-sp-snapshot-", suffix=".db")
+    os.close(fd)
+    try:
+        source = sqlite3.connect(f"file:{src}?mode=ro", uri=True)
+        target = sqlite3.connect(path)
+        try:
+            source.backup(target)
+            ok = target.execute("PRAGMA quick_check").fetchone()
+        finally:
+            source.close()
+            target.close()
+        if not ok or ok[0] != "ok":
+            raise SystemExit(f"采集器快照完整性检查失败：{ok}")
+        return path
+    except Exception:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        raise
 
 
 def make_tar() -> bytes:
@@ -312,7 +338,15 @@ WantedBy=multi-user.target
     _require("cron-ok" in out, f"写入 crontab 失败：{out[-800:]}")
 
     # 上传当前采集器数据并跑一次种子；同样不能用管道吞掉 seed 的退出码。
-    sftp.put(os.path.join(APP_DIR, "..", "sp-collector", "sp_data.db"), "/tmp/sp_data.db")
+    # 不能直接 put 活跃 SQLite 文件：采集器可能在传输期间写入，远端会得到 malformed 镜像。
+    snapshot = sqlite_snapshot(os.path.join(APP_DIR, "..", "sp-collector", "sp_data.db"))
+    try:
+        sftp.put(snapshot, "/tmp/sp_data.db")
+    finally:
+        try:
+            os.remove(snapshot)
+        except OSError:
+            pass
     code, out = run(ssh, f"set -a; . {DATA}/cron.env; set +a; cd {ROOT} && "
                          f"venv/bin/python -m app.seed /tmp/sp_data.db > /tmp/jq-seed.log 2>&1; "
                          f"rc=$?; tail -3 /tmp/jq-seed.log; exit $rc")
