@@ -20,6 +20,6 @@
 当前实现事实（2026-11-05）：
 
 - 运行目录仍是 `jieqiu-backend/`；`services/api/` 是迁移目标，不是当前生产路径。
-- OpenAPI 128 路径 / 143 方法；后端测试 260；Alembic head `20261105_12`。
+- OpenAPI 128 路径 / 143 方法；后端测试 261；Alembic head `20261105_12`。
 - 生产默认切 Postgres 仍需设置 `JQ_PROD_DATABASE_URL`；未设置时是旧 SQLite 兼容模式。
 - 全栈深审记录（历史快照）：[docs/reviews/2026-11-04-full-stack.md](../docs/reviews/2026-11-04-full-stack.md)。

@@ -180,3 +180,24 @@ def test_admin_football_link_requires_login(client):
     r = client.post("/admin/api/football/link",
                     json={"fixture_id": 999001, "match_id": "sp-1"})
     assert r.status_code == 401
+
+
+def test_provider_base_url_and_headers():
+    from types import SimpleNamespace
+    from app.modules import api_football
+
+    st = SimpleNamespace(api_football_provider="apisports",
+                         api_football_base_url="https://v3.football.api-sports.io/",
+                         api_football_key="k1")
+    base, headers = api_football._base_url_and_headers(st)
+    assert base == "https://v3.football.api-sports.io"
+    assert headers["x-apisports-key"] == "k1"
+
+    st = SimpleNamespace(api_football_provider="rapidapi",
+                         api_football_base_url="https://v3.football.api-sports.io",
+                         api_football_rapidapi_host="api-football-v1.p.rapidapi.com",
+                         api_football_key="k2")
+    base, headers = api_football._base_url_and_headers(st)
+    assert base == "https://api-football-v1.p.rapidapi.com/v3"
+    assert headers["x-rapidapi-key"] == "k2"
+    assert headers["x-rapidapi-host"] == "api-football-v1.p.rapidapi.com"

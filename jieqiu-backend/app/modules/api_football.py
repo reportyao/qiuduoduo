@@ -116,18 +116,33 @@ def consume_quota(db: Session, endpoint: str) -> None:
             db.commit()
 
 
+def _base_url_and_headers(st) -> tuple[str, dict]:
+    """兼容两种来源：API-Sports 直连 key 与 RapidAPI 订阅 key。"""
+    provider = (getattr(st, "api_football_provider", "apisports") or "apisports").lower()
+    base = st.api_football_base_url.rstrip("/")
+    if provider == "rapidapi":
+        if "api-sports.io" in base:
+            base = "https://api-football-v1.p.rapidapi.com/v3"
+        return base, {
+            "x-rapidapi-key": st.api_football_key,
+            "x-rapidapi-host": getattr(st, "api_football_rapidapi_host",
+                                       "api-football-v1.p.rapidapi.com"),
+            "Accept": "application/json",
+        }
+    return base, {"x-apisports-key": st.api_football_key,
+                  "Accept": "application/json"}
+
+
 def _request(db: Session, endpoint: str, params: dict | None = None) -> list[dict]:
     st = _settings()
     if not st.api_football_key:
         raise ApiFootballNotConfigured("JQ_API_FOOTBALL_KEY 未配置")
     consume_quota(db, endpoint)
-    url = f"{st.api_football_base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+    base, headers = _base_url_and_headers(st)
+    url = f"{base}/{endpoint.lstrip('/')}"
     try:
         with httpx.Client(timeout=st.api_football_timeout_s) as client:
-            resp = client.get(url, params=params or {}, headers={
-                "x-apisports-key": st.api_football_key,
-                "Accept": "application/json",
-            })
+            resp = client.get(url, params=params or {}, headers=headers)
             resp.raise_for_status()
             try:
                 payload = resp.json()
@@ -487,7 +502,8 @@ def status(db: Session) -> dict:
     last = db.scalar(select(func.max(ApiFootballFixture.synced_at)))
     return {
         "configured": bool(st.api_football_key),
-        "base_url": st.api_football_base_url,
+        "base_url": _base_url_and_headers(st)[0],
+        "provider": getattr(st, "api_football_provider", "apisports"),
         "daily_limit": st.api_football_daily_limit,
         "used_today": total,
         "remaining": max(0, st.api_football_daily_limit - total),

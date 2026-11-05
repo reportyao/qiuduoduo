@@ -139,7 +139,7 @@ src/
 
 ## 9. 当前验证状态（2026-11-05）
 
-- 后端 260 passed；OpenAPI 128 路径 / 143 方法；Alembic head `20261105_12`。
+- 后端 261 passed；OpenAPI 128 路径 / 143 方法；Alembic head `20261105_12`。
 - 前端 typecheck / ESLint / 22 Vitest passed；Android Hermes bundle 3.68 MB。
 - 自排除、401/410、刷新竞态、下注金额、05:00 日界、分享落地页已做回归。
 

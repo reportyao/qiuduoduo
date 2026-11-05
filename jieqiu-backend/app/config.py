@@ -61,7 +61,10 @@ class Settings(BaseSettings):
     odds_sync_min_interval_hours: float = 6.0
     # API-Football（免费档 100 请求/日；默认留 10 次给人工排查）
     api_football_key: str = ""
+    # apisports = 官方直连（x-apisports-key）；rapidapi = RapidAPI 市场（x-rapidapi-key）
+    api_football_provider: str = "apisports"
     api_football_base_url: str = "https://v3.football.api-sports.io"
+    api_football_rapidapi_host: str = "api-football-v1.p.rapidapi.com"
     api_football_timeout_s: int = Field(default=20, ge=3, le=60)
     api_football_daily_limit: int = Field(default=90, ge=1, le=100)
     api_football_lineup_hours: int = Field(default=6, ge=1, le=24)
