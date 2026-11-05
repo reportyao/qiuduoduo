@@ -263,7 +263,9 @@ def _coverage(db: Session, match: SPMatch, date: str, v: Verdict | None,
         missing.append("lineups")
     if not standings_ok:
         missing.append("standings")
-    level = "full" if score >= 70 else "partial" if score >= 50 else "insufficient"
+    # 缺少任一必需来源时不能标 full；否则前端会显示“覆盖完整”但 deep_eligible=false。
+    level = ("full" if score >= 70 and not missing else
+             "partial" if score >= 50 else "insufficient")
     minutes = _minutes_until(match.kickoff, now)
     hours = _hours_until(match.kickoff, now)
     # 没有阵容数据时，距开赛 >=12h 才允许带“首发未知”做深读。
