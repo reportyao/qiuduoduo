@@ -1063,6 +1063,9 @@ def admin_ops(db: Session = Depends(get_db),
     if not football.get("configured"):
         alerts.append({"level": "low", "title": "API-Football 未配置",
                        "detail": "阵容/伤停/积分榜将保持 missing"})
+    elif football.get("warnings"):
+        alerts.append({"level": "medium", "title": "API-Football 覆盖不完整",
+                       "detail": "；".join(football["warnings"])})
     intl = supply_data["intl_odds"]
     if not intl["configured"] and supply_data["matches"] > 0:
         alerts.append({"level": "high", "title": "国际盘未配置（The Odds API）",

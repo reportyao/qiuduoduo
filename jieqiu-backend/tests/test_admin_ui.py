@@ -223,3 +223,11 @@ def test_role_change_revokes_sessions(db):
     assert token in A._SESSIONS
     assert A.revoke_all_for_user(user.id) >= 1
     assert token not in A._SESSIONS
+
+
+def test_admin_data_exposes_football_coverage(client, db):
+    login(client)
+    af = client.get("/admin/api/data").json()["api_football"]
+    assert "target" in af and "warnings" in af
+    assert {"matches", "linked", "lineups", "injuries"} <= set(af["target"])
+    assert isinstance(af["warnings"], list)

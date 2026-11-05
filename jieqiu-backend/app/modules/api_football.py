@@ -459,6 +459,8 @@ def sync_injuries(db: Session, hours: int | None = None,
 
 def sync_standings(db: Session, max_requests: int | None = None) -> dict:
     st = _settings()
+    if not getattr(st, "api_football_standings_enabled", True):
+        return {"leagues": 0, "synced": 0, "skipped": "standings 同步已关闭"}
     limit = max_requests or st.api_football_max_requests_per_run
     fixtures = _linked_fixtures(db)
     seen: set[tuple[int, int]] = set()
@@ -581,18 +583,76 @@ def status(db: Session) -> dict:
     injuries = int(db.scalar(select(func.count()).select_from(MatchInjury)) or 0)
     standings = int(db.scalar(select(func.count()).select_from(TeamStanding)) or 0)
     last = db.scalar(select(func.max(ApiFootballFixture.synced_at)))
+
+    # 今日+明日的竞彩目标场次覆盖：后台只关心真正要发布的比赛，而不是全部 400+ 场。
+    start = f"{day} 00:00:00"
+    end = (datetime.strptime(day, "%Y-%m-%d")
+           + timedelta(days=2)).strftime("%Y-%m-%d 00:00:00")
+    target_matches = int(db.scalar(
+        select(func.count()).select_from(SPMatch).where(
+            SPMatch.kickoff >= start, SPMatch.kickoff < end)) or 0)
+    target_ids = select(SPMatch.match_id).where(
+        SPMatch.kickoff >= start, SPMatch.kickoff < end)
+    target_linked = int(db.scalar(
+        select(func.count(func.distinct(SPMatch.match_id))).select_from(SPMatch)
+        .join(ApiFootballFixture, ApiFootballFixture.match_id == SPMatch.match_id)
+        .where(SPMatch.kickoff >= start, SPMatch.kickoff < end)) or 0)
+    target_lineups = int(db.scalar(
+        select(func.count()).select_from(MatchLineup)
+        .where(MatchLineup.match_id.in_(target_ids))) or 0)
+    target_injuries = int(db.scalar(
+        select(func.count()).select_from(MatchInjury)
+        .where(MatchInjury.match_id.in_(target_ids))) or 0)
+    remaining = max(0, st.api_football_daily_limit - total)
+    quota_pct = round(total / st.api_football_daily_limit * 100) if st.api_football_daily_limit else 0
+    quota_state = ("unconfigured" if not st.api_football_key else
+                   "exhausted" if remaining <= 0 else
+                   "low" if remaining <= 15 else "ok")
+    lineups_state = ("unconfigured" if not st.api_football_key else
+                     "ok" if target_lineups > 0 else
+                     "pending" if target_linked > 0 else "missing")
+    standings_state = ("unconfigured" if not st.api_football_key else
+                       "ok" if standings > 0 else "missing")
+    warnings: list[str] = []
+    if not st.api_football_key:
+        warnings.append("API-Football 未配置")
+    else:
+        if target_matches and target_linked < target_matches:
+            warnings.append(f"今日/明日目标场次链接 {target_linked}/{target_matches}")
+        if target_linked and target_lineups == 0:
+            warnings.append("已链接场次尚无阵容；通常在停售前 1 小时内发布")
+        if target_linked and standings == 0:
+            if not getattr(st, "api_football_standings_enabled", True):
+                warnings.append("积分榜同步已关闭；当前套餐不支持当前赛季")
+            else:
+                warnings.append("当前赛季积分榜尚未同步；Free 档可能不支持该赛季")
+        if remaining <= 15:
+            warnings.append(f"今日额度仅剩 {remaining} 次，临场补阵容可能受限")
     return {
         "configured": bool(st.api_football_key),
         "base_url": _base_url_and_headers(st)[0],
         "provider": getattr(st, "api_football_provider", "apisports"),
         "daily_limit": st.api_football_daily_limit,
         "used_today": total,
-        "remaining": max(0, st.api_football_daily_limit - total),
+        "remaining": remaining,
+        "quota_pct": quota_pct,
+        "quota_state": quota_state,
+        "rate_limit_s": getattr(st, "api_football_min_interval_s", 7.0),
         "fixtures": fixtures,
         "linked": linked,
         "unlinked": max(0, fixtures - linked),
         "lineups": lineups,
         "injuries": injuries,
         "standings": standings,
+        "standings_enabled": bool(getattr(st, "api_football_standings_enabled", True)),
         "last_sync": last.isoformat() if last else None,
+        "target": {
+            "matches": target_matches,
+            "linked": target_linked,
+            "lineups": target_lineups,
+            "injuries": target_injuries,
+        },
+        "lineups_state": lineups_state,
+        "standings_state": standings_state,
+        "warnings": warnings,
     }

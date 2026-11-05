@@ -124,6 +124,40 @@ function gatePills(gates = {}) {
   }).join("")}</span>`;
 }
 
+function footballCard(af = {}) {
+  const target = af.target || {};
+  const warnings = af.warnings || [];
+  const configured = Boolean(af.configured);
+  const quotaLabels = { ok: "可用", low: "偏低", exhausted: "已用尽", unconfigured: "未配置" };
+  const quotaLabel = quotaLabels[af.quota_state] || "—";
+  const pct = Math.max(0, Math.min(100, Number(af.quota_pct || 0)));
+  const state = !configured
+    ? '<span class="pill muted">未配置</span>'
+    : warnings.length
+      ? '<span class="pill amber">待补</span>'
+      : '<span class="pill green">正常</span>';
+  return `
+    <div class="card football-card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">API-Football</h2>
+          <div class="card-sub">${esc(af.provider || "—")} · 7s 节流 · 今日 ${af.used_today ?? 0}/${af.daily_limit ?? 0} 次</div>
+        </div>
+        ${state}
+      </div>
+      <div class="af-metrics">
+        <div class="af-metric"><span>目标场次</span><b>${target.linked ?? 0}/${target.matches ?? 0}</b></div>
+        <div class="af-metric"><span>目标阵容</span><b>${target.lineups ?? 0} 行</b></div>
+        <div class="af-metric"><span>目标伤停</span><b>${target.injuries ?? 0} 条</b></div>
+        <div class="af-metric"><span>积分榜</span><b>${af.standings ?? 0} 行</b></div>
+      </div>
+      <div class="af-quota"><span style="width:${pct}%"></span></div>
+      <div class="af-foot">剩余 ${af.remaining ?? 0} 次 · ${esc(quotaLabel)}</div>
+      ${warnings.length ? `<div class="af-warnings">${warnings.map(w => `<div class="af-warning">${esc(w)}</div>`).join("")}</div>` : ""}
+    </div>
+  `;
+}
+
 function skeleton(count = 3) {
   return Array.from({ length: count }, () => '<div class="skeleton"></div>').join("");
 }
@@ -773,8 +807,7 @@ async function loadData() {
         <div class="status-item"><div><b>同步延迟</b><div class="status-label">超过 1800s 视为异常</div></div>${data.sync?.lag_seconds == null ? statusPill("skip") : data.sync.lag_seconds > 1800 ? statusPill("fail") : statusPill("ok")}</div>
       </div>
     </div>
-    <div class="card"><h2 class="card-title">API-Football</h2><div class="status-grid">${Object.entries(data.api_football || {}).map(([key, value]) => `
-      <div class="status-item"><div class="status-label">${esc(key)}</div><b class="mono">${esc(String(value))}</b></div>`).join("")}</div></div>
+    ${footballCard(data.api_football || {})}
   `;
 }
 

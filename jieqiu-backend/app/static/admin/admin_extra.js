@@ -31,8 +31,7 @@ async function loadOps() {
           <div class="status-item"><span class="status-label">最近国际盘同步</span><b class="mono">${esc(data.supply?.intl_odds?.latest || "—")}</b></div>
         </div>
       </div>
-      <div class="card"><h2 class="card-title">API-Football</h2><div class="status-grid tight">${Object.entries(data.football || {}).map(([key, value]) => `
-        <div class="status-item"><div class="status-label">${esc(key)}</div><b class="mono">${esc(typeof value === "object" ? JSON.stringify(value) : String(value))}</b></div>`).join("")}</div></div>
+      ${footballCard(data.football || {})}
       <div class="card span-2"><h2 class="card-title">24h 互动</h2>${Object.entries(data.interactions_24h || {}).map(([key, value]) => `
         <div class="status-item"><span class="status-label">${esc(key)}</span><b>${value}</b></div>`).join("") || '<div class="empty">暂无互动</div>'}</div>
     </div>
