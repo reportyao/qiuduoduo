@@ -346,6 +346,9 @@ export default function HomeScreen() {
                 <View style={styles.focusHead}>
                   <View style={styles.flex}>
                     <Text variant="overline" color={colors.green}>正在看</Text>
+                    <Text variant="bodyStrong" numberOfLines={1}>
+                      {focus.home} vs {focus.away}
+                    </Text>
                     <Text variant="caption" color={colors.muted}>
                       {focus.matchNo} · {focus.league || "联赛待同步"}
                     </Text>
