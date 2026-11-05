@@ -680,11 +680,11 @@ def today(db: Session, date: str | None = None) -> dict:
             if result == "pending_data":
                 pending += 1
         if not verdicts:
-            message = "今日暂无已发布判断；采集或判决数据还没到。"
+            message = "今日暂无已发布预测；采集或预测数据还没到。"
         elif pending >= len(verdicts):
-            message = "今日暂无已发布判断；国际盘数据未接入或覆盖不足，市闸无法通过，今天不硬推。"
+            message = "今日暂无已发布预测；国际盘数据未接入或覆盖不足，市闸无法通过，今天不硬推。"
         else:
-            message = "今日暂无已发布判断；复核中或数据不足。"
+            message = "今日暂无已发布预测；预测复核中或数据不足。"
     return {
         "trade_date": date,
         "generated_at": _now_cn().strftime("%Y-%m-%d %H:%M:%S"),

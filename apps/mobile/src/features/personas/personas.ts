@@ -118,7 +118,7 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     verdictSummary: ({ status, pickLabel, prob, rake, pendingGate, gateNote }) => {
       if (status === "promoted") {
         return `预测 ${pickLabel}，概率 ${prob != null ? (prob * 100).toFixed(1) + "%" : "--"}。` +
-          `官方定价抽水 ${rake != null ? (rake * 100).toFixed(1) + "%" : "待同步"}，三关已过，预测已发布。`;
+          `官方定价抽水 ${rake != null ? (rake * 100).toFixed(1) + "%" : "待同步"}，三关已过。`;
       }
       if (status === "screening" && pendingGate) {
         return `价闸已过（抽水 ${rake != null ? (rake * 100).toFixed(1) + "%" : "待同步"}），` +
@@ -162,7 +162,7 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     verdictSummary: ({ status, pickLabel, prob, rake, pendingGate, gateNote }) => {
       if (status === "promoted") {
         return `兄弟，预测 ${pickLabel}，模型给到 ${prob != null ? (prob * 100).toFixed(1) + "%" : "--"}，` +
-          `抽水 ${rake != null ? (rake * 100).toFixed(1) + "%" : "待同步"}，三关都过了，预测已发布。`;
+          `抽水 ${rake != null ? (rake * 100).toFixed(1) + "%" : "待同步"}，三关都过了。`;
       }
       if (status === "screening" && pendingGate) {
         return `价这关过了，抽水 ${rake != null ? (rake * 100).toFixed(1) + "%" : "待同步"}，` +
@@ -206,7 +206,7 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     verdictSummary: ({ status, pickLabel, prob, rake, pendingGate, gateNote }) => {
       if (status === "promoted") {
         return `预测 ${pickLabel}，概率 ${prob != null ? (prob * 100).toFixed(1) + "%" : "--"}，` +
-          `抽水 ${rake != null ? (rake * 100).toFixed(1) + "%" : "待同步"}，三关都过啦，预测已发布。`;
+          `抽水 ${rake != null ? (rake * 100).toFixed(1) + "%" : "待同步"}，三关都过啦。`;
       }
       if (status === "screening" && pendingGate) {
         return `价闸过啦，抽水 ${rake != null ? (rake * 100).toFixed(1) + "%" : "待同步"}，` +

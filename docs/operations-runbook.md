@@ -66,7 +66,7 @@ curl -s 'http://127.0.0.1:8100/health'            # 轻量：DB ping + 延迟 + 
 curl -s 'http://127.0.0.1:8100/health?detailed=1' # 额外全表 count，勿给探针高频调用
 ```
 
-`/admin` 运维页自动提示：SP 数据不可用或延迟（`sync_lag` 为空或 >1800s=30 分钟）、封存链异常、复核失败条数、API-Football 未配置，以及**国际盘未配置/0 条、市闸全部 pending、今日无已发布判断**。告警为请求时现算，尚无持久化/确认/外发（见 §10）。
+`/admin` 运维页自动提示：SP 数据不可用或延迟（`sync_lag` 为空或 >1800s=30 分钟）、封存链异常、复核失败条数、API-Football 未配置，以及**国际盘未配置/0 条、市闸全部 pending、今日无已发布预测**。告警为请求时现算，尚无持久化/确认/外发（见 §10）。
 
 **聚焦决策流（前后端已接通）**：`GET /stats/pulse` 与 `/admin` 数据源页同口径；源延迟/覆盖率告警复用本节阈值。数据点展示系数（默认 3、上限 5）只乘字段/数据点，不乘场次/封存数；后台同时展示 raw/display。契约见 [focused-decision-flow.md](./focused-decision-flow.md)。
 
