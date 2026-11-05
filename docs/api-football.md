@@ -1,6 +1,6 @@
 # API-Football 接入（免费档优先）
 
-> 状态：代码已接入，默认关闭；配置 `JQ_API_FOOTBALL_KEY` 后启用。当前免费档按 **100 请求/日** 设计，应用默认只用 90，留 10 次人工排查。**2026-11-05 生产未配置**：提供的 key 实测 RapidAPI 返回 `403 You are not subscribed to this API`，API-Sports 直连返回 `Missing application key`，两通道均未认可；需有效 key。`deploy.py` 已修复为合并远端 env 并自动备份，不会再因重部署丢失已有 key。
+> 状态：代码已接入，默认关闭；配置 `JQ_API_FOOTBALL_KEY` 后启用。当前免费档按 **100 请求/日** 设计，应用默认只用 90，留 10 次人工排查。**2026-11-05 生产未配置**：当前 key 属于 **apifootball.com**（不是 API-Sports/RapidAPI），已实测 Free 档可访问 countries/leagues/standings；但免费档 events 不覆盖五大联赛，英超等返回 `404 No event found (please check your plan)`。五大联赛/欧冠需 European $21/月起；升级后再接入 `apifootball` provider；当前代码的 provider 仅支持 `apisports` / `rapidapi`。`deploy.py` 已修复为合并远端 env 并自动备份，不会再因重部署丢失已有 key。
 
 ## 1. 用途
 
