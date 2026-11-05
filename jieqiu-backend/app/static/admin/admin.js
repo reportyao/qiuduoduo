@@ -685,12 +685,24 @@ async function loadData() {
   const root = el("#view-data");
   root.innerHTML = '<div class="skeleton"></div>';
   const data = await api("/admin/api/data");
+  const supply = data.supply || {};
+  const gate = supply.market_gate || {};
+  const intl = supply.intl_odds || {};
   root.innerHTML = `
+    ${supply.blocked_reason ? `<div class="card" style="border-color:var(--red)"><b style="color:var(--red)">内容供给受阻：${esc(supply.blocked_reason)}</b><div class="card-sub" style="margin-top:6px">场次 ${supply.matches ?? 0} · 判决 ${supply.verdicts?.total ?? 0} · 市闸 pending ${gate.pending_data ?? 0} · 国际盘 ${intl.total ?? 0}（覆盖 ${intl.covered_matches ?? 0}/${supply.matches ?? 0} 场）</div></div>` : ""}
     <div class="grid cols-4">
       <div class="kpi"><div class="kpi-label">verdict 总量</div><div class="kpi-value">${data.verdicts.total}</div><div class="kpi-foot">今日 ${data.verdicts.today}</div></div>
       <div class="kpi green"><div class="kpi-label">promoted</div><div class="kpi-value">${data.verdicts.promoted}</div><div class="kpi-foot">screening ${data.verdicts.screening}</div></div>
       <div class="kpi red"><div class="kpi-label">killed</div><div class="kpi-value">${data.verdicts.killed}</div><div class="kpi-foot">含历史</div></div>
       <div class="kpi"><div class="kpi-label">SP 快照</div><div class="kpi-value">${data.snapshots.total}</div><div class="kpi-foot">${esc(data.snapshots.latest || "—")}</div></div>
+    </div>
+    <div class="card"><h2 class="card-title">内容供给漏斗</h2>
+      <div class="grid cols-4">
+        <div class="kpi"><div class="kpi-label">今日场次 / SP</div><div class="kpi-value">${supply.matches ?? 0} / ${supply.sp_snapshots ?? 0}</div><div class="kpi-foot">SP 快照行数</div></div>
+        <div class="kpi ${intl.configured ? "green" : "red"}"><div class="kpi-label">国际盘</div><div class="kpi-value">${intl.total ?? 0}</div><div class="kpi-foot">${intl.configured ? "已配置" : "未配置"} · 覆盖 ${intl.covered_matches ?? 0}/${supply.matches ?? 0} 场</div></div>
+        <div class="kpi ${gate.pending_data ? "amber" : "green"}"><div class="kpi-label">市闸</div><div class="kpi-value">${gate.pass ?? 0} 过 / ${gate.pending_data ?? 0} 待</div><div class="kpi-foot">fail ${gate.fail ?? 0}</div></div>
+        <div class="kpi ${supply.published ? "green" : "amber"}"><div class="kpi-label">已发布</div><div class="kpi-value">${supply.published ?? 0}</div><div class="kpi-foot">snapshot ${supply.snapshots?.published ?? 0} · plan ${supply.plans?.published ?? 0}</div></div>
+      </div>
     </div>
     <div class="card"><h2 class="card-title">数据同步</h2>
       <div class="status-grid">

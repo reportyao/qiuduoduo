@@ -223,6 +223,21 @@ export default function HomeScreen() {
     [heroVerdict, verdicts],
   );
 
+  // 曝光埋点：只记 Today Hero / 当前聚焦场，避免首屏几十张卡同时上报。
+  const viewedKeys = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const v = heroVerdict ?? focusedVerdict;
+    if (!v) return;
+    const key = v.snapshotId ?? v.id;
+    if (viewedKeys.current.has(key)) return;
+    viewedKeys.current.add(key);
+    trackInteraction("verdict_viewed", {
+      matchId: v.matchId,
+      verdictId: v.id,
+      metadata: { snapshot_id: v.snapshotId ?? null },
+    });
+  }, [focusedVerdict, heroVerdict]);
+
   const openVerdict = useCallback(
     (id: string) => {
       trackInteraction("action_click", { verdictId: id, action: "open_detail" });

@@ -9,7 +9,9 @@ type InteractionEvent =
   | "free_text_send"
   | "pulse_open"
   | "intel_expand"
-  | "source_open";
+  | "source_open"
+  | "verdict_viewed"
+  | "plan_viewed";
 
 let sessionId = "";
 

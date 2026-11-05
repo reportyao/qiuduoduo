@@ -131,3 +131,12 @@ def test_admin_ops_exposes_focus_intel_coverage(client, db):
     data = ops.json()
     assert data["interactions_24h"] == {}
     assert "football" in data and "alerts" in data
+
+
+def test_verdict_viewed_event_allowed(client):
+    r = client.post("/interactions", json={
+        "event": "verdict_viewed", "event_id": "evt-view-0001",
+        "session_id": "s-view", "match_id": "m1", "verdict_id": "v1",
+    })
+    assert r.status_code == 200
+    assert r.json()["duplicate"] is False

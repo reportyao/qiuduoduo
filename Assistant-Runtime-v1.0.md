@@ -3,7 +3,7 @@
 > 范围：主动监控、推送、用户记忆、助理交互，以及与现有文档 / 后端 / 管理后台的对照。
 > 关联：`PRD-v5.1.md` F13/F19/F21/F22 + §5.2 推送矩阵；`TechSpec-v2.1.md` §4/§5/§8；`Intelligence-Layer-v1.0.md`；`Release-plan-v1.1.md` W5/W6。
 >
-> 状态：**P0 后端/管理后台/移动端已接（2026-11-05 更新）**：events / notifications / watch_targets / push_tokens / notify_settings / worker / inbox / 关注 / 通知设置 / 控制台助理/推送页；后端全量 **251 tests passed**（2026-11-05）。Android JPush 真实凭证、派生记忆、AI 分析、真实 live feed/进球提醒仍待接。完整全栈审查（历史快照）见 `docs/reviews/2026-11-04-full-stack.md`。
+> 状态：**P0 后端/管理后台/移动端已接（2026-11-05 更新）**：events / notifications / watch_targets / push_tokens / notify_settings / worker / inbox / 关注 / 通知设置 / 控制台助理/推送页；后端全量 **255 tests passed**（2026-11-05）。Android JPush 真实凭证、派生记忆、AI 分析、真实 live feed/进球提醒仍待接。完整全栈审查（历史快照）见 `docs/reviews/2026-11-04-full-stack.md`。
 >
 > **平台范围（2026-11-03 定）：MVP 只做 Android；iOS/APNs 与 Global/FCM 延后。**
 
@@ -496,14 +496,14 @@ JQ_LLM_PROVIDER=glm
 
 ## 17. 代码评审记录（2026-11-03）
 
-> 以下是当时的实现快照，文中 `157 passed` 为 2026-11-03 数值；当前全量测试为 **251 passed**（2026-11-05），全栈修复历史见 `docs/reviews/2026-11-04-full-stack.md`。
+> 以下是当时的实现快照，文中 `157 passed` 为 2026-11-03 数值；当前全量测试为 **255 passed**（2026-11-05），全栈修复历史见 `docs/reviews/2026-11-04-full-stack.md`。
 
 > 本节是评审当时（P0 开发前）的记录；已修复/已实现项见 §18。
 
 ### 17.1 评审范围
 
 - 后端：`app/models.py`、`app/routers/w6.py`、`app/modules/users.py`、`app/modules/chat.py`、`app/modules/messaging.py`、`app/routers/api.py`、`app/routers/admin_api.py`、`app/main.py`；
-- 测试：`python -m pytest -q`，**251 passed（当前）**（修复 6 个墙钟依赖后）；
+- 测试：`python -m pytest -q`，**255 passed（当前）**（修复 6 个墙钟依赖后）；
 - 管理后台：`/admin`、`/admin` 运维页、`/admin`（旧变体页已删除）、`/admin/ops`。
 
 ### 17.2 已确认可用
@@ -633,4 +633,4 @@ JQ_DAILY_BRIEF_HOUR=19 python -m app.assistant.worker --once
 
 **2026-11-05 更新**：后台 CSRF + RBAC（viewer/operator/admin）+ 会话撤销 + `admin_audit` 审计已上线，旧 `/console` 下线、统一 `/admin`；W8 冻结基线已重新采纳（145 路由）。`_VARIANT_POOL` 持久化、真实 JPush、派生记忆/AI 分析仍未完成。
 
-**测试**：`python -m pytest -q` → **251 passed（当前）**。
+**测试**：`python -m pytest -q` → **255 passed（当前）**。

@@ -21,6 +21,7 @@ export JQ_DEPLOY_HOST='43.128.24.244'
 export JQ_DEPLOY_PASSWORD='...'
 export JQ_ADMIN_PASSWORD='...'          # /admin 初始 admin 密码（仅首次建号）
 export JQ_ADMIN_COOKIE_SECURE=true      # HTTPS 部署建议开启
+export JQ_ODDS_API_KEY='...'            # 国际盘（The Odds API）；不配则市闸全 pending，不会产出 published
 export JQ_PROD_DATABASE_URL='postgresql+psycopg2://jieqiu:...@10.0.0.5:5432/jieqiu'  # 不设则继续旧 SQLite
 ```
 
@@ -64,9 +65,36 @@ curl -s 'http://127.0.0.1:8100/health'            # 轻量：DB ping + 延迟 + 
 curl -s 'http://127.0.0.1:8100/health?detailed=1' # 额外全表 count，勿给探针高频调用
 ```
 
-`/admin` 运维页自动提示四类告警：SP 数据不可用或延迟（`sync_lag` 为空或 >1800s=30 分钟）、封存链异常、复核失败条数、API-Football 未配置。告警为请求时现算，尚无持久化/确认/外发（见 §10）。
+`/admin` 运维页自动提示：SP 数据不可用或延迟（`sync_lag` 为空或 >1800s=30 分钟）、封存链异常、复核失败条数、API-Football 未配置，以及**国际盘未配置/0 条、市闸全部 pending、今日无已发布判断**。告警为请求时现算，尚无持久化/确认/外发（见 §10）。
 
 **聚焦决策流（前后端已接通）**：`GET /stats/pulse` 与 `/admin` 数据源页同口径；源延迟/覆盖率告警复用本节阈值。数据点展示系数（默认 3、上限 5）只乘字段/数据点，不乘场次/封存数；后台同时展示 raw/display。契约见 [focused-decision-flow.md](./focused-decision-flow.md)。
+
+### 内容供给排障（为什么没有 published）
+
+市闸要求「竞彩官方 + 至少一条国际盘」两个去水口径；国际盘为空时，所有判决停在 `pending_data`，不会 `promoted`，也不会有任何 published 内容。先在服务器上跑诊断：
+
+```bash
+cd /home/ubuntu/jieqiu-backend
+venv/bin/python -m app.odds_cli status          # 人类可读
+venv/bin/python -m app.odds_cli status --json   # 机器可读
+```
+
+看四个数：
+- `intl_odds.configured=false` → `JQ_ODDS_API_KEY` 未配置；
+- `intl_odds.total=0` → 同步未跑或源失败；
+- `market_gate.pending_data == verdicts.total` → 市闸全部 pending；
+- `blocked_reason` → 后台「数据源/运维」页与 `/admin/api/data` 的 `supply` 字段同口径展示。
+
+修复：
+
+```bash
+export JQ_ODDS_API_KEY='...'          # 部署时写入 /etc/jieqiu-backend.env
+venv/bin/python -m app.odds_cli sync  # 手动同步一次（受 6h 节流；可用 JQ_ODDS_SYNC_MIN_INTERVAL_HOURS 调整）
+venv/bin/python -m app.recommendations_cli run
+venv/bin/python -m app.odds_cli status
+```
+
+`seed` 每 30 分钟会调用一次 `sync_the_odds_api`（有 key 且过 6h 节流时）。**不要在没有国际盘时用单源硬发**——这会把“市闸”变成装饰，也会破坏“永远对照市场”的产品承诺。
 
 ## 6. 管理后台
 

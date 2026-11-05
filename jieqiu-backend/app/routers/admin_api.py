@@ -26,7 +26,7 @@ from ..models import (AdminAudit, AdminUser, ApiFootballFixture,
                       DecisionSnapshot, InteractionEvent, Notification,
                       PersonaLLMModel, PushToken, RecommendationEvent,
                       RecommendationPlan, ReviewRun, SPSnapshot, Verdict)
-from ..modules import admin_auth, api_football, llm_gateway, persona_llm, persona_registry
+from ..modules import admin_auth, api_football, llm_gateway, persona_llm, persona_registry, supply
 from ..modules.sealchain import latest_chain_status
 from ..modules.timeutil import CN, trade_date_now
 
@@ -868,6 +868,7 @@ def admin_data(db: Session = Depends(get_db), _: None = Depends(admin_auth.requi
                                 .order_by(SPSnapshot.captured_at.desc())),
         },
         "api_football": af,
+        "supply": supply.content_supply(db, date),
     }
 
 
@@ -1042,6 +1043,7 @@ def admin_ops(db: Session = Depends(get_db),
         .where(InteractionEvent.created_at >= interaction_since)
         .group_by(InteractionEvent.event)).all())
     football = api_football.status(db)
+    supply_data = supply.content_supply(db, date)
     snap_count = _count(db, DecisionSnapshot, DecisionSnapshot.trade_date == date)
     plan_count = _count(db, RecommendationPlan, RecommendationPlan.trade_date == date)
     failed = _count(db, DecisionSnapshot, DecisionSnapshot.trade_date == date,
@@ -1061,6 +1063,20 @@ def admin_ops(db: Session = Depends(get_db),
     if not football.get("configured"):
         alerts.append({"level": "low", "title": "API-Football 未配置",
                        "detail": "阵容/伤停/积分榜将保持 missing"})
+    intl = supply_data["intl_odds"]
+    if not intl["configured"]:
+        alerts.append({"level": "high", "title": "国际盘未配置（The Odds API）",
+                       "detail": "市闸需要 ≥2 个去水口径；未配置时全部判决停在 pending_data，推荐主链不会产出"})
+    elif intl["total"] == 0 and supply_data["matches"] > 0:
+        alerts.append({"level": "high", "title": "国际盘 0 条",
+                       "detail": f"今日 {supply_data['matches']} 场，但 intl_odds 为空；检查 JQ_ODDS_API_KEY 与同步日志"})
+    if (supply_data["verdicts"]["total"] > 0
+            and supply_data["market_gate"]["pending_data"] >= supply_data["verdicts"]["total"]):
+        alerts.append({"level": "high", "title": "市闸全部 pending",
+                       "detail": "国际盘覆盖不足，今日不会产生 promoted/published"})
+    elif supply_data["published"] == 0 and supply_data["verdicts"]["total"] > 0:
+        alerts.append({"level": "low", "title": "今日无已发布判断",
+                       "detail": "主链仍在复核，或数据不足；首页应显示“今天不硬推”"})
     fixtures = list(db.scalars(select(ApiFootballFixture)
                                .order_by(ApiFootballFixture.kickoff_utc.desc())
                                .limit(30)).all())
@@ -1083,6 +1099,7 @@ def admin_ops(db: Session = Depends(get_db),
             "enabled": _count(db, PushToken, PushToken.enabled.is_(True)),
         },
         "interactions_24h": interaction_rows,
+        "supply": supply_data,
         "recommendations": {"snapshots": snap_count, "plans": plan_count,
                             "review_failed": failed},
         "alerts": alerts,

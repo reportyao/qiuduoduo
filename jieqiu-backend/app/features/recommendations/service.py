@@ -617,11 +617,26 @@ def today(db: Session, date: str | None = None) -> dict:
             RecommendationPlan.status == PUBLISHED,
             not_expired_plan)
         .order_by(RecommendationPlan.risk_profile, RecommendationPlan.version)).all())
+    message = None
+    if not snaps and not plans:
+        verdicts = list(db.scalars(select(Verdict).where(Verdict.trade_date == date)).all())
+        pending = 0
+        for v in verdicts:
+            gate = (v.gates or {}).get("market") or {}
+            result = gate.get("result") if isinstance(gate, dict) else gate
+            if result == "pending_data":
+                pending += 1
+        if not verdicts:
+            message = "今日暂无已发布判断；采集或判决数据还没到。"
+        elif pending >= len(verdicts):
+            message = "今日暂无已发布判断；国际盘数据未接入或覆盖不足，市闸无法通过，今天不硬推。"
+        else:
+            message = "今日暂无已发布判断；复核中或数据不足。"
     return {
         "trade_date": date,
         "generated_at": _now_cn().strftime("%Y-%m-%d %H:%M:%S"),
         "snapshots": [_public_snapshot(db, s) for s in snaps],
         "plans": [_public_plan(db, p) for p in plans],
         "verdicts": [(s.payload or {}).get("verdict") or {} for s in snaps],
-        "message": None if snaps or plans else "今日暂无已发布判断；复核中或数据不足。",
+        "message": message,
     }

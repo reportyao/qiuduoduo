@@ -260,7 +260,7 @@ idle（未选场）
 
 ```json
 {
-  "event": "focus_select | action_click | action_result | free_text_open | free_text_send | pulse_open | intel_expand | source_open",
+  "event": "focus_select | action_click | action_result | free_text_open | free_text_send | pulse_open | intel_expand | source_open | verdict_viewed | plan_viewed",
   "event_id": "uuid",
   "schema_ver": 1,
   "session_id": "uuid",
@@ -550,7 +550,7 @@ LLM 成本必须跟用户层级走，不能匿名无限问：
 2. ✅ `GlobalMatchPicker` 和首页 `MatchPickerSheet` 选中后 `setFocus → close → 回首页`，不再直接 push 详情；详情页增加“让助理看这场”。
 3. ◐ 首页已有聚焦区（复用 `VerdictMessage`/`FocusPending`）+ `FocusPanel`（覆盖率/事实/未知项/拦截原因）；但无聚焦时的 `idle` 数据脉搏独立首屏尚未做；`empty/rest/error` 仍是旧逻辑。
 4. ◐ 真实数据脉搏指标（`Metrics`/`DataStatusSheet`）与聚焦事实/未知项展示已接；`ActionStack`、输入框默认收起尚未做。
-5. ✅ 动作点击写 `POST /interactions` 已接（`focus_select`/`action_click`/`free_text_send`/`pulse_open`，见 `src/features/telemetry/interactions.ts`）。
+5. ✅ 动作点击写 `POST /interactions` 已接（`focus_select`/`action_click`/`free_text_send`/`pulse_open`/`verdict_viewed`，见 `src/features/telemetry/interactions.ts`）。
 
 ### 后端
 

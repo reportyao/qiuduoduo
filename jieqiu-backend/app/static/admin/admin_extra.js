@@ -13,6 +13,7 @@ async function loadOps() {
           <div><div style="display:flex;gap:8px;align-items:center"><b>${esc(a.title)}</b>${statusPill(a.level === "high" ? "fail" : "skip")}</div><div class="status-label">${esc(a.detail)}</div></div>
         </div>`).join("") : '<div class="empty" style="padding:24px">无告警</div>'}
     </div>
+    ${(data.supply?.blocked_reason) ? `<div class="card" style="border-color:var(--red)"><b style="color:var(--red)">内容供给受阻：${esc(data.supply.blocked_reason)}</b><div class="card-sub" style="margin-top:6px">场次 ${data.supply.matches ?? 0} · 判决 ${data.supply.verdicts?.total ?? 0} · 市闸 pending ${data.supply.market_gate?.pending_data ?? 0} · 国际盘 ${data.supply.intl_odds?.total ?? 0}</div></div>` : ""}
     <div class="grid cols-4">
       <div class="kpi ${data.sync?.lag_seconds != null && data.sync.lag_seconds > 1800 ? "red" : "green"}"><div class="kpi-label">SP 延迟</div><div class="kpi-value">${data.sync?.lag_seconds == null ? "—" : data.sync.lag_seconds + "s"}</div><div class="kpi-foot">${esc(data.sync?.latest || "—")}</div></div>
       <div class="kpi"><div class="kpi-label">封存链</div><div class="kpi-value">${data.chain?.ok ? "OK" : "BAD"}</div><div class="kpi-foot">${esc(data.chain?.date || "—")} · ${esc(data.chain?.broken_at || "")}</div></div>
@@ -20,6 +21,16 @@ async function loadOps() {
       <div class="kpi"><div class="kpi-label">Push Token</div><div class="kpi-value">${data.push_tokens?.enabled || 0}/${data.push_tokens?.total || 0}</div><div class="kpi-foot">启用/总数</div></div>
     </div>
     <div class="grid side">
+      <div class="card"><h2 class="card-title">内容供给</h2>
+        <div class="status-grid">
+          <div class="status-item"><span class="status-label">今日场次 / SP</span><b>${data.supply?.matches ?? 0} / ${data.supply?.sp_snapshots ?? 0}</b></div>
+          <div class="status-item"><span class="status-label">国际盘行数</span><b>${data.supply?.intl_odds?.total ?? 0}</b></div>
+          <div class="status-item"><span class="status-label">国际盘覆盖</span><b>${data.supply?.intl_odds?.covered_matches ?? 0}/${data.supply?.matches ?? 0} 场</b></div>
+          <div class="status-item"><span class="status-label">市闸 pass / pending</span><b>${data.supply?.market_gate?.pass ?? 0} / ${data.supply?.market_gate?.pending_data ?? 0}</b></div>
+          <div class="status-item"><span class="status-label">promoted / published</span><b>${data.supply?.verdicts?.promoted ?? 0} / ${data.supply?.published ?? 0}</b></div>
+          <div class="status-item"><span class="status-label">最近国际盘同步</span><b class="mono">${esc(data.supply?.intl_odds?.latest || "—")}</b></div>
+        </div>
+      </div>
       <div class="card"><h2 class="card-title">API-Football</h2><div class="status-grid">${Object.entries(data.football || {}).map(([key, value]) => `
         <div class="status-item"><div class="status-label">${esc(key)}</div><b class="mono">${esc(typeof value === "object" ? JSON.stringify(value) : String(value))}</b></div>`).join("")}</div></div>
       <div class="card"><h2 class="card-title">24h 互动</h2>${Object.entries(data.interactions_24h || {}).map(([key, value]) => `

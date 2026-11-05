@@ -76,6 +76,8 @@ pip install -r requirements.txt
 JQ_DB_STATEMENT_TIMEOUT_MS=0 python -m app.seed ../sp-collector/sp_data.db   # 批量导入；放宽 API 的 15s 超时
 JQ_DB_STATEMENT_TIMEOUT_MS=0 python -m app.backtest_cli   # 校准回测（批量）
 JQ_DB_STATEMENT_TIMEOUT_MS=0 python -m app.purge_cli        # 注销期满清除
+python -m app.odds_cli status        # 内容供给诊断：国际盘/市闸/published 卡在哪
+python -m app.odds_cli sync          # 手动同步国际盘（需 JQ_ODDS_API_KEY）
 uvicorn app.main:app --port 8100
 ```
 

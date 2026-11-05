@@ -1,6 +1,6 @@
 # 文档全量审查记录（2026-11-04）
 
-> **历史快照（2026-11-04）**：本文的测试数/路径数/结论反映当时状态，不是当前事实。当前事实见 [docs/README.md](../README.md)：251 tests / 128 路径 / 143 方法 / Alembic `20261105_12`。
+> **历史快照（2026-11-04）**：本文的测试数/路径数/结论反映当时状态，不是当前事实。当前事实见 [docs/README.md](../README.md)：255 tests / 128 路径 / 143 方法 / Alembic `20261105_12`。
 
 范围：仓库内全部现行 Markdown（`AGENTS.md`、根 README、PRD/TechSpec/Release/Roadmap/Feature/Assistant/Intelligence/Ops、`docs/`、后端/移动端/服务/客户端 README）。`archive/`、`w1-validation/` 作为历史材料保留原样，只加索引说明。
 

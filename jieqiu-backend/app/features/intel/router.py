@@ -24,6 +24,7 @@ router = APIRouter(tags=["focus-intel"])
 ALLOWED_EVENTS = {
     "focus_select", "action_click", "action_result", "free_text_open",
     "free_text_send", "pulse_open", "intel_expand", "source_open",
+    "verdict_viewed", "plan_viewed",
 }
 
 _RATE_LOCK = threading.Lock()

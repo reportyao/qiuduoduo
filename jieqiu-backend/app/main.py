@@ -1,4 +1,6 @@
 """FastAPI 入口。启动即建表（W2 简化；W4 换 Alembic 迁移）。"""
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -20,6 +22,8 @@ from .routers.w8 import router as w8_router
 from .routers.auth_w5 import router as auth_router
 from .features.assistant.router import router as assistant_router
 from .features.compliance.router import router as compliance_router
+
+logger = logging.getLogger("jieqiu.startup")
 
 app = FastAPI(
     title="球多多 API",
@@ -92,6 +96,10 @@ def _warm_models() -> None:
 def _startup() -> None:
     init_db()
     from .config import get_settings
-    if get_settings().env != "test" and getattr(get_settings(), "warmup", True):
+    st = get_settings()
+    if not st.odds_api_key:
+        logger.warning("JQ_ODDS_API_KEY 未配置：市闸将全部 pending，推荐主链不会产出 published；"
+                       "用 python -m app.odds_cli status 诊断")
+    if st.env != "test" and getattr(st, "warmup", True):
         import threading
         threading.Thread(target=_warm_models, daemon=True).start()

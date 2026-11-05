@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..db import get_db
 from ..features.intel import service as intel_service
-from ..models import ModelRun, SPMatch, SPSnapshot, TeamAlias, Verdict
+from ..models import (DecisionSnapshot, IntlOdds, ModelRun, SPMatch,
+                       SPSnapshot, TeamAlias, Verdict)
 from ..modules.messaging import build_stream_cached
 from ..modules.timeutil import (trade_date_from_kickoff, trade_date_now,
                                 trade_window)
@@ -60,6 +61,11 @@ def health(detailed: bool = False, db: Session = Depends(get_db)):
             "sp_snapshots": db.scalar(select(func.count()).select_from(SPSnapshot)) or 0,
             "team_aliases": db.scalar(select(func.count()).select_from(TeamAlias)) or 0,
             "verdicts": db.scalar(select(func.count()).select_from(Verdict)) or 0,
+            "intl_odds": db.scalar(select(func.count()).select_from(IntlOdds)) or 0,
+            "published_today": db.scalar(
+                select(func.count()).select_from(DecisionSnapshot).where(
+                    DecisionSnapshot.trade_date == trade_date_now(cn_now()),
+                    DecisionSnapshot.status == "published")) or 0,
         }} if detailed else {}),
     }
 
