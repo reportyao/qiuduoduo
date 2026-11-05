@@ -16,7 +16,7 @@ const config: ExpoConfig = {
     backgroundColor: "#F5F4EF",
   },
   ios: {
-    bundleIdentifier: "com.jieqiu.app",
+    bundleIdentifier: "com.qiuduoduo.app",
     supportsTablet: true,
     infoPlist: {
       NSAppTransportSecurity: {
@@ -26,7 +26,7 @@ const config: ExpoConfig = {
     },
   },
   android: {
-    package: "com.jieqiu.app",
+    package: "com.qiuduoduo.app",
     permissions: ["POST_NOTIFICATIONS"],
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
