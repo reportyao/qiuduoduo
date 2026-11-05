@@ -1,6 +1,6 @@
 # API-Football 接入（免费档优先）
 
-> 状态：代码已接入，默认关闭；配置 `JQ_API_FOOTBALL_KEY` 后启用。当前免费档按 **100 请求/日** 设计，应用默认只用 90，留 10 次人工排查。**2026-11-05 生产 key 待重新配置**（旧 key 只存在于 `cron.env`，被部署覆盖；`deploy.py` 已修复并自动备份），订阅状态需重配后验证。
+> 状态：代码已接入，默认关闭；配置 `JQ_API_FOOTBALL_KEY` 后启用。当前免费档按 **100 请求/日** 设计，应用默认只用 90，留 10 次人工排查。**2026-11-05 生产未配置**：提供的 key 实测 RapidAPI 返回 `403 You are not subscribed to this API`，API-Sports 直连返回 `Missing application key`，两通道均未认可；需有效 key。`deploy.py` 已修复为合并远端 env 并自动备份，不会再因重部署丢失已有 key。
 
 ## 1. 用途
 

@@ -6,7 +6,7 @@
 
 - 推荐主链、概率经验区间、CLV、未采纳复盘、T-3h/T-30m 赛前提醒已上线；`/recommendations/today` 只读 published。
 - 合规（年龄门/未成年锁定/自排除）服务端闭环；`/admin` 运营台可用。
-- **API-Football key 待重新配置**：2026-11-05 部署覆盖了只存在于 `cron.env` 的旧 key；部署脚本已改为合并 + 自动备份，重配 key 后再验订阅。
+- **API-Football 未配置**：提供的 key 在 RapidAPI 返回 403、API-Sports 返回 Missing application key，两通道均未认可；需有效 key。部署脚本已改为合并 + 自动备份，不会再因重部署丢失已有 key。
 - **JPush 真机推送待接**：后端事件/站内信/dry-run 可用，客户端 SDK、厂商凭证和深链仍缺。
 - 备份/PITR、Postgres 切换、支付权益仍属上线阻塞/下一阶段。
 

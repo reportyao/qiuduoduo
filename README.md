@@ -27,7 +27,7 @@
 - **API/后台**：`/health` 正常，封存链 OK；`/admin` 运营台可用。
 - **推荐内容**：主链 build → L1–L5 复核 → publish 已跑通；当前有 1 条 published，`/recommendations/today` 只读 published。
 - **数据供给**：国际盘已配置，市闸/模型闸按各自阈值工作；模型闸仍有大量 `pending_data`，覆盖率提升依赖更好的当前赛季数据。
-- **已知待恢复**：生产 API-Football key 在 2026-11-05 部署中因旧 `cron.env` 被覆盖而缺失，当前为未配置状态；订阅是否生效需重配 key 后再验。
+- **已知待恢复**：生产 API-Football 未配置。2026-11-05 实测你提供的 key：RapidAPI `/v3/status` 返回 **403 You are not subscribed to this API**，API-Sports 直连返回 **Missing application key**；两条通道都未认可该 key，需有效 key 后再验订阅。
 - **已知待接**：JPush 真机推送客户端与厂商凭证；`dry-run` 和站内信不受影响。
 
 ## 最近完成（2026-11-05）
@@ -60,11 +60,11 @@
 | 推送骨架 | 事件监控（含赛前 T-3h/T-30m）→ 扇出 → 站内信/推送（JPush 未配置时 dry-run）；通知设置/收件箱/关注已通；真实 JPush 客户端待接 |
 | 人设语气 | 三套 profile + 槽位 + 模型池（Key 加密/failover/缓存/预生成）；后台可改 |
 | LLM Gateway | Phase 1：登录用户 `open_chat → fast`，预算/缓存/PII 脱敏/用量账本；匿名 0 LLM |
-| API-Football | fixtures/lineups/injuries/standings 同步、免费额度、自动/人工链接；支持 API-Sports 直连与 RapidAPI。**当前生产 key 待重新配置，订阅状态未验证**；未配置时保持 missing，不伪造 |
+| API-Football | fixtures/lineups/injuries/standings 同步、免费额度、自动/人工链接；支持 API-Sports 直连与 RapidAPI。**当前提供的 key 未通过两通道验证，生产未配置**；未配置时保持 missing，不伪造 |
 
 ### 待做（外部依赖或下一阶段）
 
-- **API-Football key / 订阅**：重新配置 RapidAPI 或 API-Sports key，验证 `/status` 与免费档额度后恢复每日 06:15 同步 cron。
+- **API-Football key / 订阅**：获取被 RapidAPI 或 API-Sports 认可的 key，验证 `/status` 与免费档额度后恢复每日 06:15 同步 cron。
 - **JPush 真机推送**：客户端 token 注册、通知权限软请求、点击深链、厂商凭证。
 - **支付/订阅权益**：`subscriptions/entitlements`、RevenueCat/微信商户号、免费 1 条/其余锁定。
 - **备份/PITR**：云控制台自动备份或自建 `pg_backup.sh` + WAL 归档 + 恢复演练（上线阻塞项）。

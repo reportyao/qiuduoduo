@@ -26,7 +26,7 @@
 
 **合规闭环（已实现）**：`GET /compliance/state` · `POST /gate/verify`（年龄门）· `POST /me/under18-lock` · `POST /compliance/self-exclusion` · `POST /compliance/self-assessment`。`users` 表新增合规列（迁移 `20261105_12`）；`POST /bets` 与 focus capabilities 服务端硬拦截未成年锁定（403）/自排除（423）/休息中（423），重装/换设备不能绕过。
 
-**API-Football（已接入，默认关闭）**：fixtures/lineups/injuries/standings 同步、免费额度持久化、队名/开赛时间自动链接与后台人工链接；支持 API-Sports 直连与 RapidAPI（`JQ_API_FOOTBALL_PROVIDER=apisports|rapidapi`）。未配置 `JQ_API_FOOTBALL_KEY` 时保持 missing，不伪造；配置了 key 的部署会自动安装每日 fixtures cron。**2026-11-05 当前生产 key 待重新配置（旧 key 只存在于 `cron.env`，部署时被覆盖；脚本已修复并自动备份）**，订阅状态需重配后验证。见 [docs/api-football.md](../docs/api-football.md)。
+**API-Football（已接入，默认关闭）**：fixtures/lineups/injuries/standings 同步、免费额度持久化、队名/开赛时间自动链接与后台人工链接；支持 API-Sports 直连与 RapidAPI（`JQ_API_FOOTBALL_PROVIDER=apisports|rapidapi`）。未配置 `JQ_API_FOOTBALL_KEY` 时保持 missing，不伪造；配置了 key 的部署会自动安装每日 fixtures cron。**2026-11-05 当前生产未配置有效 key：提供的 key 在 RapidAPI 返回 403、API-Sports 返回 Missing application key；脚本已修复为合并远端 env 并自动备份**，拿到有效 key 后再验订阅。见 [docs/api-football.md](../docs/api-football.md)。
 
 **LLM Gateway Phase 1（已实现）**：`open_chat` fallback → fast，`llm_usage`/`llm_cache`/`llm_budgets`、原子预算、PII 脱敏与 `/admin` 模型用量页只读看板；deep 分析与 focus 解读待 Phase 2。见 [docs/llm-gateway.md](../docs/llm-gateway.md)。当前 OpenAPI 为 128/143。
 

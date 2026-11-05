@@ -140,7 +140,7 @@ venv/bin/python -m app.odds_cli status
 
 ### API-Football（免费档）
 
-> 2026-11-05 当前生产状态：key 缺失，需重新配置。旧 key 只存在于 `cron.env`，已被一次部署覆盖；`deploy.py` 现已合并远端 env 并备份 `cron.env`。重配后先验 `/status`，再确认订阅是免费档还是未订阅。
+> 2026-11-05 当前生产状态：未配置有效 key。提供的 key 实测 RapidAPI 返回 `403 You are not subscribed to this API`，API-Sports 直连返回 `Missing application key`；两通道均未认可。`deploy.py` 现已合并远端 env 并备份 `cron.env`，拿到有效 key 后先验 `/status`。
 
 ```bash
 export JQ_API_FOOTBALL_PROVIDER='rapidapi'   # API-Sports 直连则用 apisports
