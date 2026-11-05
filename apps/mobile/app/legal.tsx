@@ -69,7 +69,8 @@ function Terms() {
       </Section>
       <Section title="年龄与自排除">
         <Text variant="body" color={colors.muted} style={styles.paragraph}>
-          未满 18 周岁只能查看公开账本。自排除生效期间，本机会拦截判断与记录；到期前不可撤销。
+          未满 18 周岁只能查看公开账本。自排除生效后本机立即拦截判断与记录，并同步到账号；
+          到期前不可撤销，换设备或重装也不能绕过。
         </Text>
       </Section>
     </>
@@ -135,7 +136,7 @@ function AiNotice() {
       </Section>
       <Section title="人设只改语气">
         <Text variant="body" color={colors.muted} style={styles.paragraph}>
-          理性专家、感性老炮、萌妹萝莉只影响说话方式，不影响概率、三关状态、封存内容与合规提示。
+          理性专家、感性老炮、元气搭子只影响说话方式，不影响概率、三关状态、封存内容与合规提示。
         </Text>
       </Section>
       <Section title="数据截止">

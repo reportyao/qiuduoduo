@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
 import { Card, Chip, Icon, Text } from "@/components/ui";
 import type { IconName } from "@/components/ui";
+import { useHideFloatingOnScroll } from "@/features/assistant/useHideFloatingOnScroll";
 import { useStreamQuery } from "@/features/home/queries";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { currentTradeDateCn } from "@/lib/format";
@@ -31,6 +32,7 @@ const TOOLS: Tool[] = [
 export default function ToolsScreen() {
   const router = useRouter();
   const { copy } = usePersonaContent();
+  const onScroll = useHideFloatingOnScroll();
   const streamQuery = useStreamQuery(currentTradeDateCn());
   const stream = streamQuery.data?.pages[0];
   const stats = stream?.stats;
@@ -43,7 +45,12 @@ export default function ToolsScreen() {
         showAssistant={false}
         right={<Chip label="8 个工具" tone="green" />}
       />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+        onScroll={onScroll}
+        scrollEventThrottle={48}
+      >
         <Text variant="overline" color={colors.green}>工具</Text>
         <Text variant="display" style={styles.title}>把账算清楚。</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>

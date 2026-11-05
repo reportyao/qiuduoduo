@@ -1,5 +1,6 @@
 import { StyleSheet, View } from "react-native";
 import type { MatchFocus } from "@/domain/focusAdapters";
+import { coverageGaps } from "@/features/home/focusCoverage";
 import { colors, spacing } from "@/theme/tokens";
 import { Text } from "@/components/ui";
 
@@ -30,6 +31,7 @@ export function FocusPanel({
   if (!focus) return null;
   const betAction = focus.actions.find((action) => action.id === "bet");
   const facts = focus.facts.slice(0, 3);
+  const gaps = coverageGaps(focus.coverage);
   return (
     <View style={styles.panel}>
       <View style={styles.head}>
@@ -40,9 +42,14 @@ export function FocusPanel({
           {focus.coverage.deepEligible ? "可深读" : "仅轻读"}
         </Text>
       </View>
-      {focus.coverage.missing.length ? (
+      {gaps.stale.length ? (
         <Text variant="caption" color={colors.subtle}>
-          缺：{focus.coverage.missing.join(" / ")}
+          偏旧：{gaps.stale.join(" / ")}
+        </Text>
+      ) : null}
+      {gaps.missing.length ? (
+        <Text variant="caption" color={colors.subtle}>
+          缺：{gaps.missing.join(" / ")}
         </Text>
       ) : null}
       {facts.map((fact) => (

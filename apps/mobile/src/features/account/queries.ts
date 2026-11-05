@@ -87,11 +87,20 @@ export function useRestMutation() {
 export function useMemoryMutations() {
   const queryClient = useQueryClient();
   const save = useMutation({
-    mutationFn: async (input: { key: string; value: string; confirm?: boolean }) => {
+    mutationFn: async (input: {
+      key: string;
+      value: string;
+      confirm?: boolean;
+      source?: string;
+    }) => {
       await callApi(
         api.client.PUT("/me/memories/{key}", {
           params: { path: { key: input.key } },
-          body: { value: input.value, source: "你说过", confirm: input.confirm ?? false },
+          body: {
+            value: input.value,
+            source: input.source ?? "你说过",
+            confirm: input.confirm ?? false,
+          },
         }),
       );
     },

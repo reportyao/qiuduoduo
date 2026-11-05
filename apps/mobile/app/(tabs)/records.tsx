@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
 import { Button, Card, Chip, EmptyState, ErrorState, Skeleton, Text } from "@/components/ui";
+import { useHideFloatingOnScroll } from "@/features/assistant/useHideFloatingOnScroll";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { useAuthStore } from "@/features/auth/authStore";
 import { useBetsQuery, useWeeklyQuery } from "@/features/records/queries";
@@ -15,6 +16,7 @@ import { colors, layout, radii, spacing } from "@/theme/tokens";
 export default function RecordsScreen() {
   const router = useRouter();
   const { copy } = usePersonaContent();
+  const onScroll = useHideFloatingOnScroll();
   const session = useAuthStore((s) => s.session);
   const [postmortemId, setPostmortemId] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,6 +47,8 @@ export default function RecordsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
+        onScroll={onScroll}
+        scrollEventThrottle={48}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.green} />}
       >
         <View style={styles.stats}>
@@ -58,7 +62,7 @@ export default function RecordsScreen() {
             label="本周盈亏"
             value={week ? signedMoney(week.pnl) : "—"}
             sub={week ? "近 7 天真实盈亏" : "周报同步中"}
-            tone={!week ? "default" : week.pnl >= 0 ? "green" : "danger"}
+            tone={!week || week.pnl === 0 ? "default" : week.pnl > 0 ? "green" : "danger"}
           />
         </View>
 

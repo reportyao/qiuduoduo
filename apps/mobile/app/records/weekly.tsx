@@ -59,7 +59,11 @@ export default function WeeklyScreen() {
               <Text variant="display" style={styles.heroTitle}>
                 {report.settled > 0 ? `${report.wins} / ${report.settled}` : "等待赛果"}
               </Text>
-              <Text variant="small" color={colors.muted}>已结算命中 / 已结算</Text>
+              <Text variant="small" color={colors.muted}>
+                {report.settled > 0
+                  ? "已结算命中 / 已结算"
+                  : `平台近 ${report.rangeDays} 天 · 复核与发布`}
+              </Text>
               <View style={styles.heroMeta}>
                 <Mini label="复核" value={String(report.verdictsTotal)} />
                 <Mini label="过三关" value={String(report.promoted)} />
@@ -76,7 +80,7 @@ export default function WeeklyScreen() {
                   <Mini
                     label="盈亏"
                     value={signedMoney(report.you.pnl)}
-                    tone={report.you.pnl >= 0 ? "green" : "danger"}
+                    tone={report.you.pnl > 0 ? "green" : report.you.pnl < 0 ? "danger" : "default"}
                   />
                 </View>
                 <Text variant="caption" color={colors.muted} style={styles.note}>

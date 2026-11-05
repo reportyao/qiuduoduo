@@ -25,9 +25,9 @@ DEFAULT_PROFILES = {
         "max_chars": 260, "emoji_policy": "none", "allowed_emoji": "",
     },
     "meng": {
-        "name": "萌妹萝莉", "address": "主人", "tone": "主人 · 小女仆 · 勤快",
-        "style_prompt": "亲近、勤快、短句、少量语气词和颜文字；不暧昧；方向必须说清楚。",
-        "max_chars": 240, "emoji_policy": "limited", "allowed_emoji": "♡～",
+        "name": "元气搭子", "address": "你", "tone": "活泼 · 直白 · 不绕弯",
+        "style_prompt": "亲近、活泼、短句、少量语气词；不暧昧、不卖萌到幼稚；方向必须说清楚。",
+        "max_chars": 240, "emoji_policy": "limited", "allowed_emoji": "～",
     },
 }
 
@@ -50,10 +50,18 @@ def _now() -> datetime:
 
 def ensure_seeded(db: Session) -> None:
     changed = False
-    existing = {p.id for p in db.scalars(select(PersonaProfile)).all()}
+    rows = {p.id: p for p in db.scalars(select(PersonaProfile)).all()}
     for pid, p in DEFAULT_PROFILES.items():
-        if pid not in existing:
+        row = rows.get(pid)
+        if row is None:
             db.add(PersonaProfile(id=pid, **p, version=1, enabled=True))
+            changed = True
+        elif pid == "meng" and row.name == "萌妹萝莉":
+            # 旧默认人设带未成年化/主仆暗示，不适合博彩类应用；
+            # 只迁移仍是旧默认值的行，运营改过的配置不覆盖。
+            for field in ("name", "address", "tone", "style_prompt", "allowed_emoji"):
+                setattr(row, field, p[field])
+            row.version += 1
             changed = True
     if changed:
         db.commit()

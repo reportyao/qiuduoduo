@@ -11,6 +11,7 @@ import { usePrefsStore } from "@/features/preferences/prefsStore";
 export function useComplianceSync(): void {
   const session = useAuthStore((s) => s.session);
   const apply = useComplianceStore((s) => s.applyServerState);
+  const markSynced = useComplianceStore((s) => s.markSynced);
   const query = useQuery({
     queryKey: ["compliance-state", session?.userId ?? "anon"],
     queryFn: async () => {
@@ -20,15 +21,47 @@ export function useComplianceSync(): void {
     enabled: Boolean(session),
     staleTime: 30_000,
   });
+  const data = query.data;
+  const refetch = query.refetch;
 
   useEffect(() => {
-    if (!query.data) return;
-    const exclusion = record(query.data.self_exclusion);
+    if (!data) return;
+    const exclusion = record(data.self_exclusion);
     const until = nullableString(exclusion.until);
     const local = useComplianceStore.getState();
     const serverActive = Boolean(until) || Boolean(exclusion.permanent);
+    const localActive = local.excludedPermanent || isExcluded(local.excludedUntil);
     // 服务端不可用/尚未写入时，不能清掉本机已生效的自排除（离线也拦截）。
-    if (!serverActive && (local.excludedPermanent || isExcluded(local.excludedUntil))) return;
+    if (!serverActive && localActive) {
+      // 本机生效但服务端未确认：联网后补写，否则换设备/重装仍可绕过。
+      if (!local.syncPending) return;
+      const days = local.excludedPermanent || local.excludedUntil == null
+        ? null
+        : Math.max(1, Math.ceil((local.excludedUntil - Date.now()) / 86_400_000));
+      void callApi(api.client.POST("/compliance/self-exclusion", {
+        body: {
+          days,
+          permanent: local.excludedPermanent,
+          reason: "user_self_exclusion_retry",
+        },
+      }))
+        .then(() => {
+          markSynced();
+          void refetch();
+        })
+        .catch(() => {});
+      return;
+    }
+    if (!serverActive) {
+      apply({
+        excludedUntil: null,
+        excludedAt: null,
+        excludedPermanent: false,
+        pgsiScore: null,
+        pgsiAt: null,
+      });
+      return;
+    }
     apply({
       excludedUntil: until ? Date.parse(until) : null,
       excludedAt: until ? Date.now() : null,
@@ -37,8 +70,8 @@ export function useComplianceSync(): void {
       pgsiAt: null,
     });
     // 服务端未成年锁定优先于本机：清缓存/换设备也不能绕过。
-    if (query.data.under18_locked) {
+    if (data.under18_locked) {
       usePrefsStore.getState().setAgeDecision("minor");
     }
-  }, [apply, query.data]);
+  }, [apply, data, markSynced, refetch]);
 }

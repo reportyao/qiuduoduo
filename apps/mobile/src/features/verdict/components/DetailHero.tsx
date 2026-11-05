@@ -2,7 +2,15 @@ import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type { GateKey, VerdictDetail } from "@/domain/types";
 import { usePersonaContent } from "@/features/personas/usePersona";
-import { formatDate, formatTime, gateLabel, pct, pickDirectionLabel, pp } from "@/lib/format";
+import {
+  formatDate,
+  formatDateTime,
+  formatTime,
+  gateLabel,
+  pct,
+  pickDirectionLabel,
+  pp,
+} from "@/lib/format";
 import { colors, gradients, radii, shadows, spacing } from "@/theme/tokens";
 import { Chip, StatusDot, Text } from "@/components/ui";
 import { GateStrip } from "./Gates";
@@ -102,7 +110,8 @@ export function DetailHero({
       />
       <SealLine hash={detail.payloadHash} sealed={Boolean(detail.sealedAt)} dark={dark} onPress={onSeal} />
       <Text variant="caption" color={dark ? colors.mutedInverse : colors.subtle} style={styles.cutoff}>
-        数据截止 {detail.dataCutoff || "待同步"} · 封存于 {detail.sealedAt ? formatDate(detail.sealedAt) : "未封存"}
+        数据截止 {detail.dataCutoff ? formatDateTime(detail.dataCutoff) : "待同步"} · 封存于{" "}
+        {detail.sealedAt ? formatDateTime(detail.sealedAt) : "未封存"}
       </Text>
     </>
   );

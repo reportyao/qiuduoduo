@@ -337,6 +337,29 @@ def test_chat_endpoint_with_protection_note(db, client, monkeypatch):
     assert r["protection"]["streak"] == 3
 
 
+def test_chat_does_not_recommend_unpublished_verdict(db, client, monkeypatch):
+    """raw promoted 未过发布门时，助理不能说“三关全过、来看这场”。"""
+    _mini(monkeypatch)
+    from app.modules.timeutil import trade_date_now
+    date = trade_date_now()
+    db.merge(Verdict(
+        id=f"v{date}-周四088", trade_date=date, match_id="chat-unpub",
+        match_no="周四088", league="英超", home="未发布主队", away="未发布客队",
+        kickoff=f"{date} 21:00:00", pool="had", goal_line="",
+        sp_h=1.5, sp_d=4.0, sp_a=6.0, rake=0.08, p_home=0.6, p_draw=0.25,
+        p_away=0.15, status="promoted", gates={},
+        payload={"id": f"v{date}-周四088", "trade_date": date},
+        payload_hash="e" * 64, pick={"dir": "主胜", "prob": 0.6, "sp": 1.5, "ev": -0.1},
+    ))
+    db.commit()
+    client.post("/auth/device", json={"device_token": "tok-chat-unpub"})
+    r = client.post("/chat", json={"text": "今晚买啥"},
+                    headers={"Authorization": "Bearer tok-chat-unpub"}).json()
+    assert r["type"] == "buy_tonight"
+    assert "还没有已发布" in r["text"]
+    assert not r.get("verdict_id")
+
+
 def test_bets_only_promoted(db, client, monkeypatch):
     _mini(monkeypatch)
     _seed_match(db, "2045020", "周四020", sp=(1.20, 4.50, 9.00))  # 深水 → killed

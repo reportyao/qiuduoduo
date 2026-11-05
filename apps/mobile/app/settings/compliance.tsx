@@ -47,6 +47,7 @@ export default function ComplianceScreen() {
   const router = useRouter();
   const toast = useToast();
   const exclude = useComplianceStore((s) => s.exclude);
+  const markSynced = useComplianceStore((s) => s.markSynced);
   const setPgsi = useComplianceStore((s) => s.setPgsi);
   const lastScore = useComplianceStore((s) => s.lastPgsiScore);
   const me = useMeQuery();
@@ -82,15 +83,30 @@ export default function ComplianceScreen() {
               void callApi(
                 api.client.PUT("/me/notify-settings", { body: { paused: true } }),
               ).catch(() => {});
-              // 服务端同步：多设备/重装后仍拦截；本地已强制生效，网络失败不回滚。
-              void callApi(api.client.POST("/compliance/self-exclusion", {
+              // 服务端同步：多设备/重装后仍拦截；本地已强制生效，网络失败留给
+              // useComplianceSync 在下次前台/登录时补写，绝不因为同步失败回滚本机拦截。
+              const sync = callApi(api.client.POST("/compliance/self-exclusion", {
                 body: {
                   days: choice === "permanent" ? null : choice,
                   permanent: choice === "permanent",
                   reason: "user_self_exclusion",
                 },
-              })).catch(() => {});
-              toast.show("自排除已生效", "warning");
+              }))
+                .then(() => {
+                  markSynced();
+                  return true;
+                })
+                .catch(() => false);
+              const synced = await Promise.race([
+                sync,
+                new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 2500)),
+              ]);
+              toast.show(
+                synced
+                  ? "自排除已生效并同步到账号"
+                  : "本机已生效；服务器同步失败，联网后会自动重试",
+                synced ? "warning" : "error",
+              );
               router.replace("/paused");
             })();
           },
@@ -119,7 +135,7 @@ export default function ComplianceScreen() {
       <Card style={styles.block}>
         <Text variant="h3">自排除</Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>
-          生效后本机立即拦截首页、记录和记注，到期前不可撤销。当前为本机强制拦截；服务端多设备同步是上线前阻塞项。
+          生效后本机立即拦截首页、记录和记注，到期前不可撤销；联网后会同步到账号，换设备或重装仍受限制。
         </Text>
         <View style={styles.choiceRow}>
           <Button label="7 天" variant="secondary" onPress={() => confirmExclusion(7)} style={styles.flex} />

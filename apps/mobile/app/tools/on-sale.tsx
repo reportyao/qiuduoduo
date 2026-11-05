@@ -15,6 +15,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { useOnSaleQuery } from "@/features/home/queries";
+import { onSaleStatusLabel } from "@/features/tools/onSaleStatus";
 import { useWatchQuery } from "@/features/inbox/queries";
 import { useWatchMatchMutation } from "@/features/verdict/queries";
 import type { OnSaleItem } from "@/domain/types";
@@ -145,11 +146,16 @@ export default function OnSaleScreen() {
                         ? colors.green
                         : item.status === "screening"
                           ? colors.amber
-                          : colors.subtle
+                          : item.status === "killed"
+                            ? colors.danger
+                            : colors.subtle
                     }
                   />
-                  <Text variant="caption" color={colors.muted}>
-                    {item.status === "promoted" ? "已过" : item.status === "screening" ? "复核" : "在售"}
+                  <Text
+                    variant="caption"
+                    color={item.status === "killed" ? colors.danger : colors.muted}
+                  >
+                    {onSaleStatusLabel(item.status)}
                   </Text>
                 </View>
               </Pressable>

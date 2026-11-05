@@ -84,7 +84,7 @@ export default function WatchScreen() {
           <EmptyState
             icon="heart-outline"
             title="还没有关注比赛"
-            body="在比赛详情页点右上角的心形，就能收到停售和终场提醒。也可以从助理的比赛选择器进入。"
+            body="在比赛详情页点底部的心形，就能收到停售和终场提醒。也可以从助理的比赛选择器进入。"
             actionLabel="看今日比赛"
             onAction={() => router.push("/(tabs)")}
           />
@@ -102,11 +102,13 @@ export default function WatchScreen() {
                     {item.home && item.away ? `${item.home} vs ${item.away}` : item.targetId}
                   </Text>
                   <Text variant="caption" color={colors.muted}>
-                    {item.matchNo ?? "比赛"} · {item.kickoff ? `${formatDate(item.kickoff)} ${formatTime(item.kickoff)}` : "时间待同步"}
+                    {item.matchNo ?? "比赛"} ·{" "}
+                    {item.kickoff
+                      ? `${formatDate(item.kickoff)} ${formatTime(item.kickoff)} · ${closeLabel(item.kickoff, now)}`
+                      : "时间待同步"}
                   </Text>
                   <View style={styles.chips}>
                     <Chip label="结论变化" tone="green" />
-                    <Chip label={item.kickoff ? closeLabel(item.kickoff, now) : "停售提醒"} tone="neutral" />
                     <Chip label="终场" tone="neutral" />
                   </View>
                 </Pressable>

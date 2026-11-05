@@ -8,14 +8,14 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
 import { Button, StatusDot, Text, useToast } from "@/components/ui";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { useAuthStore } from "@/features/auth/authStore";
-import { useFloatingStore } from "@/features/assistant/floatingStore";
+import { useHideFloatingOnScroll } from "@/features/assistant/useHideFloatingOnScroll";
 import {
   focusFromOnSale,
   focusFromVerdict,
@@ -136,15 +136,8 @@ export default function HomeScreen() {
     );
   };
 
-  // 头像常驻在 Tab 层；首页滚动时缩小并加顶部渐隐，始终跟随可见。
-  const setFloatingCompact = useFloatingStore((s) => s.setCompact);
-  const scrollY = useRef(0);
-  useFocusEffect(
-    useCallback(() => {
-      setFloatingCompact(scrollY.current > 96);
-      return () => setFloatingCompact(false);
-    }, [setFloatingCompact]),
-  );
+  // 头像常驻在 Tab 层；任意页面开始纵向阅读时收起，避免压住正文。
+  const onScroll = useHideFloatingOnScroll();
 
 
   useEffect(() => {
@@ -309,13 +302,7 @@ export default function HomeScreen() {
             scrollRef.current?.scrollToEnd({ animated: true });
           }}
           scrollEventThrottle={48}
-          onScroll={(event) => {
-            const y = event.nativeEvent.contentOffset.y;
-            const wasDocked = scrollY.current > 96;
-            const nowDocked = y > 96;
-            scrollY.current = y;
-            if (wasDocked !== nowDocked) setFloatingCompact(nowDocked);
-          }}
+          onScroll={onScroll}
           refreshControl={
             <RefreshControl
               refreshing={pulling}

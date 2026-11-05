@@ -17,6 +17,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { useLedgerQuery } from "@/features/records/queries";
+import { ledgerStatusLabel } from "@/features/records/ledgerStatus";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { errorText } from "@/lib/errors";
 import { shortHash } from "@/lib/format";
@@ -100,7 +101,9 @@ export default function LedgerScreen() {
                 key={item.id}
                 onPress={() => router.push({ pathname: "/verdict/[id]", params: { id: item.id } })}
                 accessibilityRole="button"
-                accessibilityLabel={`${item.match}，${item.settled ?? "待结算"}`}
+                accessibilityLabel={`${item.match}，${ledgerStatusLabel(item.status)}，${
+                  item.settled === "win" ? "已命中" : item.settled === "lose" ? "未命中" : "待结算"
+                }`}
                 style={({ pressed }) => [
                   styles.row,
                   index < items.length - 1 && styles.rowLine,
@@ -113,7 +116,11 @@ export default function LedgerScreen() {
                 </View>
                 <View style={styles.flex}>
                   <Text variant="bodyStrong" numberOfLines={1}>{item.match}</Text>
-                  <Text variant="caption" color={colors.muted}>
+                  <Text
+                    variant="caption"
+                    color={item.status === "killed" ? colors.danger : colors.muted}
+                  >
+                    {ledgerStatusLabel(item.status)} ·{" "}
                     {item.pick?.dir ? pickDirectionLabel(item.pool, item.pick.dir) : "未给方向"}
                     {item.resultScore ? ` · ${item.resultScore}` : ""}
                   </Text>

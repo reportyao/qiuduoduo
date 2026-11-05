@@ -32,7 +32,12 @@ export default function MemoriesScreen() {
       return;
     }
     try {
-      await save.mutateAsync({ key: key.trim(), value: value.trim(), confirm });
+      await save.mutateAsync({
+        key: key.trim(),
+        value: value.trim(),
+        confirm,
+        source: "手动添加",
+      });
       setKey("");
       setValue("");
       toast.show("记住了", "success");

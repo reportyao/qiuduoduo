@@ -151,7 +151,7 @@ def test_chat_gateway_exception_falls_back(client, db, monkeypatch):
     assert r.status_code == 200
     data = r.json()
     assert data["type"] == "fallback"
-    assert "今晚买啥" in data["text"]
+    assert "今晚看哪场" in data["text"]
 
 
 def test_anonymous_chat_never_calls_gateway(client, db, monkeypatch):
@@ -164,7 +164,7 @@ def test_anonymous_chat_never_calls_gateway(client, db, monkeypatch):
     monkeypatch.setattr(llm_gateway, "complete", fake)
     data = client.post("/chat", json={"text": "随便聊聊"}).json()
     assert called["n"] == 0
-    assert "今晚买啥" in data["text"]
+    assert "今晚看哪场" in data["text"]
     assert "llm" not in data
 
 

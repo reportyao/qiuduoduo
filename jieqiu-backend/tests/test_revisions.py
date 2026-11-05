@@ -1,5 +1,7 @@
 """修订史回归：同一 verdict 随数据更新重建时，历史封存哈希必须全部可回溯。"""
-from app.models import SPMatch, SPSnapshot, VerdictRevision
+from datetime import datetime
+
+from app.models import SPMatch, SPSnapshot, Verdict, VerdictRevision
 from app.modules.verdict import build_verdicts
 from tests.conftest import future_kickoff, today_cn
 
@@ -42,6 +44,26 @@ def test_revisions_append_and_dedup(db):
         h = hashlib.sha256(json.dumps(r.payload, ensure_ascii=False,
                                       sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         assert h == r.payload_hash
+
+
+def test_sealed_at_tracks_latest_revision(db):
+    """封存后 SP 再更新：当前 payload 的封存时间必须随最新修订，不能早于数据截止。"""
+    _seed(db, today_cn() + "T10:00:00+08:00")
+    vs = build_verdicts(db, today_cn(), NOW)
+    v = db.get(Verdict, vs[0].id)
+    v.sealed_at = datetime(2026, 1, 1, 0, 0, 0)
+    db.commit()
+
+    db.merge(SPSnapshot(match_id="2042701", pool="had", goal_line="",
+                        sp_h=1.60, sp_d=4.10, sp_a=5.90,
+                        captured_at=today_cn() + "T12:00:00+08:00"))
+    db.commit()
+    build_verdicts(db, today_cn(), NOW)
+
+    latest = db.query(VerdictRevision).order_by(VerdictRevision.id.desc()).first()
+    db.refresh(v)
+    assert v.sealed_at == latest.created_at
+    assert v.sealed_at > datetime(2026, 1, 1, 0, 0, 0)
 
 
 def test_first_revision_hash_preserved_after_updates(db):

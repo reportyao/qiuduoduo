@@ -34,10 +34,10 @@ export const PERSONAS: Record<PersonaId, PersonaMeta> = {
   },
   meng: {
     id: "meng",
-    name: "萌妹萝莉",
-    tag: "主人 · 小女仆 · 勤快",
-    address: "主人",
-    sample: "主人～这场人家算过啦，先听人家说完嘛。",
+    name: "元气搭子",
+    tag: "活泼 · 直白 · 不绕弯",
+    address: "你",
+    sample: "这场我算过啦，先听我说完嘛。",
     avatar: require("../../../assets/mascot/meng.png"),
   },
 };
@@ -95,7 +95,7 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     parlayCta: "去体检",
     feedTitle: "今日结论",
     conversationOpen: (dayLabel, total, promoted, screening, killed) =>
-      `${dayLabel} ${total} 场，我算了一遍：${promoted} 场过三关，${screening} 场还在等数据${killed ? `，${killed} 场直接砍掉` : ""}。没算清的，我不碰。`,
+      `${dayLabel} ${total} 场，我算了一遍：${promoted} 场复核过三关，${screening} 场还在等数据${killed ? `，${killed} 场直接砍掉` : ""}。没算清的，我不碰。`,
     typing: "正在把账算一遍…",
     avoidLead: "这几场我不碰，死因都写在这：",
     postmortemLead: "最近几场复盘，输赢都写：",
@@ -139,7 +139,7 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     parlayCta: "去算账",
     feedTitle: "今天看什么",
     conversationOpen: (dayLabel, total, promoted, screening, killed) =>
-      `${dayLabel === "今天" ? "今儿" : dayLabel} ${total} 场，我扒拉了一遍：过三关的 ${promoted} 场，还有 ${screening} 场在等数据${killed ? `，${killed} 场直接砍了` : ""}。没算明白的，先晾着。`,
+      `${dayLabel === "今天" ? "今儿" : dayLabel} ${total} 场，我扒拉了一遍：复核过三关的 ${promoted} 场，还有 ${screening} 场在等数据${killed ? `，${killed} 场直接砍了` : ""}。没算明白的，先晾着。`,
     typing: "正在扒场子…",
     avoidLead: "这几场我劝你别碰，死因都在这：",
     postmortemLead: "最近几场，输赢都摆出来：",
@@ -172,47 +172,47 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     },
   },
   meng: {
-    brandSub: "AI 竞彩分析助理 · 主人在上",
-    hintMatches: "主人点我，今日比赛都在这儿哦",
+    brandSub: "AI 竞彩分析助理 · 陪你算账",
+    hintMatches: "点我，今日比赛都在这儿",
     envLive: (total, promoted, screening) =>
-      `实时数据 · 人家复核了 ${total} 场 · 过三关 ${promoted} · 复核中 ${screening}`,
-    envEmpty: "实时数据 · 人家正在同步今天的比赛啦",
+      `实时数据 · 我复核了 ${total} 场 · 过三关 ${promoted} · 复核中 ${screening}`,
+    envEmpty: "实时数据 · 我正在同步今天的比赛",
     saleTitle: "最近停售啦",
-    parlayTitle: "串关体检 · 免费哦",
-    parlaySub: "主人把票票拆开，人家 30 秒算给你看",
-    parlayCta: "去体检嘛",
+    parlayTitle: "串关体检 · 免费",
+    parlaySub: "把票拆开，我 30 秒算给你看",
+    parlayCta: "去体检",
     feedTitle: "今日结论",
     conversationOpen: (dayLabel, total, promoted, screening, killed) =>
-      `主人～${dayLabel} ${total} 场，人家都算过啦：过三关的 ${promoted} 场，还有 ${screening} 场在等数据${killed ? `，${killed} 场人家直接砍掉啦` : ""}。算不清的，人家先不让主人碰哦。`,
-    typing: "人家正在努力算账…",
-    avoidLead: "这几场人家不建议碰，原因都写好啦：",
-    postmortemLead: "最近几场复盘，输赢人家都记着呢：",
+      `${dayLabel} ${total} 场，我都算过啦：复核过三关 ${promoted} 场，还有 ${screening} 场在等数据${killed ? `，${killed} 场直接砍掉` : ""}。算不清的先不碰。`,
+    typing: "我正在算账…",
+    avoidLead: "这几场我不建议碰，原因都写好啦：",
+    postmortemLead: "最近几场复盘，输赢我都记着：",
     buy: "记一注",
     bought: "记好啦 ✓",
     detail: "看完整账",
     pendingCta: "为什么还不出呀",
-    emptyTitle: "主人～今晚没有能记的场哦。",
-    emptyBody: "人家把场次都看完啦，算不清就不让主人冒险。可以看看在售，或者翻昨日复盘～",
-    pendingTitle: "主人～今天的结论还没出来哦。",
-    pendingBody: "人家还没把今天的比赛跑完呢。先看在售，或者翻昨日复盘嘛～",
-    restTitle: "主人，今天休息嘛。",
-    restBody: "歇一天不是放弃，是纪律的一部分哦。明天人家照常等你。",
-    comfort: "记下啦主人～中间不用看啦，有结果人家第一时间来报。",
-    protection: (streak) => `主人～已经连输 ${streak} 场了，先停一停好不好？人家不想看主人越陷越深。`,
-    chatPlaceholder: "主人想聊什么呀…",
-    chatGreeting: "主人～人家在呢。今晚看什么、为什么不推、昨天怎么样，都可以问人家。",
-    whyNotLead: "不推不是它不会赢哦，是人家算不清。算不清就不让主人碰。",
+    emptyTitle: "今晚没有能记的场。",
+    emptyBody: "场次都看完啦，算不清就不冒险。可以看看在售，或者翻昨日复盘。",
+    pendingTitle: "今天的结论还没出来。",
+    pendingBody: "今天的比赛还没跑完呢。先看在售，或者翻昨日复盘嘛。",
+    restTitle: "今天休息嘛。",
+    restBody: "歇一天不是放弃，是纪律的一部分。明天我照常等你。",
+    comfort: "记下啦～中间不用看，有结果我第一时间来报。",
+    protection: (streak) => `已经连输 ${streak} 场了，先停一停好不好？我不想看你越陷越深。`,
+    chatPlaceholder: "想聊什么呀…",
+    chatGreeting: "我在呢。今晚看什么、为什么不推、昨天怎么样，都可以问我。",
+    whyNotLead: "不推不是它不会赢，是我算不清。算不清就不碰。",
     footer: "数据分析结果，不构成投注建议。未满 18 周岁禁止购买彩票。",
     verdictSummary: ({ status, pickLabel, prob, rake, pendingGate, gateNote }) => {
       if (status === "promoted") {
-        return `主人～${pickLabel}人家算到 ${prob != null ? (prob * 100).toFixed(1) + "%" : "--"}，` +
+        return `${pickLabel}我算到 ${prob != null ? (prob * 100).toFixed(1) + "%" : "--"}，` +
           `抽水 ${rake != null ? (rake * 100).toFixed(1) + "%" : "待同步"}，三关都过啦。`;
       }
       if (status === "screening" && pendingGate) {
         return `价闸过啦，抽水 ${rake != null ? (rake * 100).toFixed(1) + "%" : "待同步"}，` +
-          `可是「${pendingGate}」还没齐，人家再等等嘛。`;
+          `可是「${pendingGate}」还没齐，再等等嘛。`;
       }
-      return gateNote || "这场还没过三关，主人先看数据嘛。";
+      return gateNote || "这场还没过三关，先看数据嘛。";
     },
   },
 };

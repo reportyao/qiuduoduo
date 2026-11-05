@@ -10,9 +10,11 @@ import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
+from ..features.recommendations.service import today as recommendations_today
 from ..models import User, Verdict
 from .postmortem import postmortem
-from .users import list_memories, today_cn, user_streak
+from .timeutil import trade_date_now
+from .users import list_memories, user_streak
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +27,8 @@ _INTENT_RULES: list[tuple[str, tuple[str, ...]]] = [
     ("rest", ("今天不看了", "不想看了", "休息", "今天到此为止")),
     ("protection", ("连败", "保护", "降温")),
     ("lookup_team", ("查：", "查一下", "怎么看")),
-    ("buy_tonight", ("今晚买啥", "今晚买什么", "有什么推荐", "买啥", "推一场")),
+    ("buy_tonight", ("今晚买啥", "今晚买什么", "今晚看哪场", "今晚看什么", "看哪场",
+                     "有什么推荐", "买啥", "推一场")),
 ]
 
 
@@ -46,25 +49,25 @@ def respond(db: Session, user: User | None, text: str,
     card: dict = {"type": intent}
 
     if intent == "buy_tonight":
-        top = db.scalars(
-            select(Verdict).where(Verdict.status == "promoted",
-                                  Verdict.settled.is_(None),
-                                  Verdict.trade_date == today_cn())
-            .order_by(Verdict.rake).limit(1)
-        ).first()
+        # 只回答已发布判断：raw promoted 还没过发布门，不能当成推荐。
+        # 日期必须用竞彩日（05:00 边界），不能用日历日，否则凌晨会查空。
+        published = recommendations_today(db, trade_date_now()).get("snapshots") or []
+        top = published[0] if published else None
+        verdict = (top or {}).get("verdict") or {}
         if top:
-            card["verdict_id"] = top.id
-            card["pick"] = top.pick
-            card["hash"] = top.payload_hash
-            card["text"] = (f"{top.home} vs {top.away}：三关全过。"
+            pick = verdict.get("pick") or {}
+            card["verdict_id"] = verdict.get("id")
+            card["pick"] = pick
+            card["hash"] = top.get("payload_hash")
+            card["text"] = (f"{verdict.get('home')} vs {verdict.get('away')}：三关全过，已发布。"
                             f"详情与封存哈希见卡片。")
         else:
-            card["text"] = "今晚暂无过了三关的场次——没有就不推，这是纪律。"
+            card["text"] = "今晚还没有已发布的判断——没有就不推，这是纪律。"
 
     elif intent == "why_not":
         killed = db.scalars(
             select(Verdict).where(Verdict.status == "killed",
-                                  Verdict.trade_date == today_cn())
+                                  Verdict.trade_date == trade_date_now())
             .order_by(Verdict.rake.desc()).limit(1)
         ).first()
         if killed:
@@ -145,8 +148,8 @@ def respond(db: Session, user: User | None, text: str,
         card["text"] = "报「查：队名」我可以定位到具体判决。"
 
     else:  # fallback
-        card["text"] = ("我聊今晚怎么买、为什么不买、你的复盘和记忆。"
-                        "试试：今晚买啥 / 为什么不推 / 复盘 / 记住我的主队是曼城。")
+        card["text"] = ("我聊今晚看哪场、为什么不推、你的复盘和记忆。"
+                        "试试：今晚看哪场 / 为什么不推 / 复盘 / 记住我的主队是曼城。")
         # 匿名用户固定引导（0 LLM）；登录后跑题/开放问题才进入 fast。
         if user is not None:
             from .llm_gateway import complete

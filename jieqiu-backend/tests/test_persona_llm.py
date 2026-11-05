@@ -6,10 +6,27 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.models import PersonaCopyCache, PersonaLLMModel
+from app.models import PersonaCopyCache, PersonaLLMModel, PersonaProfile
 from app.modules import persona_registry
 from app.modules import persona_llm
 from tests.conftest import admin_login
+
+
+def test_legacy_meng_default_is_migrated(db):
+    """旧库里的“萌妹萝莉/主人”默认值必须升级，避免继续面向博彩用户展示。"""
+    db.add(PersonaProfile(
+        id="meng", name="萌妹萝莉", address="主人", tone="主人 · 小女仆 · 勤快",
+        style_prompt="旧提示词", max_chars=240, emoji_policy="limited",
+        allowed_emoji="♡～", version=1, enabled=True,
+    ))
+    db.commit()
+
+    persona_registry.ensure_seeded(db)
+
+    row = db.get(PersonaProfile, "meng")
+    assert row.name == "元气搭子"
+    assert row.address == "你"
+    assert row.version == 2
 
 
 def _settings(**over):

@@ -148,7 +148,7 @@ packages/api       生成的 client
 | 前端单测 | Vitest + RNTL | hooks / 组件 |
 | E2E | Maestro | 核心用户流程 |
 
-> 当前实际（2026-11-05）：后端 pytest 265 项仍主要跑 SQLite；未接真实 Postgres CI；前端 Vitest 22 项 + typecheck/lint + Expo Android bundle；Maestro/E2E 尚未接入。
+> 当前实际（2026-11-06）：后端 pytest 271 项仍主要跑 SQLite；未接真实 Postgres CI；前端 Vitest 27 项 + typecheck/lint + Expo Android bundle；Maestro/E2E 尚未接入。
 
 ## 8. 迁移路线
 

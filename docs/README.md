@@ -1,6 +1,6 @@
 # 球多多文档索引
 
-最后对账：2026-11-05。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **128 路径 / 143 方法**，后端 **268 tests**，前端 **22 tests**，Alembic head `20261105_13`；生产线上提交 `dd4555b`，当前仍是 SQLite + WAL 过渡。
+最后对账：2026-11-06。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **128 路径 / 143 方法**，后端 **271 tests**，前端 **27 tests**，Alembic head `20261105_13`；当前仍是 SQLite + WAL 过渡。
 
 ## 当前状态（2026-11-05）
 
@@ -25,6 +25,7 @@
 | [database-architecture.md](./database-architecture.md) | 境内 Postgres（云托管优先/自建兜底）、连接池、索引、保留、备份/PITR 落地、切换 |
 | [operations-runbook.md](./operations-runbook.md) | 当前部署、cron、健康检查、`/admin` 后台、回滚与事故排查 |
 | [performance.md](./performance.md) | 性能基线：接口 p50/p95、缓存/gzip/SQLite/包体优化、网络与并发限制 |
+| [frontend-deep-test-2026-11-06.md](./frontend-deep-test-2026-11-06.md) | 移动端深度测试：已修复问题、回归结果与仍未闭环的上线缺口 |
 | [xg-providers.md](./xg-providers.md) | xG 第三方数据源选型：Sportmonks / StatsBomb / FBref / SofaScore / Understat 的适用边界 |
 | [open-source-watchlist.md](./open-source-watchlist.md) | 开源引用/候选清单：维护状态、许可证、采纳/降级结论 |
 

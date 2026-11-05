@@ -154,7 +154,25 @@ export default function LoginScreen() {
           </Card>
 
           <Text variant="caption" color={colors.subtle} center style={styles.footer}>
-            继续即表示你已阅读《服务说明》和《隐私政策》。未满 18 周岁禁止购买彩票。
+            继续即表示你已阅读
+            <Text
+              variant="caption"
+              color={colors.green}
+              accessibilityRole="link"
+              onPress={() => router.push({ pathname: "/legal", params: { doc: "terms" } })}
+            >
+              《服务说明》
+            </Text>
+            和
+            <Text
+              variant="caption"
+              color={colors.green}
+              accessibilityRole="link"
+              onPress={() => router.push({ pathname: "/legal", params: { doc: "privacy" } })}
+            >
+              《隐私政策》
+            </Text>
+            。未满 18 周岁禁止购买彩票。
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

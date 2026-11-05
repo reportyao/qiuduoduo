@@ -78,7 +78,9 @@ export default function WhyNotScreen() {
                   label={data.verdictKind === "pending" ? "复核中" : "已砍"}
                   tone={data.verdictKind === "pending" ? "amber" : "danger"}
                 />
-                <Text variant="caption" color={colors.muted}>{data.matchNo} · {formatDate(date)}</Text>
+                <Text variant="caption" color={colors.muted}>
+                  {data.matchNo} · 竞彩日 {formatDate(date)}
+                </Text>
               </View>
               <Text variant="h2" style={styles.match}>{data.home} <Text variant="body" color={colors.muted}>vs</Text> {data.away}</Text>
               <Text variant="h3" style={styles.title}>{friendlyTitle(data)}</Text>

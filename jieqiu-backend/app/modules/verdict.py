@@ -304,13 +304,14 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
             select(VerdictRevision.id).where(
                 VerdictRevision.verdict_id == payload["id"],
                 VerdictRevision.payload_hash == digest))
+        new_rev = None
         if has_rev is None:
-            rev = VerdictRevision(verdict_id=payload["id"], payload=payload,
-                                  payload_hash=digest, data_cutoff=snap.captured_at,
-                                  trade_date=trade_date)
-            db.add(rev)
+            new_rev = VerdictRevision(verdict_id=payload["id"], payload=payload,
+                                      payload_hash=digest, data_cutoff=snap.captured_at,
+                                      trade_date=trade_date)
+            db.add(new_rev)
             db.flush()  # 拿到 created_at/id 再接链
-            link_revision(db, rev)
+            link_revision(db, new_rev)
 
         v = db.get(Verdict, payload["id"])
         if v is None:
@@ -337,7 +338,10 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
         v.gates = gates
         v.payload = payload
         v.payload_hash = digest
-        # 不在重建时清空 sealed_at：否则 screening/killed 每轮 seed 都会让“已封存”闪烁。
+        # 已封存判决产生新修订后，当前 payload 的封存时间随最新修订前移；
+        # 否则详情页会出现“数据截止晚于封存时间”的矛盾。
+        if new_rev is not None and v.sealed_at is not None:
+            v.sealed_at = new_rev.created_at
         out.append(v)
     db.commit()
     return out

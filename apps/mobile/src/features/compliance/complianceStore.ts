@@ -12,6 +12,8 @@ interface PersistedCompliance {
   excludedPermanent: boolean;
   lastPgsiScore: number | null;
   lastPgsiAt: number | null;
+  /** 本机已生效但服务端尚未确认；联网/登录后必须重试，否则换设备可绕过。 */
+  syncPending: boolean;
 }
 
 interface ComplianceState extends PersistedCompliance {
@@ -19,6 +21,7 @@ interface ComplianceState extends PersistedCompliance {
   storageError: boolean;
   hydrate: () => Promise<void>;
   exclude: (choice: ExclusionChoice) => Promise<boolean>;
+  markSynced: () => void;
   setPgsi: (score: number) => void;
   clearPgsi: () => void;
   applyServerState: (state: {
@@ -36,6 +39,7 @@ const DEFAULTS: PersistedCompliance = {
   excludedPermanent: false,
   lastPgsiScore: null,
   lastPgsiAt: null,
+  syncPending: false,
 };
 
 function serialize(state: PersistedCompliance): string {
@@ -45,6 +49,7 @@ function serialize(state: PersistedCompliance): string {
     excludedPermanent: state.excludedPermanent,
     lastPgsiScore: state.lastPgsiScore,
     lastPgsiAt: state.lastPgsiAt,
+    syncPending: state.syncPending,
   });
 }
 
@@ -69,6 +74,7 @@ export const useComplianceStore = create<ComplianceState>((set, get) => ({
           lastPgsiScore:
             typeof parsed.lastPgsiScore === "number" ? parsed.lastPgsiScore : null,
           lastPgsiAt: typeof parsed.lastPgsiAt === "number" ? parsed.lastPgsiAt : null,
+          syncPending: Boolean(parsed.syncPending),
           storageError: false,
         });
       }
@@ -88,6 +94,7 @@ export const useComplianceStore = create<ComplianceState>((set, get) => ({
       excludedUntil: until,
       excludedAt: now,
       excludedPermanent: choice === "permanent",
+      syncPending: true,
     };
     try {
       // 先持久化再宣布成功：写失败时绝不显示“已生效”。
@@ -98,6 +105,11 @@ export const useComplianceStore = create<ComplianceState>((set, get) => ({
       set({ storageError: true });
       return false;
     }
+  },
+
+  markSynced: () => {
+    set({ syncPending: false });
+    persist(get());
   },
 
   setPgsi: (score) => {
@@ -117,6 +129,7 @@ export const useComplianceStore = create<ComplianceState>((set, get) => ({
       excludedPermanent: state.excludedPermanent,
       lastPgsiScore: state.pgsiScore,
       lastPgsiAt: state.pgsiAt,
+      syncPending: false,
       storageError: false,
     });
     persist(get());

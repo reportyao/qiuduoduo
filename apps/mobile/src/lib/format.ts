@@ -179,7 +179,8 @@ export function money(value: number | null | undefined, digits = 0): string {
 
 export function signedMoney(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return "--";
-  return `${value >= 0 ? "+" : "-"}¥${Math.abs(value).toFixed(0)}`;
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+  return `${sign}¥${Math.abs(value).toFixed(0)}`;
 }
 
 export function clamp(value: number, min: number, max: number): number {

@@ -10,8 +10,8 @@ import { Avatar } from "./ui/Avatar";
 const SIZE = 56;
 
 /**
- * 跨 Tab 常驻的 AI 实体：像 Muse 的头像一样悬浮在 4 个 Tab 之上。
- * 它不随页面滚动，滚动/切 Tab 都保持可见；点击进入助理对话。
+ * 跨 Tab 的 AI 实体：停在首屏顶部，点击进入助理对话。
+ * 页面滚动阅读或底部弹层打开时收起，避免压住正文和弹层。
  */
 export function FloatingAssistant() {
   const insets = useSafeAreaInsets();
@@ -19,8 +19,11 @@ export function FloatingAssistant() {
   const { meta } = usePersonaContent();
   const reduced = useReducedMotion();
   const compact = useFloatingStore((s) => s.compact);
+  const sheetOpen = useFloatingStore((s) => s.sheetDepth > 0);
+  const hidden = compact || sheetOpen;
   const float = useRef(new Animated.Value(0)).current;
   const squeeze = useRef(new Animated.Value(0)).current;
+  const reveal = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (reduced) {
@@ -59,12 +62,28 @@ export function FloatingAssistant() {
     return () => animation.stop();
   }, [compact, reduced, squeeze]);
 
+  useEffect(() => {
+    if (reduced) {
+      reveal.setValue(hidden ? 0 : 1);
+      return;
+    }
+    const animation = Animated.timing(reveal, {
+      toValue: hidden ? 0 : 1,
+      duration: hidden ? 140 : 200,
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [hidden, reduced, reveal]);
+
   return (
     <Animated.View
-      pointerEvents="box-none"
+      pointerEvents={hidden ? "none" : "box-none"}
+      accessibilityElementsHidden={hidden}
+      importantForAccessibility={hidden ? "no-hide-descendants" : "auto"}
       style={[
         styles.wrap,
-        { top: insets.top + 4 },
+        { top: insets.top + 4, opacity: reveal },
         {
           transform: [
             { translateY: squeeze.interpolate({ inputRange: [0, 1], outputRange: [0, -2] }) },

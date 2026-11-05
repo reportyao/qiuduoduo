@@ -72,7 +72,7 @@ export function AssistantBrief({
       <View style={styles.statRow}>
         <MiniStat label={dayLabel === "今天" ? "今日复核" : "当日复核"} value={String(stats.total)} />
         <View style={styles.statLine} />
-        <MiniStat label="过三关" value={String(stats.promoted)} accent />
+        <MiniStat label="复核过三关" value={String(stats.promoted)} accent />
         <View style={styles.statLine} />
         <MiniStat label={onsaleLabel} value={String(onsaleCount)} />
       </View>

@@ -36,8 +36,7 @@ export default function AboutScreen() {
         <Text variant="overline" color={colors.green}>版本</Text>
         <KeyValueRow label="App" value={Constants.expoConfig?.version ?? "0.1.0"} />
         <KeyValueRow label="API" value={version.data?.api ?? "连接中"} />
-        <KeyValueRow label="最低 App 版本" value={version.data?.min_app_version ?? "—"} />
-        <KeyValueRow label="功能冻结" value={version.data?.freeze_mode ? "已启用" : "未启用"} last />
+        <KeyValueRow label="最低 App 版本" value={version.data?.min_app_version ?? "—"} last />
       </Card>
 
       <Card style={styles.block}>

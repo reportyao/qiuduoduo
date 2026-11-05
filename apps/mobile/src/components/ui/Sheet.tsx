@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFloatingStore } from "@/features/assistant/floatingStore";
 import { colors, radii, spacing } from "@/theme/tokens";
 import { IconButton } from "./IconButton";
 import { Text } from "./Text";
@@ -39,6 +40,17 @@ export function Sheet({
   closeLabel = "关闭",
 }: SheetProps) {
   const insets = useSafeAreaInsets();
+  const pushSheet = useFloatingStore((s) => s.pushSheet);
+  const popSheet = useFloatingStore((s) => s.popSheet);
+
+  // 原生 Modal 会盖住整个 Tab 层，但悬浮头像在 Modal 之上；
+  // 打开期间把头像收掉，避免它悬在遮罩上方挡内容。
+  useEffect(() => {
+    if (!visible) return;
+    pushSheet();
+    return popSheet;
+  }, [visible, pushSheet, popSheet]);
+
   return (
     <Modal
       visible={visible}

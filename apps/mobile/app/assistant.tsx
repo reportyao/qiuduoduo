@@ -22,7 +22,7 @@ import { usePersonaContent } from "@/features/personas/usePersona";
 import { errorText } from "@/lib/errors";
 import { colors, fontFamily, layout, radii, shadows, spacing } from "@/theme/tokens";
 
-const SUGGESTIONS = ["今晚买啥", "为什么不推", "复盘", "记住我的主队是曼城"];
+const SUGGESTIONS = ["今晚看哪场", "为什么不推", "复盘", "记住我的主队是曼城"];
 
 export default function AssistantScreen() {
   const router = useRouter();
