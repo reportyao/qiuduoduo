@@ -118,7 +118,7 @@ export default function ComplianceScreen() {
   return (
     <SettingsPage title="合规中心" subtitle="永远免费，不用于营销" onBack={() => goBackOr(router)}>
       <Card tone="green">
-        <Text variant="h3">先照顾你这个人。</Text>
+        <Text variant="h3">先照顾你这个人</Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>
           球多多不卖彩票、不代购，也不靠你多下注赚钱。这里的功能永远免费，也不会出现在任何营销里。
         </Text>

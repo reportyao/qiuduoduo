@@ -77,7 +77,7 @@ export function DetailHero({
         {detail.status === "promoted" && published != null ? (
           <Chip
             label={published ? "已发布预测" : "未发布 · 复核预览"}
-            tone={published ? "green" : "amber"}
+            tone={dark ? "dark" : published ? "green" : "amber"}
           />
         ) : null}
       </View>

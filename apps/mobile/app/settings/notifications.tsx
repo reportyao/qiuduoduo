@@ -159,6 +159,7 @@ export default function NotificationsScreen() {
                   key={option.id}
                   label={option.label}
                   selected={selected}
+                  selectedStyle="soft"
                   onPress={() =>
                     setTypes(
                       selected
@@ -188,7 +189,7 @@ export default function NotificationsScreen() {
 
           <Card style={styles.cap}>
             <Text variant="smallStrong">每日主动推送上限</Text>
-            <Text variant="caption" color={colors.muted}>0 = 只留站内信；最多 10 条。</Text>
+            <Text variant="caption" color={colors.muted}>0 = 只留站内信；最多 10 条</Text>
             <Stepper
               value={draft.dailyCap}
               onChange={(dailyCap) => updateDraft({ ...draft, dailyCap })}

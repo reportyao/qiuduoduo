@@ -7,12 +7,14 @@ import { colors, layout, spacing } from "@/theme/tokens";
 
 export function ToolScreen({
   title,
+  headline,
   eyebrow,
   description,
   onBack,
   children,
 }: {
   title: string;
+  headline?: string;
   eyebrow: string;
   description: string;
   onBack: () => void;
@@ -27,7 +29,7 @@ export function ToolScreen({
         contentContainerStyle={styles.content}
       >
         <Text variant="overline" color={colors.green}>{eyebrow}</Text>
-        <Text variant="display" style={styles.title}>{title}</Text>
+        <Text variant="display" style={styles.title}>{headline ?? title}</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>{description}</Text>
         {children}
         <Text variant="caption" color={colors.subtle} center style={styles.footer}>
@@ -46,7 +48,7 @@ export function ResultPanel({
   children: ReactNode;
 }) {
   return (
-    <Card tone="green" style={styles.result}>
+    <Card style={styles.result}>
       <Text variant="overline" color={colors.green}>{title}</Text>
       {children}
     </Card>
@@ -89,7 +91,7 @@ export function FormulaNote({ children }: { children: ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.md, paddingBottom: spacing.x7 },
+  content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.xl, paddingBottom: spacing.x7 },
   title: { marginTop: spacing.xs },
   lead: { marginTop: spacing.sm, lineHeight: 22 },
   footer: { marginTop: spacing.x4, lineHeight: 18 },

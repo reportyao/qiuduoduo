@@ -18,7 +18,7 @@ export default function MinorScreen() {
           resizeMode="cover"
         />
         <Text variant="overline" color={colors.green}>未成年模式</Text>
-        <Text variant="display" center style={styles.title}>只看，不参与。</Text>
+        <Text variant="display" center style={styles.title}>只看，不参与</Text>
         <Text variant="body" color={colors.muted} center style={styles.lead}>
           未满 18 周岁不能购买彩票。球多多只开放公开账本给你了解分析怎么做，不展示记注和个性化预测。
         </Text>

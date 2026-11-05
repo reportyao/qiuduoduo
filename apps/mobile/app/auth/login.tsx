@@ -102,7 +102,7 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Text variant="overline" color={colors.green}>手机号验证码</Text>
-          <Text variant="display" style={styles.title}>登录后，账跟着你。</Text>
+          <Text variant="display" style={styles.title}>登录后，账跟着你</Text>
           <Text variant="body" color={colors.muted} style={styles.lead}>
             设备账户也可以直接使用；绑定手机号后，换手机不会丢注单和记忆。
           </Text>
@@ -145,13 +145,9 @@ export default function LoginScreen() {
             />
           </Card>
 
-          <Card style={styles.note}>
-            <Text variant="smallStrong">微信 / 国际登录</Text>
-            <Text variant="caption" color={colors.muted} style={styles.noteText}>
-              当前版本先开放手机号验证码。微信、Google、Apple 登录依赖正式 SDK 与商户配置，在对应渠道包中开启，
-              不会用假按钮占位。
-            </Text>
-          </Card>
+          <Text variant="caption" color={colors.subtle} center style={styles.altLogin}>
+            微信 / Google / Apple 登录将在对应渠道包开放
+          </Text>
 
           <Text variant="caption" color={colors.subtle} center style={styles.footer}>
             继续即表示你已阅读
@@ -186,7 +182,6 @@ const styles = StyleSheet.create({
   title: { marginTop: spacing.xs },
   lead: { marginTop: spacing.sm, lineHeight: 22 },
   form: { marginTop: spacing.x4, gap: spacing.base },
-  note: { marginTop: spacing.base, gap: spacing.xs },
-  noteText: { lineHeight: 18 },
+  altLogin: { marginTop: spacing.base, lineHeight: 17 },
   footer: { marginTop: spacing.x4, lineHeight: 18 },
 });

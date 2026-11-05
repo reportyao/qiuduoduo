@@ -23,8 +23,9 @@ export default function RakeToolScreen() {
 
   return (
     <ToolScreen
+      headline="先算入场费"
       title="抽水计算"
-      eyebrow="价闸 · 先算入场费"
+      eyebrow="价闸"
       description="输入主胜/平/客胜三项欧赔，算出官方定价抽水、真实返还率和去水后的概率。抽水是开赛前就付掉的钱。"
       onBack={() => goBackOr(router)}
     >

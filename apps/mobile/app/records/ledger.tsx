@@ -53,7 +53,7 @@ export default function LedgerScreen() {
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <Text variant="overline" color={colors.green}>F14 · 不删历史</Text>
-        <Text variant="display" style={styles.title}>赢的写，输的也写。</Text>
+        <Text variant="display" style={styles.title}>赢的写，输的也写</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
           每条预测赛前封存 SHA-256。任何一条都能独立复算，连败也公开。
         </Text>

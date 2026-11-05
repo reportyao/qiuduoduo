@@ -8,6 +8,8 @@ interface ChipProps {
   label: string;
   tone?: ChipTone;
   selected?: boolean;
+  /** 多选场景用 soft，避免一排全是深绿色实心块。 */
+  selectedStyle?: "solid" | "soft";
   onPress?: () => void;
   dot?: boolean;
   style?: object;
@@ -21,15 +23,17 @@ const TONES: Record<ChipTone, { bg: string; fg: string; border: string }> = {
   dark: { bg: "rgba(255,255,255,0.08)", fg: colors.inkInverse, border: "rgba(255,255,255,0.16)" },
 };
 
-export function Chip({ label, tone = "neutral", selected = false, onPress, dot = false, style }: ChipProps) {
+export function Chip({ label, tone = "neutral", selected = false, selectedStyle = "solid", onPress, dot = false, style }: ChipProps) {
   const palette = TONES[tone];
+  const selectedBg = selectedStyle === "soft" ? colors.greenSoft : colors.green;
+  const selectedFg = selectedStyle === "soft" ? colors.green : colors.white;
   const body = (
     <View
       style={[
         styles.chip,
         {
-          backgroundColor: selected ? colors.green : palette.bg,
-          borderColor: selected ? colors.green : palette.border,
+          backgroundColor: selected ? selectedBg : palette.bg,
+          borderColor: selected ? (selectedStyle === "soft" ? colors.greenSoft : colors.green) : palette.border,
         },
         style,
       ]}
@@ -38,12 +42,12 @@ export function Chip({ label, tone = "neutral", selected = false, onPress, dot =
         <View
           style={[
             styles.dot,
-            { backgroundColor: selected ? colors.white : palette.fg },
+            { backgroundColor: selected ? selectedFg : palette.fg },
           ]}
         />
       ) : null}
       <Text
-        style={[type.captionStrong, { color: selected ? colors.white : palette.fg }]}
+        style={[type.captionStrong, { color: selected ? selectedFg : palette.fg }]}
         numberOfLines={1}
       >
         {label}

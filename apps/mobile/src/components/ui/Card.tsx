@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     ...shadows.card,
   },
-  padded: { padding: spacing.xl },
+  padded: { padding: spacing.x3 },
   dark: { borderColor: colors.heroLine },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.line },
   section: {

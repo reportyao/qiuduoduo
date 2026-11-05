@@ -10,7 +10,7 @@ import { useAuthStore } from "@/features/auth/authStore";
 import { usePatchMeMutation } from "@/features/account/queries";
 import { decimalToFormat, oddsFormatLabel } from "@/lib/format";
 import { errorText } from "@/lib/errors";
-import { colors, spacing } from "@/theme/tokens";
+import { colors, radii, spacing } from "@/theme/tokens";
 
 const FORMATS: { id: OddsFormat; example: string; hint: string }[] = [
   { id: "decimal", example: decimalToFormat(2.05, "decimal"), hint: "含本金，国际通用" },
@@ -83,9 +83,10 @@ export default function PreferencesScreen() {
           last
         />
       </SettingsGroup>
-      <Card tone="green">
-        <Text variant="caption" color={colors.green} style={styles.note}>
-          中文文案已按人设分离。切换助理风格时，按钮、卡片和预测语气会一起变，但数字不会。
+      <Card style={styles.noteCard}>
+        <Text variant="smallStrong">文案按人设分离</Text>
+        <Text variant="caption" color={colors.muted} style={styles.note}>
+          切换助理风格时，按钮、卡片和预测语气会一起变，但数字不会。
         </Text>
       </Card>
     </SettingsPage>
@@ -100,7 +101,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: 18,
+    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.line,
     padding: spacing.base,
@@ -108,5 +109,6 @@ const styles = StyleSheet.create({
   selected: { borderColor: colors.green, backgroundColor: colors.greenSoft },
   pressed: { opacity: 0.8 },
   flex: { flex: 1, gap: 2 },
+  noteCard: { gap: spacing.xs },
   note: { lineHeight: 19 },
 });

@@ -11,9 +11,9 @@ export const colors = {
   surfaceSunken: "#F1EFE8",
   ink: "#15211B",
   inkInverse: "#F3F6F2",
-  muted: "#6B756F",
+  muted: "#55615B",
   mutedInverse: "#A6B5AD",
-  subtle: "#9AA69F",
+  subtle: "#64706A",
   line: "#E9E7E0",
   lineStrong: "#DCD8CD",
 
@@ -28,7 +28,7 @@ export const colors = {
   dangerPressed: "#8F352D",
   dangerSoft: "#F7E9E6",
 
-  amber: "#A66A18",
+  amber: "#8A5510",
   amberSoft: "#F7EFE1",
   amberLine: "#EBD9B8",
 
@@ -42,20 +42,19 @@ export const colors = {
 } as const;
 
 export const gradients = {
+  // 仅用于已发布预测主卡：同一墨绿色相内的明度变化，不做彩色渐变。
   verdict: [colors.heroTop, colors.heroBottom] as const,
-  parlay: [colors.green, colors.greenDark] as const,
-  aiHalo: ["rgba(14,107,79,0.16)", "rgba(14,107,79,0)"] as const,
 } as const;
 
 export const spacing = {
   xxs: 4,
   xs: 6,
   sm: 8,
-  md: 10,
+  md: 12,
   base: 12,
-  lg: 14,
+  lg: 16,
   xl: 16,
-  xxl: 18,
+  xxl: 20,
   x3: 20,
   x4: 24,
   x5: 28,
@@ -65,11 +64,11 @@ export const spacing = {
 
 export const radii = {
   sm: 10,
-  md: 13,
+  md: 12,
   lg: 16,
   xl: 18,
-  card: 20,
-  hero: 26,
+  card: 16,
+  hero: 24,
   sheet: 24,
   pill: 999,
 } as const;
@@ -86,10 +85,10 @@ export const fontFamily = {
 
 /** 字号下限 11：设计稿里的 9.5px 标签在生产端统一抬到 11。 */
 export const type = {
-  display: { fontSize: 30, lineHeight: 36, fontWeight: "700" as const, letterSpacing: -0.6 },
-  h1: { fontSize: 24, lineHeight: 31, fontWeight: "700" as const, letterSpacing: -0.4 },
-  h2: { fontSize: 20, lineHeight: 27, fontWeight: "600" as const, letterSpacing: -0.3 },
-  h3: { fontSize: 16, lineHeight: 23, fontWeight: "600" as const },
+  display: { fontSize: 30, lineHeight: 36, fontWeight: "600" as const, letterSpacing: -0.5 },
+  h1: { fontSize: 24, lineHeight: 31, fontWeight: "600" as const, letterSpacing: -0.3, fontVariant: ["tabular-nums"] as const },
+  h2: { fontSize: 20, lineHeight: 27, fontWeight: "600" as const, letterSpacing: -0.3, fontVariant: ["tabular-nums"] as const },
+  h3: { fontSize: 16, lineHeight: 23, fontWeight: "600" as const, fontVariant: ["tabular-nums"] as const },
   body: { fontSize: 14, lineHeight: 22, fontWeight: "400" as const },
   bodyStrong: { fontSize: 14, lineHeight: 22, fontWeight: "600" as const },
   small: { fontSize: 12, lineHeight: 19, fontWeight: "400" as const },
@@ -100,10 +99,10 @@ export const type = {
     fontSize: 11,
     lineHeight: 16,
     fontWeight: "600" as const,
-    letterSpacing: 0.6,
+    letterSpacing: 0.2,
   },
-  metric: { fontSize: 28, lineHeight: 32, fontWeight: "700" as const, letterSpacing: -0.6 },
-  mono: { fontSize: 11, lineHeight: 16, fontWeight: "400" as const, letterSpacing: 0.2 },
+  metric: { fontSize: 28, lineHeight: 32, fontWeight: "600" as const, letterSpacing: -0.5, fontVariant: ["tabular-nums"] as const },
+  mono: { fontSize: 11, lineHeight: 16, fontWeight: "400" as const, letterSpacing: 0.1, fontVariant: ["tabular-nums"] as const },
 } as const;
 
 export const shadows = {
@@ -141,10 +140,10 @@ export const shadows = {
 
 export const layout = {
   maxWidth: 430,
-  pagePadding: 18,
+  pagePadding: 20,
   headerHeight: 64,
-  tabBarHeight: 58,
-  composerHeight: 58,
+  tabBarHeight: 56,
+  composerHeight: 56,
   touch: 44,
   inputHeight: 48,
 } as const;

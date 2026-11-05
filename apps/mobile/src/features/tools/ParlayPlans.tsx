@@ -68,7 +68,7 @@ function PlanCard({ item, oddsFormat }: { item: ReviewedPlanItem; oddsFormat: Od
 
 export function ParlayPlans({ data, oddsFormat, reviewed = false }: { data: ParlayPlan; oddsFormat: OddsFormat; reviewed?: boolean }) {
   if (!data.plans.length) {
-    return <Text variant="small" color={colors.amber}>{data.message || "今日暂不配组合。"}</Text>;
+    return <Text variant="small" color={colors.amber}>{data.message || "今日暂不配组合"}</Text>;
   }
   return (
     <View style={styles.wrap}>

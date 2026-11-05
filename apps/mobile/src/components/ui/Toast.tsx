@@ -62,7 +62,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       translate.setValue(10);
       Animated.parallel([
         Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }),
-        Animated.spring(translate, { toValue: 0, damping: 18, stiffness: 220, useNativeDriver: true }),
+        Animated.timing(translate, { toValue: 0, duration: 180, useNativeDriver: true }),
       ]).start();
       hideTimer.current = setTimeout(hide, 1800);
     },

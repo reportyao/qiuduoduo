@@ -108,10 +108,10 @@ export function CardSkeleton() {
   return (
     <View style={styles.cardSkeleton}>
       <Skeleton width="42%" height={12} />
-      <Skeleton width="72%" height={26} style={{ marginTop: 14 }} />
-      <Skeleton width="55%" height={14} style={{ marginTop: 10 }} />
-      <Skeleton width="100%" height={44} radius={12} style={{ marginTop: 18 }} />
-      <Skeleton width="100%" height={58} radius={12} style={{ marginTop: 10 }} />
+      <Skeleton width="72%" height={26} style={{ marginTop: 16 }} />
+      <Skeleton width="55%" height={14} style={{ marginTop: 12 }} />
+      <Skeleton width="100%" height={44} radius={12} style={{ marginTop: 20 }} />
+      <Skeleton width="100%" height={58} radius={12} style={{ marginTop: 12 }} />
     </View>
   );
 }

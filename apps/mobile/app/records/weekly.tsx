@@ -92,7 +92,7 @@ export default function WeeklyScreen() {
             <Card style={styles.block}>
               <Text variant="h3">归因分布</Text>
               {attribution.length === 0 ? (
-                <Text variant="small" color={colors.muted}>还没有已结算的样本可归因。</Text>
+                <Text variant="small" color={colors.muted}>还没有已结算的样本可归因</Text>
               ) : (
                 attribution.map(([label, count]) => (
                   <View key={label} style={styles.attrRow}>

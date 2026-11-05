@@ -18,6 +18,7 @@ export default function BreakEvenToolScreen() {
 
   return (
     <ToolScreen
+      headline="赢多少，才不亏"
       title="回本线"
       eyebrow="成本 · 胜负门槛"
       description="这个赔率要赢多少次才不亏？把回本线和你的真实预测放在一起看，别只看单场输赢。"

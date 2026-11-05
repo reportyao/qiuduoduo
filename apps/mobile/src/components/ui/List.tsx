@@ -49,7 +49,7 @@ export function SettingsRow({
     <>
       {icon ? (
         <View style={[styles.iconWrap, danger && styles.iconDanger]}>
-          <Icon name={icon} size={17} color={danger ? colors.danger : colors.green} />
+          <Icon name={icon} size={18} color={danger ? colors.danger : colors.muted} />
         </View>
       ) : null}
       <View style={styles.textWrap}>
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: colors.greenSoft,
+    backgroundColor: colors.surfaceSunken,
     alignItems: "center",
     justifyContent: "center",
   },

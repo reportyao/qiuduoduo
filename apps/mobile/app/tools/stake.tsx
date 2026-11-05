@@ -33,6 +33,7 @@ export default function StakeToolScreen() {
 
   return (
     <ToolScreen
+      headline="先有正期望，再谈仓位"
       title="仓位计算"
       eyebrow="纪律 · 单注上限"
       description="先有正期望，再谈仓位。输入你的本金、估计胜率和赔率，凯利公式会给出数学上限；本工具强制最多 5% 本金。"

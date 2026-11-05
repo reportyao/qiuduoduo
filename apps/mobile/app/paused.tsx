@@ -33,7 +33,7 @@ export default function PausedScreen() {
           resizeMode="cover"
         />
         <Text variant="overline" color={colors.amber}>自排除生效中</Text>
-        <Text variant="display" center style={styles.title}>先停一停。</Text>
+        <Text variant="display" center style={styles.title}>先停一停</Text>
         <Text variant="body" color={colors.muted} center style={styles.lead}>
           在这段时间里，这台设备不会给你看预测与记录；已登录账号会同步暂停通知。到期前不可撤销。
         </Text>
@@ -50,7 +50,7 @@ export default function PausedScreen() {
         </Text>
         <Text variant="small" color={colors.muted}>
           {permanent
-            ? "永久自排除不会自动恢复；当前为设备级记录，服务端人工解除流程尚未接入。"
+            ? "永久自排除不会自动恢复；如需解除请联系支持。"
             : `还剩约 ${remainingDays} 天。到期后会恢复基础功能，但不会自动恢复营销。`}
         </Text>
       </Card>
@@ -63,7 +63,7 @@ export default function PausedScreen() {
             : "可以联系当地心理援助热线，或找信任的人聊聊。"}
         </Text>
         <Text variant="caption" color={colors.subtle} style={styles.text}>
-          这是保护功能，不是惩罚。当前拦截在本机生效；多设备服务端同步是上线前阻塞项。
+          这是保护功能，不是惩罚。本机立即拦截；联网后会同步到账号。
         </Text>
       </Card>
 

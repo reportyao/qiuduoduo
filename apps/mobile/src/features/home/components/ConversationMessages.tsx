@@ -504,7 +504,7 @@ export function EmptyMessage({
 export function ErrorMessage({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <AssistantMessage>
-      <Text variant="bodyStrong">这条没发出去。</Text>
+      <Text variant="bodyStrong">这条没发出去</Text>
       <Text variant="small" color={colors.muted} style={styles.paragraph}>{message}</Text>
       <Button label="重试" variant="secondary" size="sm" onPress={onRetry} style={styles.selfStart} />
     </AssistantMessage>

@@ -5,10 +5,16 @@ import { colors, radii, spacing } from "@/theme/tokens";
 import { Text } from "@/components/ui";
 
 const SEGMENTS = [
-  { key: "home" as const, label: "主胜", color: colors.green },
-  { key: "draw" as const, label: "平", color: colors.amber },
-  { key: "away" as const, label: "客胜", color: colors.subtle },
+  { key: "home" as const, label: "主胜" },
+  { key: "draw" as const, label: "平" },
+  { key: "away" as const, label: "客胜" },
 ];
+
+function segmentColor(key: "home" | "draw" | "away", dark: boolean): string {
+  if (key === "home") return dark ? colors.greenAccent : colors.green;
+  if (key === "draw") return colors.amber;
+  return dark ? colors.mutedInverse : colors.muted;
+}
 
 export function ProbabilityBar({
   probs,
@@ -29,7 +35,7 @@ export function ProbabilityBar({
       <View style={styles.legend}>
         {SEGMENTS.map((segment) => (
           <View key={segment.key} style={styles.legendItem}>
-            <View style={[styles.swatch, { backgroundColor: segment.color }]} />
+            <View style={[styles.swatch, { backgroundColor: segmentColor(segment.key, dark) }]} />
             <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>
               {prefix}{segment.label} {pct(probs[segment.key] / total)}
             </Text>
@@ -42,7 +48,7 @@ export function ProbabilityBar({
             key={segment.key}
             style={{
               flex: Math.max(probs[segment.key] / total, 0.01),
-              backgroundColor: segment.color,
+              backgroundColor: segmentColor(segment.key, dark),
             }}
           />
         ))}

@@ -30,6 +30,6 @@ export function SettingsPage({
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.md, paddingBottom: spacing.x7 },
-  body: { gap: spacing.base },
+  content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.xl, paddingBottom: spacing.x7 },
+  body: { gap: spacing.xl },
 });

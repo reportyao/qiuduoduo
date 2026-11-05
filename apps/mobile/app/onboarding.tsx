@@ -76,7 +76,7 @@ export default function OnboardingScreen() {
       ) : (
         <View style={styles.body}>
           <Text variant="overline" color={colors.green}>球多多怎么用</Text>
-          <Text variant="display" style={styles.title}>先看预测，再做决定。</Text>
+          <Text variant="display" style={styles.title}>先看预测，再做决定</Text>
           <Text variant="body" color={colors.muted} style={styles.lead}>
             对能算清的场次给出方向、预测概率和成立条件；看不准的就不发。
           </Text>

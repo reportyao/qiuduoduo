@@ -16,8 +16,9 @@ export default function OddsToolScreen() {
 
   return (
     <ToolScreen
+      headline="同一个价格，四种写法"
       title="赔率换算"
-      eyebrow="赔率 · 四种写法"
+      eyebrow="赔率"
       description="同一个价格，欧洲盘、香港盘、印尼盘、美式盘写法不同。换错格式，账就会算错。"
       onBack={() => goBackOr(router)}
     >

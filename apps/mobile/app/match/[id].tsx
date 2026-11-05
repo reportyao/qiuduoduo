@@ -114,7 +114,7 @@ export default function WhyNotScreen() {
               <Text variant="h3">什么时候会重新进池</Text>
               <View style={styles.reentry}>
                 <View style={[styles.dot, { backgroundColor: data.verdictKind === "pending" ? colors.amber : colors.green }]} />
-                <Text variant="small" style={styles.paragraph}>{data.whatIf || "数据条件满足后自动重评。"}</Text>
+                <Text variant="small" style={styles.paragraph}>{data.whatIf || "数据条件满足后自动重评"}</Text>
               </View>
               <Text variant="caption" color={colors.subtle} style={styles.paragraph}>
                 {copy.whyNotLead}

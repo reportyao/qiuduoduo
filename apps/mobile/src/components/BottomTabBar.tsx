@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.line,
-    paddingTop: 6,
+    paddingTop: 8,
     minHeight: layout.tabBarHeight,
   },
   item: {
@@ -129,5 +129,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  badgeText: { fontSize: 9, lineHeight: 12, fontWeight: "700" },
+  badgeText: { fontSize: 10, lineHeight: 12, fontWeight: "600" },
 });

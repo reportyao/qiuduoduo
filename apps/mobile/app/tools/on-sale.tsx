@@ -84,7 +84,7 @@ export default function OnSaleScreen() {
         }
       >
         <Text variant="overline" color={colors.green}>在售 · 官方停售时间</Text>
-        <Text variant="display" style={styles.title}>今天能看的场。</Text>
+        <Text variant="display" style={styles.title}>今天能看的场</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
           竞彩足球停售时刻 = 官方开赛时刻。凌晨场次会在前一晚截止，别把日期看错。
         </Text>

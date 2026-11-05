@@ -76,7 +76,7 @@ export function Button({
   accessibilityHint,
 }: ButtonProps) {
   const palette = PALETTE[variant];
-  const height = size === "md" ? layout.touch : 34;
+  const height = size === "md" ? layout.touch : 36;
   const isDisabled = disabled || loading;
 
   return (

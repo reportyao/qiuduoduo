@@ -238,7 +238,7 @@ export default function ParlayToolScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Text variant="overline" color={colors.green}>串关参谋 · 帮我配</Text>
-        <Text variant="display" style={styles.title}>先看组合，再自己改。</Text>
+        <Text variant="display" style={styles.title}>先看组合，再自己改</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
           从今日有预测的场次生成参考组合；也可以往下自己选 2–4 场做四维体检。
           当前显示：{oddsFormatLabel(oddsFormat)}。

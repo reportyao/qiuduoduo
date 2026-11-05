@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet } from "react-native";
+import { Animated, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { motion } from "@/theme/tokens";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { useFloatingStore } from "@/features/assistant/floatingStore";
 import { useReducedMotion } from "@/lib/useReducedMotion";
@@ -21,32 +20,8 @@ export function FloatingAssistant() {
   const compact = useFloatingStore((s) => s.compact);
   const sheetOpen = useFloatingStore((s) => s.sheetDepth > 0);
   const hidden = compact || sheetOpen;
-  const float = useRef(new Animated.Value(0)).current;
   const squeeze = useRef(new Animated.Value(0)).current;
   const reveal = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (reduced) {
-      float.setValue(0);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(float, {
-          toValue: 1,
-          duration: motion.mascot / 2,
-          useNativeDriver: true,
-        }),
-        Animated.timing(float, {
-          toValue: 0,
-          duration: motion.mascot / 2,
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [float, reduced]);
 
   useEffect(() => {
     if (reduced) {
@@ -99,15 +74,9 @@ export function FloatingAssistant() {
         hitSlop={10}
         style={styles.press}
       >
-        <Animated.View
-          style={{
-            transform: [
-              { translateY: float.interpolate({ inputRange: [0, 1], outputRange: [0, -3] }) },
-            ],
-          }}
-        >
+        <View>
           <Avatar source={meta.avatar} size={SIZE} online ring={false} bare />
-        </Animated.View>
+        </View>
       </Pressable>
     </Animated.View>
   );

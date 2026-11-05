@@ -114,7 +114,7 @@ export default function MemoriesScreen() {
         <Text variant="h3">手动添加</Text>
         <Field label="记什么" value={key} onChangeText={setKey} placeholder="例如：主队偏好" maxLength={64} />
         <Field label="内容" value={value} onChangeText={setValue} placeholder="例如：曼城" maxLength={200} />
-        <Button label="记住" variant="secondary" onPress={() => void add(false)} loading={save.isPending} fullWidth />
+        <Button label="记住" onPress={() => void add(false)} loading={save.isPending} fullWidth />
       </Card>
     </SettingsPage>
   );

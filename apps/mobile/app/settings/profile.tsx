@@ -175,7 +175,7 @@ export default function ProfileScreen() {
       </Card>
 
       <Button label="保存" onPress={save} loading={patchMe.isPending} fullWidth />
-      <Button label="取消" variant="secondary" onPress={() => router.back()} fullWidth />
+      <Button label="取消" variant="ghost" onPress={() => router.back()} fullWidth />
       <Text variant="caption" color={colors.subtle} center style={styles.note}>
         球多多不会收集你的出生日期，也不会上传通讯录。
       </Text>

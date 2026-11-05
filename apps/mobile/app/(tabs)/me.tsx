@@ -132,9 +132,9 @@ export default function MeScreen() {
         </Card>
 
         <View style={styles.quick}>
-          <Quick label="收件箱" value={unread > 0 ? String(unread) : "无"} icon="mail-outline" onPress={() => router.push("/inbox")} />
-          <Quick label="关注" value="比赛" icon="heart-outline" onPress={() => router.push("/watch")} />
-          <Quick label="通知" value="设置" icon="notifications-outline" onPress={() => router.push("/settings/notifications")} />
+          <Quick label="收件箱" value={unread > 0 ? `${unread} 条` : "暂无"} icon="mail-outline" onPress={() => router.push("/inbox")} />
+          <Quick label="关注" value="列表" icon="heart-outline" onPress={() => router.push("/watch")} />
+          <Quick label="今日预测" value="主看" icon="analytics-outline" onPress={() => router.navigate("/(tabs)")} />
         </View>
 
         <SettingsGroup title="助理">
@@ -244,7 +244,7 @@ function Quick({
 }) {
   return (
     <Card onPress={onPress} accessibilityLabel={label} style={styles.quickCard}>
-      <Icon name={icon} size={18} color={colors.green} />
+      <Icon name={icon} size={18} color={colors.muted} />
       <Text variant="smallStrong">{label}</Text>
       <Text variant="caption" color={colors.muted}>{value}</Text>
     </Card>

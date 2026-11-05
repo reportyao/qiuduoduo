@@ -2,7 +2,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
-import { Card, Chip, Icon, Text } from "@/components/ui";
+import { Card, Icon, SettingsGroup, SettingsRow, Text } from "@/components/ui";
 import type { IconName } from "@/components/ui";
 import { useHideFloatingOnScroll } from "@/features/assistant/useHideFloatingOnScroll";
 import { useStreamQuery } from "@/features/home/queries";
@@ -43,7 +43,7 @@ export default function ToolsScreen() {
         title="工具箱"
         subtitle="球多多 · AI 预测"
         showAssistant={false}
-        right={<Chip label="8 个工具" tone="green" />}
+        right={<Text variant="caption" color={colors.muted}>8 个工具</Text>}
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -52,19 +52,64 @@ export default function ToolsScreen() {
         scrollEventThrottle={48}
       >
         <Text variant="overline" color={colors.green}>工具</Text>
-        <Text variant="display" style={styles.title}>把预测看透。</Text>
+        <Text variant="display" style={styles.title}>把预测看透</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
           预测之后，用这些工具把成本、仓位、组合和复盘算清楚。
         </Text>
 
-        <View style={styles.grid}>
-          {TOOLS.map((tool) => (
-            <ToolTile
-              key={tool.key}
-              tool={tool}
-              onPress={() => router.push(tool.route as never)}
+        <Card
+          tone="green"
+          onPress={() => router.push(TOOLS[0].route as never)}
+          accessibilityLabel="串关参谋"
+          style={styles.feature}
+        >
+          <View style={styles.featureIcon}>
+            <Icon name={TOOLS[0].icon} size={22} color={colors.green} />
+          </View>
+          <View style={styles.featureText}>
+            <Text variant="overline" color={colors.green}>主工具</Text>
+            <Text variant="h2">{TOOLS[0].title}</Text>
+            <Text variant="small" color={colors.muted}>{TOOLS[0].subtitle}</Text>
+          </View>
+          <Icon name="arrow-forward" size={18} color={colors.green} />
+        </Card>
+
+        <View style={styles.groups}>
+          <SettingsGroup title="计算工具">
+            {TOOLS.slice(1, 5).map((tool, index) => (
+              <SettingsRow
+                key={tool.key}
+                title={tool.title}
+                subtitle={tool.subtitle}
+                icon={tool.icon}
+                onPress={() => router.push(tool.route as never)}
+                last={index === 3}
+              />
+            ))}
+          </SettingsGroup>
+
+          <SettingsGroup title="看比赛">
+            {TOOLS.slice(5, 7).map((tool, index) => (
+              <SettingsRow
+                key={tool.key}
+                title={tool.title}
+                subtitle={tool.subtitle}
+                icon={tool.icon}
+                onPress={() => router.push(tool.route as never)}
+                last={index === 1}
+              />
+            ))}
+          </SettingsGroup>
+
+          <SettingsGroup title="记录">
+            <SettingsRow
+              title={TOOLS[7].title}
+              subtitle={TOOLS[7].subtitle}
+              icon={TOOLS[7].icon}
+              onPress={() => router.push(TOOLS[7].route as never)}
+              last
             />
-          ))}
+          </SettingsGroup>
         </View>
 
         <Card style={styles.summary}>
@@ -93,21 +138,6 @@ export default function ToolsScreen() {
   );
 }
 
-function ToolTile({ tool, onPress }: { tool: Tool; onPress: () => void }) {
-  return (
-    <Card onPress={onPress} accessibilityLabel={tool.title} style={styles.tile}>
-      <View style={styles.tileIcon}>
-        <Icon name={tool.icon} size={19} color={colors.green} />
-      </View>
-      <Text variant="bodyStrong" style={styles.tileTitle}>{tool.title}</Text>
-      <Text variant="caption" color={colors.muted} numberOfLines={2} style={styles.tileSub}>
-        {tool.subtitle}
-      </Text>
-      <Icon name="arrow-forward" size={14} color={colors.subtle} style={styles.tileArrow} />
-    </Card>
-  );
-}
-
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.metric}>
@@ -121,32 +151,22 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.md, paddingBottom: spacing.x7 },
   title: { marginTop: spacing.xs },
   lead: { marginTop: spacing.sm, lineHeight: 22 },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: spacing.md,
+  feature: {
     marginTop: spacing.x4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.base,
   },
-  tile: {
-    width: "48.4%",
-    minHeight: 140,
-    padding: spacing.base,
-    gap: 3,
-    marginTop: 0,
-  },
-  tileIcon: {
-    width: 34,
-    height: 34,
+  featureIcon: {
+    width: 44,
+    height: 44,
     borderRadius: radii.sm,
-    backgroundColor: colors.greenSoft,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.sm,
   },
-  tileTitle: { fontSize: 15 },
-  tileSub: { lineHeight: 17 },
-  tileArrow: { position: "absolute", right: spacing.base, top: spacing.base },
+  featureText: { flex: 1, gap: 1 },
+  groups: { marginTop: spacing.x4, gap: spacing.x4 },
   summary: { marginTop: spacing.x4, gap: spacing.sm },
   summaryHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   flex: { flex: 1, gap: 1 },

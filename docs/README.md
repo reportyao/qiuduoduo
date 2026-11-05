@@ -28,6 +28,7 @@
 | [performance.md](./performance.md) | 性能基线：接口 p50/p95、缓存/gzip/SQLite/包体优化、网络与并发限制 |
 | [frontend-deep-test-2026-11-06.md](./frontend-deep-test-2026-11-06.md) | 移动端深度测试：已修复问题、回归结果与仍未闭环的上线缺口 |
 | [prediction-first-frontend-2026-11-06.md](./prediction-first-frontend-2026-11-06.md) | 预测优先的前端口径：取消“不预测”底线、首页/详情/助理/工具改版与边界 |
+| [ui-unslop-2026-11-06.md](./ui-unslop-2026-11-06.md) | Unslop 逐页 UI 审计：方向、页面处理、全局 tokens 与交互细节 |
 | [xg-providers.md](./xg-providers.md) | xG 第三方数据源选型：Sportmonks / StatsBomb / FBref / SofaScore / Understat 的适用边界 |
 | [open-source-watchlist.md](./open-source-watchlist.md) | 开源引用/候选清单：维护状态、许可证、采纳/降级结论 |
 

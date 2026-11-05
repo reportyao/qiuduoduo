@@ -62,7 +62,7 @@ export default function WhyNotListScreen() {
       <AppHeader title="为什么不出" showAssistant={false} onBack={() => goBackOr(router)} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <Text variant="overline" color={colors.green}>原因 · 全公开</Text>
-        <Text variant="display" style={styles.title}>没有预测，也是结论。</Text>
+        <Text variant="display" style={styles.title}>没有预测，也是结论</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
           没给预测的、还在等数据的，都在这里。点开看卡在哪一关，以及什么条件会让它重新进入预测池。
         </Text>

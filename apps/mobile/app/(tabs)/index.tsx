@@ -457,7 +457,7 @@ export default function HomeScreen() {
               <>
                 {streamQuery.isError ? (
                   <AssistantMessage>
-                    <Text variant="small" color={colors.muted}>刷新失败，先显示上次的预测。</Text>
+                    <Text variant="small" color={colors.muted}>刷新失败，先显示上次的预测</Text>
                     <Pressable
                       onPress={() => streamQuery.refetch()}
                       accessibilityRole="button"

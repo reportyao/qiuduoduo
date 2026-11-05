@@ -48,5 +48,5 @@ const styles = StyleSheet.create({
     marginBottom: spacing.base,
     backgroundColor: colors.white,
   },
-  title: { fontSize: 22, letterSpacing: 2 },
+  title: { fontSize: 22, letterSpacing: 1 },
 });
