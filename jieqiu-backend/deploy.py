@@ -299,7 +299,10 @@ WantedBy=multi-user.target
     if os.environ.get("JQ_API_FOOTBALL_KEY") or remote_env.get("JQ_API_FOOTBALL_KEY"):
         # 免费档每日一次 fixtures；未配 key 的部署不装这条，避免无意义失败日志。
         cron += (f"15 6 * * * {cron_prefix}"
-                 rf"venv/bin/python -m app.api_football_cli sync --date $(date +\%F) >> {ROOT}/api_football.log 2>&1" + "\n")
+                 rf"venv/bin/python -m app.api_football_cli sync --date $(date +\%F) --next-day >> {ROOT}/api_football.log 2>&1" + "\n")
+        # 临场阵容/伤停：比赛日每小时只补 2 场阵容 + 1 场伤停；限流入口避免刷爆 100/日。
+        cron += (f"0 0-4,10-23 * * * {cron_prefix}"
+                 f"venv/bin/python -m app.api_football_cli sync-enrich --json >> {ROOT}/api_football.log 2>&1" + "\n")
     # 用 SFTP 写 cron 文件，避免 echo 双引号把数据库密码里的 $/反引号做 shell 展开。
     with sftp.file("/tmp/jqcron", "w") as f:
         f.write(cron)

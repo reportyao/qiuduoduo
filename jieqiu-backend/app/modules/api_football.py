@@ -387,28 +387,41 @@ def sync_injuries(db: Session, hours: int | None = None,
             errors.append(str(exc))
             continue
         db.execute(delete(MatchInjury).where(MatchInjury.fixture_id == fixture.fixture_id))
+        seen: set[tuple[int, str]] = set()
         for item in items:
             team = item.get("team") or {}
             player = item.get("player") or {}
             tid = int(team.get("id") or 0)
-            if not tid or not player.get("id"):
+            player_id = int(player.get("id") or 0)
+            if not tid or not player_id:
                 continue
             # API-Football v3 把 type/reason 放在 player 内；兼容部分旧快照的顶层字段。
             injury_type = player.get("type") or item.get("type") or ""
             injury_reason = player.get("reason") or item.get("reason") or ""
+            key = (player_id, str(injury_type))
+            if key in seen:
+                # 同一球员同类型伤停可能在接口里重复出现，唯一键只允许一条。
+                continue
+            seen.add(key)
             fixture_info = item.get("fixture") or {}
             db.add(MatchInjury(
                 fixture_id=fixture.fixture_id, match_id=fixture.match_id or "",
                 team_id=tid, team_name=str(team.get("name") or ""),
                 side="home" if tid == fixture.home_team_id else "away" if tid == fixture.away_team_id else "",
-                player_id=int(player.get("id") or 0),
+                player_id=player_id,
                 player_name=str(player.get("name") or ""),
                 type=str(injury_type),
                 reason=str(injury_reason),
                 status=str(fixture_info.get("status") or ""),
             ))
         fixture.injuries_synced_at = datetime.now(timezone.utc).replace(tzinfo=None)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError as exc:
+            # 单场脏数据不能拖垮整批同步；回滚后保留错误，继续下一场。
+            db.rollback()
+            errors.append(f"fixture {fixture.fixture_id}: {type(exc).__name__}")
+            continue
         done += 1
     return {"fixtures": len(fixtures), "synced": done, "errors": errors}
 
@@ -466,19 +479,56 @@ def sync_standings(db: Session, max_requests: int | None = None) -> dict:
     return {"leagues": len(seen), "synced": done, "errors": errors}
 
 
-def sync_all(db: Session, date: str | None = None) -> dict:
+def sync_enrich(db: Session, lineups_max: int = 2,
+                injuries_max: int = 1) -> dict:
+    """只补阵容/伤停，不拉 fixtures/standings。
+
+    免费档按日限流；这个入口给高频 cron 用，单次请求数必须很小，
+    并且 sync_lineups/sync_injuries 内部已有 20min/6h 去重。
+    """
+    out: dict = {"lineups": {}, "injuries": {}, "errors": []}
+    for key, fn, limit in (("lineups", sync_lineups, lineups_max),
+                           ("injuries", sync_injuries, injuries_max)):
+        try:
+            out[key] = fn(db, max_requests=limit)
+        except ApiFootballBudgetExceeded as exc:
+            out["errors"].append(str(exc))
+            out[key] = {"error": str(exc)}
+            break
+        except ApiFootballError as exc:
+            out["errors"].append(str(exc))
+            out[key] = {"error": str(exc)}
+    return out
+
+
+def sync_all(db: Session, date: str | None = None,
+             include_next_day: bool = False) -> dict:
     d = date or _today()
     out = {"date": d, "configured": configured(), "fixtures": {}, "lineups": {},
            "injuries": {}, "standings": {}}
-    steps = (("fixtures", sync_fixtures), ("lineups", sync_lineups),
-             ("injuries", sync_injuries), ("standings", sync_standings))
-    for key, fn in steps:
+    try:
+        fixtures = sync_fixtures(db, d)
+        if include_next_day:
+            nxt = (datetime.strptime(d, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+            more = sync_fixtures(db, nxt)
+            fixtures = {"fixtures": fixtures.get("fixtures", 0) + more.get("fixtures", 0),
+                        "linked": fixtures.get("linked", 0) + more.get("linked", 0)}
+            out["next_date"] = nxt
+        out["fixtures"] = fixtures
+    except ApiFootballNotConfigured as exc:
+        out["configured"] = False
+        out["error"] = str(exc)
+        return out
+    except ApiFootballBudgetExceeded as exc:
+        out["fixtures"] = {"error": str(exc)}
+        out["error"] = str(exc)
+        return out
+    except ApiFootballError as exc:
+        out["fixtures"] = {"error": str(exc)}
+    for key, fn in (("lineups", sync_lineups), ("injuries", sync_injuries),
+                    ("standings", sync_standings)):
         try:
-            out[key] = fn(db, d) if key == "fixtures" else fn(db)
-        except ApiFootballNotConfigured as exc:
-            out["configured"] = False
-            out["error"] = str(exc)
-            break
+            out[key] = fn(db)
         except ApiFootballBudgetExceeded as exc:
             out[key] = {"error": str(exc)}
             out["error"] = str(exc)

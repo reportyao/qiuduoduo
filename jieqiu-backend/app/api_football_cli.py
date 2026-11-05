@@ -21,7 +21,12 @@ def main() -> None:
     p_status.add_argument("--json", action="store_true")
     p_sync = sub.add_parser("sync")
     p_sync.add_argument("--date", default=None)
+    p_sync.add_argument("--next-day", action="store_true")
     p_sync.add_argument("--json", action="store_true")
+    p_enrich = sub.add_parser("sync-enrich")
+    p_enrich.add_argument("--lineups-max", type=int, default=2)
+    p_enrich.add_argument("--injuries-max", type=int, default=1)
+    p_enrich.add_argument("--json", action="store_true")
     p_link = sub.add_parser("link")
     p_link.add_argument("--fixture", type=int, required=True)
     p_link.add_argument("--match", required=True)
@@ -32,7 +37,10 @@ def main() -> None:
         if args.cmd == "status":
             out = api_football.status(db)
         elif args.cmd == "sync":
-            out = api_football.sync_all(db, date=args.date)
+            out = api_football.sync_all(db, date=args.date, include_next_day=args.next_day)
+        elif args.cmd == "sync-enrich":
+            out = api_football.sync_enrich(
+                db, lineups_max=args.lineups_max, injuries_max=args.injuries_max)
         else:
             out = api_football.link_fixture(db, args.fixture, args.match)
     except api_football.ApiFootballError as exc:

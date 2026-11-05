@@ -201,3 +201,40 @@ def test_provider_base_url_and_headers():
     assert base == "https://api-football-v1.p.rapidapi.com/v3"
     assert headers["x-rapidapi-key"] == "k2"
     assert headers["x-rapidapi-host"] == "api-football-v1.p.rapidapi.com"
+
+
+def test_sync_injuries_dedupes_duplicate_rows(client, db, monkeypatch):
+    """API 会重复返回同一球员同类型伤停；唯一键只允许一条。"""
+    _, kickoff_utc = _seed_match(db)
+
+    def fake(db, endpoint, params=None):
+        if endpoint == "fixtures":
+            return [_fixture_item(kickoff_utc)]
+        if endpoint == "injuries":
+            item = {"team": {"id": 10, "name": "Manchester City"},
+                    "player": {"id": 7, "name": "Stones", "type": "Missing Fixture",
+                               "reason": "Injury"},
+                    "fixture": {"status": "NS"}}
+            return [item, item]
+        raise AssertionError(endpoint)
+
+    monkeypatch.setattr(api_football, "_request", fake)
+    api_football.sync_fixtures(db, today_cn())
+    out = api_football.sync_injuries(db, hours=24)
+    assert out["synced"] == 1
+    assert db.query(MatchInjury).count() == 1
+
+
+def test_sync_all_next_day_fetches_two_dates(db, monkeypatch):
+    dates = []
+
+    def fake(db, endpoint, params=None):
+        if endpoint == "fixtures":
+            dates.append(params["date"])
+            return []
+        return []
+
+    monkeypatch.setattr(api_football, "_request", fake)
+    out = api_football.sync_all(db, date="2026-11-05", include_next_day=True)
+    assert dates == ["2026-11-05", "2026-11-06"]
+    assert out["next_date"] == "2026-11-06"
