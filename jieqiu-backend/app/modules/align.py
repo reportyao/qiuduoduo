@@ -29,7 +29,7 @@ SEED_ALIASES: dict[str, list[str]] = {
     "埃弗顿": ["everton"],
     "纽卡斯尔": ["newcastle", "newcastleunited", "纽卡斯尔联", "纽卡素"],
     "西汉姆": ["westham", "westhamunited", "西汉姆联"],
-    "狼队": ["wolves", "wolverhamptonwanderers", "狼队足球俱乐部"],
+    "狼队": ["wolves", "wolverhamptonwanderers", "狼队足球俱乐部", "伍尔弗", "伍尔弗汉普顿"],
     "布莱顿": ["brighton", "brightonhovealbion"],
     "伯恩茅斯": ["bournemouth", "afcbournemouth"],
     "布伦特福德": ["brentford"],
@@ -149,12 +149,12 @@ SEED_ALIASES: dict[str, list[str]] = {
     "波兹南": ["lechpozna", "lechpoznan", "lech"],
     "阿尔克马": ["azalkmaar", "az"],
     "波尔图": ["porto", "fcporto"],
-    "布鲁日": ["clubbrugge", "brugge"],
+    "布鲁日": ["clubbrugge", "clubbruggekv", "brugge"],
     "顿涅茨克矿工": ["shakhtardonetsk", "shakhtar"],
     "费内巴切": ["fenerbahce"],
     "维京": ["viking", "vikingfk"],
     "布拉格斯拉维亚": ["slaviapraha", "slavia", "斯拉维亚"],
-    "萨巴赫": ["sabahfk", "sabah"],
+    "萨巴赫": ["sabahfk", "sabah", "sabahfa"],
     "葡萄牙体育": ["sportinglisbon", "sportingcp", "sporting"],
     "埃因霍温": ["psveindhoven", "psv"],
     # 亚冠 / 巴西（竞彩口语名）
@@ -162,6 +162,9 @@ SEED_ALIASES: dict[str, list[str]] = {
     "上海申花": ["shanghaishenhua", "shenhua"],
     "帕梅拉斯": ["palmeiras"],
     "里莫": ["remo"],
+    "布城": ["bristolcity"],
+    "悉尼FC": ["sydney", "sydneyfc"],
+    "中央海岸": ["centralcoastmariners", "centralcoast"],
 }
 
 _WS = re.compile(r"\s+")
