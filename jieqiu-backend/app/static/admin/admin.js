@@ -161,6 +161,7 @@ async function loadOverview() {
   const totalCost = gatewayRows.reduce((sum, row) => sum + Number(row.cost_cny || 0), 0);
   const totalCalls = gatewayRows.reduce((sum, row) => sum + Number(row.calls || 0), 0);
   const published = (c.snapshots.published || 0) + (c.plans.published || 0);
+  const healthyModels = Math.max(0, c.models.enabled - c.models.degraded);
   const stageCount = key => (c.snapshots[key] || 0) + (c.plans[key] || 0);
   const stages = [
     ["draft", "草稿"],
@@ -173,7 +174,7 @@ async function loadOverview() {
     <div class="kpi-grid">
       <div class="kpi green accent"><div class="kpi-label">今日过三关</div><div class="kpi-value">${c.verdicts_today.promoted}</div><div class="kpi-foot">复核中 ${c.verdicts_today.screening} · 已砍 ${c.verdicts_today.killed}</div></div>
       <div class="kpi"><div class="kpi-label">今日已发布</div><div class="kpi-value">${published}</div><div class="kpi-foot">snapshot ${c.snapshots.published || 0} · plan ${c.plans.published || 0}</div></div>
-      <div class="kpi ${c.models.degraded ? "amber" : "green"}"><div class="kpi-label">模型池健康</div><div class="kpi-value">${c.models.enabled}/${c.models.total}</div><div class="kpi-foot">降级 ${c.models.degraded} · 未配 Key ${c.models.total - c.models.configured}</div></div>
+      <div class="kpi ${c.models.degraded ? "amber" : "green"}"><div class="kpi-label">模型池健康</div><div class="kpi-value">${healthyModels}/${c.models.total}</div><div class="kpi-foot">降级 ${c.models.degraded} · 未配 Key ${c.models.total - c.models.configured}</div></div>
       <div class="kpi"><div class="kpi-label">模型调用（今日）</div><div class="kpi-value">${totalCalls}</div><div class="kpi-foot">成本 ¥${num(totalCost, 4)}</div></div>
     </div>
 
@@ -280,7 +281,7 @@ async function loadModels() {
   const data = await api("/admin/api/models");
   root.innerHTML = `
     <div class="toolbar">
-      <div><h2 style="margin:0">人设语气模型池</h2><div class="card-sub" style="margin:0">按优先级自动 failover；Key 加密存储，界面只显示配置状态。</div></div>
+      <div><h2 style="margin:0">模型列表</h2><div class="card-sub" style="margin:0">按优先级自动 failover；Key 加密存储，界面只显示配置状态。</div></div>
       ${canAdmin() ? '<button class="btn primary" id="add-model">添加模型</button>' : ''}
     </div>
     <div class="card">${data.models.map(model => `
@@ -293,17 +294,17 @@ async function loadModels() {
           </div>
           <div class="model-meta">
             <div><b>名称</b> ${esc(model.name)}</div>
-            <div><b>Base URL</b> <span class="mono">${esc(model.base_url)}</span></div>
+            <div><b>接口地址</b> <span class="mono">${esc(model.base_url)}</span></div>
             <div><b>优先级</b> ${model.priority}</div>
-            <div><b>max_tokens</b> ${model.max_tokens}</div>
-            <div><b>temperature</b> ${model.temperature}</div>
-            <div><b>timeout</b> ${model.timeout_s}s</div>
+            <div><b>最大 Token</b> ${model.max_tokens}</div>
+            <div><b>温度</b> ${model.temperature}</div>
+            <div><b>超时</b> ${model.timeout_s}s</div>
             <div><b>最近成功</b> ${esc(model.last_ok_at || "—")}</div>
             <div><b>失败次数</b> ${model.fail_count}</div>
           </div>
-          ${model.last_error ? `<div class="model-error">${esc(model.last_error)}</div>` : ""}
+          ${model.last_error ? `<div class="model-error"><b>最近错误</b> · ${esc(model.last_error)}</div>` : ""}
         </div>
-        <div class="actions" style="flex-direction:column;align-items:stretch;min-width:128px">
+        <div class="actions model-actions">
           ${canOperate() ? `<button class="btn secondary small" data-model-test="${model.id}">测试</button>` : ""}
           ${canAdmin() ? `<button class="btn secondary small" data-model-edit="${model.id}">编辑</button>
           <button class="btn secondary small" data-model-key="${model.id}">更新 Key</button>
@@ -403,7 +404,7 @@ async function loadPersonas() {
   root.innerHTML = `
     <div class="grid side">
       <div class="card persona-card">
-        <h2 class="card-title">人设 Profile</h2>
+        <h2 class="card-title">人设配置</h2>
         <div class="card-sub">只控制语气表达，不改变方向、概率、条件与成本。</div>
         ${data.profiles.map(profile => `
           <form class="form-grid" data-profile-form="${esc(profile.id)}" style="padding-top:16px;border-top:1px solid var(--line);margin-top:16px">
@@ -411,12 +412,12 @@ async function loadPersonas() {
             <div><label>称呼</label><input name="address" value="${esc(profile.address)}"></div>
             <div><label>语气标签</label><input name="tone" value="${esc(profile.tone)}"></div>
             <div><label>最大字数</label><input name="max_chars" type="number" min="60" max="600" value="${profile.max_chars}"></div>
-            <div><label>emoji policy</label><select name="emoji_policy">
+            <div><label>表情策略</label><select name="emoji_policy">
               ${["none", "limited", "free"].map(x => `<option value="${x}" ${profile.emoji_policy === x ? "selected" : ""}>${x}</option>`).join("")}
             </select></div>
-            <div><label>允许 emoji</label><input name="allowed_emoji" value="${esc(profile.allowed_emoji)}"></div>
-            <div class="full"><label>style prompt</label><textarea name="style_prompt">${esc(profile.style_prompt)}</textarea></div>
-            <div class="actions full"><button class="btn primary">保存 Profile</button><span class="pill muted">v${profile.version}</span></div>
+            <div><label>允许表情</label><input name="allowed_emoji" value="${esc(profile.allowed_emoji)}"></div>
+            <div class="full"><label>风格提示</label><textarea name="style_prompt">${esc(profile.style_prompt)}</textarea></div>
+            <div class="actions full"><button class="btn primary">保存人设</button><span class="pill muted">v${profile.version}</span></div>
           </form>
         `).join("")}
       </div>
@@ -427,9 +428,9 @@ async function loadPersonas() {
       </div>
     </div>
     <div class="card">
-      <h2 class="card-title">Persona 翻译测试</h2>
+      <h2 class="card-title">人设翻译测试</h2>
       <form id="persona-test" class="form-grid">
-        <div><label>persona</label><select id="pt-persona">${data.profiles.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select></div>
+        <div><label>人设</label><select id="pt-persona">${data.profiles.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select></div>
         <div class="full"><label>中性事实文本</label><textarea id="pt-text" placeholder="今天主看曼城，方向主胜，把握度56%，抽水12.1%。"></textarea></div>
         <div class="actions full"><button class="btn primary" type="submit">调用测试</button></div>
       </form>
@@ -492,9 +493,9 @@ async function loadPersonas() {
 function renderSlot(data) {
   return `
     <form id="slot-form" class="form-grid">
-      <div><label>persona</label><select id="slot-persona">${data.profiles.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select></div>
-      <div><label>slot</label><select id="slot-key">${data.slot_keys.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("")}</select></div>
-      <div class="full"><label>模板</label><textarea id="slot-template"></textarea></div>
+      <div><label>人设</label><select id="slot-persona">${data.profiles.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select></div>
+      <div><label>槽位</label><select id="slot-key">${data.slot_keys.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("")}</select></div>
+      <div class="full"><label>兜底模板</label><textarea id="slot-template"></textarea></div>
       <div class="actions full"><button class="btn primary">保存槽位</button></div>
     </form>
   `;
@@ -686,7 +687,7 @@ async function loadGateway() {
   const data = await api("/admin/api/gateway");
   const rows = data.summary.rows || [];
   root.innerHTML = `
-    <div class="kpi-grid cols-3">
+    <div class="kpi-grid auto">
       ${data.profiles.map(profile => `
         <div class="kpi ${profile.configured ? "green" : "amber"}"><div class="kpi-label">${esc(profile.name)} 配置</div><div class="kpi-value">${profile.configured ? "已配" : "未配"}</div><div class="kpi-foot">${esc(profile.provider)} · ${esc(profile.model)}</div></div>`).join("")}
     </div>
@@ -713,7 +714,7 @@ async function loadPlans() {
           <div class="reco-head"><div><div class="reco-title">${esc(plan.label)} · ${plan.legs.length} 串 1</div><div class="reco-sub">组合赔率 ${plan.check.combo.odds} · 成本 ${plan.check.combo.cost}</div></div>${statusPill("draft")}</div>
           <div class="detail-list" style="margin-top:12px">${plan.check.legs.map(leg => `<div><b>${esc(leg.match_no)}</b> ${esc(leg.home)} vs ${esc(leg.away)} · ${esc(leg.dir_label)} @${leg.odds} · ${esc(leg.status)}</div>`).join("")}</div>
           ${plan.note ? `<div class="model-error warn">${esc(plan.note)}</div>` : ""}
-        </div>`).join("") || '<div class="empty">今日暂无可配组合</div>'}
+        </div>`).join("") || '<div class="empty">' + (data.candidates ? `候选 ${data.candidates} 场，暂无满足相关性与成本条件的组合。` : '今日暂无候选场次。') + '</div>'}
     </div>
   `;
   el("#reload-plans").onclick = loadPlans;
@@ -818,7 +819,12 @@ function scheduleAutoRefresh() {
 
 async function showView(view) {
   state.view = view;
-  els(".nav-item").forEach(item => item.classList.toggle("active", item.dataset.view === view));
+  els(".nav-item").forEach(item => {
+    const active = item.dataset.view === view;
+    item.classList.toggle("active", active);
+    if (active) item.setAttribute("aria-current", "page");
+    else item.removeAttribute("aria-current");
+  });
   els(".view").forEach(section => section.classList.toggle("active", section.id === `view-${view}`));
   el("#page-title").textContent = views[view].title;
   el("#page-kicker").textContent = views[view].kicker;
