@@ -16,18 +16,27 @@
 `/devices`、`/push/preferences|health`、`/matches/{id}/follow`、`/memories`、`/me/persona` 兼容别名。
 完整对账与未实现项见 [docs/reviews/2026-11-04-api-audit.md](../docs/reviews/2026-11-04-api-audit.md)。
 
-**聚焦决策流（后端已实现）**：`GET /stats/pulse`、`GET /matches/{id}/focus`、`POST /interactions`，以及 `interaction_events` 表；`GET /matches/on-sale` 已带逐场 `coverage`；管理后台 `/admin`（数据源/运维/模型用量/人设文案/推荐主链/组合预览）已接入。`intel_items`/`match_coverage`/`pulse_daily` 仍是后续表。
+**聚焦决策流（前后端已接通）**：`GET /stats/pulse`、`GET /matches/{id}/focus`、`POST /interactions`，以及 `interaction_events` 表；`GET /matches/on-sale` 已带逐场 `coverage`。移动端首页已接真实脉搏/聚焦面板/覆盖筛选与最小互动埋点；管理后台 `/admin`（数据源/运维/模型用量/人设文案/推荐主链/组合预览）已接入。`intel_items`/`match_coverage`/`pulse_daily` 仍是后续表。
 
 **串关四维体检（已实现）**：`POST /tools/parlay/check`，2–4 腿返回成本/信息/模型/结构、逐腿 facts/coverage/unknowns、组合模型概率（仅全腿覆盖时）、风险与结构优化项；移动端串关页已接入，缺模型不伪造组合概率。
 
-**赛前判断/串关参谋（部分实现）**：`POST /tools/parlay/plan` 已实现确定性 2–3 腿组合，移动端已接，但属于**未复核预览**；`recommendation_drafts`/`recommendation_plans`、AI 审核队列、`GET /recommendations/today`、发布/付费仍待开发。正式推荐必须审核后发布。见 [docs/recommendation-product.md](../docs/recommendation-product.md)。
+**推荐主链（已实现）**：`decision_snapshots` + `recommendation_plans` + `review_runs` + `recommendation_events`；build → L1–L5 复核（L1 含 24h 数据新鲜度、L2 含来源哈希校验）→ publish → expire/withdraw。`GET /recommendations/today` 只返回 published 且未过期；公开契约带方向/把握度/成立条件/失效条件/AI 复核徽章。`POST /tools/parlay/plan` 仍是**未复核预览**（UI 标注"参考·未复核"），组合页 published 优先、preview 回退。付费/权益待做。见 [docs/recommendation-product.md](../docs/recommendation-product.md)。
 
-**API-Football（已接入，默认关闭）**：fixtures/lineups/injuries/standings 同步、免费额度持久化、队名/开赛时间自动链接与后台人工链接；未配置 `JQ_API_FOOTBALL_KEY` 时保持 missing，不伪造。见 [docs/api-football.md](../docs/api-football.md)。
+**合规闭环（已实现）**：`GET /compliance/state` · `POST /gate/verify`（年龄门）· `POST /me/under18-lock` · `POST /compliance/self-exclusion` · `POST /compliance/self-assessment`。`users` 表新增合规列（迁移 `20261105_12`）；`POST /bets` 与 focus capabilities 服务端硬拦截未成年锁定（403）/自排除（423）/休息中（423），重装/换设备不能绕过。
+
+**API-Football（已接入，默认关闭）**：fixtures/lineups/injuries/standings 同步、免费额度持久化、队名/开赛时间自动链接与后台人工链接；未配置 `JQ_API_FOOTBALL_KEY` 时保持 missing，不伪造；配置了 key 的部署会自动安装每日 fixtures cron。见 [docs/api-football.md](../docs/api-football.md)。
 
 **LLM Gateway Phase 1（已实现）**：`open_chat` fallback → fast，`llm_usage`/`llm_cache`/`llm_budgets`、原子预算、PII 脱敏与 `/admin` 模型用量页只读看板；deep 分析与 focus 解读待 Phase 2。见 [docs/llm-gateway.md](../docs/llm-gateway.md)。当前 OpenAPI 为 128/143。
 
-> **W8 冻结纪律**：新增路由后需用控制台登录调用 `POST /review/freeze/adopt` 重新采纳基线，
-> 否则 `/review/freeze` 会把本次新增路由报为违规。这是预期行为，不是运行时 bug。
+**管理后台（`/admin`，已上线）**：旧 `/console/*` 全部 302 到 `/admin`，W8 `/review/*` 也改用 `admin_t` 会话。
+- 认证/RBAC：`admin_users` + PBKDF2；`viewer` 只读 / `operator` 可复核发布 / `admin` 可改模型/人设/账号；登录 5 次失败锁 10 分钟。
+- CSRF：写操作强制 `admin_csrf` cookie + `X-CSRF-Token`；改角色/停用/改密/删除会撤销该账号全部会话。
+- 审计：`admin_audit` 记录登录/失败登录/登出/模型/人设/推荐/账号/冻结采纳，含 before/after/IP。
+- 推荐主链页：运行主链、逐条/批量复核、发布、撤回（填理由）、plan 级操作、offset 分页；GET 只读，过期由 cron 处理。
+- 页面：总览/模型池/用量/人设文案/推荐主链/组合预览/数据源/运维/账号/审计/日志。
+
+> **W8 冻结纪律**：新增路由后需登录 `/admin` 调用 `POST /review/freeze/adopt` 重新采纳基线，
+> 否则 `/review/freeze` 会把本次新增路由报为违规。这是预期行为，不是运行时 bug。当前基线 145 路由。
 
 ---
 

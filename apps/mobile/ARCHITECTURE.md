@@ -106,36 +106,39 @@ src/
 - 自排除：本机强制拦截；到期前不可撤销；页面明确“多设备同步是上线前阻塞项”。
 - 登录合并：报告合并注数，避免“登录后账没了”。
 
-## 7.1 聚焦决策流（部分实现）
+## 7.1 聚焦决策流（前后端已接通）
 
 已实现：
 
 - `src/features/home/focusStore.ts`：`FocusTarget` + Zustand focus；
 - `GlobalMatchPicker`、首页 `MatchPickerSheet` 选中后 `setFocus → 关弹层 → 回首页`，不再直接跳详情；
 - 首页聚焦区：命中当前 stream 时复用 `VerdictMessage`，未命中时 `FocusPending`；提供“换一场 / 今日全部 / 今日其他”；
-- 详情页 `DetailActionBar` 新增“让助理看这场”，设置 focus 后回首页。
+- 详情页 `DetailActionBar` 新增“让助理看这场”，设置 focus 后回首页；
+- `src/domain/focusAdapters.ts` + `useFocusQuery`/`usePulseQuery`：真实接入 `GET /matches/{id}/focus` 与 `GET /stats/pulse`；
+- `FocusPanel`：覆盖分/可深读/缺失源/3 条事实/未知项/不能记注原因；
+- 首页 `Metrics` 用服务端 `display.data_points`，`DataStatusSheet` 用真实源状态；在售/选择器接 `coverage` 与"覆盖足"筛选；
+- `src/features/telemetry/interactions.ts`：`focus_select`/`action_click`/`free_text_send`/`pulse_open` 上报 `POST /interactions`。
 
 待落地：
 
-- 无聚焦时的“数据脉搏 + 选一场”首屏；
-- `DataPulse`、`IntelFacts`、`ActionStack`、输入框默认收起；
-- 前端数据脉搏首屏、客观情报卡、互动漏斗仍未接；后端 `GET /stats/pulse`、`GET /matches/{id}/focus`、`POST /interactions` 已实现，`intel_items`/`match_coverage` 仍是后续表。
+- 无聚焦时的"数据脉搏 + 选一场"独立首屏形态；输入框默认收起；
+- `intel_items`/`match_coverage`/`pulse_daily` 仍是后续表，LLM 深读解读未接。
 
 完整契约见 [docs/focused-decision-flow.md](../../docs/focused-decision-flow.md)。
 
 ## 8. 已知后端缺口（前端不伪造）
 
-- 串关报告服务端已接入（四维体检）；串关参谋“帮我配”已接 `POST /tools/parlay/plan`，但为**未复核预览**，UI 标注“参考·未复核”。推荐观点/审核队列、订阅/支付、OCR/拍票、自排除/PGSI 服务端同步、真实 live feed/进球提醒仍未接入。新口径见 [docs/recommendation-product.md](../../docs/recommendation-product.md)。
+- 推荐主链已接：Today Hero 消费 published snapshot（方向/条件/失效条件/AI 复核徽章），组合页 published 优先、`POST /tools/parlay/plan` 为**未复核预览**（UI 标注"参考·未复核"）。订阅/支付、OCR/拍票、真实 live feed/进球提醒仍未接入。新口径见 [docs/recommendation-product.md](../../docs/recommendation-product.md)。
+- 合规已服务端闭环：`/gate/verify`、`/me/under18-lock`、`/compliance/state|self-exclusion|self-assessment`；`useComplianceSync` 启动回填服务端状态（服务端不可用时保留本机已生效的自排除）；记注被未成年/自排除/休息中硬拦截。
 - 后端已提供 `/matches/{id}/live`，但只展示已同步赛果 + SP 快照，`live_feed:false`，不伪造进球时间线。
 - JPush 真实 token 注册未接；通知设置/站内信/关注已接服务端。
 - 详情/首页已有 `goBackOr` 处理深链冷启动返回；新增页面必须复用 `src/lib/navigation.ts`，不要直接 `router.back()`。
 - 服务端新目录接口（`/matches`、`/cost`、`/water-rank`、`/calendar` 等）已生成 client，页面可按需接入；当前主要页面仍使用 `/stream`/`/on-sale`。
-- 聚焦导航已实现（头像/选择器→回首页聚焦）；后端 focus/pulse/interactions 已实现，前端数据脉搏首屏、客观情报卡、互动漏斗仍未接，需按 `docs/focused-decision-flow.md` 继续。
 
 ## 9. 当前验证状态（2026-11-05）
 
 - 后端 251 passed；OpenAPI 128 路径 / 143 方法；Alembic head `20261105_12`。
-- 前端 typecheck / ESLint / 20 Vitest passed；Android Hermes bundle 3.6 MB。
+- 前端 typecheck / ESLint / 22 Vitest passed；Android Hermes bundle 3.68 MB。
 - 自排除、401/410、刷新竞态、下注金额、05:00 日界、分享落地页已做回归。
 
 ## 10. 验证命令
