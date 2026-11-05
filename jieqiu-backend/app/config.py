@@ -67,6 +67,8 @@ class Settings(BaseSettings):
     api_football_rapidapi_host: str = "api-football-v1.p.rapidapi.com"
     api_football_timeout_s: int = Field(default=20, ge=3, le=60)
     api_football_daily_limit: int = Field(default=90, ge=1, le=100)
+    # API-Sports Free 为 10 次/分钟；留 1 次余量，测试环境自动跳过等待。
+    api_football_min_interval_s: float = Field(default=7.0, ge=0, le=60)
     api_football_lineup_hours: int = Field(default=6, ge=1, le=24)
     api_football_max_requests_per_run: int = Field(default=20, ge=1, le=100)
 

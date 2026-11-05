@@ -11,6 +11,7 @@ from __future__ import annotations
 import difflib
 import re
 import threading
+import time
 import unicodedata
 from datetime import datetime, timedelta, timezone
 
@@ -43,6 +44,8 @@ _STOP_TOKENS = {
     "足球俱乐部", "足球", "俱乐部",
 }
 _QUOTA_LOCK = threading.Lock()
+_RATE_LOCK = threading.Lock()
+_LAST_REQUEST = 0.0
 
 
 def norm_name(value: str | None) -> str:
@@ -133,11 +136,28 @@ def _base_url_and_headers(st) -> tuple[str, dict]:
                   "Accept": "application/json"}
 
 
+def _throttle(st) -> None:
+    """API-Sports Free 10 r/m；串行调用留 1 次余量，避免 429。"""
+    if st.env == "test":
+        return
+    interval = float(getattr(st, "api_football_min_interval_s", 7.0) or 0)
+    if interval <= 0:
+        return
+    global _LAST_REQUEST
+    with _RATE_LOCK:
+        now = time.monotonic()
+        wait = interval - (now - _LAST_REQUEST)
+        if wait > 0:
+            time.sleep(wait)
+        _LAST_REQUEST = time.monotonic()
+
+
 def _request(db: Session, endpoint: str, params: dict | None = None) -> list[dict]:
     st = _settings()
     if not st.api_football_key:
         raise ApiFootballNotConfigured("JQ_API_FOOTBALL_KEY 未配置")
     consume_quota(db, endpoint)
+    _throttle(st)
     base, headers = _base_url_and_headers(st)
     url = f"{base}/{endpoint.lstrip('/')}"
     try:
