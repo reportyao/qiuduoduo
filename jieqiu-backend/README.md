@@ -1,4 +1,4 @@
-# 球多多后端 · W8 + Assistant（当前实现；W8 冻结基线需随 API 变更重新采纳）
+# 球多多后端 · W8 + Assistant（当前线上 `b48a913`；W8 冻结基线需随 API 变更重新采纳）
 
 认证（方案 B·自建）：
 `/auth/sms/send|verify`（CN 手机号）· `/auth/wechat/callback|bind-phone`（微信后强制绑手机）·
@@ -22,9 +22,11 @@
 
 **推荐主链（已实现）**：`decision_snapshots` + `recommendation_plans` + `review_runs` + `recommendation_events`；build → L1–L5 复核（L1 含 24h 数据新鲜度、L2 含来源哈希校验）→ publish → expire/withdraw。`GET /recommendations/today` 只返回 published 且未过期；公开契约带方向/把握度/成立条件/失效条件/AI 复核徽章。`POST /tools/parlay/plan` 仍是**未复核预览**（UI 标注"参考·未复核"），组合页 published 优先、preview 回退。付费/权益待做。见 [docs/recommendation-product.md](../docs/recommendation-product.md)。
 
+**习惯闭环（2026-11-05 已实现）**：结算时写入收盘 SP 与 CLV（迁移 `20261105_13`），周报汇总 `clv.n/avg/positive` 与个人 `you.clv_n/clv_avg`；`calibration.interval` 用已结算 promoted 判决的残差经验分布给 `prob_low/prob_high`，样本 <20 返回 `accumulating`，不伪造区间；`/stream` 增加 `unattended`（看过但没记注的已结算场次）；worker 增加 T-3h/T-30m 赛前提醒与去重扇出。真实 JPush 客户端仍待接。
+
 **合规闭环（已实现）**：`GET /compliance/state` · `POST /gate/verify`（年龄门）· `POST /me/under18-lock` · `POST /compliance/self-exclusion` · `POST /compliance/self-assessment`。`users` 表新增合规列（迁移 `20261105_12`）；`POST /bets` 与 focus capabilities 服务端硬拦截未成年锁定（403）/自排除（423）/休息中（423），重装/换设备不能绕过。
 
-**API-Football（已接入，默认关闭）**：fixtures/lineups/injuries/standings 同步、免费额度持久化、队名/开赛时间自动链接与后台人工链接；未配置 `JQ_API_FOOTBALL_KEY` 时保持 missing，不伪造；配置了 key 的部署会自动安装每日 fixtures cron。见 [docs/api-football.md](../docs/api-football.md)。
+**API-Football（已接入，默认关闭）**：fixtures/lineups/injuries/standings 同步、免费额度持久化、队名/开赛时间自动链接与后台人工链接；支持 API-Sports 直连与 RapidAPI（`JQ_API_FOOTBALL_PROVIDER=apisports|rapidapi`）。未配置 `JQ_API_FOOTBALL_KEY` 时保持 missing，不伪造；配置了 key 的部署会自动安装每日 fixtures cron。**2026-11-05 当前生产 key 待重新配置（旧 key 只存在于 `cron.env`，部署时被覆盖；脚本已修复并自动备份）**，订阅状态需重配后验证。见 [docs/api-football.md](../docs/api-football.md)。
 
 **LLM Gateway Phase 1（已实现）**：`open_chat` fallback → fast，`llm_usage`/`llm_cache`/`llm_budgets`、原子预算、PII 脱敏与 `/admin` 模型用量页只读看板；deep 分析与 focus 解读待 Phase 2。见 [docs/llm-gateway.md](../docs/llm-gateway.md)。当前 OpenAPI 为 128/143。
 
@@ -65,7 +67,7 @@ FastAPI 模块化单体。W2-W4：流/判决三关/封存链/账本/叙述/校�
 
 登录分流：`POST /auth/device` 带 `region: cn|global`（非法 422）。
 
-## API 全景（128 路径 / 143 方法）· 测试 261
+## API 全景（128 路径 / 143 方法）· 测试 265
 
 W8 + assistant 的实际契约以 `packages/api-client/openapi.json` 为准；新增目录/成本/日历/哨兵/实况与兼容别名见上节。
 
@@ -86,13 +88,16 @@ uvicorn app.main:app --port 8100
 ```bash
 # 密码不再写进代码；部署前导出
 export JQ_DEPLOY_PASSWORD='...'
-export JQ_ADMIN_PASSWORD='...'          # /admin 初始管理员密码
+export JQ_ADMIN_PASSWORD='...'          # 仅首次建管理员；后续保留远端值
 export JQ_ADMIN_COOKIE_SECURE=true      # HTTPS 部署建议开启
+# API-Football：RapidAPI key 必须同时设 provider；直连 API-Sports 用 apisports
+export JQ_API_FOOTBALL_PROVIDER='rapidapi'
+export JQ_API_FOOTBALL_KEY='...'
 # 可选：切境内 Postgres（云托管优先 / 自建兜底；不设则继续旧 SQLite）
 export JQ_PROD_DATABASE_URL='postgresql+psycopg2://jieqiu:...@10.0.0.5:5432/jieqiu'
 # 说明：deploy.py 读取 JQ_PROD_DATABASE_URL，写入服务的 JQ_DATABASE_URL；本地直接运行只认 JQ_DATABASE_URL。
 
-python deploy.py   # VPS：数据代码分离；cron：同步/回测/purge/助理 worker/人设预生成/每周日数据保留
+python deploy.py   # VPS：数据代码分离；合并远端 /etc env + cron.env 并备份 cron.env；cron：同步/回测/purge/助理 worker/人设预生成/每周日数据保留
 ```
 
 生产认证默认 fail-closed：`deploy.py` 写入 `JQ_ENV=prod`、`JQ_AUTH_STUB=false`；未配置真实短信/邮件/OAuth 时认证端点返回 503，不会再回显 `dev_code`。管理员初始密码/JWT 密钥写入 `/etc/jieqiu-backend.env`（0600），unit 只引用 EnvironmentFile。

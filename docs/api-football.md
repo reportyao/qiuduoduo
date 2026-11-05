@@ -1,6 +1,6 @@
 # API-Football 接入（免费档优先）
 
-> 状态：代码已接入，默认关闭；配置 `JQ_API_FOOTBALL_KEY` 后启用。当前免费档按 **100 请求/日** 设计，应用默认只用 90，留 10 次人工排查。
+> 状态：代码已接入，默认关闭；配置 `JQ_API_FOOTBALL_KEY` 后启用。当前免费档按 **100 请求/日** 设计，应用默认只用 90，留 10 次人工排查。**2026-11-05 生产 key 待重新配置**（旧 key 只存在于 `cron.env`，被部署覆盖；`deploy.py` 已修复并自动备份），订阅状态需重配后验证。
 
 ## 1. 用途
 
@@ -16,12 +16,23 @@
 ## 2. 配置
 
 ```env
+# API-Sports 官方直连（key 形如 32/64 位十六进制）
+JQ_API_FOOTBALL_PROVIDER=apisports
 JQ_API_FOOTBALL_KEY=
 JQ_API_FOOTBALL_BASE_URL=https://v3.football.api-sports.io
+
+# 或 RapidAPI 市场（key 是 RapidAPI key，不是 API-Sports key）
+# JQ_API_FOOTBALL_PROVIDER=rapidapi
+# JQ_API_FOOTBALL_RAPIDAPI_HOST=api-football-v1.p.rapidapi.com
+
 JQ_API_FOOTBALL_DAILY_LIMIT=90
 JQ_API_FOOTBALL_LINEUP_HOURS=6
 JQ_API_FOOTBALL_MAX_REQUESTS_PER_RUN=20
 ```
+
+- `apisports`：请求头 `x-apisports-key`。
+- `rapidapi`：请求头 `x-rapidapi-key` + `x-rapidapi-host`；**必须在同一 RapidAPI 账号订阅 API-Football（免费 $0 档也要点 Subscribe）**，否则 key 存在也会返回 `403 You are not subscribed to this API`。
+- `401 Invalid API key` 是 key 本身无效/缺失；`403` 是订阅未生效，两者不要混为一谈。
 
 免费档额度会被持久化到 `api_football_usage`（按 day+endpoint）；超限返回 `ApiFootballBudgetExceeded`，同步任务停止，不影响判决主链。
 
@@ -32,6 +43,11 @@ cd jieqiu-backend
 python -m app.api_football_cli status --json
 python -m app.api_football_cli sync --date 2026-11-04 --json
 python -m app.api_football_cli link --fixture 12345 --match 2042508
+
+# 直接验订阅（RapidAPI；不要把 key 打进命令历史）
+curl -sS -o /tmp/af.json -w '%{http_code}
+'   -H "x-rapidapi-key: $JQ_API_FOOTBALL_KEY"   -H "x-rapidapi-host: ${JQ_API_FOOTBALL_RAPIDAPI_HOST:-api-football-v1.p.rapidapi.com}"   'https://api-football-v1.p.rapidapi.com/v3/status'
+cat /tmp/af.json
 ```
 
 cron：**配置了 `JQ_API_FOOTBALL_KEY` 的部署，`deploy.py` 会自动安装每日 06:15 的 sync cron**（无需手装）；未配置则不装。手动执行或自定义频率时参考：

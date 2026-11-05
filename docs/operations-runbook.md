@@ -140,7 +140,10 @@ venv/bin/python -m app.odds_cli status
 
 ### API-Football（免费档）
 
+> 2026-11-05 当前生产状态：key 缺失，需重新配置。旧 key 只存在于 `cron.env`，已被一次部署覆盖；`deploy.py` 现已合并远端 env 并备份 `cron.env`。重配后先验 `/status`，再确认订阅是免费档还是未订阅。
+
 ```bash
+export JQ_API_FOOTBALL_PROVIDER='rapidapi'   # API-Sports 直连则用 apisports
 export JQ_API_FOOTBALL_KEY='...'
 export JQ_API_FOOTBALL_DAILY_LIMIT=90
 cd /home/ubuntu/jieqiu-backend
@@ -148,6 +151,7 @@ python -m app.api_football_cli status --json
 python -m app.api_football_cli sync --date $(date +%F) --json
 ```
 
+- RapidAPI 的 key 必须在同一账号订阅 API-Football（免费 $0 档也要 Subscribe）；`403 You are not subscribed` = 订阅未生效，`401 Invalid API key` = key 缺失/错误。
 - 免费档 100 请求/日，默认只用 90；计数落 `api_football_usage`。
 - fixtures 每日一次；lineups/injuries 只在停售前窗口按需补；standings 每日/联赛。
 - 未配 key 时 `/admin` 运维页显示未配置，同步命令返回 `configured: false`，不影响判决主链。
