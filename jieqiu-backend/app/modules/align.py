@@ -157,6 +157,11 @@ SEED_ALIASES: dict[str, list[str]] = {
     "萨巴赫": ["sabahfk", "sabah"],
     "葡萄牙体育": ["sportinglisbon", "sportingcp", "sporting"],
     "埃因霍温": ["psveindhoven", "psv"],
+    # 亚冠 / 巴西（竞彩口语名）
+    "町田泽维": ["machidazelvia", "machida"],
+    "上海申花": ["shanghaishenhua", "shenhua"],
+    "帕梅拉斯": ["palmeiras"],
+    "里莫": ["remo"],
 }
 
 _WS = re.compile(r"\s+")
