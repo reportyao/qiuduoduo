@@ -65,7 +65,7 @@ FastAPI 模块化单体。W2-W4：流/判决三关/封存链/账本/叙述/校�
 
 登录分流：`POST /auth/device` 带 `region: cn|global`（非法 422）。
 
-## API 全景（128 路径 / 143 方法）· 测试 251
+## API 全景（128 路径 / 143 方法）· 测试 256
 
 W8 + assistant 的实际契约以 `packages/api-client/openapi.json` 为准；新增目录/成本/日历/哨兵/实况与兼容别名见上节。
 

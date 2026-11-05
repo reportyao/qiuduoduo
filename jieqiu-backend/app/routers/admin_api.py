@@ -1064,12 +1064,15 @@ def admin_ops(db: Session = Depends(get_db),
         alerts.append({"level": "low", "title": "API-Football 未配置",
                        "detail": "阵容/伤停/积分榜将保持 missing"})
     intl = supply_data["intl_odds"]
-    if not intl["configured"]:
+    if not intl["configured"] and supply_data["matches"] > 0:
         alerts.append({"level": "high", "title": "国际盘未配置（The Odds API）",
                        "detail": "市闸需要 ≥2 个去水口径；未配置时全部判决停在 pending_data，推荐主链不会产出"})
     elif intl["total"] == 0 and supply_data["matches"] > 0:
         alerts.append({"level": "high", "title": "国际盘 0 条",
                        "detail": f"今日 {supply_data['matches']} 场，但 intl_odds 为空；检查 JQ_ODDS_API_KEY 与同步日志"})
+    elif intl["covered_matches"] == 0 and supply_data["matches"] > 0:
+        alerts.append({"level": "high", "title": "今日国际盘未覆盖任何场次",
+                       "detail": f"intl_odds 有 {intl['total']} 行，但今日 {supply_data['matches']} 场都没匹配上；检查队名对齐/开赛时间/源覆盖"})
     if (supply_data["verdicts"]["total"] > 0
             and supply_data["market_gate"]["pending_data"] >= supply_data["verdicts"]["total"]):
         alerts.append({"level": "high", "title": "市闸全部 pending",

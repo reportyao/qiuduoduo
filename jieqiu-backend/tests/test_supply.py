@@ -1,11 +1,12 @@
 """内容供给诊断：国际盘缺失时，主链为什么不会产出 published。"""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
+from app.features.recommendations import service
 from app.models import IntlOdds, SPMatch, Verdict
 from app.modules.supply import content_supply
-from tests.conftest import CN, admin_login
+from tests.conftest import CN, admin_login, today_cn
 from tests.test_recommendations import _seed, _seed_market
 
 
@@ -58,3 +59,18 @@ def test_admin_data_exposes_supply(client, db):
     assert "supply" in body
     for key in ("matches", "market_gate", "intl_odds", "blocked_reason", "published"):
         assert key in body["supply"]
+
+
+def test_supply_excludes_expired_published(db):
+    _seed_market(db, "sup-3", "周三993")
+    _seed(db, mid="sup-3", no="周三993")
+    snap = service.build_snapshots(db, today_cn())[0]
+    service.review_subject(db, service.SUBJECT_DECISION, snap.id)
+    service.publish_subject(db, service.SUBJECT_DECISION, snap.id)
+    snap.expires_at = datetime.now(CN).replace(tzinfo=None) - timedelta(minutes=1)
+    db.commit()
+
+    data = content_supply(db)
+    assert data["snapshots"]["published"] == 0
+    assert data["published"] == 0
+    assert "国际盘" in (data["blocked_reason"] or "")

@@ -1,6 +1,6 @@
 # Monorepo 基座 Review 记录（2026-11-04）
 
-> **历史快照（2026-11-04）**：本文的测试数/路径数/结论反映当时状态，不是当前事实。当前事实见 [docs/README.md](../README.md)：255 tests / 128 路径 / 143 方法 / Alembic `20261105_12`。
+> **历史快照（2026-11-04）**：本文的测试数/路径数/结论反映当时状态，不是当前事实。当前事实见 [docs/README.md](../README.md)：256 tests / 128 路径 / 143 方法 / Alembic `20261105_12`。
 
 
 范围：上一轮 AI 优先架构落地（monorepo / Expo 基座 / OpenAPI client / Alembic / assistant feature slice）的代码、配置、脚本与产物。

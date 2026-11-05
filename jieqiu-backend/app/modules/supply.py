@@ -7,14 +7,15 @@ published 内容。这个模块把这条链路的每一环计数暴露给后台/
 """
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import (DecisionSnapshot, IntlOdds, RecommendationPlan, SPMatch,
                       SPSnapshot, Verdict)
-from .intl_odds import sources_for_match
-from .timeutil import trade_date_now, trade_window
+from .timeutil import CN, trade_date_now, trade_window
 
 
 def _count(db: Session, model, *where) -> int:
@@ -51,12 +52,17 @@ def content_supply(db: Session, date: str | None = None) -> dict:
         else:
             market["missing"] += 1
 
+    now = datetime.now(CN).replace(tzinfo=None)
+    not_expired_snap = or_(DecisionSnapshot.expires_at.is_(None),
+                           DecisionSnapshot.expires_at > now)
+    not_expired_plan = or_(RecommendationPlan.expires_at.is_(None),
+                           RecommendationPlan.expires_at > now)
     published_snaps = _count(
         db, DecisionSnapshot, DecisionSnapshot.trade_date == date,
-        DecisionSnapshot.status == "published")
+        DecisionSnapshot.status == "published", not_expired_snap)
     published_plans = _count(
         db, RecommendationPlan, RecommendationPlan.trade_date == date,
-        RecommendationPlan.status == "published")
+        RecommendationPlan.status == "published", not_expired_plan)
     snapshots_total = _count(
         db, DecisionSnapshot, DecisionSnapshot.trade_date == date)
     plans_total = _count(
@@ -65,14 +71,24 @@ def content_supply(db: Session, date: str | None = None) -> dict:
     intl_total = _count(db, IntlOdds)
     intl_latest = db.scalar(
         select(IntlOdds.retrieved_at).order_by(IntlOdds.retrieved_at.desc()).limit(1))
+    # 一次批量取国际盘窗口，避免逐场 N+1 查询（后台数据页会定时刷新）。
+    by_pair: dict[tuple[str, str], list[IntlOdds]] = {}
+    if matches:
+        lo = (datetime.strptime(start, "%Y-%m-%d %H:%M:%S").replace(tzinfo=CN)
+              - timedelta(hours=4)).astimezone(timezone.utc).isoformat()
+        hi = (datetime.strptime(end, "%Y-%m-%d %H:%M:%S").replace(tzinfo=CN)
+              + timedelta(hours=4)).astimezone(timezone.utc).isoformat()
+        homes = {m.home for m in matches}
+        aways = {m.away for m in matches}
+        rows = db.scalars(select(IntlOdds).where(
+            IntlOdds.kickoff_utc >= lo, IntlOdds.kickoff_utc <= hi,
+            IntlOdds.home.in_(homes), IntlOdds.away.in_(aways))).all()
+        for row in rows:
+            by_pair.setdefault((row.home, row.away), []).append(row)
     per_match = []
     for m in matches:
-        try:
-            rows = sources_for_match(db, m)
-        except Exception:  # noqa: BLE001 - 诊断接口不能因单场异常整体失败
-            rows = []
         sources = []
-        for row in rows:
+        for row in by_pair.get((m.home, m.away), []):
             if row.source not in sources:
                 sources.append(row.source)
         per_match.append({

@@ -12,7 +12,7 @@
 |---|---|
 | 版本 | `0.8.0-w8+assistant` |
 | OpenAPI | 128 路径 / 143 方法 |
-| 后端测试 | 255 passed |
+| 后端测试 | 256 passed |
 | 前端测试 | 22 passed + typecheck / ESLint / Android Hermes bundle |
 | 数据库 | 境内 PostgreSQL 16（云托管优先 / 自建兜底，ADR-0004）；未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite |
 | Alembic head | `20261105_12` |
@@ -64,7 +64,7 @@ just api-install          # pip install -r jieqiu-backend/requirements.txt
 just db-up                # 本地 Postgres（docker compose，端口 5433）
 just db-migrate           # alembic upgrade head
 just api-run              # uvicorn app.main:app --port 8100
-just api-test             # pytest（255 tests）
+just api-test             # pytest（256 tests）
 
 # 前端（Node 22 自带 corepack；仓库 .npmrc 固定 node-linker=hoisted）
 just install              # corepack pnpm install

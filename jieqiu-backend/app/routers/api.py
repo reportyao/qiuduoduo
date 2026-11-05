@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
@@ -65,7 +65,10 @@ def health(detailed: bool = False, db: Session = Depends(get_db)):
             "published_today": db.scalar(
                 select(func.count()).select_from(DecisionSnapshot).where(
                     DecisionSnapshot.trade_date == trade_date_now(cn_now()),
-                    DecisionSnapshot.status == "published")) or 0,
+                    DecisionSnapshot.status == "published",
+                    or_(DecisionSnapshot.expires_at.is_(None),
+                        DecisionSnapshot.expires_at
+                        > datetime.now(CN).replace(tzinfo=None)))) or 0,
         }} if detailed else {}),
     }
 
