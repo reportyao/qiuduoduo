@@ -22,6 +22,13 @@ const esc = (value) => String(value ?? "").replace(/[&<>'"]/g, c => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
 }[c]));
 const num = (value, digits = 0) => Number(value ?? 0).toFixed(digits);
+const fmtTime = (value, seconds = false) => {
+  const text = String(value || "");
+  if (!text) return "—";
+  const match = text.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::(\d{2}))?/);
+  if (!match) return text;
+  return `${match[1]} ${match[2]}${seconds && match[3] ? `:${match[3]}` : ""}`;
+};
 
 function toast(message, type = "success", ms = 3200) {
   const box = el("#toast");
@@ -196,7 +203,7 @@ async function loadOverview() {
         </div>
       `).join("") : '<div class="empty">没有阻塞项。数据、模型和发布都正常。</div>'}
       <div class="status-item">
-        <div><b>SP 数据</b><div class="status-label">最新 ${esc(data.sync?.latest || "—")} · lag ${data.sync?.lag_seconds == null ? "—" : data.sync.lag_seconds + "s"}</div></div>
+        <div><b>SP 数据</b><div class="status-label">最新 ${esc(fmtTime(data.sync?.latest, true))} · lag ${data.sync?.lag_seconds == null ? "—" : data.sync.lag_seconds + "s"}</div></div>
         ${data.sync?.lag_seconds == null ? statusPill("skip") : data.sync.lag_seconds > 1800 ? statusPill("fail") : statusPill("ok")}
       </div>
     </div>
@@ -235,9 +242,9 @@ async function loadOverview() {
           </div>
         `).join("") || '<div class="empty">暂无模型</div>'}
         <div class="detail-list" style="margin-top:16px">
-          <div><b>最近快照：</b>${esc(data.latest.snapshot_created_at || "—")}</div>
-          <div><b>最近事件：</b>${esc(data.latest.event_at || "—")}</div>
-          <div><b>最近判决：</b>${esc(data.latest.verdict_created_at || "—")}</div>
+          <div><b>最近快照：</b>${esc(fmtTime(data.latest.snapshot_created_at, true))}</div>
+          <div><b>最近事件：</b>${esc(fmtTime(data.latest.event_at, true))}</div>
+          <div><b>最近判决：</b>${esc(fmtTime(data.latest.verdict_created_at, true))}</div>
         </div>
       </div>
 
@@ -299,7 +306,7 @@ async function loadModels() {
             <div><b>最大 Token</b> ${model.max_tokens}</div>
             <div><b>温度</b> ${model.temperature}</div>
             <div><b>超时</b> ${model.timeout_s}s</div>
-            <div><b>最近成功</b> ${esc(model.last_ok_at || "—")}</div>
+            <div><b>最近成功</b> ${esc(fmtTime(model.last_ok_at, true))}</div>
             <div><b>失败次数</b> ${model.fail_count}</div>
           </div>
           ${model.last_error ? `<div class="model-error"><b>最近错误</b> · ${esc(model.last_error)}</div>` : ""}
@@ -413,7 +420,7 @@ async function loadPersonas() {
             <div><label>语气标签</label><input name="tone" value="${esc(profile.tone)}"></div>
             <div><label>最大字数</label><input name="max_chars" type="number" min="60" max="600" value="${profile.max_chars}"></div>
             <div><label>表情策略</label><select name="emoji_policy">
-              ${["none", "limited", "free"].map(x => `<option value="${x}" ${profile.emoji_policy === x ? "selected" : ""}>${x}</option>`).join("")}
+              ${[["none", "关闭"], ["limited", "少量"], ["free", "自由"]].map(([x, label]) => `<option value="${x}" ${profile.emoji_policy === x ? "selected" : ""}>${label}</option>`).join("")}
             </select></div>
             <div><label>允许表情</label><input name="allowed_emoji" value="${esc(profile.allowed_emoji)}"></div>
             <div class="full"><label>风格提示</label><textarea name="style_prompt">${esc(profile.style_prompt)}</textarea></div>
@@ -566,8 +573,8 @@ async function loadRecommendations(append = false) {
           </div>
           ${statusPill(plan.status)}
         </div>`).join("") || '<div class="empty">暂无 plan</div>'}</div>
-      <div class="card"><h2 class="card-title">最近主链事件</h2>${data.events.map(e => `
-        <div class="event-item"><span class="mono">${esc(e.created_at || "")}</span><span class="pill muted">${esc(e.action)}</span><span class="mono ellipsis">${esc(e.subject_id)}</span><span>${esc(e.note || `${e.from_status || "—"} → ${e.to_status || "—"}`)}</span></div>`).join("") || '<div class="empty">暂无事件</div>'}</div>
+      <div class="card"><h2 class="card-title">最近主链事件</h2><div class="event-list">${data.events.map(e => `
+        <div class="event-item"><span class="mono">${esc(fmtTime(e.created_at, true))}</span><span class="pill muted">${esc(e.action)}</span><span class="mono ellipsis">${esc(e.subject_id)}</span><span>${esc(e.note || `${e.from_status || "—"} → ${e.to_status || "—"}`)}</span></div>`).join("") || '<div class="empty">暂无事件</div>'}</div></div>
     </div>
   `;
 
@@ -734,7 +741,7 @@ async function loadData() {
       <div class="kpi"><div class="kpi-label">判决总量</div><div class="kpi-value">${data.verdicts.total}</div><div class="kpi-foot">今日 ${data.verdicts.today}</div></div>
       <div class="kpi green accent"><div class="kpi-label">已过三关</div><div class="kpi-value">${data.verdicts.promoted}</div><div class="kpi-foot">复核中 ${data.verdicts.screening}</div></div>
       <div class="kpi red"><div class="kpi-label">已砍</div><div class="kpi-value">${data.verdicts.killed}</div><div class="kpi-foot">含历史</div></div>
-      <div class="kpi"><div class="kpi-label">SP 快照</div><div class="kpi-value">${data.snapshots.total}</div><div class="kpi-foot">${esc(data.snapshots.latest || "—")}</div></div>
+      <div class="kpi"><div class="kpi-label">SP 快照</div><div class="kpi-value">${data.snapshots.total}</div><div class="kpi-foot">${esc(fmtTime(data.snapshots.latest, true))}</div></div>
     </div>
     <div class="card"><h2 class="card-title">内容供给</h2>
       <div class="flow">
@@ -762,7 +769,7 @@ async function loadData() {
     </div>
     <div class="card"><h2 class="card-title">数据同步</h2>
       <div class="status-grid">
-        <div class="status-item"><div><b>SP 最新快照</b><div class="status-label">采集器 → SFTP → seed</div></div><span class="mono">${esc(data.sync?.latest || "—")}</span></div>
+        <div class="status-item"><div><b>SP 最新快照</b><div class="status-label">采集器 → SFTP → seed</div></div><span class="mono">${esc(fmtTime(data.sync?.latest, true))}</span></div>
         <div class="status-item"><div><b>同步延迟</b><div class="status-label">超过 1800s 视为异常</div></div>${data.sync?.lag_seconds == null ? statusPill("skip") : data.sync.lag_seconds > 1800 ? statusPill("fail") : statusPill("ok")}</div>
       </div>
     </div>

@@ -39,7 +39,7 @@ async function loadOps() {
     <div class="card"><h2 class="card-title">API-Football 赛程</h2>
       <div class="table-wrap"><table><thead><tr><th>Fixture</th><th>时间</th><th>对阵</th><th>联赛</th><th>状态</th><th>链接</th></tr></thead><tbody>
         ${(data.football_fixtures || []).map(f => `<tr>
-          <td class="mono">${f.fixture_id}</td><td class="mono">${esc(f.kickoff_utc)}</td>
+          <td class="mono">${f.fixture_id}</td><td class="mono">${esc(fmtTime(f.kickoff_utc, true))} UTC</td>
           <td>${esc(f.home)} vs ${esc(f.away)}</td><td>${esc(f.league)}</td><td>${esc(f.status)}</td>
           <td>${f.match_id ? `<span class="pill green">${esc(f.match_id)}</span>` : canAdmin() ? `<div class="actions"><input data-fixture-input="${f.fixture_id}" placeholder="竞彩 match_id" style="width:128px"><button class="btn secondary small" data-fixture-link="${f.fixture_id}">链接</button></div>` : '<span class="status-label">仅 admin 可链接</span>'}</td>
         </tr>`).join("") || '<tr><td colspan="6">暂无 fixture</td></tr>'}
@@ -74,7 +74,7 @@ async function loadUsers() {
         <td><b>${esc(u.username)}</b><div class="status-label">#${u.id}</div></td>
         <td><select data-user-role="${u.id}" ${u.username === "admin" ? "disabled" : ""}>${["viewer", "operator", "admin"].map(r => `<option value="${r}" ${u.role === r ? "selected" : ""}>${r}</option>`).join("")}</select></td>
         <td>${u.enabled ? statusPill("ok") : statusPill("muted")}</td>
-        <td class="mono">${esc(u.last_login_at || "—")}</td>
+        <td class="mono">${esc(fmtTime(u.last_login_at, true))}</td>
         <td class="actions">
           <button class="btn secondary small" data-user-pw="${u.id}">重置密码</button>
           <button class="btn ${u.enabled ? "warn" : "primary"} small" data-user-toggle="${u.id}" data-enabled="${u.enabled}">${u.enabled ? "停用" : "启用"}</button>
@@ -128,7 +128,7 @@ function openPasswordModal(id) {
 
 function auditRow(item) {
   const change = item.after ? JSON.stringify(item.after) : item.before ? JSON.stringify(item.before) : "";
-  return `<tr><td class="mono">${esc(item.created_at || "")}</td><td>${esc(item.actor)}<div class="status-label">${esc(item.role)}</div></td><td><span class="pill muted">${esc(item.action)}</span></td><td>${esc(item.target_type)}<div class="status-label">${esc(item.target_id)}</div></td><td class="ellipsis mono" title="${esc(change)}">${esc(change)}</td><td class="mono">${esc(item.ip || "—")}</td></tr>`;
+  return `<tr><td class="mono">${esc(fmtTime(item.created_at, true))}</td><td>${esc(item.actor)}<div class="status-label">${esc(item.role)}</div></td><td><span class="pill muted">${esc(item.action)}</span></td><td>${esc(item.target_type)}<div class="status-label">${esc(item.target_id)}</div></td><td class="ellipsis mono" title="${esc(change)}">${esc(change)}</td><td class="mono">${esc(item.ip || "—")}</td></tr>`;
 }
 
 async function loadAudit() {

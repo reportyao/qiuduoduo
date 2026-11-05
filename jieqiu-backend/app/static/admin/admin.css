@@ -781,6 +781,8 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
 .review-layer:last-child { border-bottom: 0; }
 .review-name { font-weight: 500; }
 
+.event-list { max-height: 360px; overflow-y: auto; padding-right: 4px; }
+
 .event-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -922,7 +924,9 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
   .toolbar input, .toolbar select { width: 100%; }
   .form-grid { grid-template-columns: 1fr; }
   .review-layer { grid-template-columns: 1fr; gap: 6px; }
-  .event-item { grid-template-columns: 1fr auto; }
+  .event-list { max-height: 360px; overflow-y: auto; padding-right: 4px; }
+
+.event-item { grid-template-columns: 1fr auto; }
   .toolbar .actions { width: 100%; }
   .toolbar .actions input[type="search"],
   .toolbar .actions input[type="date"] { width: 100%; }
