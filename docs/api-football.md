@@ -1,6 +1,6 @@
 # API-Football 接入（免费档优先）
 
-> 状态：代码已接入，默认关闭；配置 `JQ_API_FOOTBALL_KEY` 后启用。当前免费档按 **100 请求/日** 设计，应用默认只用 90，留 10 次人工排查。**2026-11-05 生产未配置**：当前 key 属于 **apifootball.com**（不是 API-Sports/RapidAPI），已实测 Free 档可访问 countries/leagues/standings；但免费档 events 不覆盖五大联赛，英超等返回 `404 No event found (please check your plan)`。五大联赛/欧冠需 European $21/月起；升级后再接入 `apifootball` provider；当前代码的 provider 仅支持 `apisports` / `rapidapi`。`deploy.py` 已修复为合并远端 env 并自动备份，不会再因重部署丢失已有 key。
+> 状态：**生产已配置 API-Sports `apisports` Free 档**（100 请求/日、10 请求/分钟）。已跑通当天+次日 fixtures、已链接场次的 lineups/injuries；2026-11-05 实测今日/明日 13 场竞彩目标场次全部链接。**当前赛季 standings 被 Free 档拒绝**（`Free plans do not have access to this season`）；lineups 通常在停售前才发布，由每小时 `sync-enrich` 补充。`apifootball.com` 是另一家 provider（`APIkey` 查询参数），当前代码未接入。
 
 ## 1. 用途
 
@@ -26,38 +26,43 @@ JQ_API_FOOTBALL_BASE_URL=https://v3.football.api-sports.io
 # JQ_API_FOOTBALL_RAPIDAPI_HOST=api-football-v1.p.rapidapi.com
 
 JQ_API_FOOTBALL_DAILY_LIMIT=90
+JQ_API_FOOTBALL_MIN_INTERVAL_S=7
 JQ_API_FOOTBALL_LINEUP_HOURS=6
-JQ_API_FOOTBALL_MAX_REQUESTS_PER_RUN=20
+JQ_API_FOOTBALL_MAX_REQUESTS_PER_RUN=10
 ```
 
 - `apisports`：请求头 `x-apisports-key`。
 - `rapidapi`：请求头 `x-rapidapi-key` + `x-rapidapi-host`；**必须在同一 RapidAPI 账号订阅 API-Football（免费 $0 档也要点 Subscribe）**，否则 key 存在也会返回 `403 You are not subscribed to this API`。
 - `401 Invalid API key` 是 key 本身无效/缺失；`403` 是订阅未生效，两者不要混为一谈。
 
-免费档额度会被持久化到 `api_football_usage`（按 day+endpoint）；超限返回 `ApiFootballBudgetExceeded`，同步任务停止，不影响判决主链。
+免费档额度会被持久化到 `api_football_usage`（按 day+endpoint）；超限返回 `ApiFootballBudgetExceeded`，同步任务停止，不影响判决主链。API-Sports Free 还有 **10 次/分钟**限制，`_request` 默认 7 秒节流；否则会返回 429。2026-11-05 实测 Free 档 **当天+次日 fixtures 可用**，但 **当前赛季 standings 被拒绝**（`Free plans do not have access to this season`）。
 
 ## 3. 同步命令
 
 ```bash
 cd jieqiu-backend
 python -m app.api_football_cli status --json
-python -m app.api_football_cli sync --date 2026-11-04 --json
+python -m app.api_football_cli sync --date 2026-11-05 --next-day --json
+python -m app.api_football_cli sync-enrich --lineups-max 2 --injuries-max 1 --json
 python -m app.api_football_cli link --fixture 12345 --match 2042508
 
-# 直接验订阅（RapidAPI；不要把 key 打进命令历史）
-curl -sS -o /tmp/af.json -w '%{http_code}
-'   -H "x-rapidapi-key: $JQ_API_FOOTBALL_KEY"   -H "x-rapidapi-host: ${JQ_API_FOOTBALL_RAPIDAPI_HOST:-api-football-v1.p.rapidapi.com}"   'https://api-football-v1.p.rapidapi.com/v3/status'
+# 验订阅（API-Sports 直连；不要把 key 打进命令历史）
+curl -sS -o /tmp/af.json -w '%{http_code}\n' \
+  -H "x-apisports-key: $JQ_API_FOOTBALL_KEY" \
+  'https://v3.football.api-sports.io/status'
 cat /tmp/af.json
 ```
 
 cron：**配置了 `JQ_API_FOOTBALL_KEY` 的部署，`deploy.py` 会自动安装每日 06:15 的 sync cron**（无需手装）；未配置则不装。手动执行或自定义频率时参考：
 
 ```cron
-# 每天拉当日 fixtures；只拉一次（deploy 自动安装的是 15 6 * * *）
-15 6 * * * cd /home/ubuntu/jieqiu-backend && python -m app.api_football_cli sync --date $(date +\%F) >> /home/ubuntu/jieqiu-backend/api_football.log 2>&1
+# 每天 06:15 拉今天+明天 fixtures，并补一次阵容/伤停
+15 6 * * * cd /home/ubuntu/jieqiu-backend && python -m app.api_football_cli sync --date $(date +\%F) --next-day >> api_football.log 2>&1
+# 比赛日 0–4 / 10–23 点每小时只补 2 场阵容 + 1 场伤停
+0 0-4,10-23 * * * cd /home/ubuntu/jieqiu-backend && python -m app.api_football_cli sync-enrich --json >> api_football.log 2>&1
 ```
 
-免费档不要每 5 分钟全量拉；fixtures 1 次/日，lineups 默认只补开赛前 6 小时窗口（含开赛 2 小时内），injuries 默认补 24 小时窗口，standings 1 次/日/联赛。
+免费档不要每 5 分钟全量拉；fixtures 每日 1 次（今天+明天），lineups 只补开赛前 6 小时窗口，injuries 补 24 小时窗口。`sync-enrich` 单次只发 2+1 个请求，靠每小时 cron 逐步补齐；lineups 常见于停售前 1 小时才发布，空数组是正常现象，不能当失败。
 
 ## 4. 表
 

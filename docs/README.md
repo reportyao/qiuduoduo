@@ -1,12 +1,12 @@
 # 球多多文档索引
 
-最后对账：2026-11-05。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **128 路径 / 143 方法**，后端 **265 tests**，前端 **22 tests**，Alembic head `20261105_13`；生产线上提交 `b48a913`，当前仍是 SQLite + WAL 过渡。
+最后对账：2026-11-05。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **128 路径 / 143 方法**，后端 **267 tests**，前端 **22 tests**，Alembic head `20261105_13`；生产线上提交 `89ec4e1`，当前仍是 SQLite + WAL 过渡。
 
 ## 当前状态（2026-11-05）
 
 - 推荐主链、概率经验区间、CLV、未采纳复盘、T-3h/T-30m 赛前提醒已上线；`/recommendations/today` 只读 published。
 - 合规（年龄门/未成年锁定/自排除）服务端闭环；`/admin` 运营台可用。
-- **API-Football 未配置**：key 属于 apifootball.com，已验证 Free 档可用；但免费档 events 不覆盖五大联赛，需升级 European（$21/月）后才能用于主链。部署脚本已改为合并 + 自动备份，不会再因重部署丢失已有 key。
+- **API-Football 已配置**：API-Sports `apisports` Free（100/日、10/分钟），当天+次日 fixtures、lineups、injuries、自动链接已跑通；当前赛季 standings 被 Free 档限制，lineups 由每小时 `sync-enrich` 在停售前补齐。
 - **JPush 真机推送待接**：后端事件/站内信/dry-run 可用，客户端 SDK、厂商凭证和深链仍缺。
 - 备份/PITR、Postgres 切换、支付权益仍属上线阻塞/下一阶段。
 
@@ -21,7 +21,7 @@
 | [recommendation-product.md](./recommendation-product.md) | **赛前判断 / 串关参谋 / AI 复核发布**：新红线、免费付费、帮我配、组合卡、AI 复核流水线（snapshot/review/publish 主链、CLV/经验区间、未采纳复盘已实现；组合页 published 优先、preview 回退；付费待做） |
 | [focused-decision-flow.md](./focused-decision-flow.md) | **聚焦决策流 / 数据脉搏 / 情报层**：前端聚焦、focus/pulse/interactions API、首页真实脉搏/聚焦面板/覆盖筛选/埋点、后台 `/admin` 的数据源/运维/模型用量/人设文案/推荐主链/组合预览页已实现；intel 表/LLM 深读仍待做 |
 | [llm-gateway.md](./llm-gateway.md) | **LLM Gateway / 多模型路由**：fast/deep、任务矩阵、预算/缓存、`llm_*` 表、后台 `/admin` 模型用量页、审核任务与 persona 传输统一（Phase 1 已实现，deep 解读待做） |
-| [api-football.md](./api-football.md) | **API-Football 接入**：API-Sports 直连 / RapidAPI / apifootball.com、fixtures/lineups/injuries/standings、免费额度、队名链接、focus 集成、后台页面；apifootball.com Free key 已验证但覆盖不足 |
+| [api-football.md](./api-football.md) | **API-Football 接入**：API-Sports 直连 / RapidAPI、fixtures/lineups/injuries/standings、免费额度、7 秒节流、当天+次日、focus 集成、后台页面；apifootball.com 是另一家 provider，未接入 |
 | [database-architecture.md](./database-architecture.md) | 境内 Postgres（云托管优先/自建兜底）、连接池、索引、保留、备份/PITR 落地、切换 |
 | [operations-runbook.md](./operations-runbook.md) | 当前部署、cron、健康检查、`/admin` 后台、回滚与事故排查 |
 | [performance.md](./performance.md) | 性能基线：接口 p50/p95、缓存/gzip/SQLite/包体优化、网络与并发限制 |

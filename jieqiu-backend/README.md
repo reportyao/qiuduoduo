@@ -26,7 +26,7 @@
 
 **合规闭环（已实现）**：`GET /compliance/state` · `POST /gate/verify`（年龄门）· `POST /me/under18-lock` · `POST /compliance/self-exclusion` · `POST /compliance/self-assessment`。`users` 表新增合规列（迁移 `20261105_12`）；`POST /bets` 与 focus capabilities 服务端硬拦截未成年锁定（403）/自排除（423）/休息中（423），重装/换设备不能绕过。
 
-**API-Football（已接入，默认关闭）**：fixtures/lineups/injuries/standings 同步、免费额度持久化、队名/开赛时间自动链接与后台人工链接；支持 API-Sports 直连与 RapidAPI（`JQ_API_FOOTBALL_PROVIDER=apisports|rapidapi`）。未配置 `JQ_API_FOOTBALL_KEY` 时保持 missing，不伪造；配置了 key 的部署会自动安装每日 fixtures cron。**2026-11-05 当前生产未配置：当前 key 属于 apifootball.com，Free 档已验证可访问 countries/leagues/standings，但 events 不覆盖五大联赛（英超等返回 404 No event found）；需 European $21/月起。脚本已修复为合并远端 env 并自动备份**，升级后再接入 `apifootball` provider。见 [docs/api-football.md](../docs/api-football.md)。
+**API-Football（已接入并配置）**：生产使用 API-Sports `apisports` Free（100/日、10/分钟），fixtures 当天+次日、lineups/injuries、自动/人工链接；代码内 7 秒节流。cron 每日 06:15 `sync --next-day`，0–4/10–23 点每小时 `sync-enrich`。**当前赛季 standings 被 Free 档拒绝**；lineups 通常在停售前发布。`apifootball.com` 是另一家 provider，当前未接入。见 [docs/api-football.md](../docs/api-football.md)。
 
 **LLM Gateway Phase 1（已实现）**：`open_chat` fallback → fast，`llm_usage`/`llm_cache`/`llm_budgets`、原子预算、PII 脱敏与 `/admin` 模型用量页只读看板；deep 分析与 focus 解读待 Phase 2。见 [docs/llm-gateway.md](../docs/llm-gateway.md)。当前 OpenAPI 为 128/143。
 
@@ -67,7 +67,7 @@ FastAPI 模块化单体。W2-W4：流/判决三关/封存链/账本/叙述/校�
 
 登录分流：`POST /auth/device` 带 `region: cn|global`（非法 422）。
 
-## API 全景（128 路径 / 143 方法）· 测试 265
+## API 全景（128 路径 / 143 方法）· 测试 267
 
 W8 + assistant 的实际契约以 `packages/api-client/openapi.json` 为准；新增目录/成本/日历/哨兵/实况与兼容别名见上节。
 
