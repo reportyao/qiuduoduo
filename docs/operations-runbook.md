@@ -122,8 +122,8 @@ venv/bin/python -m app.odds_cli status
 - **首个管理员**：首次登录时用 `JQ_ADMIN_PASSWORD` 创建 `admin`；未配置时回退 `JQ_CONSOLE_PASSWORD`（dev/test 回退 `dev`）。建号后密码以 PBKDF2-SHA256 落 `admin_users`。
 - **RBAC**：
   - `viewer`：只读总览/模型/用量/人设/推荐/数据/运维/审计；
-  - `operator`：额外可运行主链、复核、发布、撤回、测试模型；
-  - `admin`：额外可改模型池、人设 profile/槽位、创建/停用账号、重置密码。
+  - `operator`：额外可运行主链、复核、发布、撤回、测试模型/LLM 连接；
+  - `admin`：额外可改文案模型池、LLM 接入配置、人设 profile/槽位、创建/停用账号、重置密码。
 - **合规（服务端强制）**：`GET /compliance/state`、`POST /gate/verify`、`POST /me/under18-lock`、`POST /compliance/self-exclusion`、`POST /compliance/self-assessment`；`POST /bets` 与 `focus.capabilities` 同时检查未成年锁定/自排除/休息中，重装或换设备不能绕过。客户端本机自排除先持久化，服务端同步失败时保留 `syncPending` 并在下次前台/登录自动补写。
 - **旧 `/console` 已全部下线**：`/console` 及 `/console/*` 一律 302 到 `/admin`，不再提供登录或页面；W8 `/review/*` 也改用 `admin_t` + RBAC。
 - **新版页面**：

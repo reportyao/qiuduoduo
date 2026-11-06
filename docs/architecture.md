@@ -124,7 +124,7 @@ packages/api       生成的 client
 - Alembic 是 schema 事实源；
 - SQLite 仅允许纯单元测试、一次性工具或尚未切换的旧部署；
 - OpenAPI 由 FastAPI 生成；后端导出 `packages/api-client/openapi.json` 快照，client 从快照离线生成；
-- Postgres 迁移先于应用启动；Alembic head 为 `20261106_14`，baseline 24 张表，当前 ORM 共 43 张表（新增 interaction_events、API-Football 5 张表、LLM 4 张表、人设翻译 4 张表、推荐主链 4 张表与管理账号/审计 2 张表）；
+- Postgres 迁移先于应用启动；Alembic head 为 `20261106_14`，baseline 24 张表，当前 ORM 共 44 张表（新增 interaction_events、API-Football 5 张表、LLM 4 张表、人设翻译 4 张表、推荐主链 4 张表与管理账号/审计 2 张表）；
 - AI 输出必须通过 Pydantic / JSON Schema 校验；
 - 领域事件必须有 `dedupe_key`、`payload_hash`、`data_cutoff`。
 
