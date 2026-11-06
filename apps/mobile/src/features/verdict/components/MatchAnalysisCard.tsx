@@ -86,7 +86,7 @@ export function MatchAnalysisCard({ matchId, date }: Props) {
 
   const reason = analysis?.reason;
   const missing = analysis?.missing ?? [];
-  const canGenerate = reason === "not_generated" || reason === "coverage";
+  const canGenerate = reason === "not_generated";
   const unavailableText = reason === "coverage"
     ? `数据还不够，先不生成解读${missing.length ? `（缺 ${missing.join("、")}）` : ""}。`
     : reason === "not_configured"

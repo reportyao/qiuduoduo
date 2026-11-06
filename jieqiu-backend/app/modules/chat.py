@@ -80,6 +80,15 @@ def _analysis_text(analysis: dict) -> str:
     return "\n".join(p for p in parts if p)[:900]
 
 
+def _with_protection(db: Session, user: User | None, card: dict) -> dict:
+    if user:
+        st = user_streak(db, user)
+        if st["active"]:
+            card["protection"] = st
+            card["text"] += "（连败保护中：今天建议只看不下。）"
+    return card
+
+
 def respond(db: Session, user: User | None, text: str,
             session_id: str = "", match_id: str = "") -> dict:
     """意图 → 卡片 + 文案。所有卡片都是真实数据驱动。"""
@@ -90,7 +99,11 @@ def respond(db: Session, user: User | None, text: str,
         match = _resolve_match(db, text, match_id)
         if match is not None:
             from ..features.analysis import service as analysis_service
-            analysis = analysis_service.generate(db, match.match_id)
+            try:
+                analysis = analysis_service.generate(db, match.match_id)
+            except Exception:  # noqa: BLE001 - 解读异常不能阻塞 /chat
+                log.exception("match analysis failed")
+                analysis = {"status": "unavailable", "reason": "error"}
             card.update({
                 "type": "match_analysis",
                 "match_id": match.match_id,
@@ -99,10 +112,10 @@ def respond(db: Session, user: User | None, text: str,
                 "analysis": analysis if analysis.get("status") == "ready" else None,
                 "text": _analysis_text(analysis),
             })
-            return card
+            return _with_protection(db, user, card)
         card["type"] = "fallback"
         card["text"] = "要分析哪一场？先在首页选中比赛，或直接说“分析：曼城 vs 布莱顿”。"
-        return card
+        return _with_protection(db, user, card)
 
     if intent == "buy_tonight":
         # 只回答已发布判断：raw promoted 还没过发布门，不能当成推荐。
@@ -234,9 +247,4 @@ def respond(db: Session, user: User | None, text: str,
                                    "cached": res.cached}
 
     # 保护中的用户：所有回复追加降温尾注（F11 行为面）
-    if user:
-        st = user_streak(db, user)
-        if st["active"]:
-            card["protection"] = st
-            card["text"] += "（连败保护中：今天建议只看不下。）"
-    return card
+    return _with_protection(db, user, card)

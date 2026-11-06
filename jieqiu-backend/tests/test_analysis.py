@@ -108,3 +108,12 @@ def test_analysis_endpoint_returns_ready_shape(client, monkeypatch):
     body = response.json()
     assert body["status"] == "ready"
     assert body["summary"] == "解读"
+
+
+def test_get_cached_reports_coverage_gap(db, monkeypatch):
+    monkeypatch.setattr(analysis.intel_service, "build_focus",
+                        lambda *a, **k: _focus(deep_eligible=False))
+    result = analysis.get_cached(db, "m-ai-1")
+    assert result["status"] == "unavailable"
+    assert result["reason"] == "coverage"
+    assert result["missing"] == ["lineups"]

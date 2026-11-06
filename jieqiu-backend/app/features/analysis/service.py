@@ -145,6 +145,10 @@ def get_cached(db: Session, match_id: str, date: str | None = None) -> dict:
         return {"status": "unavailable", "reason": "match_not_found"}
     analysis = cached_for_focus(db, focus)
     if analysis is None:
+        coverage = focus.get("coverage") or {}
+        if not coverage.get("deep_eligible"):
+            return {"status": "unavailable", "reason": "coverage",
+                    "missing": coverage.get("missing") or []}
         return {"status": "unavailable", "reason": "not_generated"}
     return analysis
 
