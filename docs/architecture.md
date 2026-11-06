@@ -7,7 +7,7 @@
 
 - 生产后端仍在 `jieqiu-backend/`，尚未迁到 `services/api/`；`services/` 只有迁移说明。
 - 生产前端在 `apps/mobile/`；`apps/web/`、`apps/admin/` 仍是规划，当前管理后台是后端同进程的 `/admin`。
-- OpenAPI 132 路径 / 148 方法；后端 287 tests；Alembic head `20261106_15`。
+- OpenAPI 135 路径 / 151 方法；后端 290 tests；Alembic head `20261106_16`。
 - Postgres 是目标生产库；未设置 `JQ_PROD_DATABASE_URL` 时生产部署仍可能是旧 SQLite 兼容模式。
 - 新增的 catalog/actions 已按 feature slice 落地；verdict/assistant 仍是混合目录，迁移未完成。
 - **聚焦决策流部分实现**：前端已有 `focusStore`、头像/选择器选中回首页聚焦、聚焦卡、详情页“让助理看这场”；后端 `/stats/pulse`、`/matches/{id}/focus`、`/interactions`、`interaction_events` 已实现；`/matches/on-sale` 已返回与 focus 同一判定的 `coverage`；`intel_items`/`match_coverage`/`pulse_daily` 与前端数据脉搏首屏仍未实现。目标契约见 [focused-decision-flow.md](./focused-decision-flow.md)。
@@ -124,7 +124,7 @@ packages/api       生成的 client
 - Alembic 是 schema 事实源；
 - SQLite 仅允许纯单元测试、一次性工具或尚未切换的旧部署；
 - OpenAPI 由 FastAPI 生成；后端导出 `packages/api-client/openapi.json` 快照，client 从快照离线生成；
-- Postgres 迁移先于应用启动；Alembic head 为 `20261106_15`，baseline 24 张表，当前 ORM 共 45 张表（新增 interaction_events、API-Football 5 张表、LLM 4 张表、AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表与管理账号/审计 2 张表）；
+- Postgres 迁移先于应用启动；Alembic head 为 `20261106_16`，baseline 24 张表，当前 ORM 共 46 张表（新增 interaction_events、API-Football 5 张表、LLM 4 张表、AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表与管理账号/审计 2 张表）；
 - AI 输出必须通过 Pydantic / JSON Schema 校验；
 - 领域事件必须有 `dedupe_key`、`payload_hash`、`data_cutoff`。
 

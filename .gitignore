@@ -35,3 +35,5 @@ dist/
 # Expo prebuild 生成的原生工程（CI 生成，不提交）
 apps/mobile/android/
 apps/mobile/ios/
+sp-collector/run_collector.bat
+sp-collector/token.txt

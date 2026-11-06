@@ -454,6 +454,28 @@ class AIAnalysis(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime)
 
 
+class CollectorStatus(Base):
+    """家宽采集器心跳；服务器不能直接探活家庭机器，用采集器主动上报。"""
+
+    __tablename__ = "collector_status"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    host: Mapped[str] = mapped_column(String(128), default="")
+    pid: Mapped[str] = mapped_column(String(32), default="")
+    version: Mapped[str] = mapped_column(String(32), default="")
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_seen: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_error: Mapped[str] = mapped_column(String(300), default="")
+    last_error_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    cycle: Mapped[int] = mapped_column(Integer, default=0)
+    matches: Mapped[int] = mapped_column(Integer, default=0)
+    snapshots_total: Mapped[int] = mapped_column(Integer, default=0)
+    last_push_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    restart_requested_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 class PersonaCopyCache(Base):
     """人设翻译结果缓存：同一 source/hash/persona 只生成一次。"""
 

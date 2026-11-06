@@ -85,7 +85,7 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 
 ### 4.1 聚焦决策流 / LLM 表（部分实现）
 
-> 目标契约见 [focused-decision-flow.md](./focused-decision-flow.md) 与 [api-football.md](./api-football.md)。当前 Alembic head 为 `20261106_15`：`interaction_events`、API-Football 5 张表、LLM 4 张表 + AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表已创建；intel/analysis 表仍未创建。
+> 目标契约见 [focused-decision-flow.md](./focused-decision-flow.md) 与 [api-football.md](./api-football.md)。当前 Alembic head 为 `20261106_16`：`interaction_events`、API-Football 5 张表、LLM 4 张表 + AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表已创建；intel/analysis 表仍未创建。
 
 | 表 | 用途 | 关键约束/索引 |
 |---|---|---|
@@ -321,6 +321,7 @@ select pid, wait_event_type, wait_event, query from pg_stat_activity where wait_
 20261105_13   verdicts 收盘 SP + CLV（closing_sp_h/d/a、closing_at、clv）
 20261106_14   llm_profiles（后台 LLM 能力配置，Key 加密）
 20261106_15   ai_analyses（单场 AI 解读缓存，按事实包 hash 失效）
+20261106_16   collector_status（采集器心跳/重启指令）
 ```
 
 验证命令：

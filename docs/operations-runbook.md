@@ -128,6 +128,7 @@ venv/bin/python -m app.odds_cli status
 - **旧 `/console` 已全部下线**：`/console` 及 `/console/*` 一律 302 到 `/admin`，不再提供登录或页面；W8 `/review/*` 也改用 `admin_t` + RBAC。
 - **新版页面**：
   - 总览：KPI + 今日待办（待复核/复核失败/待发布/模型降级/SP 延迟/未配 Key）；
+  - **采集器**：查看家宽采集器在线/离线、最后心跳、SP 文件年龄、轮次/场次/错误，一键下发重启（采集器下一次心跳退出并由本地 watchdog 拉起）。
   - **接入中心**：按“用途”分组，不按厂商堆列表。AI 能力（对话问答 fast / 发布前复核 deep / 人设文案 / 单场 AI 解读）、数据源（API-Football / The Odds API / 竞彩 SP）、推送（JPush）；fast/deep 可在页面直接上传 Base URL、Model、Key，保存后优先于环境变量，Key 加密存储；
   - 调用用量：fast/deep profile、任务路由（标记已接入/未接入）、今日成本/缓存/最近调用；
   - 文案模型池：只服务人设文案（每日 19:05 预生成），不服务 `/chat`；增删改、优先级、启停、Key 轮换、单模型测试；

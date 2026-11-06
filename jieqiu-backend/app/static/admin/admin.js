@@ -721,7 +721,68 @@ function bindSubjectButtons(data) {
   if (el("#withdraw-cancel")) el("#withdraw-cancel").onclick = closeModal;
 }
 
+/* ---------- collector ---------- */
+
+function ageText(seconds) {
+  if (seconds == null) return "—";
+  if (seconds < 60) return `${Math.max(0, Math.round(seconds))}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  return `${(seconds / 3600).toFixed(1)}h`;
+}
+
+async function loadCollector() {
+  const root = el("#view-collector");
+  root.innerHTML = '<div class="skeleton"></div>';
+  const data = await api("/admin/api/collector");
+  const badge = data.state === "online"
+    ? '<span class="pill green">在线</span>'
+    : data.state === "stale"
+      ? '<span class="pill red">离线/超时</span>'
+      : '<span class="pill muted">从未上报</span>';
+  root.innerHTML = `
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">家宽采集器</h2>
+          <div class="card-sub">采集器每轮上报心跳；服务器无法主动连家庭机器，重启指令由心跳响应下发。</div>
+        </div>
+        ${badge}
+      </div>
+      <div class="status-grid" style="margin-top:16px">
+        <div class="status-item"><div><b>最后心跳</b><div class="status-label">超过 10 分钟视为离线</div></div><span class="mono">${esc(fmtTime(data.last_seen, true))} · ${ageText(data.stale_seconds)}前</span></div>
+        <div class="status-item"><div><b>SP 数据文件</b><div class="status-label">${esc(data.data_updated_at ? "服务器收到的 sp_data.db" : "未收到文件")}</div></div><span class="mono">${esc(fmtTime(data.data_updated_at, true))} · ${ageText(data.data_age_seconds)}前</span></div>
+        <div class="status-item"><div><b>最近成功采集</b><div class="status-label">最近一次抓到官方 SP</div></div><span class="mono">${esc(fmtTime(data.last_success_at, true))}</span></div>
+        <div class="status-item"><div><b>最近推送</b><div class="status-label">SFTP 到服务器</div></div><span class="mono">${esc(fmtTime(data.last_push_at, true))}</span></div>
+      </div>
+      <div class="integration-meta" style="margin-top:16px">
+        <b>主机</b><span class="mono">${esc(data.host || "—")} · pid ${esc(data.pid || "—")} · ${esc(data.version || "—")}</span>
+        <b>轮次</b><span>${data.cycle ?? 0} 轮 · 场次 ${data.matches ?? 0} · 快照 ${data.snapshots_total ?? 0}</span>
+        <b>错误</b><span>${data.last_error ? esc(data.last_error) : "无"}</span>
+        <b>重启</b><span>${data.restart_pending ? "已下发，等待采集器下一次心跳" : "无待执行指令"}</span>
+      </div>
+      <div class="integration-actions" style="margin-top:16px">
+        ${canOperate() ? '<button class="btn secondary small" id="collector-restart">一键重启采集器</button>' : ""}
+        <button class="btn ghost small" data-goto="data">查看数据源</button>
+      </div>
+      ${data.host ? "" : '<div class="af-warning">还没有收到心跳：请确认采集器已启动，且 JQ_COLLECTOR_TOKEN 与服务器一致。</div>'}
+    </div>
+  `;
+  els("[data-goto]").forEach(btn => btn.onclick = () => showView(btn.dataset.goto));
+  if (el("#collector-restart")) {
+    el("#collector-restart").onclick = () => confirmModal(
+      "重启采集器",
+      "会向采集器下发重启指令。采集器在线时下一次心跳会退出，由本地 watchdog 自动拉起；离线时指令会排队。",
+      async () => {
+        await post("/admin/api/collector/restart");
+        toast("已下发重启指令");
+        loadCollector();
+      },
+    );
+  }
+}
+
 /* ---------- integration center ---------- */
+
 
 function integrationStatus(configured, enabled = true) {
   if (!enabled) return '<span class="pill muted">已停用</span>';
@@ -1090,6 +1151,7 @@ async function loadLogs() {
 
 const views = {
   overview: { title: "总览", kicker: "今日运营", loader: loadOverview },
+  collector: { title: "采集器", kicker: "家宽心跳", loader: loadCollector },
   integrations: { title: "接入中心", kicker: "AI 能力与接口", loader: loadIntegrations },
   models: { title: "文案模型池", kicker: "人设文案模型", loader: loadModels },
   gateway: { title: "调用用量", kicker: "调用与成本", loader: loadGateway },
@@ -1101,7 +1163,7 @@ const views = {
 };
 
 let autoTimer = null;
-const AUTO_VIEWS = new Set(["overview", "recommendations", "gateway", "data", "models", "integrations"]);
+const AUTO_VIEWS = new Set(["overview", "recommendations", "gateway", "data", "models", "integrations", "collector"]);
 
 function scheduleAutoRefresh() {
   clearInterval(autoTimer);

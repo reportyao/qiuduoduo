@@ -60,6 +60,9 @@ class Settings(BaseSettings):
                         "soccer_uefa_europa_conference_league")
     odds_api_regions: str = "eu"   # 每多一个 region 多 1 credit；Pinnacle 在 eu
     odds_sync_min_interval_hours: float = 6.0
+    # 家宽采集器心跳/重启令牌；为空时 /collector/heartbeat 关闭
+    collector_token: str = ""
+    collector_data_path: str = "/home/ubuntu/jieqiu-sp/sp_data.db"
     # API-Football（免费档 100 请求/日；默认留 10 次给人工排查）
     api_football_key: str = ""
     # apisports = 官方直连（x-apisports-key）；rapidapi = RapidAPI 市场（x-rapidapi-key）

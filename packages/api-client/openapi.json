@@ -4600,6 +4600,46 @@
         }
       }
     },
+    "/admin/api/collector": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Collector",
+        "operationId": "admin_collector_admin_api_collector_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/collector/restart": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Collector Restart",
+        "operationId": "admin_collector_restart_admin_api_collector_restart_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/api/data": {
       "get": {
         "tags": [
@@ -7012,6 +7052,63 @@
           }
         }
       }
+    },
+    "/collector/heartbeat": {
+      "post": {
+        "tags": [
+          "collector"
+        ],
+        "summary": "Collector Heartbeat",
+        "operationId": "collector_heartbeat_collector_heartbeat_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Heartbeat"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -8049,6 +8146,87 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "Heartbeat": {
+        "properties": {
+          "host": {
+            "type": "string",
+            "maxLength": 128,
+            "title": "Host",
+            "default": ""
+          },
+          "pid": {
+            "type": "string",
+            "maxLength": 32,
+            "title": "Pid",
+            "default": ""
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 32,
+            "title": "Version",
+            "default": ""
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "last_error": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Last Error",
+            "default": ""
+          },
+          "cycle": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Cycle",
+            "default": 0
+          },
+          "matches": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Matches",
+            "default": 0
+          },
+          "snapshots_total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Snapshots Total",
+            "default": 0
+          },
+          "last_push_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Push At"
+          }
+        },
+        "type": "object",
+        "title": "Heartbeat"
       },
       "InboxItem": {
         "properties": {

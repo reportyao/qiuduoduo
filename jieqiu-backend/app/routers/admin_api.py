@@ -26,7 +26,7 @@ from ..features.recommendations import service as recommendation_service
 from ..features.tools import service as parlay_service
 from ..features.tools.schemas import ParlayPlanRequest
 from ..models import (AdminAudit, AdminUser, ApiFootballFixture,
-                      DecisionSnapshot, InteractionEvent, LLMProfile,
+                      DecisionSnapshot, InteractionEvent, LLMProfile, CollectorStatus,
                       Notification, PersonaLLMModel, PushToken,
                       RecommendationEvent, RecommendationPlan, ReviewRun,
                       SPSnapshot, Verdict)
@@ -988,6 +988,70 @@ def admin_llm_profile_test(name: str, request: Request,
         "text": (text or "").strip()[:200],
         "usage": usage,
     }
+
+
+def _collector_view(db: Session) -> dict:
+    row = db.get(CollectorStatus, 1)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    data_path = get_settings().collector_data_path
+    data_updated = None
+    data_age = None
+    try:
+        mtime = datetime.fromtimestamp(Path(data_path).stat().st_mtime, timezone.utc).replace(tzinfo=None)
+        data_updated = _iso(mtime)
+        data_age = int((now - mtime).total_seconds())
+    except OSError:
+        pass
+    if row is None:
+        return {"state": "never", "online": False, "last_seen": None,
+                "stale_seconds": None, "last_success_at": None,
+                "last_error": "", "cycle": 0, "matches": 0,
+                "snapshots_total": 0, "last_push_at": None,
+                "restart_pending": False, "host": "", "pid": "",
+                "version": "", "data_updated_at": data_updated,
+                "data_age_seconds": data_age}
+    stale = int((now - row.last_seen).total_seconds()) if row.last_seen else None
+    online = stale is not None and stale <= 600
+    return {
+        "state": "online" if online else "stale",
+        "online": online,
+        "last_seen": _iso(row.last_seen),
+        "stale_seconds": stale,
+        "last_success_at": _iso(row.last_success_at),
+        "last_error": row.last_error or "",
+        "cycle": row.cycle,
+        "matches": row.matches,
+        "snapshots_total": row.snapshots_total,
+        "last_push_at": _iso(row.last_push_at),
+        "restart_pending": row.restart_requested_at is not None,
+        "restart_requested_at": _iso(row.restart_requested_at),
+        "host": row.host,
+        "pid": row.pid,
+        "version": row.version,
+        "data_updated_at": data_updated,
+        "data_age_seconds": data_age,
+    }
+
+
+@router.get("/api/collector")
+def admin_collector(db: Session = Depends(get_db),
+                    _: None = Depends(admin_auth.require_role("viewer"))):
+    return _collector_view(db)
+
+
+@router.post("/api/collector/restart")
+def admin_collector_restart(request: Request,
+                            db: Session = Depends(get_db),
+                            principal: admin_auth.AdminPrincipal = Depends(
+                                admin_auth.require_role("operator"))):
+    row = db.get(CollectorStatus, 1)
+    if row is None:
+        raise HTTPException(409, "采集器从未上报心跳，无法下发重启")
+    row.restart_requested_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.commit()
+    _audit(db, principal, "collector.restart", "collector", "1",
+           after={"requested_at": _iso(row.restart_requested_at)}, request=request)
+    return _collector_view(db)
 
 
 @router.get("/api/data")
