@@ -5,7 +5,6 @@ import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import { SettingsPage } from "@/components/SettingsPage";
 import {
-  Button,
   Card,
   SettingsGroup,
   SettingsRow,
@@ -115,7 +114,6 @@ export default function PrivacyScreen() {
         />
       </SettingsGroup>
 
-      <Button label="返回" variant="secondary" onPress={() => router.back()} fullWidth />
       <Text variant="caption" color={colors.subtle} center style={styles.note}>
         注销不会删除你已经生成的公开预测；公开账本中的预测不含个人金额。
       </Text>

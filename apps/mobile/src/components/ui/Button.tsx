@@ -15,6 +15,7 @@ export type ButtonVariant =
   | "secondary"
   | "ghost"
   | "danger"
+  | "dangerGhost"
   | "light"
   | "darkPrimary"
   | "darkGhost";
@@ -47,6 +48,7 @@ const PALETTE: Record<
   },
   ghost: { bg: "transparent", pressed: colors.greenSoft, fg: colors.green, border: "transparent" },
   danger: { bg: colors.danger, pressed: colors.dangerPressed, fg: colors.white, border: colors.danger },
+  dangerGhost: { bg: "transparent", pressed: colors.dangerSoft, fg: colors.danger, border: "transparent" },
   light: { bg: colors.greenSoft, pressed: colors.greenSoftStrong, fg: colors.green, border: colors.greenSoft },
   darkPrimary: {
     bg: colors.greenAccent,

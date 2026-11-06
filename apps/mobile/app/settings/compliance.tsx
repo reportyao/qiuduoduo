@@ -140,8 +140,13 @@ export default function ComplianceScreen() {
         <View style={styles.choiceRow}>
           <Button label="7 天" variant="secondary" onPress={() => confirmExclusion(7)} style={styles.flex} />
           <Button label="30 天" variant="secondary" onPress={() => confirmExclusion(30)} style={styles.flex} />
-          <Button label="永久" variant="danger" onPress={() => confirmExclusion("permanent")} style={styles.flex} />
         </View>
+        <Button
+          label="永久自排除"
+          variant="dangerGhost"
+          onPress={() => confirmExclusion("permanent")}
+          style={styles.permanent}
+        />
       </Card>
 
       <Card style={styles.block}>
@@ -207,6 +212,7 @@ export default function ComplianceScreen() {
 const styles = StyleSheet.create({
   paragraph: { lineHeight: 20 },
   block: { gap: spacing.sm },
+  permanent: { alignSelf: "flex-start", marginTop: spacing.sm },
   choiceRow: { flexDirection: "row", gap: spacing.sm },
   flex: { flex: 1 },
   question: { gap: spacing.xs, paddingVertical: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },

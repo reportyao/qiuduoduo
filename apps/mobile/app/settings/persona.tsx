@@ -81,7 +81,7 @@ export default function PersonaScreen() {
         })}
       </View>
 
-      <Card tone="green" style={styles.preview}>
+      <Card style={styles.preview}>
         <Text variant="overline" color={colors.green}>预览 · 今晚的预测会这样说</Text>
         <Text variant="body" color={colors.ink} style={styles.paragraph}>
           {meta.sample}

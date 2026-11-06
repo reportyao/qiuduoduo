@@ -168,7 +168,9 @@ export default function LoginScreen() {
             >
               《隐私政策》
             </Text>
-            。未满 18 周岁禁止购彩。
+          </Text>
+          <Text variant="caption" color={colors.subtle} center style={styles.ageNote}>
+            未满 18 周岁禁止购彩
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -184,4 +186,5 @@ const styles = StyleSheet.create({
   form: { marginTop: spacing.x4, gap: spacing.base },
   altLogin: { marginTop: spacing.base, lineHeight: 17 },
   footer: { marginTop: spacing.x4, lineHeight: 18 },
+  ageNote: { marginTop: spacing.xxs, lineHeight: 16 },
 });
