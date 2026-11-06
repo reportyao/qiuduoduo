@@ -756,8 +756,8 @@ function llmProfileCard(profile, usage, lastError) {
         <b>今日</b><span>${usage.calls} 次调用 · ¥${num(usage.cost, 4)}${lastError ? ` · 最近失败 ${esc(lastError)}` : ""}</span>
       </div>
       <div class="integration-actions">
-        <button class="btn secondary small" data-llm-edit="${profile.name}">配置接口</button>
-        <button class="btn ghost small" data-llm-test="${profile.name}" ${profile.configured ? "" : "disabled"}>测试连接</button>
+        ${canAdmin() ? `<button class="btn secondary small" data-llm-edit="${profile.name}">配置接口</button>` : ""}
+        ${canOperate() ? `<button class="btn ghost small" data-llm-test="${profile.name}" ${profile.configured ? "" : "disabled"}>测试连接</button>` : ""}
       </div>
     </div>`;
 }
