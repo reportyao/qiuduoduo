@@ -44,14 +44,14 @@ registration id 与连接状态，不能作为“App 可正常使用”的验收
 
 ## 真机测试包
 
-- `apk-20261106-21`：版本 `0.3.2`（versionCode 7），在 APK 18 基础上：
+- `apk-20261106-22`：版本 `0.3.3`（versionCode 8），在 APK 18 基础上：
   - 保留 `JCommonService`
   - 移除 JPush AAR 带入的定位、电话、外部存储、`QUERY_ALL_PACKAGES` 权限
   - `JPushReceiver` 增加 `onNotifyMessageArrived` / `onNotifyMessageOpened` 日志，
     便于验证通知到达与点击回调
   - 已复核 APK manifest：无 `READ/WRITE_EXTERNAL_STORAGE`、无定位、无电话权限
-- 安装：`adb install -r qiuduoduo-apk-20261106-21.apk`
-- SHA256：`4b39dec5036c51735ef9f91d90c174141537c9d07dd3c5ad50489da00ec6ce88`
+- 安装：`adb install -r qiuduoduo-apk-20261106-22.apk`
+- SHA256：`70dd6216d089389477526ad403171d8f466670d051c0e0c4635f66334478dfc5`
 
 ### 真机验收清单
 
