@@ -45,7 +45,7 @@ def _sync(as_json: bool) -> int:
         seed_aliases(db)
         sports = sports_for_trade_date(db)
         n, note = sync_the_odds_api(db, Aligner(db), datetime.now(timezone.utc),
-                                    sports=sports or None)
+                                    sports=sports)
         if as_json:
             print(json.dumps({"synced": n, "sports": sports, "note": note},
                              ensure_ascii=False))

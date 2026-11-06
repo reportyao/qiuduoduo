@@ -58,6 +58,7 @@ class Settings(BaseSettings):
                         "soccer_italy_serie_a,soccer_france_ligue_one,"
                         "soccer_uefa_champs_league,soccer_uefa_europa_league,"
                         "soccer_uefa_europa_conference_league")
+    odds_api_regions: str = "eu"   # 每多一个 region 多 1 credit；Pinnacle 在 eu
     odds_sync_min_interval_hours: float = 6.0
     # API-Football（免费档 100 请求/日；默认留 10 次给人工排查）
     api_football_key: str = ""

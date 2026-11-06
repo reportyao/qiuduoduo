@@ -95,7 +95,7 @@ venv/bin/python -m app.recommendations_cli run
 venv/bin/python -m app.odds_cli status
 ```
 
-`seed` 每 30 分钟会调用一次 `sync_the_odds_api`（有 key 且过 `JQ_ODDS_SYNC_MIN_INTERVAL_HOURS` 节流时）。sport key **按当日竞彩联赛动态选择**（英超/西甲/德甲/意甲/法甲/欧冠/欧联/欧协联等），不会为无关联赛烧配额；`JQ_ODDS_SPORTS` 仅作兜底。免费档 500 次/月时建议 `JQ_ODDS_SYNC_MIN_INTERVAL_HOURS=18` 或更高。**不要在没有国际盘时用单源硬发**——这会把“市闸”变成装饰，也会破坏“永远对照市场”的产品承诺。
+`seed` 每 30 分钟会调用一次 `sync_the_odds_api`（有 key 且过 `JQ_ODDS_SYNC_MIN_INTERVAL_HOURS` 节流时）。sport key **按当日竞彩联赛动态选择**；先调免费的 `/sports/{sport}/events`，只把与 `SPMatch` 队名 + 开赛时间（±4h）匹配的 `eventIds` 传给 `/odds`；没有匹配赛事就不请求 odds，不花 credit。默认 `JQ_ODDS_API_REGIONS=eu`、1 市场 = 1 credit/sport。免费档 500 次/月时建议 `JQ_ODDS_SYNC_MIN_INTERVAL_HOURS=18` 或更高。**不要在没有国际盘时用单源硬发**——这会把“市闸”变成装饰，也会破坏“永远对照市场”的产品承诺。
 
 ### 模型闸排障（市闸过了为什么还没有 promoted）
 
@@ -128,7 +128,7 @@ venv/bin/python -m app.odds_cli status
 - **旧 `/console` 已全部下线**：`/console` 及 `/console/*` 一律 302 到 `/admin`，不再提供登录或页面；W8 `/review/*` 也改用 `admin_t` + RBAC。
 - **新版页面**：
   - 总览：KPI + 今日待办（待复核/复核失败/待发布/模型降级/SP 延迟/未配 Key）；
-  - **接入中心**：按“用途”分组，不按厂商堆列表。AI 能力（对话问答 fast / 发布前复核 deep / 人设文案 / 单场实时分析未接入）、数据源（API-Football / The Odds API / 竞彩 SP）、推送（JPush）；fast/deep 可在页面直接上传 Base URL、Model、Key，保存后优先于环境变量，Key 加密存储；
+  - **接入中心**：按“用途”分组，不按厂商堆列表。AI 能力（对话问答 fast / 发布前复核 deep / 人设文案 / 单场 AI 解读）、数据源（API-Football / The Odds API / 竞彩 SP）、推送（JPush）；fast/deep 可在页面直接上传 Base URL、Model、Key，保存后优先于环境变量，Key 加密存储；
   - 调用用量：fast/deep profile、任务路由（标记已接入/未接入）、今日成本/缓存/最近调用；
   - 文案模型池：只服务人设文案（每日 19:05 预生成），不服务 `/chat`；增删改、优先级、启停、Key 轮换、单模型测试；
   - 人设文案：三套 profile、槽位、翻译测试；

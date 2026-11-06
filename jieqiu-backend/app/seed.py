@@ -61,7 +61,7 @@ def main() -> int:
 
         # 国际盘同步：按当日联赛动态选 sport key，避免为无关联赛烧配额。
         sports = sports_for_trade_date(db, trade_date)
-        n_intl, note = sync_the_odds_api(db, aligner, now_utc, sports=sports or None)
+        n_intl, note = sync_the_odds_api(db, aligner, now_utc, sports=sports)
         print(f"[intl] sports={sports or '[]'} {note}")
 
         # 本季 xG 增量同步（源不可达 → 跳过说明；恢复后模闸自动生效）

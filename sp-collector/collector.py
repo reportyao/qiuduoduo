@@ -12,6 +12,8 @@ REMOTE_HOST = os.environ.get("JQ_COLLECTOR_HOST", "43.128.24.244")
 REMOTE_USER = os.environ.get("JQ_COLLECTOR_USER", "ubuntu")
 REMOTE_PASSWORD = os.environ.get("JQ_COLLECTOR_PASSWORD", "")
 REMOTE_DIR = "/home/ubuntu/jieqiu-sp"
+# 服务器机房 IP 会被体彩 WAF 567；服务器模式必须走住宅代理。
+PROXY = os.environ.get("JQ_COLLECTOR_PROXY", "").strip()
 CN = timezone(timedelta(hours=8))
 
 def now_cn(): return datetime.now(CN).strftime("%Y-%m-%dT%H:%M:%S+08:00")
@@ -28,6 +30,11 @@ CREATE TABLE IF NOT EXISTS sp_snapshots (match_id TEXT, pool TEXT, goal_line TEX
 
 def fetch():
     req = urllib.request.Request(API, headers=HDR)
+    if PROXY:
+        opener = urllib.request.build_opener(
+            urllib.request.ProxyHandler({"http": PROXY, "https": PROXY}))
+        with opener.open(req, timeout=20) as r:
+            return json.loads(r.read().decode("utf-8"))
     with urllib.request.urlopen(req, timeout=20) as r:
         return json.loads(r.read().decode("utf-8"))
 
@@ -35,8 +42,10 @@ def parse(d):
     rows_m, rows_s = [], []
     ts = now_cn()
     for block in d.get("value", {}).get("matchInfoList", []):
-        league = block.get("leagueAbbName", "")
+        # 联赛名在 subMatch 上（顶层 block 只有 businessDate）；旧代码读 block 会全空。
+        block_league = block.get("leagueAbbName", "")
         for m in block.get("subMatchList", []):
+            league = m.get("leagueAbbName") or block_league
             mid = str(m.get("matchId") or f"{m.get('matchDate','')}{m.get('matchNumStr','')}")
             rows_m.append((m.get("matchNumStr",""), mid, league,
                            m.get("homeTeamAbbName",""), m.get("awayTeamAbbName",""),

@@ -208,3 +208,78 @@ def test_hhad_market_gate_uses_had_not_hhad(db, monkeypatch):
     assert mg["detail"]["market_pool"] == "had"
     assert mg["detail"]["verdict_pool"] == "hhad"
     assert mg["detail"]["divergence"] < 0.05
+
+
+def test_intl_sync_only_requests_matched_events(db, monkeypatch):
+    from app.modules.intl_odds import sync_the_odds_api
+    from tests.conftest import future_kickoff, today_cn
+    from datetime import datetime, timezone
+    from app.modules.intl_odds import CN
+
+    kick = future_kickoff(today_cn())
+    db.merge(SPMatch(match_id="2043888", match_no="周四888", league="英超",
+                     home_raw="霸主", away_raw="弱旅", home="霸主", away="弱旅",
+                     kickoff=kick, single_flag=True))
+    db.commit()
+    kick_utc = (datetime.strptime(kick, "%Y-%m-%d %H:%M:%S")
+                .replace(tzinfo=CN).astimezone(timezone.utc)
+                .isoformat().replace("+00:00", "Z"))
+    listed = [
+        {"id": "ev-match", "home_team": "霸主", "away_team": "弱旅",
+         "commence_time": kick_utc},
+        {"id": "ev-other", "home_team": "Other", "away_team": "Team",
+         "commence_time": kick_utc},
+    ]
+    seen = {}
+
+    def fetch_list(sport):
+        return listed
+
+    def fetch_odds(sport, ids):
+        seen["ids"] = ids
+        return [{
+            "id": "ev-match", "sport_title": "EPL", "commence_time": kick_utc,
+            "home_team": "霸主", "away_team": "弱旅",
+            "bookmakers": [{"key": "pinnacle", "markets": [{"key": "h2h", "outcomes": [
+                {"name": "霸主", "price": 1.8},
+                {"name": "Draw", "price": 3.5},
+                {"name": "弱旅", "price": 4.2},
+            ]}]}],
+        }]
+
+    n, _ = sync_the_odds_api(
+        db, Aligner(db), datetime.now(timezone.utc), api_key="test",
+        fetch_events=fetch_odds, fetch_event_list=fetch_list,
+        sports=["soccer_epl"])
+    assert n == 1
+    assert seen["ids"] == ["ev-match"]
+    assert db.query(IntlOdds).count() == 1
+
+
+def test_intl_sync_skips_odds_when_no_target_event(db, monkeypatch):
+    from app.modules.intl_odds import sync_the_odds_api
+    from tests.conftest import future_kickoff, today_cn
+    from datetime import datetime, timezone
+
+    kick = future_kickoff(today_cn())
+    db.merge(SPMatch(match_id="2043889", match_no="周四889", league="英超",
+                     home_raw="霸主", away_raw="弱旅", home="霸主", away="弱旅",
+                     kickoff=kick, single_flag=True))
+    db.commit()
+
+    called = {"odds": 0}
+
+    def fetch_odds(sport, ids):
+        called["odds"] += 1
+        return []
+
+    n, note = sync_the_odds_api(
+        db, Aligner(db), datetime.now(timezone.utc), api_key="test",
+        fetch_events=fetch_odds,
+        fetch_event_list=lambda sport: [
+            {"id": "x", "home_team": "Other", "away_team": "Team",
+             "commence_time": "2026-11-06T00:00:00Z"}],
+        sports=["soccer_epl"])
+    assert n == 0
+    assert called["odds"] == 0
+    assert "不请求" in note or "0 场" in note

@@ -61,23 +61,76 @@ def sports_for_trade_date(db: Session, date: str | None = None) -> list[str]:
     return keys
 
 
+def _target_matches(db: Session, date: str) -> list[dict]:
+    """当天竞彩在售/在赛场次；国际盘只允许匹配这些目标。"""
+    from ..models import SPMatch
+    from .timeutil import trade_window
+
+    start, end = trade_window(date)
+    rows = list(db.scalars(select(SPMatch).where(
+        SPMatch.kickoff >= start, SPMatch.kickoff <= end)).all())
+    return [{"match_id": m.match_id, "home": m.home, "away": m.away,
+             "kickoff": m.kickoff} for m in rows if m.home and m.away]
+
+
+def _event_matches(ev: dict, targets: list[dict], aligner: Aligner) -> bool:
+    home = aligner.resolve(ev.get("home_team", "") or "")
+    away = aligner.resolve(ev.get("away_team", "") or "")
+    if not home or not away:
+        return False
+    raw = (ev.get("commence_time") or "").replace("Z", "+00:00")
+    try:
+        kick = datetime.fromisoformat(raw).astimezone(CN)
+    except (TypeError, ValueError):
+        return False
+    for target in targets:
+        if home != target["home"] or away != target["away"]:
+            continue
+        try:
+            target_kick = datetime.strptime(
+                target["kickoff"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=CN)
+        except ValueError:
+            continue
+        if abs((kick - target_kick).total_seconds()) <= 4 * 3600:
+            return True
+    return False
+
+
 def sync_the_odds_api(db: Session, aligner: Aligner, now_utc: datetime,
                       api_key: str | None = None,
                       fetch_events=None,
-                      sports: list[str] | None = None) -> tuple[int, str]:
+                      fetch_event_list=None,
+                      sports: list[str] | None = None,
+                      trade_date: str | None = None) -> tuple[int, str]:
     """同步国际盘。返回 (入库条数, 说明)。key 缺失/网络失败不抛错（管线不中断）。
 
-    fetch_events(sport_key) -> list[event]：可注入用于测试（默认调 the-odds-api）。
+    生产路径先调免费的 /events 列出赛事，只对竞彩采集到的比赛请求 /odds
+    （eventIds 过滤）；没有对应赛事就不花 credit。
+    fetch_events/fetch_event_list 可注入用于测试；只注入 fetch_events 时保留旧行为。
     """
     st = get_settings()
     key = api_key or st.odds_api_key
     if not key:
         return 0, "ODDS_API_KEY 未配置 —— 市闸将以单源 pending_data 运行"
 
+    legacy_fetch = fetch_events is not None and fetch_event_list is None
     if fetch_events is None:
-        def fetch_events(sport: str):
-            url = (f"https://api.the-odds-api.com/v4/sports/{sport}/odds/"
-                   f"?apiKey={urllib.parse.quote(key)}&regions=eu,uk&markets=h2h&oddsFormat=decimal")
+        def fetch_events(sport: str, event_ids: list[str]):
+            params = urllib.parse.urlencode({
+                "apiKey": key,
+                "regions": st.odds_api_regions,
+                "markets": "h2h",
+                "oddsFormat": "decimal",
+                "eventIds": ",".join(event_ids),
+            })
+            url = f"https://api.the-odds-api.com/v4/sports/{sport}/odds/?{params}"
+            with urllib.request.urlopen(url, timeout=20) as r:
+                return json.loads(r.read().decode())
+
+    if fetch_event_list is None:
+        def fetch_event_list(sport: str):
+            params = urllib.parse.urlencode({"apiKey": key})
+            url = f"https://api.the-odds-api.com/v4/sports/{sport}/events/?{params}"
             with urllib.request.urlopen(url, timeout=20) as r:
                 return json.loads(r.read().decode())
 
@@ -97,14 +150,28 @@ def sync_the_odds_api(db: Session, aligner: Aligner, now_utc: datetime,
     sport_list = sports if sports is not None else [
         s.strip() for s in st.odds_sports.split(",") if s.strip()]
     if not sport_list:
-        return 0, "当日联赛没有对应的 Odds API sport key —— 市闸保持 pending_data"
+        return 0, "当日联赛没有对应的 Odds API sport key —— 不请求任何比赛"
+    targets = _target_matches(db, trade_date or _trade_date_cn(now_utc))
+    if not targets and not legacy_fetch:
+        return 0, "当日没有竞彩目标场次 —— 不请求国际盘"
+
     for sport in sport_list:
         try:
-            events = fetch_events(sport)
+            if legacy_fetch:
+                events = fetch_events(sport)
+            else:
+                listed = fetch_event_list(sport) or []
+                ids = [str(ev.get("id")) for ev in listed
+                       if ev.get("id") and _event_matches(ev, targets, aligner)]
+                if not ids:
+                    continue
+                events = fetch_events(sport, ids)
         except Exception as e:
             errors.append(f"{sport}:{type(e).__name__}")
             continue
         for ev in events or []:
+            if not legacy_fetch and not _event_matches(ev, targets, aligner):
+                continue
             bk = {}
             for bm in ev.get("bookmakers", []):
                 for mk in bm.get("markets", []):
@@ -118,7 +185,6 @@ def sync_the_odds_api(db: Session, aligner: Aligner, now_utc: datetime,
                         bk[bm["key"]] = (h, d, a)
             if not bk:
                 continue
-            # 选 Pinnacle（若在）否则市场共识：所有庄家去水后取均值
             if "pinnacle" in bk:
                 sp_h, sp_d, sp_a = bk["pinnacle"]
                 source = "pinnacle"
@@ -137,7 +203,6 @@ def sync_the_odds_api(db: Session, aligner: Aligner, now_utc: datetime,
             kickoff_utc = (ev.get("commence_time") or "").replace("Z", "+00:00")
             if not kickoff_utc:
                 continue
-            # 按唯一键 upsert（同一场新赔率覆盖旧行 —— 市闸只看最新；SP 历史由快照表承担）
             row = db.scalar(select(IntlOdds).where(
                 IntlOdds.source == source, IntlOdds.home == home,
                 IntlOdds.away == away, IntlOdds.kickoff_utc == kickoff_utc))
@@ -146,7 +211,7 @@ def sync_the_odds_api(db: Session, aligner: Aligner, now_utc: datetime,
                                 home_raw=home_raw, away_raw=away_raw, home=home, away=away,
                                 kickoff_utc=kickoff_utc, sp_h=sp_h, sp_d=sp_d, sp_a=sp_a,
                                 retrieved_at=retrieved))
-                db.flush()  # autoflush=False：立刻可见，避免同批同键再 INSERT 撞唯一
+                db.flush()
             else:
                 row.sp_h, row.sp_d, row.sp_a = sp_h, sp_d, sp_a
                 row.retrieved_at = retrieved
@@ -157,6 +222,10 @@ def sync_the_odds_api(db: Session, aligner: Aligner, now_utc: datetime,
         note += f"（失败 {len(errors)}：{';'.join(errors[:3])}）"
     return total, note
 
+
+def _trade_date_cn(now_utc: datetime) -> str:
+    from .timeutil import trade_date_now
+    return trade_date_now(now_utc.astimezone(CN))
 
 def _devig(sp: tuple[float, float, float]) -> tuple[float, float, float]:
     imp = [1.0 / x for x in sp]

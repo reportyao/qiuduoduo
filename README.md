@@ -30,6 +30,7 @@
 - **推荐内容**：主链 build → L1–L5 复核 → publish 已跑通；但 **当前生产 `/recommendations/today` 为空**——raw 复核有 1 场“复核过三关”，尚未产出 published snapshot/plan。前端已按 published 门控，不把未发布判决当推荐；发布链仍需在 `/admin` 查 `review_runs` 失败层。
 - **数据供给**：国际盘已配置，市闸/模型闸按各自阈值工作；模型闸仍有大量 `pending_data`，覆盖率提升依赖更好的当前赛季数据。
 - **API-Football 已配置**：生产使用 API-Sports `apisports` Free 档（100 次/日、10 次/分钟）。已支持当天+次日 fixtures、已链接场次的线阵容/伤停；后台按“今日/明日”分开展示链接数；当日目标场次已全部链接，次日赛程在每日 06:15 同步。当前赛季积分榜被 Free 档限制，需付费档；lineups 通常在停售前才发布，由每小时 `sync-enrich` 补充。
+- **采集器出口**：体彩 WAF 对机房 IP 返回 567，采集器不能直接跑腾讯云；需家宽常驻（systemd / 任务计划 + 心跳）或服务器 + 住宅代理。详见 [sp-collector/README.md](./sp-collector/README.md)。
 - **JPush**：Android 客户端已接入 core SDK（`JCommonService` 已补，registration id 上报、连接状态、通知权限、设备推送状态）。模拟器实测能拿到 registration id 且 `connected=true`，但 MuMu/Houdini 的 arm64 转译会在 RN 启动阶段被 JCore 原生库带崩；**需真机（arm64）复测可用性**。厂商通道与 Master Secret 待配置，服务端目前仍可能 dry-run。详见 [docs/jpush.md](./docs/jpush.md)。
 
 ## 最近完成（2026-11-06）
@@ -95,7 +96,7 @@ just api-install          # pip install -r jieqiu-backend/requirements.txt
 just db-up                # 本地 Postgres（docker compose，端口 5433）
 just db-migrate           # alembic upgrade head
 just api-run              # uvicorn app.main:app --port 8100
-just api-test             # pytest（284 tests）
+just api-test             # pytest（286 tests）
 
 # 前端（Node 22 自带 corepack；仓库 .npmrc 固定 node-linker=hoisted）
 just install              # corepack pnpm install
