@@ -124,6 +124,24 @@ function withJPush(config) {
     const application = manifest.application && manifest.application[0];
     if (!application) return config;
 
+    const serviceName = `${PACKAGE}.jpush.JPushCommonService`;
+    application.service = application.service || [];
+    if (!application.service.some((item) => item.$ && item.$["android:name"] === serviceName)) {
+      application.service.push({
+        $: {
+          "android:name": serviceName,
+          "android:enabled": "true",
+          "android:exported": "true",
+          "android:process": ":pushcore",
+        },
+        "intent-filter": [
+          {
+            action: [{ $: { "android:name": "cn.jiguang.user.service.action" } }],
+          },
+        ],
+      });
+    }
+
     const receiverName = `${PACKAGE}.jpush.JPushReceiver`;
     application.receiver = application.receiver || [];
     if (!application.receiver.some((item) => item.$ && item.$["android:name"] === receiverName)) {
