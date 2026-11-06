@@ -8,7 +8,9 @@ const config: ExpoConfig = {
   userInterfaceStyle: "light",
   scheme: "jieqiu",
   platforms: ["android", "ios"],
-  newArchEnabled: true,
+  // JPush 的 arm64 原生库在 MuMu/Houdini 的 Bridgeless 启动路径上会触发
+  // Hermes 崩溃；先用旧架构验证。真机验证后再决定是否切回新架构。
+  newArchEnabled: false,
   icon: "./assets/icon.png",
   splash: {
     image: "./assets/splash-icon.png",
