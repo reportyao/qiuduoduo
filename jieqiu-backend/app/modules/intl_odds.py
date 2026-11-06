@@ -39,6 +39,14 @@ LEAGUE_SPORT_KEYS: dict[str, str] = {
     "苏超": "soccer_spl",
     "奥甲": "soccer_austria_bundesliga",
     "俄超": "soccer_russia_premier_league",
+    "巴甲": "soccer_brazil_campeonato",
+    "日职": "soccer_japan_j_league",
+    "韩职": "soccer_korea_kleague1",
+    "澳超": "soccer_australia_aleague",
+    "荷甲": "soccer_netherlands_eredivisie",
+    "瑞超": "soccer_sweden_allsvenskan",
+    "葡超": "soccer_portugal_primeira_liga",
+    "法乙": "soccer_france_ligue_two",
 }
 
 

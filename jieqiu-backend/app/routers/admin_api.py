@@ -971,7 +971,8 @@ def admin_llm_profile_test(name: str, request: Request,
         text, usage = llm_gateway.call_profile(
             profile,
             [{"role": "user", "content": "只回复两个字：正常"}],
-            max_tokens=32, temperature=0, timeout_s=15,
+            max_tokens=400 if name == "deep" else 64,
+            temperature=0, timeout_s=45 if name == "deep" else 20,
         )
     except Exception as exc:  # noqa: BLE001 - 测试失败原样返回给管理员
         _audit(db, principal, "llm.profile.test", "llm_profile", name,
