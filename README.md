@@ -8,15 +8,15 @@
 - 接口契约：`packages/api-client/`（OpenAPI 快照 + 生成 TS client，禁止手写接口类型）
 - 数据底座：`sp-collector/`（竞彩官方 SP 自采，家宽出口）
 - 当前线上：`43.128.24.244:8100`，代码提交 `dd4555b`（2026-11-05 部署）
-- 仓库最新：2026-11-06 预测优先 + Unslop 前端改版（后端修复待部署，Android 包 `apk-20261106-16`）
-- Android 测试包：https://github.com/reportyao/qiuduoduo/releases/tag/apk-20261106-16
+- 仓库最新：2026-11-06 JPush 客户端接入（后端修复待部署，Android 包 `apk-20261106-18`）
+- Android 测试包：https://github.com/reportyao/qiuduoduo/releases/tag/apk-20261106-18
 
 | 事实 | 当前值（2026-11-06） |
 |---|---|
 | 版本 | `0.8.0-w8+assistant` |
 | OpenAPI | 128 路径 / 143 方法 |
 | 后端测试 | 271 passed |
-| 前端测试 | 30 passed + typecheck / ESLint / Android Hermes bundle（JPush 原生集成后需重跑 bundle） |
+| 前端测试 | 30 passed + typecheck / ESLint / Android Hermes bundle；APK 18 已含 JPush 原生库 |
 | 生产数据库 | **当前 SQLite + WAL（过渡，单写者）**；目标境内 PostgreSQL 16（云托管优先 / 自建兜底，ADR-0004） |
 | Alembic head | `20261105_13`（CLV 收盘价字段；升级/降级已验证） |
 | W8 冻结基线 | 145 路由（新增路由后须重新采纳） |
@@ -30,7 +30,7 @@
 - **推荐内容**：主链 build → L1–L5 复核 → publish 已跑通；但 **当前生产 `/recommendations/today` 为空**——raw 复核有 1 场“复核过三关”，尚未产出 published snapshot/plan。前端已按 published 门控，不把未发布判决当推荐；发布链仍需在 `/admin` 查 `review_runs` 失败层。
 - **数据供给**：国际盘已配置，市闸/模型闸按各自阈值工作；模型闸仍有大量 `pending_data`，覆盖率提升依赖更好的当前赛季数据。
 - **API-Football 已配置**：生产使用 API-Sports `apisports` Free 档（100 次/日、10 次/分钟）。已支持当天+次日 fixtures、已链接场次的线阵容/伤停；后台按“今日/明日”分开展示链接数；当日目标场次已全部链接，次日赛程在每日 06:15 同步。当前赛季积分榜被 Free 档限制，需付费档；lineups 通常在停售前才发布，由每小时 `sync-enrich` 补充。
-- **JPush**：Android 客户端已接入 core SDK（registration id 上报、通知权限、设备推送状态）；厂商通道与 Master Secret 待配置，服务端目前仍可能 dry-run。
+- **JPush**：Android 客户端已接入 core SDK（`JCommonService` 已补，registration id 上报、连接状态、通知权限、设备推送状态）。模拟器实测能拿到 registration id 且 `connected=true`，但 MuMu/Houdini 的 arm64 转译会在 RN 启动阶段被 JCore 原生库带崩；**需真机（arm64）复测可用性**。厂商通道与 Master Secret 待配置，服务端目前仍可能 dry-run。详见 [docs/jpush.md](./docs/jpush.md)。
 
 ## 最近完成（2026-11-06）
 
@@ -40,9 +40,10 @@
 4. **赛前提醒**：worker 增加 T-3h / T-30m 扫描、去重、中性文案和扇出事件。
 5. **部署加固**：`deploy.py` 合并远端 `/etc/jieqiu-backend.env` 与 `cron.env` 的可选 key，覆盖 `cron.env` 前自动备份最近 5 份。
 6. **移动端深度测试**：修复悬浮头像遮挡、详情原始 ISO 时间、覆盖面板“偏旧/缺”混淆、已砍场次误显示为在售、账本发布状态、周报空态、自排除服务端补同步、深链 `jieqiu://today`、助理发布门等；详见 [docs/frontend-deep-test-2026-11-06.md](./docs/frontend-deep-test-2026-11-06.md)。
-7. **Android 内部测试包**：`apk-20261106-16`，版本 `0.2.1`，包名 `com.qiuduoduo.app`；[Release](https://github.com/reportyao/qiuduoduo/releases/tag/apk-20261106-16) · SHA256 `f63ce85c61a8fe898da9f8ab7db70d18e0d46206464f946615d73ae67cb148bc`。
+7. **Android 内部测试包**：`apk-20261106-18`，版本 `0.3.0`（versionCode 5），包名 `com.qiuduoduo.app`，含 JPush 6.3.0 core；[Release](https://github.com/reportyao/qiuduoduo/releases/tag/apk-20261106-18) · SHA256 `a9da668a3e0f869f2b4d56218791b169a9b7f5b70f16a98b31ec4977b3beba8d`。
 8. **预测优先前端改版**：取消“不预测”底线，首页 Tab 改为“预测”，重写首页/详情/助理/工具/账本/周报/设置文案与信息层级；详见 [docs/prediction-first-frontend-2026-11-06.md](./docs/prediction-first-frontend-2026-11-06.md)。
 9. **Unslop 逐页 UI 精修**：收敛页面节奏、卡片圆角与内边距、字重/对比度、图标颜色和无意义动效；工具页改为“主工具 + 分组列表”；复核轮又降低永久自排除按钮权重、删除隐私页重复返回、拆分登录法律文案、预览卡改中性。详见 [docs/ui-unslop-2026-11-06.md](./docs/ui-unslop-2026-11-06.md)。
+10. **JPush Android 接入**：JPush 6.3.0 + JCore 5.6.0 core、`JCommonService`、registration id 上报、通知权限与“设备推送”状态；模拟器已拿到 `registration_id` 与 `connected=true`，但 MuMu/Houdini 转译会在 RN 启动阶段崩溃，需真机复测。厂商通道可后补。详见 [docs/jpush.md](./docs/jpush.md)。
 
 ## 功能完成度
 
@@ -63,7 +64,7 @@
 | 管理后台 | `/admin`：总览/模型池/用量/人设/推荐主链（逐条+批量+plan 操作+撤回理由）/组合/数据/运维/账号/审计/日志；RBAC + CSRF + 会话撤销 + 审计 |
 | 认证 | 设备令牌 + CN 手机号/微信、GL Email/Google/Apple；JWT 轮换 + refresh 复用检测；生产 fail-closed |
 | 封存与信任 | 判决哈希封存链、公开账本、分享编号可验（`/s/{id}`）、周报/复盘 |
-| 推送骨架 | 事件监控（含赛前 T-3h/T-30m）→ 扇出 → 站内信/推送（JPush 未配置时 dry-run）；通知设置/收件箱/关注已通；真实 JPush 客户端待接 |
+| 推送 | 事件监控（含赛前 T-3h/T-30m）→ 扇出 → 站内信/推送；通知设置/收件箱/关注已通；JPush Android core 已接（registration id/连接状态），Master Secret 未配置时 dry-run；厂商通道待补 |
 | 人设语气 | 三套 profile + 槽位 + 模型池（Key 加密/failover/缓存/预生成）；后台可改 |
 | LLM Gateway | Phase 1：登录用户 `open_chat → fast`，预算/缓存/PII 脱敏/用量账本；匿名 0 LLM |
 | API-Football | API-Sports Free：fixtures 当天/次日、lineups、injuries、自动/人工链接；7 秒节流 + 90/日预算。**当前赛季 standings 被 Free 档拒绝**；apifootball.com 是另一家 provider，未接入 |
@@ -71,7 +72,7 @@
 ### 待做（外部依赖或下一阶段）
 
 - **API-Football 当前赛季 standings**：Free 档不支持 2026 赛季积分榜；若需要完整 focus 覆盖，升级 API-Sports 付费档（或另接 standings provider）。
-- **JPush 真机推送**：客户端 token 注册、通知权限软请求、点击深链、厂商凭证。
+- **JPush 真机验收**：在 arm64 真机确认启动不崩、registration id 上报、通知展示/点击深链；再配 Master Secret 与厂商凭证。模拟器（MuMu/Houdini）已确认会被 JCore 原生库带崩，不能作为验收环境。
 - **支付/订阅权益**：`subscriptions/entitlements`、RevenueCat/微信商户号、免费 1 条/其余锁定。
 - **备份/PITR**：云控制台自动备份或自建 `pg_backup.sh` + WAL 归档 + 恢复演练（上线阻塞项）。
 - **当前赛季 xG**：API-Football 不提供 xG；当前仍是静态历史 xG + 进球代理。选型见 [docs/xg-providers.md](./docs/xg-providers.md)，优先 Sportmonks，回测可用 StatsBomb/FBref。
