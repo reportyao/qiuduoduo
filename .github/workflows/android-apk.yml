@@ -92,11 +92,14 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: 球多多 Android 测试包 ${{ github.ref_name }}
           body: |
-            内部测试 APK。
+            球多多 Android 内部测试包（预测优先 + Unslop UI 精修）。
 
-            - 包名：`com.jieqiu.app`
+            - 版本：`0.2.1`（versionCode 4）
+            - 包名：`com.qiuduoduo.app`
             - API：`http://43.128.24.244:8100`
             - 使用 debug keystore 签名，仅供内部安装测试，不可上架分发
             - 首次安装需要允许“安装未知来源应用”
+            - 首页：今日预测 / 通过三关 / 已发布预测 / 在售；无 published 时显示原因
+            - 未发布详情为浅色复核预览，锁住记注与分享
           files: apps/mobile/qiuduoduo-${{ github.ref_name }}.apk
           fail_on_unmatched_files: true
