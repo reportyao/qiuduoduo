@@ -189,7 +189,7 @@ packages/api       生成的 client
 | 单场聚焦 | `GET /matches/{id}/focus` · `features/intel` | focus service 复用 verdict/catalog；新增 intel_items/match_coverage |
 | 比赛选择器覆盖徽章 | `GET /matches/on-sale` 扩展 | match_coverage |
 | 动作漏斗 | `POST /interactions` | interaction_events |
-| 深读解读 | `analysis_jobs` / `ai_analyses` + LLM Gateway | 仅 eligible 场次，异步/缓存 |
+| 深读解读 | `ai_analyses` + LLM Gateway；`analysis_jobs` 待做 | 仅 eligible 场次，同步生成 + hash/6h 缓存 |
 | 多模型路由 | [llm-gateway.md](./llm-gateway.md) · `/admin` 模型用量页 | fast/deep、预算、缓存、usage |
 | 客观情报 | [api-football.md](./api-football.md) · `modules/api_football.py` | fixtures/lineups/injuries/standings；免费档 90/日 |
 | 后台 | `/admin` 运营台 + `/admin/api/*` | 总览/模型池/用量/人设/主链/组合/数据/日志 |

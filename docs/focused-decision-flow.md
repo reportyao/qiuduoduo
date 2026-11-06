@@ -226,7 +226,7 @@ idle（未选场）
 - `actions` 只给稳定 ID；文案、图标、人设语气由移动端 i18n/Persona 映射。
 - `capabilities` 是服务端业务规则：sealed、settled、休息/自排除、未登录、未成年等都在后端判断，前端不能自行放开。
 - `verdict` 可为 `null`（仅在售、还没判决）；此时 `state=on_sale`，`can_why_not=false`。
-- `interpretation` 可为 `null`；缺失时客户端用模板解释，不阻塞页面。
+- `interpretation` 未生成时为 `null`；详情页可显式触发 `POST /matches/{id}/analysis`，不阻塞 focus 接口。
 - 404：比赛不存在；`stale=true`：仍返回上次结果，客户端标“未刷新”。
 - 只对 `state` 匹配的 action 返回；服务端不返回用户隐私。
 - 详情页仍走 `/verdicts/{id}`、`/matches/{id}/why-not`；focus 不替代它们。
@@ -364,7 +364,7 @@ admin_audit
 - `intel_items.status`：`confirmed | inferred | unknown | stale`；`unknown` 也要展示“缺什么”，不能省略；`stale` 表示有值但超过新鲜度阈值。
 - `match_coverage` 可先由 service 实时计算；有性能压力再物化。
 - `interaction_events` 与 `user_events` 分开：后者要求 `user_id` 非空，前者支持匿名/会话级漏斗。
-- `analysis_jobs` / `ai_analyses` 只在深读解读阶段启用；不阻塞 focus 接口。
+- `ai_analyses` 已用于单场解读缓存；`analysis_jobs` 异步队列仍未做。
 - `ai_analyses` 只存一份事实分析；`narrative_pool` 存每个人设的外层文案，避免 DeepSeek ×3。
 - `pulse_daily` 用于“累计/历史”脉搏；当日实时计数仍可实时算，后台可重算。
 - `admin_audit` 记录展示系数、路由、预算、情报发布等后台变更。
@@ -559,7 +559,7 @@ LLM 成本必须跟用户层级走，不能匿名无限问：
 3. ✅ `/admin` 数据源页、运维页、模型用量页、推荐主链页等后台页面（RBAC+CSRF+审计）。
 4. ✅ API-Football fixtures/lineups/injuries/standings + 免费额度 + 人工链接。
 5. ⏳ `intel_items` / `match_coverage` / `pulse_daily` 持久化。
-6. ⏳ `analysis_jobs` / `ai_analyses` 与 `/admin` 模型用量页。
+6. ⏳ `analysis_jobs` 异步队列；`ai_analyses` 与后台接入中心已落地。
 6. 每步保持旧 `/stream` / 详情接口不变。
 
 ### 数据库
