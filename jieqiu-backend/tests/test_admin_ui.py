@@ -13,6 +13,8 @@ def test_admin_shell_public_and_api_requires_auth(client):
     shell = client.get("/admin")
     assert shell.status_code == 200
     assert "球多多运营台" in shell.text
+    assert "接入中心" in shell.text
+    assert "view-integrations" in shell.text
     assert client.get("/admin/api/overview").status_code == 401
     assert client.get("/admin/assets/admin.js").status_code == 200
 
@@ -53,6 +55,8 @@ def test_admin_model_specific_test_uses_that_model(client, db, monkeypatch):
 def test_admin_overview_and_models_crud(client, db):
     login(client)
     overview = client.get("/admin/api/overview")
+    assert "push_channel" in overview.json()
+    assert "push_tokens" in overview.json()
     assert overview.status_code == 200
     data = overview.json()
     assert data["date"] == today_cn()
@@ -231,3 +235,64 @@ def test_admin_data_exposes_football_coverage(client, db):
     assert "target" in af and "warnings" in af
     assert {"matches", "linked", "lineups", "injuries"} <= set(af["target"])
     assert isinstance(af["warnings"], list)
+
+
+def test_admin_llm_profile_upload_and_status(client, db, monkeypatch):
+    login(client)
+    profiles = client.get("/admin/api/llm/profiles")
+    assert profiles.status_code == 200
+    items = {p["name"]: p for p in profiles.json()["profiles"]}
+    assert set(items) == {"fast", "deep"}
+    assert "api_key" not in items["fast"]
+
+    saved = client.put("/admin/api/llm/profiles/fast", json={
+        "provider": "tokenrhythm",
+        "base_url": "https://tokenrhythm.studio/v1",
+        "model": "egg-alpha",
+        "api_key": "sk-test-admin",
+        "input_price_cny_per_m": 1,
+        "output_price_cny_per_m": 2,
+        "enabled": True,
+    })
+    assert saved.status_code == 200, saved.text
+    body = saved.json()["profile"]
+    assert body["source"] == "admin" and body["configured"] is True
+    assert body["admin_key_set"] is True
+
+    refreshed = client.get("/admin/api/llm/profiles").json()["profiles"]
+    fast = next(p for p in refreshed if p["name"] == "fast")
+    assert fast["model"] == "egg-alpha"
+    assert fast["source"] == "admin"
+
+
+def test_admin_llm_profile_rejects_private_base_url(client):
+    login(client)
+    response = client.put("/admin/api/llm/profiles/fast", json={
+        "provider": "openai_compatible",
+        "base_url": "https://127.0.0.1/v1",
+        "model": "x",
+        "api_key": "k",
+    })
+    assert response.status_code == 400
+
+
+def test_admin_llm_profile_test_uses_saved_profile(client, db, monkeypatch):
+    from app.modules import llm_gateway, persona_llm
+    from app.models import LLMProfile
+
+    login(client)
+    db.add(LLMProfile(
+        name="deep", provider="tokenrhythm",
+        base_url="https://tokenrhythm.studio/v1", model="deepseek-v4.1-flash-1017",
+        api_key_enc=persona_llm.encrypt_key("sk-test-deep"),
+    ))
+    db.commit()
+
+    monkeypatch.setattr(llm_gateway, "call_profile",
+                        lambda *args, **kwargs: ("正常", {"input_tokens": 2,
+                                                          "output_tokens": 2}))
+    response = client.post("/admin/api/llm/profiles/deep/test")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["ok"] is True
+    assert body["model"] == "deepseek-v4.1-flash-1017"

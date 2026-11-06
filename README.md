@@ -14,11 +14,11 @@
 | 事实 | 当前值（2026-11-06） |
 |---|---|
 | 版本 | `0.8.0-w8+assistant` |
-| OpenAPI | 128 路径 / 143 方法 |
+| OpenAPI | 131 路径 / 146 方法 |
 | 后端测试 | 271 passed |
 | 前端测试 | 30 passed + typecheck / ESLint / Android Hermes bundle；APK 18 已含 JPush 原生库 |
 | 生产数据库 | **当前 SQLite + WAL（过渡，单写者）**；目标境内 PostgreSQL 16（云托管优先 / 自建兜底，ADR-0004） |
-| Alembic head | `20261105_13`（CLV 收盘价字段；升级/降级已验证） |
+| Alembic head | `20261106_14`（后台 LLM 能力配置；升级/降级已验证） |
 | W8 冻结基线 | 145 路由（新增路由后须重新采纳） |
 | 线上提交 | `dd4555b`（2026-11-05；仓库最新预测改版待部署） |
 
@@ -44,6 +44,7 @@
 8. **预测优先前端改版**：取消“不预测”底线，首页 Tab 改为“预测”，重写首页/详情/助理/工具/账本/周报/设置文案与信息层级；详见 [docs/prediction-first-frontend-2026-11-06.md](./docs/prediction-first-frontend-2026-11-06.md)。
 9. **Unslop 逐页 UI 精修**：收敛页面节奏、卡片圆角与内边距、字重/对比度、图标颜色和无意义动效；工具页改为“主工具 + 分组列表”；复核轮又降低永久自排除按钮权重、删除隐私页重复返回、拆分登录法律文案、预览卡改中性。详见 [docs/ui-unslop-2026-11-06.md](./docs/ui-unslop-2026-11-06.md)。
 10. **JPush Android 接入**：JPush 6.3.0 + JCore 5.6.0 core、`JCommonService`、registration id 上报、通知权限与“设备推送”状态；模拟器已拿到 `registration_id` 与 `connected=true`，但 MuMu/Houdini 转译会在 RN 启动阶段崩溃，需真机复测。厂商通道可后补。详见 [docs/jpush.md](./docs/jpush.md)。
+11. **后台接入中心**：`/admin` 按“用途”重排 AI 能力（对话问答/发布前复核/人设文案/单场分析）、数据源与推送通道；fast/deep 支持后台直接上传 Base URL、Model、Key，加密存 `llm_profiles` 并优先于环境变量；新增迁移 `20261106_14`。详见 [docs/llm-gateway.md](./docs/llm-gateway.md)。
 
 ## 功能完成度
 
@@ -61,7 +62,7 @@
 | 互动埋点 | `POST /interactions` 白名单幂等；前端 `focus_select` / `action_click` / `free_text_send` / `pulse_open` 已上报 |
 | 合规闭环 | `/gate/verify`、`/me/under18-lock`、`/compliance/state` · `/compliance/self-exclusion` · `/compliance/self-assessment`；`POST /bets` 与 focus capabilities 服务端硬拦截未成年/自排除/休息中；移动端启动回填服务端状态 |
 | 串关体检 | `POST /tools/parlay/check` 四维体检（成本/信息/模型/结构），缺模型不伪造组合概率 |
-| 管理后台 | `/admin`：总览/模型池/用量/人设/推荐主链（逐条+批量+plan 操作+撤回理由）/组合/数据/运维/账号/审计/日志；RBAC + CSRF + 会话撤销 + 审计 |
+| 管理后台 | `/admin`：总览/接入中心/调用用量/文案模型池/人设文案/推荐主链（逐条+批量+plan 操作+撤回理由）/组合/数据/运维/账号/审计/日志；RBAC + CSRF + 会话撤销 + 审计 |
 | 认证 | 设备令牌 + CN 手机号/微信、GL Email/Google/Apple；JWT 轮换 + refresh 复用检测；生产 fail-closed |
 | 封存与信任 | 判决哈希封存链、公开账本、分享编号可验（`/s/{id}`）、周报/复盘 |
 | 推送 | 事件监控（含赛前 T-3h/T-30m）→ 扇出 → 站内信/推送；通知设置/收件箱/关注已通；JPush Android core 已接（registration id/连接状态），Master Secret 未配置时 dry-run；厂商通道待补 |
@@ -93,7 +94,7 @@ just api-install          # pip install -r jieqiu-backend/requirements.txt
 just db-up                # 本地 Postgres（docker compose，端口 5433）
 just db-migrate           # alembic upgrade head
 just api-run              # uvicorn app.main:app --port 8100
-just api-test             # pytest（271 tests）
+just api-test             # pytest（278 tests）
 
 # 前端（Node 22 自带 corepack；仓库 .npmrc 固定 node-linker=hoisted）
 just install              # corepack pnpm install

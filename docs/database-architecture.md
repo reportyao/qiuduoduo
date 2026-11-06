@@ -85,7 +85,7 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 
 ### 4.1 聚焦决策流 / LLM 表（部分实现）
 
-> 目标契约见 [focused-decision-flow.md](./focused-decision-flow.md) 与 [api-football.md](./api-football.md)。当前 Alembic head 为 `20261105_13`：`interaction_events`、API-Football 5 张表、LLM 3 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表已创建；intel/analysis 表仍未创建。
+> 目标契约见 [focused-decision-flow.md](./focused-decision-flow.md) 与 [api-football.md](./api-football.md)。当前 Alembic head 为 `20261106_14`：`interaction_events`、API-Football 5 张表、LLM 4 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表已创建；intel/analysis 表仍未创建。
 
 | 表 | 用途 | 关键约束/索引 |
 |---|---|---|
@@ -319,6 +319,7 @@ select pid, wait_event_type, wait_event, query from pg_stat_activity where wait_
 20261105_11   admin users + audit log
 20261105_12   users 合规列：年龄门/未成年锁定/自排除（迁移 + SQLite 兼容补列）
 20261105_13   verdicts 收盘 SP + CLV（closing_sp_h/d/a、closing_at、clv）
+20261106_14   llm_profiles（后台 LLM 能力配置，Key 加密）
 ```
 
 验证命令：

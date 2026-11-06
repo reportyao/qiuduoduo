@@ -398,6 +398,58 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--brand); outline
 .kpi-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .kpi-grid.auto { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 
+/* 接入中心：按“能力”分卡片，而不是按模型厂商堆列表 */
+.section-title {
+  margin: 28px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.integration-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.integration-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.integration-meta {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px 12px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.integration-meta b {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.integration-meta .mono { overflow-wrap: anywhere; }
+
+.integration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+@media (max-width: 720px) {
+  .integration-grid { grid-template-columns: 1fr; }
+}
+
 .kpi {
   position: static;
   overflow: visible;

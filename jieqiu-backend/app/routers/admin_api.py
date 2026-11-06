@@ -5,10 +5,13 @@
 """
 from __future__ import annotations
 
+import ipaddress
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse
@@ -23,9 +26,10 @@ from ..features.recommendations import service as recommendation_service
 from ..features.tools import service as parlay_service
 from ..features.tools.schemas import ParlayPlanRequest
 from ..models import (AdminAudit, AdminUser, ApiFootballFixture,
-                      DecisionSnapshot, InteractionEvent, Notification,
-                      PersonaLLMModel, PushToken, RecommendationEvent,
-                      RecommendationPlan, ReviewRun, SPSnapshot, Verdict)
+                      DecisionSnapshot, InteractionEvent, LLMProfile,
+                      Notification, PersonaLLMModel, PushToken,
+                      RecommendationEvent, RecommendationPlan, ReviewRun,
+                      SPSnapshot, Verdict)
 from ..modules import admin_auth, api_football, llm_gateway, persona_llm, persona_registry, supply
 from ..modules.sealchain import latest_chain_status
 from ..modules.timeutil import CN, trade_date_now
@@ -47,6 +51,14 @@ LOG_FILES = {
 
 def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value else None
+
+
+def _push_channel_status() -> dict:
+    configured = bool(os.environ.get("JQ_JPUSH_APPKEY")
+                      and os.environ.get("JQ_JPUSH_MASTER_SECRET"))
+    dryrun = (os.environ.get("JQ_JPUSH_DRYRUN", "").strip() in ("1", "true", "yes")
+              or not configured)
+    return {"provider": "jpush", "configured": configured, "dryrun": dryrun}
 
 
 def _model(row: PersonaLLMModel) -> dict:
@@ -322,7 +334,8 @@ def admin_overview(db: Session = Depends(get_db), _: None = Depends(admin_auth.r
     latest_verdict = db.scalar(select(Verdict).order_by(Verdict.created_at.desc()))
     sync_latest, sync_lag = _sync_lag(db)
     degraded_models = [m for m in models if m.enabled and m.fail_count >= 3]
-    unconfigured_profiles = [p for p in llm_gateway.profile_status() if not p["configured"]]
+    unconfigured_profiles = [p for p in llm_gateway.profile_status(db)
+                           if not p["configured"] and p.get("enabled", True)]
 
     def total_status(status: str) -> int:
         return snapshot_statuses.get(status, 0) + plan_statuses.get(status, 0)
@@ -389,7 +402,12 @@ def admin_overview(db: Session = Depends(get_db), _: None = Depends(admin_auth.r
         "sync": {"latest": sync_latest, "lag_seconds": sync_lag},
         "actions": actions,
         "gateway": llm_gateway.usage_summary(db),
-        "gateway_profiles": llm_gateway.profile_status(),
+        "gateway_profiles": llm_gateway.profile_status(db),
+        "push_channel": _push_channel_status(),
+        "push_tokens": {
+            "total": _count(db, PushToken),
+            "enabled": _count(db, PushToken, PushToken.enabled.is_(True)),
+        },
     }
 
 
@@ -841,9 +859,134 @@ def admin_plans_preview(date: str | None = None, stake: float = 100,
 def admin_gateway(db: Session = Depends(get_db), _: None = Depends(admin_auth.require_role("viewer"))):
     summary = llm_gateway.usage_summary(db)
     return {
-        "profiles": llm_gateway.profile_status(),
+        "profiles": llm_gateway.profile_status(db),
         "routes": llm_gateway.TASK_PROFILE,
         "summary": summary,
+    }
+
+
+_LLM_PURPOSE = {
+    "fast": "对话问答 / 轻任务（/chat 开放问题、组合复核）",
+    "deep": "发布前复核 / 单场深读（决策复核、未来实时分析）",
+}
+
+
+def _validate_llm_base_url(raw: str) -> str:
+    url = (raw or "").strip().rstrip("/")
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or not parsed.hostname:
+        raise HTTPException(400, "Base URL 必须是 https:// 开头的完整地址")
+    host = parsed.hostname.lower()
+    if host == "localhost" or host.endswith(".local"):
+        raise HTTPException(400, "Base URL 不允许指向本机/内网")
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        ip = None
+    if ip is not None and (ip.is_private or ip.is_loopback or ip.is_link_local
+                           or ip.is_reserved or ip.is_multicast):
+        raise HTTPException(400, "Base URL 不允许指向内网/保留地址")
+    return url
+
+
+def _llm_profile_view(name: str, db: Session) -> dict:
+    row = db.get(LLMProfile, name)
+    effective = next(p for p in llm_gateway.profile_status(db) if p["name"] == name)
+    return {
+        "name": name,
+        "purpose": _LLM_PURPOSE.get(name, ""),
+        "provider": effective["provider"],
+        "base_url": effective["base_url"],
+        "model": effective["model"],
+        "configured": effective["configured"],
+        "source": effective["source"],  # admin | env | none
+        "enabled": effective.get("enabled", True),
+        "input_price_cny_per_m": effective["input_price_cny_per_m"],
+        "output_price_cny_per_m": effective["output_price_cny_per_m"],
+        "admin_key_set": bool(row and row.api_key_enc),
+        "updated_at": _iso(row.updated_at) if row else None,
+    }
+
+
+class LLMProfileUpdate(BaseModel):
+    provider: str = Field(default="openai_compatible", max_length=32)
+    base_url: str = Field(min_length=8, max_length=256)
+    model: str = Field(min_length=1, max_length=96)
+    api_key: str | None = Field(default=None, max_length=512)
+    clear_key: bool = False
+    input_price_cny_per_m: float = Field(default=0, ge=0, le=10000)
+    output_price_cny_per_m: float = Field(default=0, ge=0, le=10000)
+    enabled: bool = True
+
+
+@router.get("/api/llm/profiles")
+def admin_llm_profiles(db: Session = Depends(get_db),
+                       _: None = Depends(admin_auth.require_role("viewer"))):
+    return {"profiles": [_llm_profile_view(name, db)
+                         for name in llm_gateway.LLM_PROFILE_NAMES]}
+
+
+@router.put("/api/llm/profiles/{name}")
+def admin_llm_profile_update(name: str, body: LLMProfileUpdate, request: Request,
+                             db: Session = Depends(get_db),
+                             principal: admin_auth.AdminPrincipal = Depends(
+                                 admin_auth.require_role("admin"))):
+    if name not in llm_gateway.LLM_PROFILE_NAMES:
+        raise HTTPException(404, "未知的 LLM 能力")
+    base_url = _validate_llm_base_url(body.base_url)
+    row = db.get(LLMProfile, name)
+    if row is None:
+        row = LLMProfile(name=name)
+        db.add(row)
+    before = _llm_profile_view(name, db)
+    row.provider = body.provider.strip()[:32] or "openai_compatible"
+    row.base_url = base_url
+    row.model = body.model.strip()
+    row.input_price_cny_per_m = body.input_price_cny_per_m
+    row.output_price_cny_per_m = body.output_price_cny_per_m
+    row.enabled = body.enabled
+    if body.clear_key:
+        row.api_key_enc = ""
+    elif body.api_key is not None and body.api_key.strip():
+        row.api_key_enc = persona_llm.encrypt_key(body.api_key.strip())
+    db.commit()
+    after = _llm_profile_view(name, db)
+    _audit(db, principal, "llm.profile.update", "llm_profile", name,
+           before=before, after=after, request=request)
+    return {"profile": after}
+
+
+@router.post("/api/llm/profiles/{name}/test")
+def admin_llm_profile_test(name: str, request: Request,
+                           db: Session = Depends(get_db),
+                           principal: admin_auth.AdminPrincipal = Depends(
+                               admin_auth.require_role("operator"))):
+    if name not in llm_gateway.LLM_PROFILE_NAMES:
+        raise HTTPException(404, "未知的 LLM 能力")
+    profile = llm_gateway._profile(name, db)
+    if not profile.get("api_key") or not profile.get("enabled", True):
+        raise HTTPException(400, "该能力尚未配置可用的 API Key")
+    started = datetime.now(timezone.utc)
+    try:
+        text, usage = llm_gateway.call_profile(
+            profile,
+            [{"role": "user", "content": "只回复两个字：正常"}],
+            max_tokens=32, temperature=0, timeout_s=15,
+        )
+    except Exception as exc:  # noqa: BLE001 - 测试失败原样返回给管理员
+        _audit(db, principal, "llm.profile.test", "llm_profile", name,
+               after={"ok": False}, request=request)
+        raise HTTPException(400, f"调用失败：{str(exc)[:240]}")
+    latency_ms = int((datetime.now(timezone.utc) - started).total_seconds() * 1000)
+    _audit(db, principal, "llm.profile.test", "llm_profile", name,
+           after={"ok": True, "model": profile["model"]}, request=request)
+    return {
+        "ok": True,
+        "provider": profile["provider"],
+        "model": profile["model"],
+        "latency_ms": latency_ms,
+        "text": (text or "").strip()[:200],
+        "usage": usage,
     }
 
 
@@ -1104,6 +1247,7 @@ def admin_ops(db: Session = Depends(get_db),
             "total": _count(db, PushToken),
             "enabled": _count(db, PushToken, PushToken.enabled.is_(True)),
         },
+        "push_channel": _push_channel_status(),
         "interactions_24h": interaction_rows,
         "supply": supply_data,
         "recommendations": {"snapshots": snap_count, "plans": plan_count,

@@ -410,6 +410,26 @@ class PersonaLLMModel(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
+class LLMProfile(Base):
+    """按用途命名的 LLM 接入配置（fast=对话/轻任务，deep=发布复核/深读）。
+
+    后台可覆盖环境变量；Key 加密存储，接口只返回是否配置。
+    仅允许已知 profile 名，避免后台随意新增路由。
+    """
+
+    __tablename__ = "llm_profiles"
+
+    name: Mapped[str] = mapped_column(String(16), primary_key=True)  # fast | deep
+    provider: Mapped[str] = mapped_column(String(32), default="openai_compatible")
+    base_url: Mapped[str] = mapped_column(String(256), default="")
+    model: Mapped[str] = mapped_column(String(96), default="")
+    api_key_enc: Mapped[str] = mapped_column(Text, default="")
+    input_price_cny_per_m: Mapped[float] = mapped_column(Float, default=0.0)
+    output_price_cny_per_m: Mapped[float] = mapped_column(Float, default=0.0)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 class PersonaCopyCache(Base):
     """人设翻译结果缓存：同一 source/hash/persona 只生成一次。"""
 

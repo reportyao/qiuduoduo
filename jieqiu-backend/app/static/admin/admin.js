@@ -321,8 +321,9 @@ async function loadModels() {
   root.innerHTML = '<div class="card"><div class="skeleton" style="height:80px"></div></div>';
   const data = await api("/admin/api/models");
   root.innerHTML = `
+    <div class="card notice" style="margin-bottom:16px"><b>这里是“人设文案”专用模型池</b><div class="card-sub" style="margin-top:6px">只用于三套语气改写（每日 19:05 预生成）；不服务 /chat，也不服务发布前复核。对话与复核请到「接入中心」配置 fast/deep。</div></div>
     <div class="toolbar">
-      <div><h2 style="margin:0">模型列表</h2><div class="card-sub" style="margin:0">按优先级自动 failover；Key 加密存储，界面只显示配置状态。</div></div>
+      <div><h2 style="margin:0">文案模型列表</h2><div class="card-sub" style="margin:0">按优先级自动 failover；Key 加密存储，界面只显示配置状态。</div></div>
       ${canAdmin() ? '<button class="btn primary" id="add-model">添加模型</button>' : ''}
     </div>
     <div class="card">${data.models.map(model => `
@@ -720,7 +721,261 @@ function bindSubjectButtons(data) {
   if (el("#withdraw-cancel")) el("#withdraw-cancel").onclick = closeModal;
 }
 
+/* ---------- integration center ---------- */
+
+function integrationStatus(configured, enabled = true) {
+  if (!enabled) return '<span class="pill muted">已停用</span>';
+  return configured
+    ? '<span class="pill green">已配置</span>'
+    : '<span class="pill amber">未配置</span>';
+}
+
+function llmProfileCard(profile, usage, lastError) {
+  const isFast = profile.name === "fast";
+  const title = isFast ? "对话问答" : "发布前复核";
+  const subtitle = isFast
+    ? "/chat 开放问题、轻任务（fast）"
+    : "决策/组合的语义复核（deep）";
+  const source = profile.source === "admin" ? "后台配置"
+    : profile.source === "env" ? "环境变量" : "—";
+  const keyState = profile.admin_key_set ? "后台已保存 Key" : "未在后台保存 Key";
+  return `
+    <div class="card integration-card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">${title}</h2>
+          <div class="card-sub">${subtitle}</div>
+        </div>
+        ${integrationStatus(profile.configured, profile.enabled)}
+      </div>
+      <div class="integration-meta">
+        <b>作用</b><span>${esc(profile.purpose)}</span>
+        <b>模型</b><span class="mono">${esc(profile.provider)} · ${esc(profile.model || "—")}</span>
+        <b>接口</b><span class="mono">${esc(profile.base_url || "—")}</span>
+        <b>来源</b><span>${source} · ${keyState}</span>
+        <b>今日</b><span>${usage.calls} 次调用 · ¥${num(usage.cost, 4)}${lastError ? ` · 最近失败 ${esc(lastError)}` : ""}</span>
+      </div>
+      <div class="integration-actions">
+        <button class="btn secondary small" data-llm-edit="${profile.name}">配置接口</button>
+        <button class="btn ghost small" data-llm-test="${profile.name}" ${profile.configured ? "" : "disabled"}>测试连接</button>
+      </div>
+    </div>`;
+}
+
+async function loadIntegrations() {
+  const root = el("#view-integrations");
+  root.innerHTML = '<div class="skeleton"></div>';
+  const [llm, models, data, overview, gateway] = await Promise.all([
+    api("/admin/api/llm/profiles"),
+    api("/admin/api/models"),
+    api("/admin/api/data"),
+    api("/admin/api/overview"),
+    api("/admin/api/gateway"),
+  ]);
+  const usageByProfile = {};
+  (gateway.summary.rows || []).forEach(row => {
+    const item = usageByProfile[row.profile] || { calls: 0, cost: 0 };
+    item.calls += Number(row.calls || 0);
+    item.cost += Number(row.cost_cny || 0);
+    usageByProfile[row.profile] = item;
+  });
+  const lastErrorByProfile = {};
+  (gateway.summary.recent || []).forEach(row => {
+    if (row.status !== "ok" && row.profile && !lastErrorByProfile[row.profile]) {
+      lastErrorByProfile[row.profile] = row.error_class || row.status;
+    }
+  });
+  const personaModels = models.models || [];
+  const personaEnabled = personaModels.filter(m => m.enabled);
+  const personaFailing = personaEnabled.filter(m => (m.fail_count || 0) >= 3);
+  const af = data.api_football || {};
+  const intl = (data.supply || {}).intl_odds || {};
+  const sync = data.sync || {};
+  const pushChannel = overview.push_channel || {};
+  const pushTokens = overview.push_tokens || {};
+
+  root.innerHTML = `
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2 class="card-title">先选“做什么”，再配“用哪个接口”</h2>
+          <div class="card-sub">LLM 接口可在本页直接上传 Base URL / Model / Key；保存 Key 后后台配置优先于环境变量。数据源与推送密钥仍在服务器环境变量，页面只做状态核对。Key 加密存储，不回显。</div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title">AI 能力</h2>
+    <div class="integration-grid">
+      ${llm.profiles.map(p => llmProfileCard(
+        p, usageByProfile[p.name] || { calls: 0, cost: 0 }, lastErrorByProfile[p.name],
+      )).join("")}
+      <div class="card integration-card">
+        <div class="card-head">
+          <div><h2 class="card-title">人设文案</h2><div class="card-sub">三套语气改写 · 每日 19:05 预生成</div></div>
+          ${integrationStatus(personaEnabled.length > 0 && personaFailing.length === 0)}
+        </div>
+        <div class="integration-meta">
+          <b>作用</b><span>把已封存的判断改写成专家/老炮/萌系三套文案，写缓存供用户端读取。</span>
+          <b>模型池</b><span>${personaEnabled.length}/${personaModels.length} 个启用${personaFailing.length ? ` · ${personaFailing.length} 个熔断` : ""}</span>
+          <b>入口</b><span>文案模型池（不是 /chat 的 fast）</span>
+        </div>
+        <div class="integration-actions">
+          <button class="btn secondary small" data-goto="models">管理文案模型池</button>
+        </div>
+      </div>
+      <div class="card integration-card">
+        <div class="card-head">
+          <div><h2 class="card-title">单场实时分析</h2><div class="card-sub">事实包 → 情景 / 风险解释</div></div>
+          <span class="pill muted">未接入</span>
+        </div>
+        <div class="integration-meta">
+          <b>作用</b><span>把 SP、国际盘、阵容、伤停、积分榜、概率与三闸交给 deep 模型，生成可引用的赛前解读。</span>
+          <b>缺口</b><span>analysis_jobs / ai_analyses / interpretation 写入 / 前端解读卡</span>
+        </div>
+        <div class="integration-actions">
+          <button class="btn ghost small" data-goto="data">先看数据供给</button>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title">数据源</h2>
+    <div class="integration-grid">
+      <div class="card integration-card">
+        <div class="card-head">
+          <div><h2 class="card-title">API-Football</h2><div class="card-sub">阵容 / 伤停 / 积分榜</div></div>
+          ${integrationStatus(Boolean(af.configured))}
+        </div>
+        <div class="integration-meta">
+          <b>今日额度</b><span>${af.used_today ?? 0}/${af.daily_limit ?? 0} 次 · 剩余 ${af.remaining ?? 0}</span>
+          <b>目标覆盖</b><span>阵容 ${af.target?.lineups ?? 0} 行 · 伤停 ${af.target?.injuries ?? 0} 条</span>
+          <b>积分榜</b><span>${af.standings ?? 0} 行（免费档当前赛季不可用）</span>
+        </div>
+        <div class="integration-actions"><button class="btn secondary small" data-goto="data">查看数据源</button></div>
+      </div>
+      <div class="card integration-card">
+        <div class="card-head">
+          <div><h2 class="card-title">The Odds API</h2><div class="card-sub">国际盘 / 市场闸</div></div>
+          ${integrationStatus(Boolean(intl.configured))}
+        </div>
+        <div class="integration-meta">
+          <b>当前数据</b><span>${intl.total ?? 0} 条 · 覆盖 ${intl.covered_matches ?? 0} 场</span>
+          <b>同步</b><span>最新 ${esc(fmtTime(sync.latest, true))} · 延迟 ${sync.lag_seconds == null ? "—" : `${sync.lag_seconds}s`}</span>
+          <b>额度提醒</b><span>免费 500/月；8 联赛 × 6h 约 960/月，需降到 18h 或升级</span>
+        </div>
+        <div class="integration-actions"><button class="btn secondary small" data-goto="data">查看数据源</button></div>
+      </div>
+      <div class="card integration-card">
+        <div class="card-head">
+          <div><h2 class="card-title">竞彩 SP 采集器</h2><div class="card-sub">官方在售赔率 · 5 分钟快照</div></div>
+          ${sync.latest ? '<span class="pill green">有数据</span>' : '<span class="pill amber">无数据</span>'}
+        </div>
+        <div class="integration-meta">
+          <b>最新快照</b><span>${esc(fmtTime(sync.latest, true))}</span>
+          <b>同步延迟</b><span>${sync.lag_seconds == null ? "—" : `${sync.lag_seconds}s`}（超过 1800s 视为异常）</span>
+          <b>位置</b><span>家宽机器 collector.py → SFTP → seed</span>
+        </div>
+        <div class="integration-actions"><button class="btn secondary small" data-goto="data">查看数据源</button></div>
+      </div>
+    </div>
+
+    <h2 class="section-title">推送通道</h2>
+    <div class="integration-grid">
+      <div class="card integration-card">
+        <div class="card-head">
+          <div><h2 class="card-title">JPush</h2><div class="card-sub">设备推送 / 通知</div></div>
+          ${integrationStatus(Boolean(pushChannel.configured))}
+        </div>
+        <div class="integration-meta">
+          <b>服务端</b><span>${pushChannel.configured ? "已配置" : "未配置（当前 dry-run）"}</span>
+          <b>设备令牌</b><span>${pushTokens.enabled ?? 0} 启用 / ${pushTokens.total ?? 0} 总数</span>
+          <b>Key 位置</b><span>服务器环境变量 JQ_JPUSH_APPKEY / JQ_JPUSH_MASTER_SECRET</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  els("[data-goto]").forEach(btn => btn.onclick = () => showView(btn.dataset.goto));
+  els("[data-llm-edit]").forEach(btn => btn.onclick = () => {
+    const profile = llm.profiles.find(p => p.name === btn.dataset.llmEdit);
+    if (profile) openLLMProfileModal(profile);
+  });
+  els("[data-llm-test]").forEach(btn => btn.onclick = async () => {
+    btn.disabled = true; btn.textContent = "测试中…";
+    try {
+      const result = await post(`/admin/api/llm/profiles/${btn.dataset.llmTest}/test`);
+      modal("连接测试", `
+        <div class="detail-list"><div><b>模型</b> ${esc(result.provider)} · ${esc(result.model)}</div>
+        <div><b>延迟</b> ${result.latency_ms}ms</div></div>
+        <div class="card" style="margin-top:16px;white-space:pre-wrap">${esc(result.text || "（空响应）")}</div>`);
+    } catch (error) { toast(error.message, "error"); }
+    btn.disabled = false; btn.textContent = "测试连接";
+  });
+}
+
+function openLLMProfileModal(profile) {
+  const label = profile.name === "fast" ? "对话问答" : "发布前复核";
+  modal(`配置 ${label}`, `
+    <form id="llm-form" class="form-grid">
+      <div class="full"><label>用途</label><div class="card-sub">${esc(profile.purpose)}</div></div>
+      <div><label>Provider</label><input id="llm-provider" value="${esc(profile.provider || "openai_compatible")}" placeholder="deepseek / glm / tokenrhythm"></div>
+      <div><label>Model ID</label><input id="llm-model" required value="${esc(profile.model || "")}" placeholder="deepseek-chat"></div>
+      <div class="full"><label>Base URL</label><input id="llm-base" required value="${esc(profile.base_url || "")}" placeholder="https://api.deepseek.com/v1"></div>
+      <div class="full"><label>API Key ${profile.admin_key_set ? "（已保存，留空不修改）" : ""}</label><input id="llm-key" type="password" placeholder="sk-..."><div class="card-sub" style="margin-top:6px">未保存过 Key 时，留空会整组沿用环境变量；修改 Base URL/Model 请同时填 Key。</div></div>
+      <div><label>输入价 ¥/百万 tokens</label><input id="llm-in" type="number" min="0" step="0.01" value="${profile.input_price_cny_per_m ?? 0}"></div>
+      <div><label>输出价 ¥/百万 tokens</label><input id="llm-out" type="number" min="0" step="0.01" value="${profile.output_price_cny_per_m ?? 0}"></div>
+      <div><label>启用</label><select id="llm-enabled"><option value="true" ${profile.enabled ? "selected" : ""}>启用</option><option value="false" ${!profile.enabled ? "selected" : ""}>停用</option></select></div>
+      ${profile.admin_key_set ? '<div><label>清除已保存 Key</label><select id="llm-clear"><option value="false">否</option><option value="true">是</option></select></div>' : ""}
+      <div class="actions full">
+        <button class="btn primary" type="submit">保存</button>
+        <button class="btn secondary" type="button" id="llm-save-test">保存并测试</button>
+        <button class="btn ghost" type="button" id="llm-cancel">取消</button>
+      </div>
+    </form>`);
+  const save = async () => {
+    const key = el("#llm-key").value.trim();
+    const body = {
+      provider: el("#llm-provider").value.trim() || "openai_compatible",
+      base_url: el("#llm-base").value.trim(),
+      model: el("#llm-model").value.trim(),
+      api_key: key || null,
+      clear_key: el("#llm-clear") ? el("#llm-clear").value === "true" : false,
+      input_price_cny_per_m: Number(el("#llm-in").value || 0),
+      output_price_cny_per_m: Number(el("#llm-out").value || 0),
+      enabled: el("#llm-enabled").value === "true",
+    };
+    await put(`/admin/api/llm/profiles/${profile.name}`, body);
+  };
+  el("#llm-form").onsubmit = async event => {
+    event.preventDefault();
+    try { await save(); toast("已保存"); closeModal(); loadIntegrations(); }
+    catch (error) { toast(error.message, "error"); }
+  };
+  el("#llm-save-test").onclick = async () => {
+    try {
+      await save();
+      const result = await post(`/admin/api/llm/profiles/${profile.name}/test`);
+      modal("连接测试", `
+        <div class="detail-list"><div><b>模型</b> ${esc(result.provider)} · ${esc(result.model)}</div>
+        <div><b>延迟</b> ${result.latency_ms}ms</div></div>
+        <div class="card" style="margin-top:16px;white-space:pre-wrap">${esc(result.text || "（空响应）")}</div>`);
+      loadIntegrations();
+    } catch (error) { toast(error.message, "error"); }
+  };
+  el("#llm-cancel").onclick = closeModal;
+}
+
 /* ---------- gateway / plans / data / logs ---------- */
+
+const TASK_META = {
+  open_chat: { label: "对话问答", connected: true },
+  decision_review: { label: "单场发布复核", connected: true },
+  plan_review: { label: "组合发布复核", connected: true },
+  match_analysis: { label: "单场实时分析", connected: false },
+  copy_polish: { label: "通知/卡片润色", connected: false },
+  adversarial_review: { label: "对抗复核", connected: false },
+  json_repair: { label: "JSON 修复", connected: false },
+};
+const PROFILE_LABEL = { fast: "对话问答（fast）", deep: "发布前复核（deep）" };
 
 async function loadGateway() {
   const root = el("#view-gateway");
@@ -730,16 +985,19 @@ async function loadGateway() {
   root.innerHTML = `
     <div class="kpi-grid auto">
       ${data.profiles.map(profile => `
-        <div class="kpi ${profile.configured ? "green" : "amber"}"><div class="kpi-label">${esc(profile.name)} 配置</div><div class="kpi-value">${profile.configured ? "已配" : "未配"}</div><div class="kpi-foot">${esc(profile.provider)} · ${esc(profile.model)}</div></div>`).join("")}
+        <div class="kpi ${profile.configured ? "green" : "amber"}"><div class="kpi-label">${esc(PROFILE_LABEL[profile.name] || profile.name)}</div><div class="kpi-value">${profile.configured ? "已配" : "未配"}</div><div class="kpi-foot">${esc(profile.source === "admin" ? "后台" : profile.source === "env" ? "环境变量" : "未配置")} · ${esc(profile.provider)} · ${esc(profile.model)}</div></div>`).join("")}
     </div>
-    <div class="card"><h2 class="card-title">任务路由</h2><div class="table-wrap"><table><thead><tr><th>任务</th><th>配置</th></tr></thead><tbody>
-      ${Object.entries(data.routes || {}).map(([task, profile]) => `<tr><td>${esc(task)}</td><td>${esc(profile)}</td></tr>`).join("")}
+    <div class="card"><h2 class="card-title">任务路由</h2><div class="table-wrap"><table><thead><tr><th>用途</th><th>配置</th><th>状态</th></tr></thead><tbody>
+      ${Object.entries(data.routes || {}).map(([task, profile]) => {
+        const meta = TASK_META[task] || { label: task, connected: true };
+        return `<tr><td>${esc(meta.label)}</td><td>${esc(PROFILE_LABEL[profile] || profile)}</td><td>${meta.connected ? statusPill("ok") : '<span class="pill muted">未接入</span>'}</td></tr>`;
+      }).join("")}
     </tbody></table></div></div>
     <div class="card"><h2 class="card-title">今日用量</h2><div class="table-wrap"><table><thead><tr><th>任务</th><th>配置</th><th class="num">调用</th><th class="num">缓存</th><th class="num">Tokens</th><th class="num">成本</th></tr></thead><tbody>
       ${rows.map(row => `<tr><td>${esc(row.task)}</td><td>${esc(row.profile)}</td><td class="num">${row.calls}</td><td class="num">${row.cache_hits}</td><td class="num">${row.input_tokens}/${row.output_tokens}</td><td class="num">¥${num(row.cost_cny, 5)}</td></tr>`).join("") || '<tr><td colspan="6">今日无调用</td></tr>'}
     </tbody></table></div></div>
     <div class="card"><h2 class="card-title">最近调用</h2><div class="table-wrap"><table><thead><tr><th>任务</th><th>模型</th><th>状态</th><th class="num">延迟</th><th class="num">成本</th></tr></thead><tbody>
-      ${(data.summary.recent || []).map(u => `<tr><td>${esc(u.task)}</td><td>${esc(u.model)}</td><td>${statusPill(u.status)}</td><td class="num">${u.latency_ms}ms</td><td class="num">¥${num(u.cost_cny, 6)}</td></tr>`).join("") || '<tr><td colspan="5">暂无调用</td></tr>'}
+      ${(data.summary.recent || []).map(u => `<tr><td>${esc(TASK_META[u.task]?.label || u.task)}</td><td>${esc(u.model)}</td><td>${statusPill(u.status)}</td><td class="num">${u.latency_ms}ms</td><td class="num">¥${num(u.cost_cny, 6)}</td></tr>`).join("") || '<tr><td colspan="5">暂无调用</td></tr>'}
     </tbody></table></div></div>
   `;
 }
@@ -833,8 +1091,9 @@ async function loadLogs() {
 
 const views = {
   overview: { title: "总览", kicker: "今日运营", loader: loadOverview },
-  models: { title: "模型池", kicker: "人设模型", loader: loadModels },
-  gateway: { title: "模型用量", kicker: "调用与成本", loader: loadGateway },
+  integrations: { title: "接入中心", kicker: "AI 能力与接口", loader: loadIntegrations },
+  models: { title: "文案模型池", kicker: "人设文案模型", loader: loadModels },
+  gateway: { title: "调用用量", kicker: "调用与成本", loader: loadGateway },
   personas: { title: "人设文案", kicker: "文案语气", loader: loadPersonas },
   recommendations: { title: "推荐主链", kicker: "判断发布", loader: loadRecommendations },
   plans: { title: "组合预览", kicker: "风险组合", loader: loadPlans },
@@ -843,7 +1102,7 @@ const views = {
 };
 
 let autoTimer = null;
-const AUTO_VIEWS = new Set(["overview", "recommendations", "gateway", "data", "models"]);
+const AUTO_VIEWS = new Set(["overview", "recommendations", "gateway", "data", "models", "integrations"]);
 
 function scheduleAutoRefresh() {
   clearInterval(autoTimer);

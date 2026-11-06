@@ -22,7 +22,7 @@ from sqlalchemy import case, func, select, update
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..models import LLMBudget, LLMCache, LLMUsage
+from ..models import LLMBudget, LLMCache, LLMProfile, LLMUsage
 
 CN = timezone(timedelta(hours=8))
 PROMPT_VER = "v1"
@@ -79,7 +79,10 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def _profile(name: str) -> dict:
+LLM_PROFILE_NAMES = ("fast", "deep")
+
+
+def _env_profile(name: str) -> dict:
     st = _settings()
     if name == "deep":
         return {
@@ -88,6 +91,8 @@ def _profile(name: str) -> dict:
             "model": st.llm_deep_model, "api_key": st.llm_deep_api_key,
             "input_price": st.llm_deep_input_price_cny_per_m,
             "output_price": st.llm_deep_output_price_cny_per_m,
+            "source": "env" if st.llm_deep_api_key else "none",
+            "enabled": True,
         }
     return {
         "name": "fast", "provider": st.llm_fast_provider,
@@ -95,17 +100,55 @@ def _profile(name: str) -> dict:
         "model": st.llm_fast_model, "api_key": st.llm_fast_api_key,
         "input_price": st.llm_fast_input_price_cny_per_m,
         "output_price": st.llm_fast_output_price_cny_per_m,
+        "source": "env" if st.llm_fast_api_key else "none",
+        "enabled": True,
     }
 
 
-def profile_status() -> list[dict]:
+def _admin_profile(name: str, db: Session) -> dict | None:
+    """后台配置优先；未保存 Key 时回退环境变量，显式停用则不回退。"""
+    row = db.get(LLMProfile, name)
+    if row is None:
+        return None
+    base = {
+        "name": name, "provider": row.provider,
+        "base_url": (row.base_url or "").rstrip("/"),
+        "model": row.model,
+        "input_price": row.input_price_cny_per_m,
+        "output_price": row.output_price_cny_per_m,
+        "source": "admin", "enabled": row.enabled,
+    }
+    if not row.enabled:
+        return {**base, "api_key": ""}
+    if not row.api_key_enc:
+        return None
+    from .persona_llm import decrypt_key
+    key = decrypt_key(row.api_key_enc)
+    if not key:
+        # Key 保存过但当前加密密钥无法解开：停用而不是悄悄用 env。
+        return {**base, "api_key": "", "enabled": False}
+    return {**base, "api_key": key}
+
+
+def _profile(name: str, db: Session | None = None) -> dict:
+    if db is not None:
+        override = _admin_profile(name, db)
+        if override is not None:
+            return override
+    return _env_profile(name)
+
+
+def profile_status(db: Session | None = None) -> list[dict]:
     """后台展示用：只返回是否配置/模型/端点，绝不返回 Key。"""
     out = []
-    for name in ("fast", "deep"):
-        p = _profile(name)
+    for name in LLM_PROFILE_NAMES:
+        p = _profile(name, db)
         out.append({
             "name": name, "provider": p["provider"], "model": p["model"],
             "base_url": p["base_url"], "configured": bool(p["api_key"]),
+            "source": p["source"], "enabled": p.get("enabled", True),
+            "input_price_cny_per_m": p["input_price"],
+            "output_price_cny_per_m": p["output_price"],
         })
     return out
 
@@ -150,7 +193,8 @@ def _input_hash(task: str, messages: list[dict], schema: dict | None,
 def _cache_key(task: str, profile: dict, input_hash: str, scope: str,
                user_id: str | None, session_id: str) -> str:
     extra = f"{user_id or ''}:{session_id}" if scope == "user_private" else ""
-    blob = "|".join([task, profile["model"], PROMPT_VER, input_hash, scope, extra])
+    blob = "|".join([task, profile["provider"], profile["base_url"],
+                     profile["model"], PROMPT_VER, input_hash, scope, extra])
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
@@ -356,7 +400,12 @@ def complete(db: Session, task: str, messages: list[dict], *,
     if profile_name is None:
         return LLMResult(degraded=True, error_class="unknown_task",
                          request_id=request_id)
-    profile = _profile(profile_name)
+    profile = _profile(profile_name, db)
+    if not profile.get("enabled", True):
+        return LLMResult(degraded=True, error_class="disabled",
+                         provider=profile["provider"], profile=profile_name,
+                         model=profile["model"],
+                         request_id=request_id)
     if not profile["api_key"]:
         return LLMResult(degraded=True, error_class="not_configured",
                          provider=profile["provider"], profile=profile_name,
@@ -495,6 +544,7 @@ def usage_summary(db: Session, day: str | None = None) -> dict:
         ],
         "recent": [
             {"request_id": u.request_id, "task": u.task, "profile": u.profile,
+             "provider": u.provider, "model": u.model,
              "status": u.status, "error_class": u.error_class,
              "cost_cny": round(u.cost_cny, 6), "latency_ms": u.latency_ms,
              "cache_hit": u.cache_hit,

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>球多多运营台 · 运营控制台</title>
-  <link rel="stylesheet" href="/admin/assets/admin.css">
+  <link rel="stylesheet" href="/admin/assets/admin.css?v=20261106b">
   <meta name="robots" content="noindex">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b6b4f'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
 </head>
@@ -63,11 +63,12 @@
         <button class="nav-item active" data-view="overview"><span>总览</span></button>
         <button class="nav-item" data-view="recommendations"><span>推荐主链</span></button>
         <button class="nav-item" data-view="plans"><span>组合预览</span></button>
-        <div class="nav-label">配置</div>
-        <button class="nav-item" data-view="models"><span>模型池</span></button>
-        <button class="nav-item" data-view="gateway"><span>模型用量</span></button>
+        <div class="nav-label">AI 接入</div>
+        <button class="nav-item" data-view="integrations"><span>接入中心</span></button>
+        <button class="nav-item" data-view="gateway"><span>调用用量</span></button>
+        <button class="nav-item" data-view="models"><span>文案模型池</span></button>
         <button class="nav-item" data-view="personas"><span>人设文案</span></button>
-        <div class="nav-label">系统</div>
+        <div class="nav-label">数据与系统</div>
         <button class="nav-item" data-view="data"><span>数据源</span></button>
         <button class="nav-item" data-view="ops"><span>运维</span></button>
         <button class="nav-item" data-view="users" data-admin-only><span>账号</span></button>
@@ -98,6 +99,7 @@
       <div id="modal" class="modal-backdrop" hidden><div class="modal" id="modal-card"></div></div>
 
       <section id="view-overview" class="view active"></section>
+      <section id="view-integrations" class="view"></section>
       <section id="view-models" class="view"></section>
       <section id="view-gateway" class="view"></section>
       <section id="view-personas" class="view"></section>
@@ -111,7 +113,7 @@
     </main>
   </div>
 
-  <script src="/admin/assets/admin.js"></script>
-  <script src="/admin/assets/admin_extra.js"></script>
+  <script src="/admin/assets/admin.js?v=20261106b"></script>
+  <script src="/admin/assets/admin_extra.js?v=20261106b"></script>
 </body>
 </html>

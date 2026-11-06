@@ -1,6 +1,6 @@
 # 球多多文档索引
 
-最后对账：2026-11-06。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **128 路径 / 143 方法**，后端 **271 tests**，前端 **30 tests**，Alembic head `20261105_13`；当前仍是 SQLite + WAL 过渡。
+最后对账：2026-11-06。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **131 路径 / 146 方法**，后端 **278 tests**，前端 **30 tests**，Alembic head `20261106_14`；当前仍是 SQLite + WAL 过渡。
 
 ## 当前状态（2026-11-06）
 

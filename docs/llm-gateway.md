@@ -1,6 +1,8 @@
 # 球多多 · LLM Gateway 与多模型路由（Phase 1 已实现）
 
-> **状态：Phase 1 已实现。** `llm_usage`/`llm_cache`/`llm_budgets` 三张表与迁移 `20261104_07` 已落；`/chat` 的登录用户 fallback 已接入 `open_chat → fast`，失败/无 Key/超预算/超时/schema 失败一律回到固定引导；后台 `/admin` 模型用量页已展示 profile 状态、今日用量、预算与最近调用。`match_analysis → deep`、`analysis_jobs`、`ai_analyses`、`intel_items` 仍待 Phase 2；2026-11-05 已配置 deep profile（TokenRhythm `deepseek-v4.1-flash-1017`）并用于发布前复核，`llm_review` 实测通过；复核使用压缩 payload + `JQ_LLM_REVIEW_MAX_TOKENS=1600`（推理模型 reasoning tokens 会占额度）。`narrate.py` 先读 `persona_copy_cache`，未命中走确定性模板，不在请求时调 LLM。审核任务 `decision_review` / `adversarial_review` / `plan_review` 已接入；persona 的实际 HTTP 调用也统一走 `llm_gateway.call_profile`，模型池/熔断仍由 persona 子系统管理。
+> **状态：Phase 1 已实现。** `llm_usage`/`llm_cache`/`llm_budgets` 三张表与迁移 `20261104_07` 已落；`/chat` 的登录用户 fallback 已接入 `open_chat → fast`，失败/无 Key/超预算/超时/schema 失败一律回到固定引导；后台 `/admin` 模型用量页已展示 profile 状态、今日用量、预算与最近调用。`match_analysis → deep`、`analysis_jobs`、`ai_analyses`、`intel_items` 仍待 Phase 2；2026-11-05 已配置 deep profile（TokenRhythm `deepseek-v4.1-flash-1017`）并用于发布前复核，`llm_review` 实测通过；复核使用压缩 payload + `JQ_LLM_REVIEW_MAX_TOKENS=1600`（推理模型 reasoning tokens 会占额度）。`narrate.py` 先读 `persona_copy_cache`，未命中走确定性模板，不在请求时调 LLM。审核任务中 `decision_review` / `plan_review` 已接入调用方；`adversarial_review`、`copy_polish`、`json_repair` 目前只有路由定义、没有调用方；persona 的实际 HTTP 调用也统一走 `llm_gateway.call_profile`，模型池/熔断仍由 persona 子系统管理。
+>
+> **2026-11-06 后台接入中心：** fast/deep 现在可以在 `/admin` →「接入中心」直接配置，Key 加密存 `llm_profiles`，**后台配置优先于环境变量**；环境变量仍是兜底。后台「文案模型池」是另一套 `persona_llm_models`，只服务人设文案，不服务 `/chat`。
 >
 > 目标：用 **两条车道 + 任务路由 + 缓存 + 原子预算 + 异步分析** 接入多个模型，而不是每条消息都调一次 LLM。
 >
@@ -74,11 +76,30 @@ JQ_LLM_DAILY_BUDGET_CNY=50
 
 约定：
 
-- Key 只走 env/KMS；数据库不存明文。
-- Provider 端点只允许内置适配器；不允许后台填任意 `base_url`（SSRF）。
+- Key 只走 env/KMS 或后台加密存储（Fernet，`llm_profiles`）；数据库不存明文，接口不回显。
+- 后台 `base_url` 必须 HTTPS，拒绝 localhost/内网/保留地址；仍建议只填可信厂商。
 - 模型名要固定版本，不用会漂移的别名；换模型走配置版本/审计。
 - `fast` 不是“无限免费”：仍要 RPM/TPM 限流、超时、熔断和备用 profile。
 - 免费档的数据条款要先审：用户记忆、注单、连败等个人数据不发给免费模型。
+
+### 3.3 后台「接入中心」与优先级
+
+`/admin` →「接入中心」按**用途**展示，而不是按厂商：
+
+| 卡片 | 对应 profile | 作用 | 配置位置 |
+|---|---|---|---|
+| 对话问答 | `fast` | `/chat` 开放问题、轻任务 | 接入中心（后台优先） |
+| 发布前复核 | `deep` | 单场/组合发布前的语义复核 | 接入中心（后台优先） |
+| 人设文案 | `persona_llm_models` | 三套语气改写，每日 19:05 预生成 | 文案模型池 |
+| 单场实时分析 | `deep`（规划中） | 事实包 → 情景/风险解释 | 未接入 |
+
+解析顺序：
+
+1. `llm_profiles` 有该 profile 且启用、有可解密 Key → 用后台配置；
+2. 否则用 `JQ_LLM_FAST_*` / `JQ_LLM_DEEP_*` 环境变量；
+3. 都没有 → `degraded`，调用方走模板/规则，不阻塞主链。
+
+显式在后台停用某个 profile 时，不会回退环境变量。后台只保存 Key 的加密密文；`GET /admin/api/llm/profiles` 只返回 `configured/source`。
 
 ### 3.1 Provider 适配器
 
@@ -152,7 +173,7 @@ llm_budgets             -- ✅ 已实现（global 行 task='*', profile='*'）
 迁移建议：
 
 - `20261104_07_llm_gateway.py`：已落 `llm_usage`/`llm_cache`/`llm_budgets`；
-- 聚焦/情报表（`intel_items`/`match_coverage`/`pulse_daily`）：待落，用下一个可用迁移号（当前 head `20261105_13`）；
+- 聚焦/情报表（`intel_items`/`match_coverage`/`pulse_daily`）：待落，用下一个可用迁移号（当前 head `20261106_14`）；
 - 都要求 up/down；生产只 `alembic upgrade head`。
 
 ### 预算必须原子

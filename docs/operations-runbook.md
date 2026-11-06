@@ -128,16 +128,18 @@ venv/bin/python -m app.odds_cli status
 - **旧 `/console` 已全部下线**：`/console` 及 `/console/*` 一律 302 到 `/admin`，不再提供登录或页面；W8 `/review/*` 也改用 `admin_t` + RBAC。
 - **新版页面**：
   - 总览：KPI + 今日待办（待复核/复核失败/待发布/模型降级/SP 延迟/未配 Key）；
-  - 模型池：增删改、优先级、启停、Key 轮换、单模型测试；
-  - 模型用量：fast/deep profile、任务路由、今日成本/缓存/最近调用；
+  - **接入中心**：按“用途”分组，不按厂商堆列表。AI 能力（对话问答 fast / 发布前复核 deep / 人设文案 / 单场实时分析未接入）、数据源（API-Football / The Odds API / 竞彩 SP）、推送（JPush）；fast/deep 可在页面直接上传 Base URL、Model、Key，保存后优先于环境变量，Key 加密存储；
+  - 调用用量：fast/deep profile、任务路由（标记已接入/未接入）、今日成本/缓存/最近调用；
+  - 文案模型池：只服务人设文案（每日 19:05 预生成），不服务 `/chat`；增删改、优先级、启停、Key 轮换、单模型测试；
   - 人设文案：三套 profile、槽位、翻译测试；
   - 推荐主链：运行 build→review→publish、逐条/批量复核、发布、撤回、搜索、分页；
   - 组合预览、数据源、运维（告警/API-Football/通知队列/Push/24h 互动）、账号、审计、日志。
+- **LLM 配置优先级**：`llm_profiles`（后台，加密）→ 环境变量 `JQ_LLM_FAST_*` / `JQ_LLM_DEEP_*` → `degraded` 模板兜底；后台显式停用不回退 env。迁移 `20261106_14_llm_profiles`。
 - **审计**：`admin_audit` 记录 actor/role/action/target/before/after/IP；登录、模型、人设、推荐发布、账号变更均写入；`/admin/api/audit?limit=&offset=` 读取。
 - **分页**：`/admin/api/recommendations?limit=&offset=` 返回 `page.has_more/next_offset`；审计同样 limit/offset；日志只读尾部 256KB。
 - **GET 只读**：`/admin/api/*` 与 `/recommendations/today` 只读不写库；过期由 30 分钟 cron 的 `run_pipeline → expire_due` 处理，`/recommendations/today` 只按 `expires_at` 过滤。公开详情 `GET /recommendations/{id}`、`/recommendations/plans/{id}` 仍会惰性 `expire_due`（读时顺带过期），属预期。
 - **会话/横向扩展**：`admin_t` 会话在进程内存；多 worker 前需换 Redis/DB 会话。
-- **W8 冻结**：新增路由后登录后台调用 `POST /review/freeze/adopt`；当前基线 **145 路由**。
+- **W8 冻结**：新增路由后登录后台调用 `POST /review/freeze/adopt`；当前基线 **145 路由**。2026-11-06 新增 3 条 admin 接入路由（LLM profiles 查询/保存/测试），部署后必须重新 adopt。
 
 ### API-Football（免费档）
 
@@ -202,7 +204,7 @@ export JQ_LLM_USER_DAILY_CALLS=50
 - `decision_review`/`plan_review` 已接 deep 模型；复核只发送压缩后的必要字段（~1KB），避免推理模型把 token 全花在 reasoning 上。2026-11-05 实测 `rules+deepseek-v4.1-flash-1017`、`llm_degraded=false`、`llm_review=pass`。
 - `match_analysis`/`adversarial_review` 任务已注册，但尚未接异步分析队列/情报表；当前只用于发布前复核。
 - 无 Key/超预算/超时/schema 失败均 `degraded`，不会阻塞判决，也不会返回 5xx。
-- Key 只在 env；`/admin` 模型用量页只显示“已配置/未配置”，不回显明文。
+- LLM Key 可走 env 或后台加密存储（`llm_profiles`）；`/admin` 只显示“已配置/未配置”与来源，不回显明文。
 - `/admin` 模型池/人设写操作均已接入 `admin_audit`；写操作强制 CSRF（`admin_csrf` + `X-CSRF-Token`），角色/启停/改密/删除会撤销该账号全部会话。
 - 详见 [llm-gateway.md](./llm-gateway.md)。
 

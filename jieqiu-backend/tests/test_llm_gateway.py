@@ -183,3 +183,65 @@ def test_admin_gateway_status(client, db):
     data = client.get("/admin/api/gateway").json()
     assert {p["name"] for p in data["profiles"]} == {"fast", "deep"}
     assert data["routes"]
+
+
+def test_admin_profile_overrides_env(db, monkeypatch):
+    from app.models import LLMProfile
+    from app.modules import persona_llm
+
+    db.add(LLMProfile(
+        name="fast", provider="tokenrhythm",
+        base_url="https://tokenrhythm.studio/v1", model="egg-alpha",
+        api_key_enc=persona_llm.encrypt_key("admin-key"),
+        input_price_cny_per_m=1.0, output_price_cny_per_m=2.0,
+    ))
+    db.commit()
+    monkeypatch.setattr(llm_gateway, "_settings", lambda: _settings(
+        llm_fast_api_key="env-key", llm_fast_model="glm-4-flash"))
+    called = {}
+
+    def fake_call(profile, messages, **kw):
+        called["model"] = profile["model"]
+        called["key"] = profile["api_key"]
+        return "ok", {"input_tokens": 1, "output_tokens": 1}
+
+    monkeypatch.setattr(llm_gateway, "_call", fake_call)
+    result = llm_gateway.complete(db, "open_chat", _msgs())
+    assert result.degraded is False
+    assert called == {"model": "egg-alpha", "key": "admin-key"}
+    assert result.profile == "fast"
+
+
+def test_admin_profile_without_key_falls_back_env(db, monkeypatch):
+    from app.models import LLMProfile
+
+    db.add(LLMProfile(name="fast", provider="glm", base_url="https://example.invalid/v4",
+                      model="admin-model", api_key_enc=""))
+    db.commit()
+    monkeypatch.setattr(llm_gateway, "_settings", lambda: _settings(
+        llm_fast_api_key="env-key", llm_fast_model="glm-4-flash"))
+
+    def fake_call(profile, messages, **kw):
+        return "ok", {"input_tokens": 1, "output_tokens": 1}
+
+    monkeypatch.setattr(llm_gateway, "_call", fake_call)
+    result = llm_gateway.complete(db, "open_chat", _msgs())
+    assert result.degraded is False
+    assert result.model == "glm-4-flash"
+
+
+def test_admin_disabled_profile_blocks_env_fallback(db, monkeypatch):
+    from app.models import LLMProfile
+    from app.modules import persona_llm
+
+    db.add(LLMProfile(
+        name="fast", provider="glm", base_url="https://example.invalid/v4",
+        model="glm-4-flash", api_key_enc=persona_llm.encrypt_key("admin-key"),
+        enabled=False,
+    ))
+    db.commit()
+    monkeypatch.setattr(llm_gateway, "_settings", lambda: _settings(
+        llm_fast_api_key="env-key"))
+    result = llm_gateway.complete(db, "open_chat", _msgs())
+    assert result.degraded is True
+    assert result.error_class == "disabled"
