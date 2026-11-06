@@ -84,6 +84,14 @@ class JPushProvider:
             with urllib.request.urlopen(req, timeout=8) as resp:
                 body = resp.read().decode("utf-8", "replace")
                 data = json.loads(body or "{}")
+                # JPush 对“audience 里没有有效 registration id”等业务错误
+                # 仍可能返回 HTTP 200 + error 字段，不能当成功。
+                err = data.get("error")
+                if isinstance(err, dict) and err:
+                    return PushResult(
+                        False,
+                        error=f"jpush_{err.get('code', '')}:{err.get('message', '')}"[:300],
+                    )
                 return PushResult(True, provider_msg_id=str(data.get("msg_id", "")))
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:300]

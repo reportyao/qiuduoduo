@@ -245,3 +245,28 @@ def test_prematch_reminders_dedupe(db):
                          event_type="prematch_t3h") == 1
     assert scan_prematch(db, now_cn=now, minutes_before=180,
                          event_type="prematch_t3h") == 0
+
+
+def test_jpush_provider_treats_200_error_as_failure(monkeypatch):
+    """JPush 对无有效 audience 可能返回 200 + error，不能标记为已发送。"""
+    from app.features.assistant import providers
+
+    class _Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self):
+            return b'{"error":{"code":1011,"message":"cannot find user by this audience"}}'
+
+    monkeypatch.setenv("JQ_JPUSH_APPKEY", "test-appkey")
+    monkeypatch.setenv("JQ_JPUSH_MASTER_SECRET", "test-secret")
+    monkeypatch.delenv("JQ_JPUSH_DRYRUN", raising=False)
+    monkeypatch.setattr(providers.urllib.request, "urlopen",
+                        lambda *args, **kwargs: _Resp())
+    result = providers.JPushProvider().send(
+        ["reg-invalid"], providers.PushMessage(title="测试", body="正文"))
+    assert result.ok is False
+    assert "1011" in result.error
