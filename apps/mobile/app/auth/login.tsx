@@ -168,7 +168,7 @@ export default function LoginScreen() {
             >
               《隐私政策》
             </Text>
-            。未满 18 周岁禁止购买彩票。
+            。未满 18 周岁禁止购彩。
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

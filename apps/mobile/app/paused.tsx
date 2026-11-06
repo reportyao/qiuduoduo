@@ -76,7 +76,7 @@ export default function PausedScreen() {
         />
       </View>
       <Text variant="caption" color={colors.subtle} center style={styles.footer}>
-        数据分析结果，不构成投注建议。未满 18 周岁禁止购买彩票。
+        数据分析结果，不构成投注建议。未满 18 周岁禁止购彩。
       </Text>
     </SafeAreaView>
   );

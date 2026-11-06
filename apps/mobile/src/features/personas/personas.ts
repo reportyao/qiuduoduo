@@ -114,7 +114,7 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     chatPlaceholder: "继续问球多多…",
     chatGreeting: "我在。问今日预测、问为什么不出、问复盘，或者让我记住你的偏好。",
     whyNotLead: "不出预测不是它不会赢，是我们算不清。算不清就不预测。",
-    footer: "数据分析结果，不构成投注建议。未满 18 周岁禁止购买彩票。",
+    footer: "数据分析结果，不构成投注建议。未满 18 周岁禁止购彩。",
     verdictSummary: ({ status, pickLabel, prob, rake, pendingGate, gateNote }) => {
       if (status === "promoted") {
         return `预测 ${pickLabel}，概率 ${prob != null ? (prob * 100).toFixed(1) + "%" : "--"}。` +
@@ -158,7 +158,7 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     chatPlaceholder: "跟老炮聊聊…",
     chatGreeting: "来了兄弟。今天看哪场预测、为啥不出、昨天咋样，直接问。",
     whyNotLead: "不出预测不代表它不会赢。是这账咱算不清，算不清就不瞎给。",
-    footer: "数据分析结果，不构成投注建议。未满 18 周岁禁止购买彩票。",
+    footer: "数据分析结果，不构成投注建议。未满 18 周岁禁止购彩。",
     verdictSummary: ({ status, pickLabel, prob, rake, pendingGate, gateNote }) => {
       if (status === "promoted") {
         return `兄弟，预测 ${pickLabel}，模型给到 ${prob != null ? (prob * 100).toFixed(1) + "%" : "--"}，` +
@@ -202,7 +202,7 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     chatPlaceholder: "想聊什么呀…",
     chatGreeting: "我在呢。今天看哪场预测、为什么不出、昨天怎么样，都可以问我。",
     whyNotLead: "不出预测不是它不会赢，是我算不清。算不清就不预测。",
-    footer: "数据分析结果，不构成投注建议。未满 18 周岁禁止购买彩票。",
+    footer: "数据分析结果，不构成投注建议。未满 18 周岁禁止购彩。",
     verdictSummary: ({ status, pickLabel, prob, rake, pendingGate, gateNote }) => {
       if (status === "promoted") {
         return `预测 ${pickLabel}，概率 ${prob != null ? (prob * 100).toFixed(1) + "%" : "--"}，` +
