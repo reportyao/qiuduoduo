@@ -168,6 +168,8 @@ function withJPush(config) {
       "android.permission.ACCESS_BACKGROUND_LOCATION",
       "android.permission.READ_PHONE_STATE",
       "android.permission.QUERY_ALL_PACKAGES",
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
     ];
     manifest["uses-permission"] = manifest["uses-permission"] || [];
     for (const name of removePermissions) {

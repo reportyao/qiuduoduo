@@ -42,6 +42,41 @@ JPush 6.x 要求 App 自己声明一个 `JCommonService` 子类，否则 JCore �
 **结论：需要一台真机（arm64 Android）复测。** 模拟器上只能验证到
 registration id 与连接状态，不能作为“App 可正常使用”的验收。
 
+## 真机测试包
+
+- `apk-20261106-20`：版本 `0.3.1`（versionCode 6），在 APK 18 基础上：
+  - 保留 `JCommonService`
+  - 移除 JPush AAR 带入的定位、电话、外部存储、`QUERY_ALL_PACKAGES` 权限
+  - `JPushReceiver` 增加 `onNotifyMessageArrived` / `onNotifyMessageOpened` 日志，
+    便于验证通知到达与点击回调
+- 安装：`adb install -r qiuduoduo-apk-20261106-20.apk`
+
+### 真机验收清单
+
+1. **启动不崩**：冷启动进首页，连续杀进程再启动 3 次。
+2. **注册成功**：`adb logcat -s JPushModule JPush` 看到
+   `registration_id=...` 与 `connected=true`。
+3. **服务端绑定**：登录后进“我的 → 通知设置”，设备推送行显示已绑定；
+   或 `GET /push/health` 返回 `enabled_tokens >= 1`。
+4. **通知到达**：配置 Master Secret 与 `JQ_JPUSH_DRYRUN=0` 后，从 JPush
+   控制台发送通知；前台/后台各测一次，确认通知栏展示。
+5. **点击回调**：点通知打开 App，logcat 应出现
+   `notification_opened ... extras={"deeplink":...}`。
+6. **权限**：Android 13+ 首次打开推送开关时弹通知权限；拒绝后 App 不崩。
+
+## 已知缺口（按优先级）
+
+1. **通知点击深链未路由**：当前只记录 `notification_opened` 日志，尚未把
+   `deeplink` 交给 Expo Router。真机确认点击回调后再接，避免未验证代码。
+2. **退出登录未解绑 token**：`/push/unregister` 后端已有，客户端未调用；
+   同一设备换账号可能收到 409。建议在登出前用旧 access token 解绑。
+3. **前台通知**：未做应用内横幅/弹层；JPush 默认行为是通知栏展示。
+4. **token 刷新**：只在登录后轮询 60 秒；若 registration id 晚到或更换，
+   不会再次上报。建议加 AppState 回前台重试。
+5. **通知权限请求时机**：只在用户打开“推送”开关时请求；未打开设置的用户
+   不会收到系统权限弹窗。
+6. **iOS**：未接入。
+
 ## 厂商通道
 
 **暂未配置，以后可以补，且不影响现在这版核心接入**。厂商通道主要是提升国产
