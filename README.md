@@ -8,8 +8,8 @@
 - 接口契约：`packages/api-client/`（OpenAPI 快照 + 生成 TS client，禁止手写接口类型）
 - 数据底座：`sp-collector/`（竞彩官方 SP 自采，家宽出口）
 - 当前线上：`43.128.24.244:8100`，2026-11-06 已部署后台接入中心/单场 AI 解读（SQLite 启动期建表）
-- 仓库最新：2026-11-06 JPush 客户端接入（后端修复待部署，真机包 `apk-20261106-22`）
-- Android 测试包：https://github.com/reportyao/qiuduoduo/releases/tag/apk-20261106-22
+- 仓库最新：2026-11-06 单场 AI 解读 + 后台接入中心（后端已部署，真机包 `apk-20261106-23`）
+- Android 测试包：https://github.com/reportyao/qiuduoduo/releases/tag/apk-20261106-23
 
 | 事实 | 当前值（2026-11-06） |
 |---|---|
@@ -41,7 +41,7 @@
 4. **赛前提醒**：worker 增加 T-3h / T-30m 扫描、去重、中性文案和扇出事件。
 5. **部署加固**：`deploy.py` 合并远端 `/etc/jieqiu-backend.env` 与 `cron.env` 的可选 key，覆盖 `cron.env` 前自动备份最近 5 份。
 6. **移动端深度测试**：修复悬浮头像遮挡、详情原始 ISO 时间、覆盖面板“偏旧/缺”混淆、已砍场次误显示为在售、账本发布状态、周报空态、自排除服务端补同步、深链 `jieqiu://today`、助理发布门等；详见 [docs/frontend-deep-test-2026-11-06.md](./docs/frontend-deep-test-2026-11-06.md)。
-7. **Android 内部测试包**：`apk-20261106-22`，版本 `0.3.3`（versionCode 8），包名 `com.qiuduoduo.app`，含 JPush 6.3.0 core 与 `JCommonService`，已移除定位/电话/外部存储权限；[Release](https://github.com/reportyao/qiuduoduo/releases/tag/apk-20261106-22) · SHA256 `70dd6216d089389477526ad403171d8f466670d051c0e0c4635f66334478dfc5`。
+7. **Android 内部测试包**：`apk-20261106-23`，版本 `0.3.4`（versionCode 9），包名 `com.qiuduoduo.app`，含 JPush 6.3.0 core 与 `JCommonService`，已移除定位/电话/外部存储权限；[Release](https://github.com/reportyao/qiuduoduo/releases/tag/apk-20261106-23) · SHA256 `fdd8f1025c6809c5774f2b6befa29db956bf48873c74f78edc0899fc96252781`。
 8. **预测优先前端改版**：取消“不预测”底线，首页 Tab 改为“预测”，重写首页/详情/助理/工具/账本/周报/设置文案与信息层级；详见 [docs/prediction-first-frontend-2026-11-06.md](./docs/prediction-first-frontend-2026-11-06.md)。
 9. **Unslop 逐页 UI 精修**：收敛页面节奏、卡片圆角与内边距、字重/对比度、图标颜色和无意义动效；工具页改为“主工具 + 分组列表”；复核轮又降低永久自排除按钮权重、删除隐私页重复返回、拆分登录法律文案、预览卡改中性。详见 [docs/ui-unslop-2026-11-06.md](./docs/ui-unslop-2026-11-06.md)。
 10. **JPush Android 接入**：JPush 6.3.0 + JCore 5.6.0 core、`JCommonService`、registration id 上报、通知权限与“设备推送”状态；模拟器已拿到 `registration_id` 与 `connected=true`，但 MuMu/Houdini 转译会在 RN 启动阶段崩溃，需真机复测。厂商通道可后补。详见 [docs/jpush.md](./docs/jpush.md)。
