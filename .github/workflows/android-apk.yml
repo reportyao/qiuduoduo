@@ -94,7 +94,7 @@ jobs:
           body: |
             球多多 Android 内部测试包（JPush 客户端接入 + 预测优先 UI）。
 
-            - 版本：`0.3.2`（versionCode 7）
+            - 版本：`0.3.3`（versionCode 8）
             - 包名：`com.qiuduoduo.app`
             - API：`http://43.128.24.244:8100`
             - JPush Android 6.3.0 core + JCore 5.6.0；已补 JCommonService，移除定位/电话/存储等可选权限
