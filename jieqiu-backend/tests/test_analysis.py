@@ -92,3 +92,19 @@ def test_cached_for_focus_reads_saved_analysis(db, monkeypatch):
     got = analysis.get_cached(db, "m-ai-1")
     assert got["status"] == "ready"
     assert got["cached"] is True
+
+
+def test_analysis_endpoint_returns_ready_shape(client, monkeypatch):
+    from app.features.analysis import service as analysis_service
+
+    monkeypatch.setattr(analysis_service, "generate", lambda *a, **k: {
+        "status": "ready", "summary": "解读", "key_factors": ["a"],
+        "risks": ["r"], "invalidators": ["i"], "data_gaps": [],
+        "confidence_note": "n", "model": "m", "generated_at": None,
+        "data_cutoff": None, "cached": False,
+    })
+    response = client.post("/matches/m-ai/analysis")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["summary"] == "解读"
