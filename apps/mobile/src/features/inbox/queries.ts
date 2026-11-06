@@ -4,6 +4,7 @@ import { callApi } from "@/lib/callApi";
 import { adaptInbox, adaptNotify, adaptWatch } from "@/domain/accountAdapters";
 import { useAuthStore } from "@/features/auth/authStore";
 import type { InboxResponse, NotifySettings, WatchItem } from "@/domain/types";
+import { boolean, nullableString, number, record, string } from "@/lib/parse";
 
 export const inboxKeys = {
   list: ["inbox"] as const,
@@ -152,6 +153,40 @@ export function useUpdateNotifyMutation() {
       const userId = useAuthStore.getState().session?.userId ?? "anon";
       queryClient.setQueryData([...inboxKeys.notify, userId], data);
     },
+  });
+}
+
+export interface PushHealth {
+  configured: boolean;
+  dryrun: boolean;
+  provider: string;
+  enabledTokens: number;
+  totalTokens: number;
+  lastError: string | null;
+  note: string;
+}
+
+export function usePushHealthQuery(enabled = true) {
+  const ready = useAuthStore((s) => s.ready);
+  const hasSession = useAuthStore((s) => Boolean(s.session));
+  const userId = useAuthStore((s) => s.session?.userId ?? "anon");
+  return useQuery({
+    queryKey: ["push-health", userId],
+    queryFn: async () => {
+      const raw = await callApi(api.client.GET("/push/health"));
+      const item = record(raw);
+      return {
+        configured: boolean(item.configured),
+        dryrun: boolean(item.dryrun),
+        provider: string(item.provider, "jpush"),
+        enabledTokens: number(item.enabled_tokens),
+        totalTokens: number(item.total_tokens),
+        lastError: nullableString(item.last_error),
+        note: string(item.note),
+      } satisfies PushHealth;
+    },
+    enabled: ready && hasSession && enabled,
+    staleTime: 15_000,
   });
 }
 

@@ -133,7 +133,7 @@ src/
 - 推荐主链已接：Today Hero 消费 published snapshot（方向/条件/失效条件/AI 复核徽章），组合页 published 优先、`POST /tools/parlay/plan` 为**未复核预览**（UI 标注"参考·未复核"）。订阅/支付、OCR/拍票、真实 live feed/进球提醒仍未接入。新口径见 [docs/recommendation-product.md](../../docs/recommendation-product.md)。
 - 合规已服务端闭环：`/gate/verify`、`/me/under18-lock`、`/compliance/state|self-exclusion|self-assessment`；`useComplianceSync` 启动回填服务端状态（服务端不可用时保留本机已生效的自排除，并在联网后补写）；记注被未成年/自排除/休息中硬拦截。
 - 后端已提供 `/matches/{id}/live`，但只展示已同步赛果 + SP 快照，`live_feed:false`，不伪造进球时间线。
-- JPush 真实 token 注册未接；通知设置/站内信/关注已接服务端。
+- JPush Android 6.3.0 已接入：原生桥上报 registration id，通知设置请求系统权限并显示设备绑定状态；厂商通道与服务端 Master Secret 待配置。
 - 详情/首页已有 `goBackOr` 处理深链冷启动返回；新增页面必须复用 `src/lib/navigation.ts`，不要直接 `router.back()`。
 - 服务端新目录接口（`/matches`、`/cost`、`/water-rank`、`/calendar` 等）已生成 client，页面可按需接入；当前主要页面仍使用 `/stream`/`/on-sale`。
 

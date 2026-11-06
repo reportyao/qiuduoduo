@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { goBackOr } from "@/lib/navigation";
-import { Linking, StyleSheet, View } from "react-native";
+import { Linking, Platform, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SettingsPage } from "@/components/SettingsPage";
 import {
@@ -19,9 +19,11 @@ import {
 } from "@/components/ui";
 import {
   useNotifySettingsQuery,
+  usePushHealthQuery,
   useUpdateNotifyMutation,
 } from "@/features/inbox/queries";
 import type { NotifySettings } from "@/domain/types";
+import { requestNotificationPermission } from "@/features/push/jpush";
 import { errorText } from "@/lib/errors";
 import { colors, spacing } from "@/theme/tokens";
 
@@ -44,6 +46,7 @@ export default function NotificationsScreen() {
   const toast = useToast();
   const query = useNotifySettingsQuery();
   const update = useUpdateNotifyMutation();
+  const pushHealth = usePushHealthQuery();
   const [draft, setDraft] = useState<NotifySettings | null>(null);
   const dirty = useRef(false);
 
@@ -133,11 +136,17 @@ export default function NotificationsScreen() {
             />
             <SettingsRow
               title="推送"
-              subtitle="Android 厂商通道接入后生效"
+              subtitle="JPush 已接入；厂商通道待配置"
               right={
                 <Toggle
                   value={draft.channels.includes("push")}
-                  onChange={(next) => {
+                  onChange={async (next) => {
+                    if (next) {
+                      const granted = await requestNotificationPermission();
+                      if (!granted) {
+                        toast.show("系统通知权限未开启，推送不会显示", "warning");
+                      }
+                    }
                     const channels = next
                       ? Array.from(new Set([...draft.channels, "push"]))
                       : draft.channels.filter((c) => c !== "push");
@@ -146,8 +155,28 @@ export default function NotificationsScreen() {
                   label="推送"
                 />
               }
-              last
             />
+            {Platform.OS === "android" ? (
+              <SettingsRow
+                title="设备推送"
+                subtitle={
+                  pushHealth.isError
+                    ? "状态待同步"
+                    : pushHealth.data?.dryrun
+                      ? "服务端推送待配置"
+                      : "JPush 已配置"
+                }
+                value={
+                  pushHealth.isLoading
+                    ? "检查中"
+                    : pushHealth.data && pushHealth.data.totalTokens > 0
+                      ? `已绑定 ${pushHealth.data.totalTokens} 台`
+                      : "等待注册"
+                }
+                icon="phone-portrait-outline"
+                last
+              />
+            ) : null}
           </SettingsGroup>
 
           <Text variant="overline" color={colors.green}>推什么</Text>

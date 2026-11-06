@@ -3,7 +3,7 @@ import type { ExpoConfig } from "expo/config";
 const config: ExpoConfig = {
   name: "球多多",
   slug: "jieqiu",
-  version: "0.2.1",
+  version: "0.3.0",
   orientation: "portrait",
   userInterfaceStyle: "light",
   scheme: "jieqiu",
@@ -28,15 +28,21 @@ const config: ExpoConfig = {
   },
   android: {
     package: "com.qiuduoduo.app",
-    versionCode: 4,
+    versionCode: 5,
     permissions: ["POST_NOTIFICATIONS"],
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#F5F4EF",
     },
   },
+  extra: {
+    // JPush AppKey 是可公开的客户端标识；Master Secret 只放服务端。
+    jpushAppKey: process.env.EXPO_PUBLIC_JPUSH_APPKEY ?? "838fd4617f14e23ff4bbfcdd",
+    jpushChannel: process.env.EXPO_PUBLIC_JPUSH_CHANNEL ?? "developer-default",
+  },
   plugins: [
     "expo-router",
+    "./plugins/withJPush",
     [
       "expo-image-picker",
       {

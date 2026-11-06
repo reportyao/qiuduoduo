@@ -11,6 +11,7 @@ import { useMeQuery } from "@/features/account/queries";
 import { useComplianceStore, isExcluded } from "@/features/compliance/complianceStore";
 import { useComplianceSync } from "@/features/compliance/useComplianceSync";
 import { usePrefsStore } from "@/features/preferences/prefsStore";
+import { usePushRegistration } from "@/features/push/usePushRegistration";
 import { makeQueryClient } from "@/lib/queryClient";
 import { useNow } from "@/lib/useNow";
 import { colors } from "@/theme/tokens";
@@ -80,6 +81,7 @@ export default function RootLayout() {
               <>
                 <ProfileSync />
                 <ComplianceSync />
+                <PushRegistration />
                 <RouteGuard />
               </>
             ) : (
@@ -129,6 +131,11 @@ function RouteGuard() {
 
 function ComplianceSync() {
   useComplianceSync();
+  return null;
+}
+
+function PushRegistration() {
+  usePushRegistration();
   return null;
 }
 

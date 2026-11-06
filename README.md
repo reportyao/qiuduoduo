@@ -16,7 +16,7 @@
 | 版本 | `0.8.0-w8+assistant` |
 | OpenAPI | 128 路径 / 143 方法 |
 | 后端测试 | 271 passed |
-| 前端测试 | 30 passed + typecheck / ESLint / Android Hermes bundle |
+| 前端测试 | 30 passed + typecheck / ESLint / Android Hermes bundle（JPush 原生集成后需重跑 bundle） |
 | 生产数据库 | **当前 SQLite + WAL（过渡，单写者）**；目标境内 PostgreSQL 16（云托管优先 / 自建兜底，ADR-0004） |
 | Alembic head | `20261105_13`（CLV 收盘价字段；升级/降级已验证） |
 | W8 冻结基线 | 145 路由（新增路由后须重新采纳） |
@@ -30,7 +30,7 @@
 - **推荐内容**：主链 build → L1–L5 复核 → publish 已跑通；但 **当前生产 `/recommendations/today` 为空**——raw 复核有 1 场“复核过三关”，尚未产出 published snapshot/plan。前端已按 published 门控，不把未发布判决当推荐；发布链仍需在 `/admin` 查 `review_runs` 失败层。
 - **数据供给**：国际盘已配置，市闸/模型闸按各自阈值工作；模型闸仍有大量 `pending_data`，覆盖率提升依赖更好的当前赛季数据。
 - **API-Football 已配置**：生产使用 API-Sports `apisports` Free 档（100 次/日、10 次/分钟）。已支持当天+次日 fixtures、已链接场次的线阵容/伤停；后台按“今日/明日”分开展示链接数；当日目标场次已全部链接，次日赛程在每日 06:15 同步。当前赛季积分榜被 Free 档限制，需付费档；lineups 通常在停售前才发布，由每小时 `sync-enrich` 补充。
-- **已知待接**：JPush 真机推送客户端与厂商凭证；`dry-run` 和站内信不受影响。
+- **JPush**：Android 客户端已接入 core SDK（registration id 上报、通知权限、设备推送状态）；厂商通道与 Master Secret 待配置，服务端目前仍可能 dry-run。
 
 ## 最近完成（2026-11-06）
 
