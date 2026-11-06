@@ -1,6 +1,6 @@
 # 球多多文档索引
 
-最后对账：2026-11-06。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **135 路径 / 151 方法**，后端 **290 tests**，前端 **30 tests**，Alembic head `20261106_16`；当前仍是 SQLite + WAL 过渡。
+最后对账：2026-11-06。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **138 路径 / 154 方法**，后端 **295 tests**，前端 **30 tests**，Alembic head `20261106_16`；当前仍是 SQLite + WAL 过渡。
 
 ## 当前状态（2026-11-06）
 
@@ -32,6 +32,7 @@
 | [prediction-first-frontend-2026-11-06.md](./prediction-first-frontend-2026-11-06.md) | 预测优先的前端口径：取消“不预测”底线、首页/详情/助理/工具改版与边界 |
 | [ui-unslop-2026-11-06.md](./ui-unslop-2026-11-06.md) | Unslop 逐页 UI 审计：方向、页面处理、全局 tokens 与交互细节 |
 | [jpush.md](./jpush.md) | JPush Android 6.3.0 接入、registration id 上报、系统通知权限、厂商通道后续配置 |
+| [workbench.md](./workbench.md) | 运营工作台：全链路阶段、状态语义、AI 体检与安全动作 |
 | [xg-providers.md](./xg-providers.md) | xG 第三方数据源选型：Sportmonks / StatsBomb / FBref / SofaScore / Understat 的适用边界 |
 | [open-source-watchlist.md](./open-source-watchlist.md) | 开源引用/候选清单：维护状态、许可证、采纳/降级结论 |
 

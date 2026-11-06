@@ -1024,3 +1024,34 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
     transition-duration: .01ms !important;
   }
 }
+
+/* 工作台：链路优先，不是 KPI 陈列 */
+.wb-hero { border-left: 4px solid var(--brand); }
+.wb-headline { margin: 12px 0 4px; font-size: 22px; line-height: 1.35; letter-spacing: -.01em; }
+.wb-stage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-top: 12px; }
+.wb-stage { border-top: 3px solid var(--line); }
+.wb-stage.ok { border-top-color: var(--brand); }
+.wb-stage.warn { border-top-color: var(--amber); }
+.wb-stage.blocked { border-top-color: var(--red); }
+.wb-stage-headline { font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+.wb-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; margin-top: 4px; }
+.wb-metric { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.wb-metric span { color: var(--muted); font-size: 11px; }
+.wb-metric b { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+.wb-evidence { color: var(--ink-2); font-size: 12px; line-height: 1.6; }
+.wb-next { color: var(--ink-2); font-size: 12px; line-height: 1.6; padding: 6px 0; }
+.wb-next b { color: var(--muted); font-weight: 500; margin-right: 6px; }
+.wb-definition { border-top: 1px dashed var(--line); padding-top: 8px; color: var(--muted); font-size: 12px; }
+.wb-definition summary { cursor: pointer; }
+.wb-definition > div { margin-top: 6px; line-height: 1.6; }
+.wb-blocker { display: flex; flex-direction: column; gap: 3px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.wb-blocker b { color: var(--red); font-weight: 500; }
+.wb-glossary { margin-top: 16px; }
+.wb-glossary summary { cursor: pointer; color: var(--ink-2); font-size: 13px; }
+.wb-def { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; line-height: 1.6; }
+.wb-def b { color: var(--green); font-weight: 500; }
+.wb-ai { margin-top: 16px; border-left: 3px solid var(--brand); }
+.wb-ai-headline { font-size: 16px; line-height: 1.5; margin: 4px 0 10px; }
+.wb-causes { display: grid; gap: 8px; }
+.wb-cause { padding: 10px 12px; background: var(--surface-2); border-radius: var(--radius-sm); display: flex; flex-direction: column; gap: 3px; font-size: 13px; line-height: 1.55; }
+.wb-cause b { font-weight: 500; }

@@ -721,7 +721,143 @@ function bindSubjectButtons(data) {
   if (el("#withdraw-cancel")) el("#withdraw-cancel").onclick = closeModal;
 }
 
+/* ---------- workbench ---------- */
+
+let workbenchData = null;
+let workbenchDiag = null;
+
+function wbPill(state) {
+  if (state === "ok") return '<span class="pill green">正常</span>';
+  if (state === "warn") return '<span class="pill amber">需关注</span>';
+  return '<span class="pill red">卡住</span>';
+}
+
+function wbMetric(metric) {
+  return `<div class="wb-metric"><span>${esc(metric.label)}</span><b>${esc(metric.value)}</b></div>`;
+}
+
+function wbStageCard(stage) {
+  const actions = (stage.actions || []).map(id =>
+    `<button class="btn ghost small" data-wb-action="${esc(id)}">${esc(wbActionLabel(id))}</button>`).join("");
+  return `
+    <div class="card wb-stage ${esc(stage.state)}">
+      <div class="card-head">
+        <div><h2 class="card-title">${esc(stage.title)}</h2><div class="card-sub">${esc(stage.question)}</div></div>
+        ${wbPill(stage.state)}
+      </div>
+      <div class="wb-stage-headline">${esc(stage.headline)}</div>
+      <div class="wb-metrics">${(stage.metrics || []).map(wbMetric).join("")}</div>
+      ${(stage.evidence || []).length ? `<div class="wb-evidence">${stage.evidence.map(e => `<div>· ${esc(e)}</div>`).join("")}</div>` : ""}
+      <div class="wb-next"><b>下一步</b> ${esc(stage.next)}</div>
+      ${actions ? `<div class="integration-actions">${actions}</div>` : ""}
+      <details class="wb-definition"><summary>这是什么？</summary><div>${esc(stage.definition)}</div></details>
+    </div>`;
+}
+
+function wbActionLabel(id) {
+  return ({
+    restart_collector: "重启采集器",
+    sync_odds: "同步国际盘",
+    test_llm: "测试 LLM",
+    run_pipeline: "运行主链",
+  })[id] || id;
+}
+
+async function wbRunAction(id) {
+  const unsafe = ["sync_odds", "run_pipeline"].includes(id);
+  const run = async () => {
+    const body = { action: id };
+    if (state.date) body.date = state.date;
+    const result = await post("/admin/api/workbench/action", body);
+    toast(result.message || (result.ok ? "动作已完成" : "动作未完成"), result.ok ? "success" : "error");
+    await loadWorkbench();
+  };
+  if (!unsafe) return run();
+  confirmModal(wbActionLabel(id), id === "run_pipeline"
+    ? "会运行 build→复核→发布，可能改变前端内容。确认执行？"
+    : "会请求 The Odds API 并消耗额度，只请求竞彩目标场次。确认执行？", run);
+}
+
+function renderWorkbenchDiagnosis(diagnosis) {
+  const box = el("#wb-diagnosis");
+  if (!box || !diagnosis) return;
+  const causes = (diagnosis.root_causes || []).map(c => `
+    <div class="wb-cause"><b>${esc(c.title || c.stage || "")}</b><span>${esc(c.why || "")}</span>
+    ${(c.evidence || []).length ? `<div class="card-sub">${c.evidence.map(e => esc(e)).join(" · ")}</div>` : ""}</div>`).join("");
+  const actions = (diagnosis.actions || []).map(a => `
+    <button class="btn ${a.safe ? "secondary" : "ghost"} small" data-wb-diag-action="${esc(a.id)}">
+      ${esc(a.label || wbActionLabel(a.id))}${a.safe ? "" : "（需确认）"}
+    </button>`).join("");
+  box.innerHTML = `
+    <div class="card wb-ai">
+      <div class="card-head"><div><h2 class="card-title">AI 诊断</h2>
+      <div class="card-sub">${diagnosis.fallback ? "deep 未配置，使用规则诊断" : "基于工作台快照与 LLM"}</div></div>
+      <span class="pill ${diagnosis.fallback ? "amber" : "green"}">${diagnosis.fallback ? "规则兜底" : "AI 已分析"}</span></div>
+      <div class="wb-ai-headline">${esc(diagnosis.headline || "")}</div>
+      ${causes ? `<div class="wb-causes">${causes}</div>` : ""}
+      ${diagnosis.needs_human ? `<div class="wb-next"><b>需要你处理</b> ${esc(diagnosis.needs_human)}</div>` : ""}
+      ${actions ? `<div class="integration-actions">${actions}
+        ${(diagnosis.actions || []).some(a => a.safe) ? '<button class="btn primary small" id="wb-safe-fix">执行安全项</button>' : ""}
+      </div>` : ""}
+    </div>`;
+  els("[data-wb-diag-action]").forEach(btn => btn.onclick = () => wbRunAction(btn.dataset.wbDiagAction));
+  if (el("#wb-safe-fix")) el("#wb-safe-fix").onclick = async () => {
+    const safe = (diagnosis.actions || []).filter(a => a.safe).map(a => a.id);
+    for (const id of safe) {
+      try { await post("/admin/api/workbench/action", { action: id, ...(state.date ? { date: state.date } : {}) }); }
+      catch (error) { toast(error.message, "error"); }
+    }
+    toast(safe.length ? "安全项已执行" : "没有可自动执行的安全项");
+    await loadWorkbench();
+  };
+}
+
+async function loadWorkbench() {
+  const root = el("#view-workbench");
+  root.innerHTML = '<div class="skeleton"></div>';
+  const query = state.date ? `?date=${encodeURIComponent(state.date)}` : "";
+  const data = await api("/admin/api/workbench" + query);
+  workbenchData = data;
+  workbenchDiag = null;
+  root.innerHTML = `
+    <div class="card wb-hero">
+      <div class="card-head">
+        <div><h2 class="card-title">今日全链路</h2><div class="card-sub">从采集到前端，每一环都给出当前状态、证据和下一步。</div></div>
+        ${wbPill(data.overall)}
+      </div>
+      <div class="wb-headline">${esc(data.headline)}</div>
+      <div class="integration-actions">
+        <button class="btn primary small" id="wb-ai">AI 体检</button>
+        <button class="btn ghost small" id="wb-refresh">刷新</button>
+      </div>
+    </div>
+    <div id="wb-diagnosis"></div>
+    <h2 class="section-title">链路</h2>
+    <div class="wb-stage-grid">${data.stages.map(wbStageCard).join("")}</div>
+    <div class="card"><h2 class="card-title">卡点摘要</h2>
+      ${data.blockers.length ? data.blockers.map(b => `<div class="wb-blocker"><b>${esc(b.title)}</b><span>${esc(b.headline)}</span><span class="card-sub">${esc(b.next)}</span></div>`).join("") : '<div class="card-sub">没有 blocked 环节。</div>'}
+      ${data.warnings.length ? `<div class="card-sub" style="margin-top:12px">需关注：${data.warnings.map(w => esc(w.title)).join("、")}</div>` : ""}
+    </div>
+    <details class="card wb-glossary"><summary>名词解释（SP / 主链 / 三闸 / 封存 / 复核 / published）</summary>
+      ${Object.entries(data.definitions).map(([k, v]) => `<div class="wb-def"><b>${esc(k)}</b><span>${esc(v)}</span></div>`).join("")}
+    </details>
+  `;
+  els("[data-wb-action]").forEach(btn => btn.onclick = () => wbRunAction(btn.dataset.wbAction));
+  el("#wb-refresh").onclick = loadWorkbench;
+  el("#wb-ai").onclick = async () => {
+    const btn = el("#wb-ai"); btn.disabled = true; btn.textContent = "AI 分析中…";
+    try {
+      const result = await post("/admin/api/workbench/diagnose" + query);
+      workbenchDiag = result.diagnosis;
+      renderWorkbenchDiagnosis(result.diagnosis);
+      toast("AI 体检完成");
+    } catch (error) { toast(error.message, "error"); }
+    btn.disabled = false; btn.textContent = "AI 体检";
+  };
+}
+
 /* ---------- collector ---------- */
+
 
 function ageText(seconds) {
   if (seconds == null) return "—";
@@ -1151,6 +1287,7 @@ async function loadLogs() {
 
 const views = {
   overview: { title: "总览", kicker: "今日运营", loader: loadOverview },
+  workbench: { title: "工作台", kicker: "全链路健康", loader: loadWorkbench },
   collector: { title: "采集器", kicker: "家宽心跳", loader: loadCollector },
   integrations: { title: "接入中心", kicker: "AI 能力与接口", loader: loadIntegrations },
   models: { title: "文案模型池", kicker: "人设文案模型", loader: loadModels },
@@ -1163,7 +1300,7 @@ const views = {
 };
 
 let autoTimer = null;
-const AUTO_VIEWS = new Set(["overview", "recommendations", "gateway", "data", "models", "integrations", "collector"]);
+const AUTO_VIEWS = new Set(["workbench", "overview", "recommendations", "gateway", "data", "models", "integrations", "collector"]);
 
 function scheduleAutoRefresh() {
   clearInterval(autoTimer);
@@ -1211,7 +1348,7 @@ async function bootstrap() {
     el("#env-pill").textContent = `${session.env} · ${session.role} · ${session.username}`;
     applyRole();
     showApp();
-    await showView("overview");
+    await showView("workbench");
   } catch (_) { showLogin(); }
 }
 
@@ -1234,7 +1371,7 @@ el("#login-form").addEventListener("submit", async event => {
     el("#env-pill").textContent = `${session.env} · ${session.role} · ${session.username}`;
     applyRole();
     showApp();
-    await showView("overview");
+    await showView("workbench");
     toast("已进入控制台");
   } catch (error) {
     el("#login-error").textContent = error.message;

@@ -20,6 +20,8 @@ HOSTNAME = socket.gethostname()
 STARTED_AT = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
 STATE = {"last_success_at": None, "last_error": "", "cycle": 0,
          "matches": 0, "snapshots_total": 0, "last_push_at": None}
+# Windows 系统代理常指向一个未启动的本地端口；采集器和心跳必须直连。
+DIRECT = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 CN = timezone(timedelta(hours=8))
 
 def now_cn(): return datetime.now(CN).strftime("%Y-%m-%dT%H:%M:%S+08:00")
@@ -43,7 +45,7 @@ def heartbeat() -> bool:
         headers={"Content-Type": "application/json",
                  "Authorization": "Bearer " + TOKEN})
     try:
-        with urllib.request.urlopen(req, timeout=10) as r:
+        with DIRECT.open(req, timeout=10) as r:
             data = json.loads(r.read().decode("utf-8") or "{}")
         return bool(data.get("restart"))
     except Exception as e:  # noqa: BLE001 - 心跳失败不能影响采集
@@ -67,7 +69,7 @@ def fetch():
             urllib.request.ProxyHandler({"http": PROXY, "https": PROXY}))
         with opener.open(req, timeout=20) as r:
             return json.loads(r.read().decode("utf-8"))
-    with urllib.request.urlopen(req, timeout=20) as r:
+    with DIRECT.open(req, timeout=20) as r:
         return json.loads(r.read().decode("utf-8"))
 
 def parse(d):

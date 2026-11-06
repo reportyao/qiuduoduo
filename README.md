@@ -14,7 +14,7 @@
 | 事实 | 当前值（2026-11-06） |
 |---|---|
 | 版本 | `0.8.0-w8+assistant` |
-| OpenAPI | 135 路径 / 151 方法 |
+| OpenAPI | 138 路径 / 154 方法 |
 | 后端测试 | 271 passed |
 | 前端测试 | 30 passed + typecheck / ESLint / Android Hermes bundle；APK 18 已含 JPush 原生库 |
 | 生产数据库 | **当前 SQLite + WAL（过渡，单写者）**；目标境内 PostgreSQL 16（云托管优先 / 自建兜底，ADR-0004） |
@@ -48,6 +48,7 @@
 11. **后台接入中心**：`/admin` 按“用途”重排 AI 能力（对话问答/发布前复核/人设文案/单场分析）、数据源与推送通道；fast/deep 支持后台直接上传 Base URL、Model、Key，加密存 `llm_profiles` 并优先于环境变量；新增迁移 `20261106_14` / `20261106_15` / `20261106_16`。详见 [docs/llm-gateway.md](./docs/llm-gateway.md)。
 12. **单场 AI 解读**：新增 `ai_analyses` 与 `GET/POST /matches/{id}/analysis`；只对 `deep_eligible` 场次生成，按事实包 hash + 6h 缓存；详情页新增解读卡，`/chat` 可带 `match_id` 用同一事实包；移动端复核徽章区分“AI 复核”与“规则复核”。
 13. **采集器后台**：采集器每轮心跳上报（主机/轮次/场次/错误/推送时间），`/admin` 新增「采集器」页查看在线/离线与数据文件年龄，并可一键下发重启；采集器退出后由本地 watchdog 自动拉起。
+14. **运营工作台**：`/admin` 默认进入「工作台」，按采集→入库→市场→模型→三闸→封存→复核→发布→LLM→推送展示全链路状态/证据/下一步；内置 AI 体检、allowlist 动作（重启采集器/同步国际盘/测试 LLM/运行主链）与名词解释。详见 [docs/workbench.md](./docs/workbench.md)。
 
 ## 功能完成度
 
@@ -65,7 +66,7 @@
 | 互动埋点 | `POST /interactions` 白名单幂等；前端 `focus_select` / `action_click` / `free_text_send` / `pulse_open` 已上报 |
 | 合规闭环 | `/gate/verify`、`/me/under18-lock`、`/compliance/state` · `/compliance/self-exclusion` · `/compliance/self-assessment`；`POST /bets` 与 focus capabilities 服务端硬拦截未成年/自排除/休息中；移动端启动回填服务端状态 |
 | 串关体检 | `POST /tools/parlay/check` 四维体检（成本/信息/模型/结构），缺模型不伪造组合概率 |
-| 管理后台 | `/admin`：总览/接入中心/调用用量/文案模型池/人设文案/推荐主链（逐条+批量+plan 操作+撤回理由）/组合/数据/运维/账号/审计/日志；RBAC + CSRF + 会话撤销 + 审计 |
+| 管理后台 | `/admin`：工作台/总览/接入中心/调用用量/文案模型池/人设文案/推荐主链（逐条+批量+plan 操作+撤回理由）/组合/数据/运维/账号/审计/日志；RBAC + CSRF + 会话撤销 + 审计 |
 | 认证 | 设备令牌 + CN 手机号/微信、GL Email/Google/Apple；JWT 轮换 + refresh 复用检测；生产 fail-closed |
 | 封存与信任 | 判决哈希封存链、公开账本、分享编号可验（`/s/{id}`）、周报/复盘 |
 | 推送 | 事件监控（含赛前 T-3h/T-30m）→ 扇出 → 站内信/推送；通知设置/收件箱/关注已通；JPush Android core 已接（registration id/连接状态），Master Secret 未配置时 dry-run；厂商通道待补 |
@@ -97,7 +98,7 @@ just api-install          # pip install -r jieqiu-backend/requirements.txt
 just db-up                # 本地 Postgres（docker compose，端口 5433）
 just db-migrate           # alembic upgrade head
 just api-run              # uvicorn app.main:app --port 8100
-just api-test             # pytest（290 tests）
+just api-test             # pytest（295 tests）
 
 # 前端（Node 22 自带 corepack；仓库 .npmrc 固定 node-linker=hoisted）
 just install              # corepack pnpm install

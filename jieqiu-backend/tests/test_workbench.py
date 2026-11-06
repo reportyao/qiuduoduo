@@ -1,0 +1,46 @@
+"""运营工作台：全链路快照 / 诊断降级 / allowlist 动作。"""
+from __future__ import annotations
+
+from app.features.ops import workbench as ops
+from app.models import CollectorStatus
+from tests.conftest import admin_login, today_cn
+
+
+def test_workbench_with_empty_data_marks_blockers(db):
+    wb = ops.build_workbench(db)
+    assert wb["date"] == today_cn()
+    assert wb["overall"] in ("blocked", "warn")
+    keys = {s["key"] for s in wb["stages"]}
+    assert {"collect", "ingest", "market", "model", "gates", "seal",
+            "review", "publish", "llm", "push"} <= keys
+    assert "SP" in wb["definitions"]
+    assert any(s["key"] == "collect" and s["state"] == "blocked"
+               for s in wb["stages"])
+
+
+def test_workbench_diagnose_falls_back_without_deep_key(db):
+    result = ops.diagnose_workbench(db)
+    assert result["diagnosis"]["fallback"] is True
+    assert result["diagnosis"]["needs_human"]
+
+
+def test_workbench_restart_action_requires_collector(db, monkeypatch):
+    result = ops.run_action(db, "restart_collector")
+    assert result["ok"] is False
+    db.add(CollectorStatus(id=1, host="home", pid="1", last_seen=ops._utcnow()))
+    db.commit()
+    result = ops.run_action(db, "restart_collector")
+    assert result["ok"] is True
+    db.expire_all()
+    assert db.get(CollectorStatus, 1).restart_requested_at is not None
+
+
+def test_workbench_api_requires_login(client):
+    assert client.get("/admin/api/workbench").status_code == 401
+
+
+def test_workbench_api_with_admin(client):
+    admin_login(client)
+    response = client.get("/admin/api/workbench")
+    assert response.status_code == 200
+    assert "stages" in response.json()

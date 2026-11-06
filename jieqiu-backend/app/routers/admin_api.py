@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..db import get_db
+from ..features.ops import workbench as ops_workbench
 from ..features.recommendations import service as recommendation_service
 from ..features.tools import service as parlay_service
 from ..features.tools.schemas import ParlayPlanRequest
@@ -1053,6 +1054,38 @@ def admin_collector_restart(request: Request,
     _audit(db, principal, "collector.restart", "collector", "1",
            after={"requested_at": _iso(row.restart_requested_at)}, request=request)
     return _collector_view(db)
+
+
+@router.get("/api/workbench")
+def admin_workbench(date: str | None = None,
+                    db: Session = Depends(get_db),
+                    _: None = Depends(admin_auth.require_role("viewer"))):
+    return ops_workbench.build_workbench(db, _valid_date(date) if date else None)
+
+
+@router.post("/api/workbench/diagnose")
+def admin_workbench_diagnose(date: str | None = None,
+                             db: Session = Depends(get_db),
+                             _: None = Depends(admin_auth.require_role("operator"))):
+    return ops_workbench.diagnose_workbench(
+        db, _valid_date(date) if date else None)
+
+
+class WorkbenchActionBody(BaseModel):
+    action: Literal["restart_collector", "sync_odds", "test_llm", "run_pipeline"]
+    date: str | None = None
+
+
+@router.post("/api/workbench/action")
+def admin_workbench_action(body: WorkbenchActionBody, request: Request,
+                           db: Session = Depends(get_db),
+                           principal: admin_auth.AdminPrincipal = Depends(
+                               admin_auth.require_role("operator"))):
+    result = ops_workbench.run_action(db, body.action,
+                                      _valid_date(body.date) if body.date else None)
+    _audit(db, principal, f"workbench.{body.action}", "workbench",
+           body.action, after={"ok": result.get("ok")}, request=request)
+    return result
 
 
 @router.get("/api/data")

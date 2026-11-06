@@ -4640,6 +4640,142 @@
         }
       }
     },
+    "/admin/api/workbench": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Workbench",
+        "operationId": "admin_workbench_admin_api_workbench_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/workbench/diagnose": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Workbench Diagnose",
+        "operationId": "admin_workbench_diagnose_admin_api_workbench_diagnose_post",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/workbench/action": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Workbench Action",
+        "operationId": "admin_workbench_action_admin_api_workbench_action_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkbenchActionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/api/data": {
       "get": {
         "tags": [
@@ -12227,6 +12363,36 @@
           "code"
         ],
         "title": "WechatBody"
+      },
+      "WorkbenchActionBody": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "restart_collector",
+              "sync_odds",
+              "test_llm",
+              "run_pipeline"
+            ],
+            "title": "Action"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "WorkbenchActionBody"
       }
     }
   }

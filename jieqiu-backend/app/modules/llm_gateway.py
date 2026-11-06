@@ -31,12 +31,14 @@ TASK_PROFILE = {
     "match_analysis": "deep",
     "decision_review": "deep",
     "plan_review": "fast",
+    "workbench_diagnose": "fast",
 }
 _TTL = {
     "open_chat": 1800,
     "match_analysis": 21600,
     "decision_review": 21600,
     "plan_review": 86400,
+    "workbench_diagnose": 300,
 }
 _PRIVATE_TASKS = {"open_chat"}
 _RESERVATION_TTL_SECONDS = 600
@@ -387,7 +389,7 @@ def call_profile(profile: dict, messages: list[dict], *, max_tokens: int = 512,
 def complete(db: Session, task: str, messages: list[dict], *,
              schema: dict | None = None, max_tokens: int = 512,
              temperature: float = 0.4, user_id: str | None = None,
-             session_id: str = "") -> LLMResult:
+             session_id: str = "", timeout_s: float | None = None) -> LLMResult:
     """调用 LLM；任何失败都返回 degraded=True，不抛业务异常。"""
     request_id = uuid.uuid4().hex
     profile_name = TASK_PROFILE.get(task)
@@ -453,7 +455,8 @@ def complete(db: Session, task: str, messages: list[dict], *,
     settled = False
     try:
         text, usage = _call(profile, messages, max_tokens=max_tokens,
-                            temperature=temperature, schema=schema)
+                            temperature=temperature, schema=schema,
+                            timeout_s=timeout_s)
         if not (text or "").strip():
             raise RuntimeError("empty_output")
         data = None
