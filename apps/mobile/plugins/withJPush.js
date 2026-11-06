@@ -173,7 +173,13 @@ function withJPush(config) {
     ];
     manifest["uses-permission"] = manifest["uses-permission"] || [];
     for (const name of removePermissions) {
-      if (!manifest["uses-permission"].some((item) => item.$ && item.$["android:name"] === name)) {
+      const existing = manifest["uses-permission"].find(
+        (item) => item.$ && item.$["android:name"] === name,
+      );
+      if (existing) {
+        // 其他插件可能已经声明了这些权限；必须显式标 remove，合并时才会移除。
+        existing.$["tools:node"] = "remove";
+      } else {
         manifest["uses-permission"].push({
           $: { "android:name": name, "tools:node": "remove" },
         });

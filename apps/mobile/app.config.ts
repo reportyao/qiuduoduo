@@ -3,7 +3,7 @@ import type { ExpoConfig } from "expo/config";
 const config: ExpoConfig = {
   name: "球多多",
   slug: "jieqiu",
-  version: "0.3.1",
+  version: "0.3.2",
   orientation: "portrait",
   userInterfaceStyle: "light",
   scheme: "jieqiu",
@@ -28,7 +28,7 @@ const config: ExpoConfig = {
   },
   android: {
     package: "com.qiuduoduo.app",
-    versionCode: 6,
+    versionCode: 7,
     permissions: ["POST_NOTIFICATIONS"],
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
