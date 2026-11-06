@@ -708,7 +708,7 @@ def build_focus(db: Session, match_id: str, date: str | None = None,
                           .where(VerdictRevision.verdict_id == v.id)) if v else 0
     persona = persona if persona in PERSONAS else (
         user.persona if user and user.persona in PERSONAS else "zhuanjia")
-    return {
+    result = {
         "match": {"match_id": match.match_id, "match_no": match.match_no,
                   "league": match.league, "home": match.home, "away": match.away,
                   "kickoff": match.kickoff, "sale_close": match.kickoff,
@@ -730,3 +730,7 @@ def build_focus(db: Session, match_id: str, date: str | None = None,
         "actions": actions,
         "persona": persona,
     }
+    # 只读已生成的 AI 解读；聚焦接口绝不触发 LLM。
+    from ..analysis.service import cached_for_focus
+    result["interpretation"] = cached_for_focus(db, result)
+    return result

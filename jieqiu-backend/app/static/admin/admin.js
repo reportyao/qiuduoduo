@@ -793,6 +793,7 @@ async function loadIntegrations() {
   const sync = data.sync || {};
   const pushChannel = overview.push_channel || {};
   const pushTokens = overview.push_tokens || {};
+  const deepProfile = llm.profiles.find(p => p.name === "deep");
 
   root.innerHTML = `
     <div class="card">
@@ -825,15 +826,16 @@ async function loadIntegrations() {
       </div>
       <div class="card integration-card">
         <div class="card-head">
-          <div><h2 class="card-title">单场实时分析</h2><div class="card-sub">事实包 → 情景 / 风险解释</div></div>
-          <span class="pill muted">未接入</span>
+          <div><h2 class="card-title">单场 AI 解读</h2><div class="card-sub">事实包 → 情景 / 风险解释</div></div>
+          ${integrationStatus(Boolean(deepProfile?.configured), deepProfile?.enabled ?? true)}
         </div>
         <div class="integration-meta">
           <b>作用</b><span>把 SP、国际盘、阵容、伤停、积分榜、概率与三闸交给 deep 模型，生成可引用的赛前解读。</span>
-          <b>缺口</b><span>analysis_jobs / ai_analyses / interpretation 写入 / 前端解读卡</span>
+          <b>入口</b><span>详情页「生成 AI 解读」；只对 deep_eligible 场次生成。</span>
+          <b>缓存</b><span>事实包 hash + 6 小时过期；数据变化自动重算。</span>
         </div>
         <div class="integration-actions">
-          <button class="btn ghost small" data-goto="data">先看数据供给</button>
+          <button class="btn ghost small" data-goto="data">查看数据供给</button>
         </div>
       </div>
     </div>
@@ -970,10 +972,7 @@ const TASK_META = {
   open_chat: { label: "对话问答", connected: true },
   decision_review: { label: "单场发布复核", connected: true },
   plan_review: { label: "组合发布复核", connected: true },
-  match_analysis: { label: "单场实时分析", connected: false },
-  copy_polish: { label: "通知/卡片润色", connected: false },
-  adversarial_review: { label: "对抗复核", connected: false },
-  json_repair: { label: "JSON 修复", connected: false },
+  match_analysis: { label: "单场实时分析", connected: true },
 };
 const PROFILE_LABEL = { fast: "对话问答（fast）", deep: "发布前复核（deep）" };
 

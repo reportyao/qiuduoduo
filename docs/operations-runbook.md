@@ -202,7 +202,7 @@ export JQ_LLM_USER_DAILY_CALLS=50
 
 - 固定意图 0 LLM；匿名固定引导；只有登录用户的 `/chat` fallback 进入 `open_chat → fast`。
 - `decision_review`/`plan_review` 已接 deep 模型；复核只发送压缩后的必要字段（~1KB），避免推理模型把 token 全花在 reasoning 上。2026-11-05 实测 `rules+deepseek-v4.1-flash-1017`、`llm_degraded=false`、`llm_review=pass`。
-- `match_analysis`/`adversarial_review` 任务已注册，但尚未接异步分析队列/情报表；当前只用于发布前复核。
+- `match_analysis` 已接单场解读（`POST /matches/{id}/analysis`，`ai_analyses` 缓存）；异步 `analysis_jobs` 与情报表仍未做；`adversarial_review` 已删除。
 - 无 Key/超预算/超时/schema 失败均 `degraded`，不会阻塞判决，也不会返回 5xx。
 - LLM Key 可走 env 或后台加密存储（`llm_profiles`）；`/admin` 只显示“已配置/未配置”与来源，不回显明文。
 - `/admin` 模型池/人设写操作均已接入 `admin_audit`；写操作强制 CSRF（`admin_csrf` + `X-CSRF-Token`），角色/启停/改密/删除会撤销该账号全部会话。

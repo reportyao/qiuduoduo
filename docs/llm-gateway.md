@@ -1,6 +1,6 @@
 # 球多多 · LLM Gateway 与多模型路由（Phase 1 已实现）
 
-> **状态：Phase 1 已实现。** `llm_usage`/`llm_cache`/`llm_budgets` 三张表与迁移 `20261104_07` 已落；`/chat` 的登录用户 fallback 已接入 `open_chat → fast`，失败/无 Key/超预算/超时/schema 失败一律回到固定引导；后台 `/admin` 模型用量页已展示 profile 状态、今日用量、预算与最近调用。`match_analysis → deep`、`analysis_jobs`、`ai_analyses`、`intel_items` 仍待 Phase 2；2026-11-05 已配置 deep profile（TokenRhythm `deepseek-v4.1-flash-1017`）并用于发布前复核，`llm_review` 实测通过；复核使用压缩 payload + `JQ_LLM_REVIEW_MAX_TOKENS=1600`（推理模型 reasoning tokens 会占额度）。`narrate.py` 先读 `persona_copy_cache`，未命中走确定性模板，不在请求时调 LLM。审核任务中 `decision_review` / `plan_review` 已接入调用方；`adversarial_review`、`copy_polish`、`json_repair` 目前只有路由定义、没有调用方；persona 的实际 HTTP 调用也统一走 `llm_gateway.call_profile`，模型池/熔断仍由 persona 子系统管理。
+> **状态：Phase 1 已实现。** `llm_usage`/`llm_cache`/`llm_budgets` 三张表与迁移 `20261104_07` 已落；`/chat` 的登录用户 fallback 已接入 `open_chat → fast`，失败/无 Key/超预算/超时/schema 失败一律回到固定引导；后台 `/admin` 模型用量页已展示 profile 状态、今日用量、预算与最近调用。`match_analysis → deep` 已接单场解读（`ai_analyses` 缓存 + `POST /matches/{id}/analysis`）；异步 `analysis_jobs` 仍未做；`intel_items` 仍待。2026-11-05 已配置 deep profile（TokenRhythm `deepseek-v4.1-flash-1017`）并用于发布前复核，`llm_review` 实测通过；复核使用压缩 payload + `JQ_LLM_REVIEW_MAX_TOKENS=1600`（推理模型 reasoning tokens 会占额度）。`narrate.py` 先读 `persona_copy_cache`，未命中走确定性模板，不在请求时调 LLM。审核任务中 `decision_review` / `plan_review` 已接入调用方；`adversarial_review`、`copy_polish`、`json_repair` 已从任务路由删除（需要时重新设计）；persona 的实际 HTTP 调用也统一走 `llm_gateway.call_profile`，模型池/熔断仍由 persona 子系统管理。
 >
 > **2026-11-06 后台接入中心：** fast/deep 现在可以在 `/admin` →「接入中心」直接配置，Key 加密存 `llm_profiles`，**后台配置优先于环境变量**；环境变量仍是兜底。后台「文案模型池」是另一套 `persona_llm_models`，只服务人设文案，不服务 `/chat`。
 >
@@ -17,7 +17,7 @@ Intent Router（规则优先，固定意图 0 LLM）
         ↓
 LLMGateway.complete(task, messages, schema)
         ↓
-Task Route：copy_polish / open_chat / match_analysis / json_repair
+Task Route：open_chat / match_analysis / decision_review / plan_review
         ↓
 Profile：fast（免费/低成本） / deep（DeepSeek） / none（模板）
         ↓
@@ -38,18 +38,15 @@ Profile：fast（免费/低成本） / deep（DeepSeek） / none（模板）
 
 | task | profile | 用途 | 约束 |
 |---|---|---|---|
-| `copy_polish` | fast | 人设文案、通知改写、卡片摘要、推荐观点委婉化 |
 | `decision_review` | deep | L1–L5 发布前复核；规则为主，LLM 为可选增强 | schema JSON；无 Key 时标记降级，不阻塞规则门 |
-| `adversarial_review` | deep | 对抗复核：找反例/失效条件（L4 可选增强） | 同 decision_review；当前规则门为主 |
 | `plan_review` | fast | 组合腿/覆盖/风险复核 | 同上 |
 | `persona_translate` | persona pool | 人设语气翻译 | 走 `call_profile`；模型池/熔断/缓存独立 |
 | `open_chat` | fast | 开放问答、跑题引导、FAQ | 只带公开事实；默认收起；配额 |
-| `match_analysis` | deep | 单场深度分析、情景/风险解释 | 仅 `coverage.level=full`；异步/缓存 |
-| `json_repair` | fast | JSON 修复、格式重写 | 不产生新事实 |
+| `match_analysis` | deep | 单场数据解读：情景/风险/失效条件 | 仅 `deep_eligible`；同步生成 + 按事实包 hash 缓存 |
 | `moderation` | none | 禁用词/风险扫描 | 规则/词表；不用 LLM |
 | `prediction` | none | 概率/推荐 | **禁止调用任何 LLM** |
 
-路由不是“按消息内容猜”，而是先由 `chat.py` 的规则识别 intent；只有 fallback/开放问题才进入 `open_chat`。深读分析由 `analysis_jobs` 触发，不在聊天主链路同步调用。
+路由不是“按消息内容猜”，而是先由 `chat.py` 的规则识别 intent；只有 fallback/开放问题才进入 `open_chat`。单场解读由详情页 `POST /matches/{id}/analysis` 或 `/chat` 携带 `match_id` 的显式分析意图触发，同步生成并按事实包 hash 缓存；异步 `analysis_jobs` 仍未做。
 
 ## 3. Profile 与配置
 
@@ -278,7 +275,7 @@ TTL 建议：
 
 ## 7. 提示词与输出
 
-- 每个 task 一个 prompt 版本；persona 卡只影响 `copy_polish`/外层改写，不影响事实。
+- 每个 task 一个 prompt 版本；persona 卡只影响人设文案外层改写，不影响事实。
 - 深读分析输入=确定性事实包；输出 JSON：
 
 ```json
@@ -320,11 +317,11 @@ TTL 建议：
 | 业务 | 接入方式 |
 |---|---|
 | `chat.py` 的 `fallback` | ✅ 登录用户 `open_chat` → fast；匿名固定引导；固定 intent 不调用 |
-| `narrate.py` / 变体池 | 读 `persona_copy_cache`；miss 走模板；`copy_polish`/变体池待接 |
+| `narrate.py` / 变体池 | 读 `persona_copy_cache`；miss 走模板；不调 LLM |
 | `GET /matches/{id}/focus` 的 `interpretation` | 读 `ai_analyses` 缓存；没有则返回 null/模板，不现场调 deep（待 Phase 2） |
 | 深读分析 | `analysis_jobs` → worker → `match_analysis` → deep → 审核/发布（待 Phase 2） |
-| 通知文案 | `copy_polish` → fast；中性/禁用词校验（待接） |
-| 推荐观点/组合文案 | `copy_polish` → fast，只做委婉化/结构化；方向/概率/条件由模型与规则锁定，AI 复核后发布 |
+| 通知文案 | 固定中性模板；不调 LLM |
+| 推荐观点/组合文案 | 人设文案池预生成；方向/概率/条件由模型与规则锁定，AI 复核后发布 |
 | 预测/三闸/抽水 | 不接 LLM |
 
 ## 10. 安全与合规
@@ -344,7 +341,7 @@ TTL 建议：
 
 **Phase 1（fast only）— ✅ 已实现**
 - `llm_usage` + `llm_cache` + `llm_budgets` + Gateway + fast profile。
-- 已接 `open_chat` fallback；`copy_polish` 仍走模板（待接）；固定 intent 0 LLM。
+- 已接 `open_chat` fallback 与 `match_analysis`；固定 intent 0 LLM。
 - `/admin` 模型用量页只读 profile/用量/预算/最近调用；启停/熔断开关未做。
 - 无 Key/超预算/超时/schema 失败 → `degraded`，调用方保留固定引导。
 

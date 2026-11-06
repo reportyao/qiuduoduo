@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from ..features.recommendations.service import today as recommendations_today
-from ..models import User, Verdict
+from ..models import SPMatch, User, Verdict
 from .postmortem import postmortem
 from .timeutil import trade_date_now
 from .users import list_memories, user_streak
@@ -26,6 +26,7 @@ _INTENT_RULES: list[tuple[str, tuple[str, ...]]] = [
     ("why_not", ("为什么不", "别碰", "死因", "为啥不推", "为什么不推")),
     ("rest", ("今天不看了", "不想看了", "休息", "今天到此为止")),
     ("protection", ("连败", "保护", "降温")),
+    ("analyze_match", ("分析", "这场", "依据")),
     ("lookup_team", ("查：", "查一下", "怎么看")),
     ("buy_tonight", ("今晚买啥", "今晚买什么", "今晚看哪场", "今晚看什么", "看哪场",
                      "今日预测", "有什么预测", "看预测", "有什么推荐", "买啥", "推一场")),
@@ -42,11 +43,66 @@ def route_intent(text: str) -> str:
     return "fallback"
 
 
+def _resolve_match(db: Session, text: str, match_id: str) -> SPMatch | None:
+    if match_id:
+        return db.get(SPMatch, match_id)
+    today = trade_date_now()
+    rows = list(db.scalars(select(SPMatch).where(
+        SPMatch.kickoff.like(f"{today}%"))).all())
+    for row in rows:
+        if (row.home and row.home in text) or (row.away and row.away in text):
+            return row
+    return None
+
+
+def _analysis_text(analysis: dict) -> str:
+    if analysis.get("status") != "ready":
+        reason = analysis.get("reason") or "unavailable"
+        if reason == "coverage":
+            missing = "、".join(analysis.get("missing") or [])
+            return f"这场数据还不够（缺 {missing or '关键来源'}），先不生成 AI 解读。"
+        if reason == "not_configured":
+            return "AI 解读还没配置 deep 模型；先看三关和数据。"
+        return f"AI 解读暂不可用（{reason}）。"
+    parts = [analysis.get("summary") or ""]
+    factors = analysis.get("key_factors") or []
+    risks = analysis.get("risks") or []
+    invalidators = analysis.get("invalidators") or []
+    gaps = analysis.get("data_gaps") or []
+    if factors:
+        parts.append("关键：" + "；".join(factors[:3]))
+    if risks:
+        parts.append("风险：" + "；".join(risks[:2]))
+    if invalidators:
+        parts.append("失效：" + "；".join(invalidators[:2]))
+    if gaps:
+        parts.append("数据缺口：" + "；".join(gaps[:2]))
+    return "\n".join(p for p in parts if p)[:900]
+
+
 def respond(db: Session, user: User | None, text: str,
-            session_id: str = "") -> dict:
+            session_id: str = "", match_id: str = "") -> dict:
     """意图 → 卡片 + 文案。所有卡片都是真实数据驱动。"""
     intent = route_intent(text)
     card: dict = {"type": intent}
+
+    if intent == "analyze_match" or (match_id and intent in ("lookup_team", "fallback")):
+        match = _resolve_match(db, text, match_id)
+        if match is not None:
+            from ..features.analysis import service as analysis_service
+            analysis = analysis_service.generate(db, match.match_id)
+            card.update({
+                "type": "match_analysis",
+                "match_id": match.match_id,
+                "analysis_status": analysis.get("status"),
+                "analysis_reason": analysis.get("reason"),
+                "analysis": analysis if analysis.get("status") == "ready" else None,
+                "text": _analysis_text(analysis),
+            })
+            return card
+        card["type"] = "fallback"
+        card["text"] = "要分析哪一场？先在首页选中比赛，或直接说“分析：曼城 vs 布莱顿”。"
+        return card
 
     if intent == "buy_tonight":
         # 只回答已发布判断：raw promoted 还没过发布门，不能当成推荐。
@@ -157,9 +213,10 @@ def respond(db: Session, user: User | None, text: str,
                 res = complete(
                     db, "open_chat",
                     [{"role": "system",
-                      "content": ("你是球多多助理。只聊足球数据、下注成本与风险纪律；"
-                                  "不预测比赛结果、不承诺收益、不引导下注。回答不超过 120 字，"
-                                  "语气克制，事实不确定就直说不知道。")},
+                      "content": ("你是球多多赛前分析助理。只聊足球数据、预测依据、"
+                                  "成本与风险纪律；可以解释已给出的方向与概率，但不得改写"
+                                  "概率、不得编造未提供的事实、不承诺收益、不引导加注。"
+                                  "回答不超过 120 字，事实不确定就直说不知道。")},
                      {"role": "user", "content": text}],
                     max_tokens=220, user_id=user.id, session_id=session_id,
                 )

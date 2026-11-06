@@ -430,6 +430,30 @@ class LLMProfile(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
+class AIAnalysis(Base):
+    """单场 AI 解读缓存：按事实包 hash 失效，同一输入只调用一次 deep。"""
+
+    __tablename__ = "ai_analyses"
+    __table_args__ = (
+        UniqueConstraint("match_id", "input_hash", name="uq_ai_analysis_match_hash"),
+        Index("ix_ai_analyses_match_created", "match_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    match_id: Mapped[str] = mapped_column(String(32), index=True)
+    trade_date: Mapped[str] = mapped_column(String(16), default="")
+    input_hash: Mapped[str] = mapped_column(String(64))
+    data_cutoff: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="ok")  # ok | rejected
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    model: Mapped[str] = mapped_column(String(96), default="")
+    provider: Mapped[str] = mapped_column(String(32), default="")
+    prompt_ver: Mapped[str] = mapped_column(String(16), default="v1")
+    cost_cny: Mapped[float] = mapped_column(Float, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+
+
 class PersonaCopyCache(Base):
     """人设翻译结果缓存：同一 source/hash/persona 只生成一次。"""
 

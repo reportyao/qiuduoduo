@@ -219,7 +219,7 @@ export const VerdictMessage = memo(function VerdictMessage({
             </Text>
             {verdict.review ? (
               <Text variant="caption" color={verdict.review.status === "passed" ? colors.green : colors.amber}>
-                AI 复核 · {verdict.review.status === "passed" ? "通过" : "待修"}
+                {verdict.review.llmDegraded ? "规则复核" : "AI 复核"} · {verdict.review.status === "passed" ? "通过" : "待修"}
               </Text>
             ) : null}
           </View>

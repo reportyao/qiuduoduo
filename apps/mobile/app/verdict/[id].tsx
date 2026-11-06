@@ -25,6 +25,7 @@ import { currentTradeDateCn, formatDateTime, pct } from "@/lib/format";
 import { colors, layout, spacing } from "@/theme/tokens";
 import { DetailHero } from "@/features/verdict/components/DetailHero";
 import { GateDetailsCard } from "@/features/verdict/components/GateDetailsCard";
+import { MatchAnalysisCard } from "@/features/verdict/components/MatchAnalysisCard";
 import { IntelSection } from "@/features/verdict/components/IntelSection";
 import { EvidenceList } from "@/features/verdict/components/EvidenceList";
 import { DetailActionBar } from "@/features/verdict/components/DetailActionBar";
@@ -134,6 +135,7 @@ export default function VerdictDetailScreen() {
         <DetailHero detail={detail} published={published} onSeal={() => setSealOpen(true)} />
         <IntelSection report={buildIntelReport(detail)} />
         <GateDetailsCard detail={detail} />
+        <MatchAnalysisCard matchId={detail.matchId} date={detail.tradeDate} />
         <EvidenceList items={detail.evidence} cutoff={detail.dataCutoff} />
 
         <Card style={styles.counter}>

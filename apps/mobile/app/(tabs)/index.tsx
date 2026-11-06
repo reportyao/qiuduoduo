@@ -99,7 +99,8 @@ export default function HomeScreen() {
     setInput("");
     autoScroll.current = true;
     setChatMessages((prev) => [...prev, { id: nextChatId("u"), role: "user", text }]);
-    chat.mutate(text, {
+    const wantsAnalysis = ["分析", "这场", "依据", "怎么看", "风险"].some((hint) => text.includes(hint));
+    chat.mutate({ text, matchId: wantsAnalysis ? focus?.matchId : undefined }, {
       onSuccess: (card) => {
         autoScroll.current = true;
         setChatMessages((prev) => [

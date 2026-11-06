@@ -17,6 +17,7 @@ import { AppScreen } from "@/components/Screen";
 import { Chip, Icon, Text, useToast } from "@/components/ui";
 import { useChatMutation } from "@/features/assistant/queries";
 import { ChatCardContent, type ChatMessage } from "@/features/assistant/components/ChatCardContent";
+import { useFocusStore } from "@/features/home/focusStore";
 import { useMemoryMutations } from "@/features/account/queries";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { errorText } from "@/lib/errors";
@@ -30,6 +31,7 @@ export default function AssistantScreen() {
   const toast = useToast();
   const { meta, copy } = usePersonaContent();
   const chat = useChatMutation();
+  const focus = useFocusStore((s) => s.focus);
   const { save: saveMemory } = useMemoryMutations();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -48,7 +50,8 @@ export default function AssistantScreen() {
     setMessages((prev) => [...prev, { id: nextId("u"), role: "user", text }]);
     // 兼容尚未升级的后端：新快捷词用旧意图词发送，避免落到 fallback。
     const apiText = text === "今日预测" ? "今晚看哪场" : text;
-    chat.mutate(apiText, {
+    const wantsAnalysis = ["分析", "这场", "依据", "怎么看", "风险"].some((hint) => text.includes(hint));
+    chat.mutate({ text: apiText, matchId: wantsAnalysis ? focus?.matchId : undefined }, {
       onSuccess: (card) => {
         setMessages((prev) => [
           ...prev,

@@ -11,7 +11,7 @@ import { colors, spacing } from "@/theme/tokens";
 type ReviewedPlanItem = ParlayPlanItem & {
   conditions?: string[];
   invalidators?: string[];
-  review?: { status: string } | null;
+  review?: { status: string; llmDegraded?: boolean } | null;
 };
 
 function PlanCard({ item, oddsFormat }: { item: ReviewedPlanItem; oddsFormat: OddsFormat }) {
@@ -70,10 +70,17 @@ export function ParlayPlans({ data, oddsFormat, reviewed = false }: { data: Parl
   if (!data.plans.length) {
     return <Text variant="small" color={colors.amber}>{data.message || "今日暂不配组合"}</Text>;
   }
+  const llmDegraded = (data.plans as ReviewedPlanItem[]).some(
+    (item) => item.review?.llmDegraded,
+  );
   return (
     <View style={styles.wrap}>
       <Text variant="caption" color={reviewed ? colors.green : colors.amber}>
-        {reviewed ? "参考组合 · AI 复核通过" : "参考·未复核：仅作结构参考，未接入 AI 复核"}
+        {reviewed
+          ? llmDegraded
+            ? "参考组合 · 规则复核通过（AI 复核未启用）"
+            : "参考组合 · AI 复核通过"
+          : "参考·未复核：仅作结构参考，未接入 AI 复核"}
       </Text>
       {data.plans.map((item) => (
         <PlanCard key={item.risk_profile} item={item} oddsFormat={oddsFormat} />

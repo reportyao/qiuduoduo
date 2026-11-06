@@ -21,6 +21,7 @@ export const INTENT_LABEL: Record<string, string> = {
   protection: "连败保护",
   lookup_team: "球队查询",
   lookup_match: "比赛查询",
+  match_analysis: "AI 解读",
   fallback: "可以这样问",
 };
 

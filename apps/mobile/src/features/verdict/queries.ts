@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { components } from "@jieqiu/api-client";
 import { api } from "@/lib/api";
 import { callApi } from "@/lib/callApi";
 import {
@@ -9,12 +10,45 @@ import {
 import { adaptPostmortem } from "@/domain/accountAdapters";
 import type { Postmortem, SealResponse, VerdictDetail, WhyNotResponse } from "@/domain/types";
 
+export type MatchAnalysis = components["schemas"]["MatchAnalysisResponse"];
+
 export const verdictKeys = {
   detail: (id: string) => ["verdict", id] as const,
   seal: (id: string) => ["verdict", id, "seal"] as const,
   whyNot: (matchId: string, date: string) => ["why-not", matchId, date] as const,
   postmortem: (id: string) => ["postmortem", id] as const,
+  analysis: (matchId: string, date: string) => ["match-analysis", matchId, date] as const,
 };
+
+export function useMatchAnalysisQuery(matchId: string | undefined, date: string | undefined) {
+  return useQuery({
+    queryKey: verdictKeys.analysis(matchId ?? "", date ?? ""),
+    queryFn: async () => {
+      const raw = await callApi(api.client.GET("/matches/{match_id}/analysis", {
+        params: { path: { match_id: matchId! }, query: date ? { date } : {} },
+      }));
+      return raw as MatchAnalysis;
+    },
+    enabled: Boolean(matchId),
+    retry: false,
+    staleTime: 60_000,
+  });
+}
+
+export function useGenerateMatchAnalysisMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { matchId: string; date: string }) => {
+      const raw = await callApi(api.client.POST("/matches/{match_id}/analysis", {
+        params: { path: { match_id: input.matchId }, query: { date: input.date } },
+      }));
+      return raw as MatchAnalysis;
+    },
+    onSuccess: (data, input) => {
+      queryClient.setQueryData(verdictKeys.analysis(input.matchId, input.date), data);
+    },
+  });
+}
 
 export function useVerdictDetailQuery(id: string | undefined) {
   return useQuery({

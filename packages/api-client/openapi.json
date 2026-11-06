@@ -740,6 +740,138 @@
         }
       }
     },
+    "/matches/{match_id}/analysis": {
+      "get": {
+        "tags": [
+          "focus-intel"
+        ],
+        "summary": "Match Analysis",
+        "description": "读取已缓存的单场 AI 解读；不触发 LLM。",
+        "operationId": "match_analysis_matches__match_id__analysis_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchAnalysisResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "focus-intel"
+        ],
+        "summary": "Create Match Analysis",
+        "description": "生成单场 AI 解读；同一事实包只调用一次 deep，失败返回 unavailable。",
+        "operationId": "create_match_analysis_matches__match_id__analysis_post",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchAnalysisResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/interactions": {
       "post": {
         "tags": [
@@ -4356,6 +4488,118 @@
         }
       }
     },
+    "/admin/api/llm/profiles": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Llm Profiles",
+        "operationId": "admin_llm_profiles_admin_api_llm_profiles_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/llm/profiles/{name}": {
+      "put": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Llm Profile Update",
+        "operationId": "admin_llm_profile_update_admin_api_llm_profiles__name__put",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LLMProfileUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/llm/profiles/{name}/test": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Llm Profile Test",
+        "operationId": "admin_llm_profile_test_admin_api_llm_profiles__name__test_post",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/api/data": {
       "get": {
         "tags": [
@@ -7180,6 +7424,12 @@
             "maxLength": 64,
             "title": "Session Id",
             "default": ""
+          },
+          "match_id": {
+            "type": "string",
+            "maxLength": 32,
+            "title": "Match Id",
+            "default": ""
           }
         },
         "type": "object",
@@ -8076,6 +8326,70 @@
         ],
         "title": "KeyPatch"
       },
+      "LLMProfileUpdate": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "maxLength": 32,
+            "title": "Provider",
+            "default": "openai_compatible"
+          },
+          "base_url": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 8,
+            "title": "Base Url"
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 96,
+            "minLength": 1,
+            "title": "Model"
+          },
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key"
+          },
+          "clear_key": {
+            "type": "boolean",
+            "title": "Clear Key",
+            "default": false
+          },
+          "input_price_cny_per_m": {
+            "type": "number",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Input Price Cny Per M",
+            "default": 0
+          },
+          "output_price_cny_per_m": {
+            "type": "number",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Output Price Cny Per M",
+            "default": 0
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "base_url",
+          "model"
+        ],
+        "title": "LLMProfileUpdate"
+      },
       "LiveTimelineItem": {
         "properties": {
           "captured_at": {
@@ -8128,6 +8442,106 @@
           "password"
         ],
         "title": "LoginBody"
+      },
+      "MatchAnalysisResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "default": ""
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing",
+            "default": []
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "default": ""
+          },
+          "key_factors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Key Factors",
+            "default": []
+          },
+          "risks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Risks",
+            "default": []
+          },
+          "invalidators": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Invalidators",
+            "default": []
+          },
+          "data_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Data Gaps",
+            "default": []
+          },
+          "confidence_note": {
+            "type": "string",
+            "title": "Confidence Note",
+            "default": ""
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": ""
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "data_cutoff": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Cutoff"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "MatchAnalysisResponse"
       },
       "MatchEvidenceResponse": {
         "properties": {

@@ -10,9 +10,13 @@ const CHAT_SESSION = `${Date.now().toString(36)}-${Math.random().toString(36).sl
 export function useChatMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (text: string): Promise<ChatCard> => {
+    mutationFn: async (input: { text: string; matchId?: string }): Promise<ChatCard> => {
       const raw = await callApi(api.client.POST("/chat", {
-        body: { text, session_id: CHAT_SESSION },
+        body: {
+          text: input.text,
+          session_id: CHAT_SESSION,
+          match_id: input.matchId ?? "",
+        },
       }));
       return adaptChat(raw);
     },

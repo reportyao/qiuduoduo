@@ -244,6 +244,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/matches/{match_id}/analysis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Match Analysis
+         * @description 读取已缓存的单场 AI 解读；不触发 LLM。
+         */
+        get: operations["match_analysis_matches__match_id__analysis_get"];
+        put?: never;
+        /**
+         * Create Match Analysis
+         * @description 生成单场 AI 解读；同一事实包只调用一次 deep，失败返回 unavailable。
+         */
+        post: operations["create_match_analysis_matches__match_id__analysis_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/interactions": {
         parameters: {
             query?: never;
@@ -1541,6 +1565,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/api/llm/profiles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Llm Profiles */
+        get: operations["admin_llm_profiles_admin_api_llm_profiles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/api/llm/profiles/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Admin Llm Profile Update */
+        put: operations["admin_llm_profile_update_admin_api_llm_profiles__name__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/api/llm/profiles/{name}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Llm Profile Test */
+        post: operations["admin_llm_profile_test_admin_api_llm_profiles__name__test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/api/data": {
         parameters: {
             query?: never;
@@ -2527,6 +2602,11 @@ export interface components {
              * @default
              */
             session_id: string;
+            /**
+             * Match Id
+             * @default
+             */
+            match_id: string;
         };
         /** ClickResponse */
         ClickResponse: {
@@ -2833,6 +2913,40 @@ export interface components {
             /** Api Key */
             api_key: string;
         };
+        /** LLMProfileUpdate */
+        LLMProfileUpdate: {
+            /**
+             * Provider
+             * @default openai_compatible
+             */
+            provider: string;
+            /** Base Url */
+            base_url: string;
+            /** Model */
+            model: string;
+            /** Api Key */
+            api_key?: string | null;
+            /**
+             * Clear Key
+             * @default false
+             */
+            clear_key: boolean;
+            /**
+             * Input Price Cny Per M
+             * @default 0
+             */
+            input_price_cny_per_m: number;
+            /**
+             * Output Price Cny Per M
+             * @default 0
+             */
+            output_price_cny_per_m: number;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+        };
         /** LiveTimelineItem */
         LiveTimelineItem: {
             /** Captured At */
@@ -2852,6 +2966,65 @@ export interface components {
             username: string;
             /** Password */
             password: string;
+        };
+        /** MatchAnalysisResponse */
+        MatchAnalysisResponse: {
+            /** Status */
+            status: string;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+            /**
+             * Missing
+             * @default []
+             */
+            missing: string[];
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
+            /**
+             * Key Factors
+             * @default []
+             */
+            key_factors: string[];
+            /**
+             * Risks
+             * @default []
+             */
+            risks: string[];
+            /**
+             * Invalidators
+             * @default []
+             */
+            invalidators: string[];
+            /**
+             * Data Gaps
+             * @default []
+             */
+            data_gaps: string[];
+            /**
+             * Confidence Note
+             * @default
+             */
+            confidence_note: string;
+            /**
+             * Model
+             * @default
+             */
+            model: string;
+            /** Generated At */
+            generated_at?: string | null;
+            /** Data Cutoff */
+            data_cutoff?: string | null;
+            /**
+             * Cached
+             * @default false
+             */
+            cached: boolean;
         };
         /** MatchEvidenceResponse */
         MatchEvidenceResponse: {
@@ -4464,6 +4637,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FocusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    match_analysis_matches__match_id__analysis_get: {
+        parameters: {
+            query?: {
+                date?: string | null;
+            };
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchAnalysisResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_match_analysis_matches__match_id__analysis_post: {
+        parameters: {
+            query?: {
+                date?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchAnalysisResponse"];
                 };
             };
             /** @description Validation Error */
@@ -6876,6 +7117,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    admin_llm_profiles_admin_api_llm_profiles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    admin_llm_profile_update_admin_api_llm_profiles__name__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LLMProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_llm_profile_test_admin_api_llm_profiles__name__test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

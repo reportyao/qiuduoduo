@@ -170,6 +170,22 @@ class FocusResponse(BaseModel):
     persona: str
 
 
+class MatchAnalysisResponse(BaseModel):
+    status: str  # ready | unavailable
+    reason: str = ""
+    missing: list[str] = []
+    summary: str = ""
+    key_factors: list[str] = []
+    risks: list[str] = []
+    invalidators: list[str] = []
+    data_gaps: list[str] = []
+    confidence_note: str = ""
+    model: str = ""
+    generated_at: str | None = None
+    data_cutoff: str | None = None
+    cached: bool = False
+
+
 class InteractionResponse(BaseModel):
     ok: bool
     duplicate: bool

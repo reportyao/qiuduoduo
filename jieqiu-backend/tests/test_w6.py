@@ -595,3 +595,24 @@ def test_bet_pnl_uses_odds_snapshot_and_blocks_settled(db, client):
     r = client.post("/bets", json={"verdict_id": "v-pnl-2", "amount": 100},
                     headers={"Authorization": "Bearer tok-pnl"})
     assert r.status_code == 422
+
+
+def test_chat_analyze_match_uses_analysis_service(db, client, monkeypatch):
+    _seed_match(db, "m-chat-ai", "周四888", home="曼城", away="布莱顿")
+    login_device(db, "tok-chat-ai")
+    from app.features.analysis import service as analysis_service
+
+    monkeypatch.setattr(analysis_service, "generate", lambda *a, **k: {
+        "status": "ready", "summary": "主胜方向有价格支撑，但首发未定。",
+        "key_factors": ["主胜概率 56%"], "risks": ["首发未公布"],
+        "invalidators": ["临场主胜 SP 抬升"], "data_gaps": ["首发未公布"],
+        "confidence_note": "数据截止 12:00", "model": "deepseek",
+        "generated_at": None, "data_cutoff": None, "cached": False,
+    })
+    r = client.post("/chat", json={
+        "text": "分析这场", "match_id": "m-chat-ai",
+    }, headers={"Authorization": "Bearer tok-chat-ai"}).json()
+    assert r["type"] == "match_analysis"
+    assert "主胜方向" in r["text"]
+    assert "风险" in r["text"]
+    assert r["analysis_status"] == "ready"

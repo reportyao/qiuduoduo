@@ -16,8 +16,10 @@ from sqlalchemy.orm import Session
 from ...db import get_db
 from ...models import InteractionEvent, User
 from ...modules.users import is_deleted, user_from_token
+from ..analysis import service as analysis_service
 from . import service
-from .schemas import FocusResponse, InteractionResponse, PulseResponse
+from .schemas import (FocusResponse, InteractionResponse, MatchAnalysisResponse,
+                      PulseResponse)
 
 router = APIRouter(tags=["focus-intel"])
 
@@ -94,6 +96,33 @@ def match_focus(match_id: str, response: Response, date: str | None = None,
     # capabilities 依赖登录态，禁止共享缓存。
     response.headers["Cache-Control"] = "private, no-store"
     return payload
+
+
+@router.get("/matches/{match_id}/analysis",
+            response_model=MatchAnalysisResponse)
+def match_analysis(match_id: str, date: str | None = None,
+                   db: Session = Depends(get_db)):
+    """读取已缓存的单场 AI 解读；不触发 LLM。"""
+    try:
+        return analysis_service.get_cached(db, match_id, date=date)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.post("/matches/{match_id}/analysis",
+             response_model=MatchAnalysisResponse)
+def create_match_analysis(match_id: str, request: Request,
+                          date: str | None = None,
+                          user: User | None = Depends(optional_user),
+                          db: Session = Depends(get_db)):
+    """生成单场 AI 解读；同一事实包只调用一次 deep，失败返回 unavailable。"""
+    rate_key = request.client.host if request.client else "anon"
+    if not _rate_ok("analysis:" + rate_key):
+        raise HTTPException(429, "解读请求过于频繁")
+    try:
+        return analysis_service.generate(db, match_id, date=date)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 @router.post("/interactions", response_model=InteractionResponse)

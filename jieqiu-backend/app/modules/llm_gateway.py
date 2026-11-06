@@ -27,21 +27,15 @@ from ..models import LLMBudget, LLMCache, LLMProfile, LLMUsage
 CN = timezone(timedelta(hours=8))
 PROMPT_VER = "v1"
 TASK_PROFILE = {
-    "copy_polish": "fast",
     "open_chat": "fast",
     "match_analysis": "deep",
-    "json_repair": "fast",
     "decision_review": "deep",
-    "adversarial_review": "deep",
     "plan_review": "fast",
 }
 _TTL = {
-    "copy_polish": 86400,
     "open_chat": 1800,
     "match_analysis": 21600,
-    "json_repair": 3600,
     "decision_review": 21600,
-    "adversarial_review": 21600,
     "plan_review": 86400,
 }
 _PRIVATE_TASKS = {"open_chat"}
