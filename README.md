@@ -7,7 +7,7 @@
 - 生产后端：`jieqiu-backend/`（FastAPI 模块化单体，过渡期目录，迁移目标 `services/api/`）
 - 接口契约：`packages/api-client/`（OpenAPI 快照 + 生成 TS client，禁止手写接口类型）
 - 数据底座：`sp-collector/`（竞彩官方 SP 自采，家宽出口）
-- 当前线上：`43.128.24.244:8100`，代码提交 `dd4555b`（2026-11-05 部署）
+- 当前线上：`43.128.24.244:8100`，2026-11-06 已部署后台接入中心/单场 AI 解读（SQLite 启动期建表）
 - 仓库最新：2026-11-06 JPush 客户端接入（后端修复待部署，真机包 `apk-20261106-22`）
 - Android 测试包：https://github.com/reportyao/qiuduoduo/releases/tag/apk-20261106-22
 
