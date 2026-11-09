@@ -1049,11 +1049,22 @@ def admin_collector_restart(request: Request,
     row = db.get(CollectorStatus, 1)
     if row is None:
         raise HTTPException(409, "采集器从未上报心跳，无法下发重启")
-    row.restart_requested_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    stale = int((now - row.last_seen).total_seconds()) if row.last_seen else None
+    online = stale is not None and stale <= 600
+    row.restart_requested_at = now
     db.commit()
     _audit(db, principal, "collector.restart", "collector", "1",
            after={"requested_at": _iso(row.restart_requested_at)}, request=request)
-    return _collector_view(db)
+    view = _collector_view(db)
+    # 重启指令靠采集器下一次心跳取走；进程已死时只能挂起，必须把这一点说清楚。
+    if online:
+        view["notice"] = "重启指令已下发，采集器将在 5 分钟内（下次心跳）自动退出并由 watchdog 拉起。"
+    else:
+        view["notice"] = (
+            "采集器当前离线，重启指令已挂起（restart_pending）。"
+            "服务器无法拉起本机进程：请在本机运行 run_collector.bat 或登录后由计划任务自动启动。")
+    return view
 
 
 @router.get("/api/workbench")

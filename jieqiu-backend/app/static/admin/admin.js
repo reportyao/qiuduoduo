@@ -910,8 +910,8 @@ async function loadCollector() {
       "重启采集器",
       "会向采集器下发重启指令。采集器在线时下一次心跳会退出，由本地 watchdog 自动拉起；离线时指令会排队。",
       async () => {
-        await post("/admin/api/collector/restart");
-        toast("已下发重启指令");
+        const res = await post("/admin/api/collector/restart");
+        toast(res && res.notice ? res.notice : "已下发重启指令", res && res.online ? "success" : "warn", 6000);
         loadCollector();
       },
     );

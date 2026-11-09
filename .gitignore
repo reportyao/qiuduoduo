@@ -37,3 +37,10 @@ apps/mobile/android/
 apps/mobile/ios/
 sp-collector/run_collector.bat
 sp-collector/token.txt
+
+# 采集器运行期产物（不入库）
+sp-collector/collector.lock
+sp-collector/register_result.txt
+sp-collector/*.bak-*
+jczq_leagues_2m.json
+matchlist_official.json
