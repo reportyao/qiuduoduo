@@ -86,6 +86,9 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
     chain = latest_chain_status(db)
     matches = list(db.scalars(select(SPMatch).where(
         SPMatch.kickoff >= start, SPMatch.kickoff <= end)).all())
+    no_matches = len(matches) == 0
+    next_match = db.scalar(select(SPMatch).where(
+        SPMatch.kickoff > end).order_by(SPMatch.kickoff).limit(1)) if no_matches else None
     match_ids = [m.match_id for m in matches]
     snapshots_total = int(db.scalar(select(func.count()).select_from(SPSnapshot).where(
         SPSnapshot.match_id.in_(match_ids))) or 0) if match_ids else 0
@@ -122,9 +125,9 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
 
     # 1 采集
     # 采集器每 30 分钟 SFTP 推一次文件；心跳 10 分钟。文件 35 分钟内更新都算正常。
-    c_ok = bool(collector["online"]
-                and (collector["data_age_seconds"] or 10**9) <= 2100)
-    c_warn = c_ok and (snapshots_today == 0 or missing_league > 0)
+    c_ok = bool(collector["online"] and
+                (no_matches or (collector["data_age_seconds"] or 10**9) <= 2100))
+    c_warn = c_ok and not no_matches and (snapshots_today == 0 or missing_league > 0)
     stages.append(_stage(
         "collect", "采集", "今天有没有拿到官方 SP？", _DEFINITIONS["SP"],
         _state(c_ok, c_warn),
@@ -144,12 +147,12 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
     ))
 
     # 2 入库
-    ingest_ok = len(matches) > 0 and snapshots_today > 0
+    ingest_ok = no_matches or (len(matches) > 0 and snapshots_today > 0)
     stages.append(_stage(
         "ingest", "入库", "采集数据有没有正确进入后端？",
         "采集器推送 sp_data.db 后，seed 把场次和 SP 快照写入后端数据库。",
-        _state(ingest_ok, ingest_ok and missing_league > 0),
-        f"{len(matches)} 场已入库，今日 {snapshots_today} 条 SP 快照",
+        _state(ingest_ok, ingest_ok and not no_matches and missing_league > 0),
+        "当前销售日无在售场次" if no_matches else f"{len(matches)} 场已入库，今日 {snapshots_today} 条 SP 快照",
         [{"label": "场次", "value": str(len(matches))},
          {"label": "今日 SP 快照", "value": str(snapshots_today)},
          {"label": "空联赛", "value": str(missing_league)}],
@@ -161,12 +164,12 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
     intl = supply["intl_odds"]
     cover = intl["covered_matches"]
     total = supply["matches"]
-    market_ok = bool(intl["configured"] and cover > 0)
+    market_ok = no_matches or bool(intl["configured"] and cover > 0)
     stages.append(_stage(
         "market", "市场数据", "国际盘和阵容够不够？",
         "市闸需要竞彩官方 + 至少一条国际盘；API-Football 补阵容、伤停、积分榜。",
-        _state(market_ok, market_ok and cover < total),
-        f"国际盘覆盖 {cover}/{total} 场；API-Football 今日已用 {af.get('used_today', 0)}/{af.get('daily_limit', 0)} 次",
+        _state(market_ok, market_ok and not no_matches and cover < total),
+        "当前销售日无在售场次，不需要请求国际盘" if no_matches else f"国际盘覆盖 {cover}/{total} 场；API-Football 今日已用 {af.get('used_today', 0)}/{af.get('daily_limit', 0)} 次",
         [{"label": "国际盘覆盖", "value": f"{cover}/{total}"},
          {"label": "今日国际盘", "value": str(intl["total"])},
          {"label": "阵容行", "value": str(af.get("target", {}).get("lineups", 0))},
@@ -179,12 +182,12 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
 
     # 4 模型
     v_status = supply["verdicts"]
-    model_ok = v_status["total"] > 0 and model_runs > 0
+    model_ok = no_matches or (v_status["total"] > 0 and model_runs > 0)
     stages.append(_stage(
         "model", "模型", "模型有没有算出可用的概率？",
         "确定性统计模型生成胜平负概率；模型闸检查覆盖率，不把 LLM 当预测器。",
-        _state(model_ok, model_ok and v_status["promoted"] == 0),
-        f"今日 {v_status['total']} 条判决，{v_status['promoted']} 条通过三关，模型运行 {model_runs} 次",
+        _state(model_ok, model_ok and not no_matches and v_status["promoted"] == 0),
+        "当前销售日无在售场次" if no_matches else f"今日 {v_status['total']} 条判决，{v_status['promoted']} 条通过三关，模型运行 {model_runs} 次",
         [{"label": "判决", "value": str(v_status["total"])},
          {"label": "promoted", "value": str(v_status["promoted"])},
          {"label": "模型运行", "value": str(model_runs)}],
@@ -198,11 +201,11 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
                      if (v.gates or {}).get("price", {}).get("result") == "pass")
     model_pass = sum(1 for v in verdicts
                      if (v.gates or {}).get("model", {}).get("result") == "pass")
-    gates_ok = bool(verdicts) and promoted > 0
+    gates_ok = no_matches or (bool(verdicts) and promoted > 0)
     stages.append(_stage(
         "gates", "三闸", "价 / 市 / 模分别卡在哪？", _DEFINITIONS["三闸"],
         _state(gates_ok, bool(verdicts) and not gates_ok),
-        f"价闸过 {price_pass}，市闸过 {gates.get('pass', 0)}，模闸过 {model_pass}；promoted {promoted}",
+        "当前销售日无在售场次" if no_matches else f"价闸过 {price_pass}，市闸过 {gates.get('pass', 0)}，模闸过 {model_pass}；promoted {promoted}",
         [{"label": "价闸", "value": f"{price_pass}/{len(verdicts)}"},
          {"label": "市闸", "value": f"{gates.get('pass', 0)} 过 / {gates.get('pending_data', 0)} 待"},
          {"label": "模闸", "value": f"{model_pass}/{len(verdicts)}"}],
@@ -213,9 +216,9 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
     # 6 封存
     stages.append(_stage(
         "seal", "封存", "判决有没有写入不可篡改链？", _DEFINITIONS["封存"],
-        _state(bool(chain.get("ok")) and sealed > 0,
+        _state(no_matches or (bool(chain.get("ok")) and sealed > 0),
                bool(chain.get("ok")) and sealed == 0),
-        f"链 {'正常' if chain.get('ok') else '异常'}，本日已封存 {sealed}/{len(verdicts)}",
+        "当前销售日无在售场次，无封存" if no_matches else f"链 {'正常' if chain.get('ok') else '异常'}，本日已封存 {sealed}/{len(verdicts)}",
         [{"label": "链状态", "value": "正常" if chain.get("ok") else "断裂"},
          {"label": "链接数", "value": str(chain.get("links", 0))},
          {"label": "已封存", "value": str(sealed)}],
@@ -244,8 +247,8 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
     published = supply["published"]
     stages.append(_stage(
         "publish", "发布", "前端今天能看到几条？", _DEFINITIONS["published"],
-        _state(published > 0, bool(snaps or plans) and published == 0),
-        f"已发布 {published} 条；snapshot {supply['snapshots']['published']}，plan {supply['plans']['published']}",
+        _state(no_matches or published > 0, bool(snaps or plans) and published == 0),
+        "当前销售日无在售场次" if no_matches else f"已发布 {published} 条；snapshot {supply['snapshots']['published']}，plan {supply['plans']['published']}",
         [{"label": "已发布", "value": str(published)},
          {"label": "snapshot", "value": f"{supply['snapshots']['published']}/{supply['snapshots']['total']}"},
          {"label": "plan", "value": f"{supply['plans']['published']}/{supply['plans']['total']}"}],
@@ -287,7 +290,11 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
     warn = [s for s in stages if s["state"] == "warn"]
     headline = (f"今日 {len(matches)} 场 · SP {snapshots_today} 条 · "
                 f"国际盘 {cover}/{len(matches)} · 已发布 {published}")
-    if blocked:
+    if no_matches:
+        nxt = (f"下一场 {next_match.home} vs {next_match.away}（{next_match.kickoff}）"
+               if next_match is not None else "暂无下一批赛程")
+        headline = f"{date} 销售日无在售场次；{nxt}"
+    elif blocked:
         headline += f"；主卡点：{blocked[0]['title']}"
     elif warn:
         headline += f"；需关注：{warn[0]['title']}"
@@ -297,7 +304,8 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
         "date": date,
         "generated_at": datetime.now(CN).isoformat(timespec="seconds"),
         "headline": headline,
-        "overall": "blocked" if blocked else "warn" if warn else "ok",
+        "overall": ("blocked" if blocked else "warn" if warn else
+                    "idle" if no_matches else "ok"),
         "stages": stages,
         "blockers": [{"key": s["key"], "title": s["title"],
                       "headline": s["headline"], "next": s["next"]}
@@ -322,6 +330,9 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
             "llm": {"fast": fast, "deep": deep, "recent_errors": recent_errors[:5]},
             "push": {"total": tokens_total, "enabled": tokens_enabled},
             "missing_league": missing_league,
+            "no_matches": no_matches,
+            "next_match": ({"home": next_match.home, "away": next_match.away,
+                            "kickoff": next_match.kickoff} if next_match else None),
         },
     }
 
@@ -344,6 +355,12 @@ def _action_items(ids: list[str]) -> list[dict]:
 
 
 def _fallback_diagnosis(wb: dict) -> dict:
+    if (wb.get("raw") or {}).get("no_matches"):
+        nxt = (wb.get("raw") or {}).get("next_match") or {}
+        tip = (f"当前销售日没有在售场次；下一场 {nxt.get('home')} vs {nxt.get('away')}"
+               f"（{nxt.get('kickoff')}）。" if nxt else "当前销售日没有在售场次，暂无下一批赛程。")
+        return {"headline": wb.get("headline", ""), "root_causes": [],
+                "actions": [], "needs_human": tip, "fallback": True}
     source = (wb.get("blockers") or wb.get("warnings") or [{}])[0]
     stage = next((s for s in wb.get("stages", [])
                   if s.get("key") == source.get("key")), {})

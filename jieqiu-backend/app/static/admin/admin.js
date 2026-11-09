@@ -729,6 +729,7 @@ let workbenchDiag = null;
 function wbPill(state) {
   if (state === "ok") return '<span class="pill green">正常</span>';
   if (state === "warn") return '<span class="pill amber">需关注</span>';
+  if (state === "idle") return '<span class="pill muted">无场次</span>';
   return '<span class="pill red">卡住</span>';
 }
 

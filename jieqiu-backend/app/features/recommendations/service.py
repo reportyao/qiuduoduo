@@ -12,15 +12,15 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from ...models import (DecisionSnapshot, RecommendationEvent, RecommendationPlan,
-                       ReviewRun, Verdict, utcnow)
+                       ReviewRun, SPMatch, Verdict, utcnow)
 from ...config import get_settings
 from ...modules import calibration, llm_gateway
 from ...modules.compliance import scan_text
-from ...modules.timeutil import CN, trade_date_now
+from ...modules.timeutil import CN, trade_date_now, trade_window
 from ..tools import service as parlay_service
 from ..tools.schemas import ParlayPlanRequest
 
@@ -680,7 +680,20 @@ def today(db: Session, date: str | None = None) -> dict:
             if result == "pending_data":
                 pending += 1
         if not verdicts:
-            message = "今日暂无已发布预测；采集或预测数据还没到。"
+            start, end = trade_window(date)
+            none_today = int(db.scalar(
+                select(func.count()).select_from(SPMatch).where(
+                    SPMatch.kickoff >= start, SPMatch.kickoff <= end)) or 0) == 0
+            if none_today:
+                nxt = db.scalar(select(SPMatch).where(
+                    SPMatch.kickoff > end).order_by(SPMatch.kickoff).limit(1))
+                if nxt is not None:
+                    message = (f"这个竞彩销售日没有在售场次；下一场 "
+                               f"{nxt.home} vs {nxt.away}（{nxt.kickoff}）。")
+                else:
+                    message = "这个竞彩销售日没有在售场次，暂无下一批赛程。"
+            else:
+                message = "今日暂无已发布预测；采集或预测数据还没到。"
         elif pending >= len(verdicts):
             message = "今日暂无已发布预测；国际盘数据未接入或覆盖不足，市闸无法通过，今天不硬推。"
         else:
