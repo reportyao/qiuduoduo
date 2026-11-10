@@ -1,195 +1,196 @@
-# 球多多 × Sportmonks 重构方案（数据源收编 + Prediction Model 主力）
+# 球多多 × Sportmonks 重构方案 v2（数据源收编 + Prediction Model 主力）
 
 > 前提约束：**数据源收敛为两个** —— ① 自建竞彩采集器（SP/让球/单关/销售窗口，唯一竞彩口径事实源）；② Sportmonks Football API v3（国际数据 + 预测模型）。
-> 依据：`Sportmonks调研报告.md`（预测专项）+ docs.sportmonks.com/v3 全量文档（llms-full.txt 本地留存）+ 当前代码审查（dc_model/verdict/intl_odds/api_football/understat/results 同步链）。
+> 依据：`Sportmonks调研报告.md` + docs.sportmonks.com/v3 全量文档 + 当前代码审查 + **DeepSeek 独立评审 12 条（已全部采纳，见 §11 与 [sm_deepseek_review.md](./sm_deepseek_review.md)）**。
+> v2 变更：预算上限修正、市场闸判据修正、验证管线改影子模式、结算双源对账、排期改四门制、合规与授权缺口补齐。
 > 日期：2026-11-11
 
 ## 0. 一句话结论
 
-**把 Sportmonks Prediction Model 作为"模型闸"的第二引擎（非五大联赛的唯一引擎），把 Sportmonks 赔率（Pinnacle）作为"市场闸"的唯一国际基准，把它的伤停/阵容/积分榜作为情报事实包，赛果结算也切到它——然后下线 The Odds API、API-Football、football-data 三条链路；Understat 只保留给 DC 模型训练回填（免费且只有五大联赛有 xG）。**
+**把 Sportmonks Prediction Model 作为"模型闸"的第二引擎（非五大联赛的唯一引擎），Pinnacle 赔率作为"市场闸"的国际基准，伤停/阵容/积分榜做情报事实包，赛果结算先双源对账再切换——全部切换都以"合同确认 + 覆盖验证 + 影子运行"三门为准入，然后才下线 The Odds API、API-Football、football-data；Understat 只保留给 DC 训练回填。**
 
 ---
 
 ## 1. 为什么这样接：现状诊断
 
-当前预测链路的实际瓶颈（来自代码与生产数据）：
-
 | 环节 | 现状 | 问题 |
 |---|---|---|
-| 模型闸 | Dixon-Coles（Understat xG 训练，五大联赛 10,707 场） | **只覆盖五大联赛球队**（`min_matches=3`），日职/英锦标赛/韩职等全部 `model_runs=0`、模型闸 pending → 无法发布 |
-| 市场闸 | The Odds API（免费 500 credit/月，target-only） | EFL Trophy 等无 sport key（404），覆盖缺口；credit 是长期天花板 |
+| 模型闸 | Dixon-Coles（Understat xG 训练，五大联赛） | **只覆盖五大联赛球队**，日职/英锦标赛等全部模型 pending → 无法发布 |
+| 市场闸 | The Odds API（免费 500 credit/月） | EFL Trophy 等无 sport key；credit 是天花板 |
 | 情报层 | API-Football 免费 100 次/天 | 配额小，lineups/injuries 经常拿不到 |
-| 结算 | football-data（免费） | 免费源覆盖不稳，低级别联赛缺 |
-| xG | Understat（免费） | 五大联赛 only，且是抓取（有被反爬风险） |
+| 结算 | football-data（免费） | 覆盖不稳，低级别联赛缺 |
+| xG | Understat（免费抓取） | 五大 only，有反爬风险 |
 
-Sportmonks 一次收编解决全部四个问题：
+Sportmonks 对应解决：Predictions Model 覆盖 1,350+ 联赛；赔率 feed 50+ 庄家；lineups/sidelined/standings/h2h 情报一次配齐；fixtures 赛果结算。
 
-- **Predictions Model 覆盖 1,350+ 联赛**（36 种市场，赛前 21 天可用，逐日刷新）→ 补齐模型闸的联赛缺口；
-- **赔率 feed**（50+ 庄家、150+ 市场，赛后历史回溯到 2018）→ 市场闸换 Pinnacle 基准；
-- **lineups / sidelined（伤停）/ standings / statistics / h2h** → 情报层一次性配齐，无免费配额焦虑；
-- **fixtures 赛果** → 结算替代 football-data。
+## 2. 数据采购决策（v2：预算给上限，合同给门）
 
-## 2. 数据采购决策（先定钱，再定架构）
-
-| 采购项 | 决策 | 理由 |
+| 采购项 | 决策 | 说明 |
 |---|---|---|
-| 基础套餐 | **Growth €99/月**（任选 30 联赛） | 竞彩近两月 38 个赛事、860 场的分布（见 `jczq_leagues_2m.json`），5/120 档都不合适 |
-| Predictions | **Odds & Predictions 捆绑 €15/月**（省 20%） | 比单买 Basic €23 便宜；下单前邮件客服确认捆绑内是 Basic 还是 Advanced |
-| Advanced（滚球） | **暂不买** | 球多多是赛前产品；滚球只有 1X2 一个市场且按分钟烧配额。等做"实时胜率曲线"功能再升 |
-| xG Basic | **暂不买**（€19+） | 赛后 xG 对赛前预测无用；DC 训练用 Understat 免费源；低级别杯赛大概率没 xG |
-| Premium Odds / Premium Expected Lineups / Livescores | 不买 | 赛前产品用不上；普通 lineups include 够用 |
-| 年付 | 验证跑通 1-2 个月后再转年付（-20%） | 先月付 |
+| 基础套餐 | Growth €99/月（任选 30 联赛），先月付 | 30 槽名单见 §2.1 |
+| Predictions | 优先 Odds & Predictions 捆绑 €15/月 | **书面客服确认四件事后才锁定**：①捆绑内含 Predictions Basic 还是 Advanced；②Odds 是标准 feed 完整档还是阉割档；③是否含 Pinnacle 及其历史；④**C 端展示/再分发许可** |
+| 预算上限 | **按 €99 + €23（Basic）+ €14（Odds 最低档）= €136/月 做预算上限** | €15 捆绑是官方"Save 20%"标注（€24→€15），实际折扣约 37%，数字存疑；确认前按最坏情况做预算，不把 €114 写进任何承诺 |
+| Advanced 滚球 | 暂不买 | 赛前产品；只有 1X2 一个市场且按分钟烧配额 |
+| xG Basic | 暂不买 | 赛后 xG 对赛前无用；DC 用 Understat |
+| Premium Odds / Premium Expected Lineups / Livescores | 不买 | 赛前产品用不上 |
+| 年付 | 四门全过后转年付（-20%） | — |
 
-**月成本：€114（≈ ¥880）。** 30 个联赛槽位名单按 `docs` 里 24 固定 + 6 轮换执行（见前一轮"会员选联赛"结论）。
+### 2.1 30 槽名单与覆盖缺口降级策略
+
+- 名单：24 固定 + 6 轮换（前一轮"会员选联赛"结论），按近两月 860 场/38 赛事分布校准；
+- **38 赛事 > 30 槽是事实**：亚运类一次性赛事、沙特联、亚冠联2、单场杯赛（巴西杯/荷杯）天然无槽。P0 产出**竞彩场次加权覆盖表**：每个赛事近 90 天场次 × 是否入槽 × SM 预测覆盖（predictable 命中率）；
+- **降级规则（写进验收，不隐瞒）**：无 SM 覆盖的比赛 = 维持现状（市场/模型闸 pending，不发布预测，只展示 SP 与分析），**不能因为接了 SM 就默认全部竞彩场次都有模型**；
+- 杯赛是否占槽、是否按赛季计费：P0 问客服确认。
 
 ## 3. Sportmonks 数据怎么用（按预测价值排序）
 
-| 数据 | 端点/字段 | 用在哪 | 对准确率的价值 |
-|---|---|---|---|
-| **1X2 概率**（type 237） | `predictions/probabilities/fixtures/{id}` | 模型闸第二引擎；详情页概率对比 | ★★★ 核心补齐：非五大联赛从"无模型"变"有模型" |
-| **Value Bets**（type 33） | `predictions/valuebets` | review 层参考信号（不直接发布） | ★★★ 模型×庄家赔率的现成价值筛选 |
-| **联赛可预测性**（type 243） | `predictions/predictability/leagues/{id}` | 模型权重 + UI 诚实标签 | ★★★ `high/medium/poor` 直接决定"这场信不信模型" |
-| **赛前赔率全庄家** | `odds/fixtures/{id}`（按 bookmaker/market 过滤） | 市场闸：Pinnacle 去水基准 + 全庄离散 | ★★★ 收盘最强基准，替代 The Odds API |
-| **伤停/停赛**（sidelined） | fixture include `sidelined` | intel_items → AI 解读事实包 | ★★ 核心球员缺阵是赛前最大信息增量 |
-| **阵容**（confirmed + predicted lineups） | fixture include `lineups` | 详情页情报卡；开赛前刷新 | ★★ 预测首发（赛前）→ 确认阵容（赛前 20-40 分钟） |
-| **积分榜/排名** | standings by season（含主客场拆分） | 特征 + 解读事实（主客场成绩差） | ★★ 主场龙/客场虫类结构性信号 |
-| **赛季统计** | statistics by participant | 解读事实（进失球、连胜连败、零封率） | ★★ 与 xG 互补的状态特征 |
-| **历史交锋** | fixtures by head-to-head | 解读事实包 | ★ 心理/风格因素，权重低 |
-| **赛果** | fixtures（state/scores） | 结算（替代 football-data） | 结算可靠性，不直接提升预测 |
-| **赛程** | fixtures by date-range | 与采集器对齐（`jc_source_links`） | 基础设施 |
-| 比分矩阵（240）/BTTS/大小球/双 chance/HT-FT | 同预测端点 | 暂存不展示（未来玩法扩展） | ★ 预留 |
-| zh 翻译（Beta） | `locale=zh` | 辅助展示 | ★ 自建 type_id/state 中文映射表，不依赖 Beta |
-| xG / 滚球 / Pressure Index | 加购 | **不接** | — |
+| 数据 | 端点/字段 | 用在哪 | 价值 | 状态 |
+|---|---|---|---|---|
+| 1X2 概率（237） | predictions/probabilities/fixtures/{id} | 模型闸第二引擎 | ★★★ | 受 predictable 过滤，非每场都有 |
+| Value Bets（33） | predictions/valuebets | review 层参考（禁"价值/edge"措辞外露） | ★★★ | 模板合规见 §9 |
+| 联赛可预测性（243） | predictions/predictability/leagues/{id} | 权重参考 + UI 标签 | ★★★ | **定性**；`unchanged` 单独按未知处理，不映射为权重 |
+| 赛前赔率全庄家 | odds/fixtures/{id}（bookmaker/market 过滤） | 市场闸 Pinnacle 基准 | ★★★ | Pinnacle id/含盖许可 P0 确认 |
+| 伤停（sidelined） | fixture include | intel_items | ★★★ | — |
+| 阵容 lineups | fixture include（confirmed） | 情报层 only（见 §4.5 时序） | ★★ | predicted lineups 是否含基础档未验证，不进验收 |
+| 积分榜（主客拆分） | standings | 特征 + 事实 | ★★ | — |
+| 赛季统计 / h2h | statistics / head-to-head | 事实包 | ★★ | — |
+| 赛果 | fixtures state/scores | 结算（先对账） | 基础设施 | 状态机见 §4.6 |
+| zh 翻译 | locale=zh（Beta） | 辅助 | ★ | 自建映射为主 |
+| xG / 滚球 / Pressure / Premium 系列 | 加购 | 不接 | — | — |
 
-**明确不用的**：Pressure Index（比赛动能，滚球语境）、Transfer rumours（噪声）、News/TV（无关）。
+## 4. 预测链路重构（v2 核心修订）
 
-## 4. 预测链路重构（核心）
+### 4.1 模型闸：双引擎，但**影子起步、权重从数据里长出来**
 
-### 4.1 模型闸：从"单 DC"到"双引擎融合"
+- **五大联赛**：起步 `w(sm)=0`（纯 DC 维持现状），SM 概率只记录进 `model_evals` 对比表；
+- **非五大联赛**：起步 SM 单引擎（DC 无数据，`model_source=sportmonks`）——这是唯一一开始就启用的部分，且每联赛先查 predictable 命中率；
+- **融合（DC ⊕ SM）不预设 0.5/0.5**：等影子期 RPS 数据（含置信区间）出来后按联赛定权重；样本不足的联赛不开融合；
+- **独立性检查（防双重计数）**：SM 预测大概率吸收了赔率信息，与 Pinnacle 基准相关。影子期加做两项检验：①SM 概率 vs Pinnacle 去水隐含的相关性；②SM 对 Pinnacle 的**条件信息增量**（在已知 Pinnacle 概率的条件下，SM 是否还提升 RPS）。无增量就不融合，模型闸只认一个；
+- verdict.gates.model 证据扩展：`{"model_source", "sm_prob", "dc_prob", "blend_weights", "league_predictability", "sm_predictable": bool}`。
 
-```text
-                 ┌─ DC 模型（Understat xG，五大联赛有数据时）─┐
-竞彩 SP 隐含概率 ─┤                                            ├─ 融合概率 p_model ─ 模型闸 vs 竞彩 SP
-                 └─ SM Prediction 1X2（1350+ 联赛）──────────┘
-                         权重 w(sm) = f(联赛 predictability, 自测 RPS)
-```
+### 4.2 市场闸：判据修正（v2）
 
-- **五大联赛**：`p = 0.5·DC + 0.5·SM` 起步（权重由第 4.3 节验证管线产出后动态调）；
-- **非五大**：`p = SM`（DC 没有数据，诚实降级为单引擎，证据层标注 `model_source=sportmonks`）；
-- **联赛级开关**：predictability `fulltime_result=poor` 的联赛，模型闸只做"不反对"检查（SM 概率与 SP 隐含偏差 > 阈值时不否决、也不加持），UI 打"该联赛模型可信度低"标签；
-- `verdict.gates.model` 证据扩展：`{"model_source": "dc"|"sportmonks"|"blend", "sm_prob": {...}, "dc_prob": {...}, "blend_weights": {...}, "league_predictability": "high"}`。
+- **主判据（唯一否决判据）**：`竞彩去水隐含 vs Pinnacle 去水隐含` 逐结果偏差 < 5pp（沿用现有阈值语义：竞彩对国际基准的偏离）；
+- **辅助展示（不进同一 max）**：全庄离散改用 **IQR / 标准差 + 庄家数**，作为信息展示和人工复核提示，不参与自动否决——Pinnacle 与中位数高度相关，三向取 max 会系统性放大误杀；
+- **双源策略**：The Odds API 链路**保留且默认开启**，与 SM 并行对照 ≥ 2 周、且 §2 四项书面确认到手后，才配置切换默认源；切换后旧链路保留 30 天再删代码。
 
-### 4.2 市场闸：Pinnacle 基准 + 全庄离散
+### 4.3 验证管线：影子模式起步（v2，修复"4 周样本 vs 14 天试用"矛盾）
 
-- 现有 `intl_odds` 表保留，`source` 增加取值 `sportmonks:pinnacle` / `sportmonks:median`；
-- Pinnacle 去水隐含概率作为"市场基准盘"参与模型闸对照（收盘基准语义）；
-- 离散度计算改为：竞彩去水 vs Pinnacle vs 全庄中位数，三向最大离散 < 5pp（阈值沿用现有 settings）；
-- The Odds API 代码路径保留但默认关闭（`JQ_ODDS_API_ENABLED=false`），试用期内并行跑一周做数据对照后再删。
-
-### 4.3 第三方模型验证管线（上线前必做，报告 §7 的落地）
-
-黑盒模型不验证就不配上权重：
-
-1. **每日快照冻结**：`sm_prediction_snapshots` 表（fixture_id、type_id、probabilities、captured_at），每天对全部在售竞彩场次拉一次预测——概率是逐日刷新的，冻结快照防"赛后回填"；
-2. **赛后结算对比**：SM fixtures 赛果落库后，计算每场 **RPS / log loss**（1X2）；
-3. **按联赛×周滚动聚合**进现有 `model_evals` 表：SM vs DC vs Pinnacle 收盘三列对照；
-4. **权重决策**：某联赛 SM 连续 4 周 RPS 显著差于 Pinnacle 隐含 → `w(sm)` 降权/该联赛模型闸只做不反对检查；
-5. 期间**绝不随机切分**，按时间切。
+1. **P0 先问客服：历史 predictions 是否可回溯**（文档只承诺赛前 21 天逐日刷新，未承诺历史回溯）。可回溯 → 直接拉历史做回测；不可回溯 → 只能前瞻积累；
+2. **影子模式**：`sm_prediction_snapshots` 每日冻结在售竞彩场次的预测（fixture、type_id、probabilities、captured_at），模型闸行为不变，只记录对比；
+3. 赛果落库后算每场 **RPS / log loss**，按**联赛×市场**聚合进 `model_evals`：SM / DC / Pinnacle 三列；
+4. **启用条件按统计而非固定时长**：某联赛 SM 样本 ≥ 30 场且 RPS 的 bootstrap 置信区间不差于 Pinnacle 隐含 → 该联赛 `w(sm)>0`；样本不够就继续影子；
+5. 时间序列切分，绝不随机切分；快照表是防回填的关键，永远先冻结再对账。
 
 ### 4.4 Value Bet 的位置
 
-- `predictions/valuebets` 每日同步到 `sm_valuebets`（fixture、market、prob、bookmaker_odds、value）；
-- **不直接进发布链**——它只是"第三方模型认为有价值"的参考。进入 `review_runs`（L1 规则层）作为参考字段：`value_bet: {"present": true, "edge": 0.07}`，人设文案可以引用，但三闸语义不变；
-- 合规红线不变：文案只写"预测方向/预测概率/置信度"，不得写"必中/稳赚"。
+- 同步进 `sm_valuebets`；只进 `review_runs` L1 作参考字段；
+- **L1 模板硬约束：禁止"价值/edge/庄家优势/收益率"类措辞**，只允许"模型概率/方向/置信度"；UI 明示"第三方参考，非投注建议"。
 
-### 4.5 情报层（intel_items 扩容）
-
-现有 `match_coverage` 六源（price/market/model/lineups/standings/schedule）从 API-Football 切到 Sportmonks：
+### 4.5 情报层 + 封存时序（v2 修订）
 
 | 覆盖源 | 新数据源 | 刷新时机 |
 |---|---|---|
-| lineups | SM fixture include lineups（confirmed）+ predicted lineups | 开赛前 2h / 30min 两次 |
-| 伤停 | SM sidelined include | 每日 + 开赛前 2h |
-| standings | SM standings（主客场拆分） | 每日 |
-| schedule | 采集器（竞彩口径，唯一权威） | 不变 |
-| price | 采集器 SP | 不变 |
-| market | SM odds | 每日 + 开赛前 2h |
+| lineups | SM confirmed lineups | 开赛前 2h 拉一次；T-30min 第二次**只进情报层** |
+| sidelined | SM sidelined | 每日 + 开赛前 2h |
+| standings | SM standings（主客拆分） | 每日 |
+| schedule / price | 采集器（唯一权威） | 不变 |
+| market | SM odds（Pinnacle + 中位数） | 每日 + 开赛前 2h |
 
-`FocusResponse.interpretation` / `match_analysis` 事实包自动获得伤停、阵容、排名、交锋事实——这些直接提升 AI 解读质量（match_analysis 的 `_compact` 事实包加入 SM 预测概率与伤停清单）。
+**封存纪律**：verdict 一经封存，后到的情报（如 T-30min 确认阵容）**不得修改已封存证据**；若需要用新情报重算，走 `verdict_revisions` 新版本 + 重新封存 + UI 标注版本。predicted lineups 未确认能力前不进任何验收标准。
 
-### 4.6 结算切换
+### 4.6 结算：双源对账 ≥ 4 周后才切主（v2）
 
-`results_sync`（football-data）替换为 SM fixtures 赛果：对齐走 `jc_source_links`，`jc_results` 表（见 `docs/jc-data-model.md`）承接。Understat 结果代理同步一并下线。
+- 定义**比赛状态机**：scheduled → live → finished（90 分钟口径）/ postponed / cancelled / abandoned；SM state 与竞彩停售口径的差异逐个映射（加时/点球不算 90 分钟结果）；
+- **阶段一（≥4 周）**：SM fixtures 赛果只读比对 football-data，逐场记录差异（含比分、状态、开赛时间），差异告警进工作台；
+- **阶段二**：连续 4 周无未解释差异 → SM 切主，football-data 转 fallback；
+- 结算是资金/公信力链路，任何对不上都要人审，不允许静默取一方。
 
 ## 5. 新增/改造模块清单（后端）
 
 ```text
-app/modules/sportmonks.py            # 新增：HTTP client（token/重试/限速/usage 记账）
-app/modules/sm_sync.py               # 新增：fixtures/predictions/odds/lineups/sidelined/standings/results 七个同步器
-app/modules/sm_predictions.py        # 新增：概率解析（type_id 拆包）、快照冻结、RPS/logloss 计算
-app/modules/verdict.py               # 改：模型闸双引擎融合 + 证据扩展
-app/modules/gates.py                 # 改：model_gate 接受 blended prob + model_source
-app/modules/intl_odds.py             # 改：SM Pinnacle/中位数源接入（The Odds API 路径保留可关）
-app/features/intel/service.py        # 改：coverage 六源切换到 SM；事实包扩容
-app/features/analysis/service.py     # 改：match_analysis 事实包加 SM 预测/伤停/交锋
-app/modules/results_sync.py          # 改：结算切 SM fixtures（football-data 下线）
-app/models.py                        # 新表：sm_fixtures, sm_prediction_snapshots, sm_valuebets, sm_usage（复用 jc_source_links, model_evals）
-migrations/20261111_17_sm_*.py       # Alembic
+app/modules/sportmonks.py        # HTTP client：token/重试/429 退避/限速/sm_usage 记账/硬熔断
+app/modules/sm_sync.py           # 七个同步器，全部幂等（唯一键 + ON CONFLICT）+ 失败死信表
+app/modules/sm_predictions.py    # type_id 拆包、快照冻结、RPS/logloss、bootstrap 置信区间
+app/modules/verdict.py           # 模型闸双引擎 + 影子记录 + 证据扩展
+app/modules/gates.py             # model_gate(blended, model_source)；market_gate 改主判据+辅助
+app/modules/intl_odds.py         # SM Pinnacle/中位数源；The Odds API 保留可切
+app/features/intel/service.py    # coverage 六源切 SM；事实包扩容
+app/features/analysis/service.py # match_analysis 事实包加 SM 预测/伤停/交锋
+app/modules/results_sync.py      # SM 赛果只读比对（阶段一）
+app/models.py + migrations       # 新表 sm_fixtures/sm_prediction_snapshots/sm_valuebets/sm_usage/sm_dead_letter
 ```
 
-配置新增（`config.py` + 后台接入中心可改）：`SPORTMONKS_TOKEN`（Fernet 入库，同 llm_profiles 模式）、`SPORTMONKS_BOOKMAKER_PINNACLE_ID`（试用时从 bookmakers 端点确认后固化）、`SPORTMONKS_PLAN`、`SM_SYNC_HORIZON_DAYS=21`。
+**配额纪律**（Growth 2,500/entity/h）：赔率**只拉 Pinnacle + 竞彩对应市场**（bookmaker_id + market_id 过滤，杜绝全庄全市场分页暴涨）；预测按 fixture 单拉；`sm_usage` 按端点×实体记账 + 日/时熔断阈值 + 429 指数退避 + 死信队列。缓存节奏 T-2h / T-30m 两档。
 
-**配额预算**（Growth 2,500 次/实体/小时，实际消耗极低）：每日同步 ≈ 在售场次 N×4 类请求 + 每周 7 次联赛级 predictability + 赛果 N 次，日均 < 500 次。`sm_usage` 表照抄 `api_football_usage` 的按日计数模式。
+配置：`SPORTMONKS_TOKEN`（Fernet 入库）、`SPORTMONKS_BOOKMAKER_PINNACLE_ID`（P0 从 bookmakers 端点核实后固化）、`SPORTMONKS_PLAN`、`SM_MARKET_SOURCE=the_odds_api|sportmonks`（默认 the_odds_api，四门过后切）、`SM_SHADOW=true|false`。
 
-## 6. 移动端（UI/功能）改造
+## 6. 移动端改造
 
 | 位置 | 改动 |
 |---|---|
-| 详情页（verdict/[id]） | 新增**「概率对比」卡**：竞彩 SP 隐含 vs 融合模型 vs 市场基准（Pinnacle 去水），三向条形对比；显示"数据源：竞彩官方 + Sportmonks" |
-| 详情页 | 联赛可预测性徽章：`高/中/低`（来自 type 243），low 时显示"该联赛模型参考价值有限"——把诚实度做成 UI |
-| 详情页情报区 | 伤停清单卡（核心球员红点）、阵容卡（开赛前自动刷新为确认阵容）、交锋摘要（近 5 次） |
-| FocusResponse | `coverage.sources` 从 api-football 键换 sportmonks 键；`sm_prediction` 字段进 focus payload |
-| verdict 卡片（Home） | 证据层带 `model_source` 徽章（融合/SM/DC）；文案不变（仍走人设渲染） |
-| `/chat` | `match_analysis` 事实包自动包含 SM 概率/伤停 → 回答"为什么看好 X"时能引伤停事实 |
-| 结算/账本 | 无感切换（SM 赛果），公开账本不受影响 |
+| 详情页 | 「概率对比」卡（SP 隐含 vs 模型 vs Pinnacle 基准）；联赛可预测性徽章（高/中/低/未知）；`unchanged` 与无预测场次显示"第三方模型暂无可信预测"，**不承诺"有模型"** |
+| 详情页情报区 | 伤停卡、阵容卡（confirmed；赛前仅情报展示，不改封存证据）、交锋摘要 |
+| verdict 卡片 | `model_source` 徽章（融合/SM/DC）；数据源标注"竞彩官方 + Sportmonks" |
+| 全局 | 第三方内容统一脚注："数据来源：Sportmonks，仅供参考，非投注建议" |
+| /chat | match_analysis 事实包自动含 SM 概率/伤停（如有） |
 
-原则：**前端契约尽量不动**——`FocusResponse`/verdict payload 是追加字段，不破坏现有 OpenAPI 契约；OpenAPI 快照更新后 `api-client` 重新生成。
+原则：FocusResponse/verdict 契约只追加字段；OpenAPI 快照更新后重新生成 client。
 
 ## 7. 管理后台改造
 
 | 页面 | 改动 |
 |---|---|
-| 接入中心 | **API-Football、The Odds API 卡片下线**；新增「Sportmonks」大卡：token/套餐/配额用量/七条同步器状态/最近错误；联赛槽位选择器（30 个联赛 ↔ jc_leagues 映射状态，未映射标红） |
-| 新增「模型对照」页 | 按联赛列表：SM RPS / DC RPS / Pinnacle 隐含 RPS、predictability 评级、`w(sm)` 当前权重、样本数；提供"权重方案"编辑（operator 权限），改动进 admin_audit |
-| 工作台 | 阶段「市场数据」「模型」的证据源换成 Sportmonks；数据源健康卡显示 sm_usage 配额水位 |
-| 调用用量 | 加 SM 每日/每小时请求曲线 |
-| 审计 | 权重变更、联赛槽位变更、token 变更全部进 admin_audit |
+| 接入中心 | API-Football、The Odds API 卡片改为"对照源"状态；新增 Sportmonks 大卡（token/套餐/配额水位/七同步器状态/死信队列深度） |
+| 新增「模型对照」页 | 联赛×市场：SM RPS（含 CI）/ DC RPS / Pinnacle 隐含 RPS、predictability、当前 `w(sm)`、样本量、影子/启用状态；权重编辑走 admin_audit |
+| 工作台 | 阶段证据源切 SM；结算对账差异面板（阶段一核心） |
+| 审计 | 权重/槽位/token/数据源切换全部入 admin_audit |
 
-## 8. 实施排期（预计 2 周）
+## 8. 实施排期：四门制（v2，每门有退出条件）
 
-| 阶段 | 内容 | 产出/验收 |
-|---|---|---|
-| **P0 试用验证**（1-2 天） | 开 14 天试用；跑验证脚本：30 联赛预测覆盖（predictable 命中率）、Pinnacle 盘存在性、243 评级粒度、zh 覆盖率、€15 捆绑包档位（邮件客服） | 覆盖率报告；决定 Growth 30 槽最终名单 |
-| **P1 通道搭建**（2-3 天） | sportmonks.py + sm_sync（fixtures/odds/results）+ jc_source_links 对齐 + sm_usage | 竞彩在售场次 100% 有 SM fixture 映射；市场闸双源并行 |
-| **P2 预测接入**（3-4 天） | sm_predictions 快照冻结 + 融合模型闸 + 验证管线 + 值预测参考 | 非五大联赛模型闸从 pending 变有输出；RPS 管线出第一周报告 |
-| **P3 情报与 UI**（3 天） | sidelined/lineups/standings 同步 + 详情页三卡 + 概率对比 + 后台模型对照页 | 详情页可见伤停/阵容/概率对比 |
-| **P4 收编清理**（2 天） | 关闭 The Odds API/API-Football 调用路径（代码保留 30 天后删）；结算切 SM；文档更新 | 数据源只剩采集器 + Sportmonks |
-| **P5 调优**（持续） | 权重按周报调整；predictability poor 联赛降级；30 天后转年付省 20% | 每周模型周报 |
+| 门 | 内容 | 进入条件 | 退出条件（准出） |
+|---|---|---|---|
+| **门1 合同与覆盖**（2-3 天） | 试用 + 验证脚本 + 客服书面确认（捆绑档位/Pinnacle/再分发许可/历史预测回溯/杯赛占槽） | 开通试用 | 四项确认到手 + 加权覆盖表产出 |
+| **门2 影子同步**（3-4 天） | sportmonks.py + sm_sync（fixtures/odds/results/predictions）+ jc_source_links 对齐 + 快照冻结 + usage/死信 | 门1 过 | 在售场次映射率 ≥95%；快照连续 3 天无缺口；配额 < 预算 30% |
+| **门3 只读展示**（3 天） | 详情页概率对比/情报卡/后台模型对照页；全部只读，不影响任何 gate | 门2 过 | UI 验收；数据一致性抽查通过 |
+| **门4 影响 gate**（3-4 天 + 影子期） | 市场闸切 SM（主判据修订版）；非五大模型闸启用 SM；融合按 §4.3 条件逐步开 | 门3 过 + 影子 RPS 报告 | 每个联赛独立启用；回滚开关验证 |
 
-**回滚**：每阶段独立可回滚——P1 后市场闸可切回 The Odds API（配置开关）；P2 后 `SM_WEIGHT=0` 即回到纯 DC 行为；无 schema 破坏性变更（全部新表）。
+门4 之后才谈结算切主（§4.6，另计 4 周对账）与旧链路删除。**2 周内只承诺到门3；门4 由影子数据决定节奏，不赶工。**
 
-## 9. 风险与对策
+## 9. 风险与对策（v2 补强）
 
 | 风险 | 对策 |
 |---|---|
-| SM 模型黑盒、部分联赛质量差 | 验证管线 + predictability 门槛 + 权重动态化；poor 联赛模型闸降级为"不反对" |
-| 目标联赛不在预测覆盖（1,350+/2,200+） | P0 阶段逐联赛验证，覆盖缺口写入联赛槽位决策 |
-| zh 翻译 Beta 不全 | 自建 type_id/state/队名映射（`jc_teams.name_cn` 已有）；UI 中英混排设计 |
-| 配额超限 | sm_usage 记账 + 2500/entity/hr 远超实际用量；分页 per_page=50 |
-| €15 捆绑包内含 Basic 还是 Advanced 不明 | 下单前邮件客服确认（报告 §8 行动清单） |
-| 依赖第三方 API 可用性 | 采集器 SP 是主键事实源，SM 全挂时链路降级为"只有价闸"——不阻塞发布流程，只是市场/模型闸 pending |
-| 合规 | 第三方模型概率展示必须带"参考"字样与数据源标注；发布仍走 L1-L5 与封存链 |
+| SM 预测与赔率同源（双重计数→三闸虚假一致） | §4.1 独立性检验；无条件增量不融合 |
+| 覆盖缺口（30 槽 < 38 赛事；predictable 非全量） | §2.1 加权覆盖表 + 显式降级规则；UI 不承诺全覆盖 |
+| 历史预测不可回溯 | 影子模式前瞻积累；统计门而非时间门 |
+| Pinnacle/再分发授权不明 | 门1 书面确认；确认前双源默认 The Odds API |
+| 结算事故 | §4.6 状态机 + 4 周对账 + 差异人审 |
+| 封存后证据变化 | §4.5 封存纪律：revision + 重封存 |
+| 措辞合规 | L1 模板禁"价值/edge"；UI"非投注建议"脚注 |
+| zh 翻译 Beta | 自建映射；中英混排 |
+| 配额 | 端点记账 + 熔断 + 市场过滤拉取 |
+| 单人带宽 | 四门制；每门可独立暂停，不阻塞现有生产链 |
 
-## 10. 和 jc-data-model 的关系
+## 10. 与 jc-data-model 的关系
 
-本方案的表结构遵循 `docs/jc-data-model.md`：SM 是通过 `jc_source_links` 挂接的增强源，`match_id`（体彩官方）仍是唯一根主键；`sm_*` 表全部带 `source/source_ref/captured_at/payload_hash`；预测快照带 `captured_at` 冻结语义。
+不变：`match_id`（体彩官方）是唯一根主键；SM 通过 `jc_source_links` 挂接；`sm_*` 表全部带 `source/source_ref/captured_at/payload_hash`；预测快照冻结语义。
+
+## 11. DeepSeek 独立评审采纳清单（2026-11-11，12/12 采纳）
+
+| # | 评审要点（P0×6/P1×6） | 处置 |
+|---|---|---|
+| 1 | €15 捆绑算术与档位不明；预算失效风险 | §2 预算上限 €136 + 四项书面确认 |
+| 2 | 30 槽 < 38 赛事，覆盖不成立 | §2.1 加权覆盖表 + 显式降级规则 |
+| 3 | 4 周 RPS vs 14 天试用矛盾 | §4.3 影子模式 + 统计门 + 历史回溯询问 |
+| 4 | predictable/unchanged 不能当权重 | §4.1/§3 按联赛×市场统计；unchanged 按未知 |
+| 5 | Pinnacle id/许可/全庄历史未确认 | 门1 确认项；双源默认不切 |
+| 6 | 结算切主无对账、无状态机 | §4.6 状态机 + 4 周对账 |
+| 7 | 双引擎独立性/双重计数 | §4.1 条件信息增量检验；无增量不融合 |
+| 8 | 三向 max 离散系统性误杀 | §4.2 主判据改两向；全庄改 IQR 辅助 |
+| 9 | 配额低估（分页/全庄/双刷新） | §5 市场过滤 + 熔断 + 死信 |
+| 10 | lineups 晚于封存 → 证据漂移 | §4.5 封存纪律 + revision 机制 |
+| 11 | "edge"措辞与再分发合规 | §4.4/§6/§9 模板禁词 + 授权确认 + 脚注 |
+| 12 | 2 周排期低估 | §8 四门制，2 周只承诺到门3 |
+
+评审原文：[sm_deepseek_review.md](./sm_deepseek_review.md)；评审上下文事实单：[sm_review_context.md](./sm_review_context.md)。
