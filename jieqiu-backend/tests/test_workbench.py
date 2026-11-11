@@ -11,8 +11,11 @@ def test_workbench_with_empty_data_marks_blockers(db):
     assert wb["date"] == today_cn()
     assert wb["overall"] in ("blocked", "warn")
     keys = {s["key"] for s in wb["stages"]}
-    assert {"collect", "ingest", "market", "model", "gates", "seal",
+    assert {"collect", "ingest", "intel", "market", "model", "gates", "seal",
             "review", "publish", "llm", "push"} <= keys
+    for stage in wb["stages"]:
+        assert isinstance(stage["evidence"], list), stage["key"]
+        assert isinstance(stage["next"], str), stage["key"]
     assert "SP" in wb["definitions"]
     assert any(s["key"] == "collect" and s["state"] == "blocked"
                for s in wb["stages"])

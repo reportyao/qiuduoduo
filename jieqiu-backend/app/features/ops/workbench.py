@@ -52,8 +52,11 @@ def _state(ok: bool, warn: bool = False) -> str:
 
 def _stage(key: str, title: str, question: str, definition: str,
            state: str, headline: str, metrics: list[dict],
-           evidence: list[str], next_step: str,
+           evidence: list[str] | str, next_step: str,
            actions: list[str] | None = None) -> dict:
+    # 前端按数组渲染 evidence；这里兜底，避免单个阶段参数写错把整页打挂。
+    if isinstance(evidence, str):
+        evidence = [evidence] if evidence else []
     return {"key": key, "title": title, "question": question,
             "definition": definition, "state": state, "headline": headline,
             "metrics": metrics, "evidence": evidence, "next": next_step,
@@ -180,6 +183,9 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
             {"label": "Sportmonks 覆盖", "value": f"{sm_count}/{len(matches)}"},
             {"label": "AI 情报就绪", "value": f"{intel_ready}/{len(matches)}"},
         ],
+        ([f"Sportmonks 覆盖 {sm_count}/{len(matches)} 场",
+          f"AI 情报就绪 {intel_ready}/{len(matches)} 场"]
+         if not no_matches else ["无在售场次，情报同步待下一销售日"]),
         "同步 Sportmonks" if sm_count < len(matches) else ("同步 AI 情报" if intel_ready < len(matches) else "正常"),
         (["sync_sportmonks"] if sm_count < len(matches) else [])
         + (["sync_intel"] if intel_ready < len(matches) else []),
