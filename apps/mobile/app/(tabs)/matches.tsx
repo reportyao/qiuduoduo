@@ -3,10 +3,13 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-n
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
-import { Button, Chip, ErrorState, Skeleton, StatusDot, Text } from "@/components/ui";
+import { Button, Chip, ErrorState, Sheet, Skeleton, StatusDot, Text, useToast } from "@/components/ui";
 import { useOnSaleQuery } from "@/features/home/queries";
+import { useHideFloatingOnScroll } from "@/features/assistant/useHideFloatingOnScroll";
+import { useWatchQuery } from "@/features/inbox/queries";
 import { useParlayStore } from "@/features/tools/parlayStore";
 import { onSaleStatusLabel } from "@/features/tools/onSaleStatus";
+import { useWatchMatchMutation } from "@/features/verdict/queries";
 import type { OnSaleItem } from "@/domain/types";
 import { errorText } from "@/lib/errors";
 import { countdownText, currentTradeDateCn, formatTime, pct, tradeDateCnFromKickoff } from "@/lib/format";
@@ -18,12 +21,20 @@ type Filter = "all" | "single" | "promoted" | "screening";
 /** 比赛 Tab：在售雷达 + 顶部串关入口。 */
 export default function MatchesScreen() {
   const router = useRouter();
+  const toast = useToast();
   const query = useOnSaleQuery();
+  const watchQuery = useWatchQuery();
+  const watchMutation = useWatchMatchMutation();
+  const onScroll = useHideFloatingOnScroll();
   const parlayCount = useParlayStore((s) => s.legs.length);
   const [filter, setFilter] = useState<Filter>("all");
+  const [selected, setSelected] = useState<OnSaleItem | null>(null);
   const [pulling, setPulling] = useState(false);
   const now = useNow(60_000);
   const today = currentTradeDateCn(now);
+  const watch = selected
+    ? (watchQuery.data ?? []).find((item) => item.targetId === selected.matchId)
+    : undefined;
 
   const rows = useMemo(() => {
     const list = query.data ?? [];
@@ -40,10 +51,8 @@ export default function MatchesScreen() {
       router.push({ pathname: "/verdict/[id]", params: { id: item.verdictId } });
       return;
     }
-    router.push({
-      pathname: "/match/[id]",
-      params: { id: item.matchId, date: tradeDateCnFromKickoff(item.kickoff) },
-    });
+    // 没有判决的场次先给关注/详情，不直接跳走。
+    setSelected(item);
   };
 
   return (
@@ -66,6 +75,8 @@ export default function MatchesScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
+        onScroll={onScroll}
+        scrollEventThrottle={48}
         refreshControl={
           <RefreshControl
             refreshing={pulling}
@@ -91,7 +102,7 @@ export default function MatchesScreen() {
           {([
             ["all", "全部"],
             ["single", "单关"],
-            ["promoted", "已发布"],
+            ["promoted", "三关通过"],
             ["screening", "复核中"],
           ] as [Filter, string][]).map(([key, label]) => (
             <Chip key={key} label={label} selected={filter === key} onPress={() => setFilter(key)} />
@@ -158,6 +169,87 @@ export default function MatchesScreen() {
           </View>
         )}
       </ScrollView>
+
+      <Sheet
+        visible={Boolean(selected)}
+        onClose={() => setSelected(null)}
+        title={selected ? `${selected.home} vs ${selected.away}` : "比赛"}
+        subtitle={selected ? `${selected.matchNo} · ${formatTime(selected.saleClose)} 停售` : undefined}
+        footer={
+          selected ? (
+            <View style={styles.sheetFooter}>
+              <Button
+                label={watch ? "取消关注" : "关注这场比赛"}
+                variant={watch ? "secondary" : "primary"}
+                loading={watchMutation.isPending}
+                disabled={watchMutation.isPending}
+                onPress={async () => {
+                  if (watchMutation.isPending) return;
+                  try {
+                    await watchMutation.mutateAsync({
+                      targetId: selected.matchId,
+                      watching: Boolean(watch),
+                      watchId: watch?.id,
+                    });
+                    toast.show(watch ? "已取消关注" : "已关注，停售和终场会提醒", "success");
+                    setSelected(null);
+                  } catch (e) {
+                    toast.show(errorText(e), "error");
+                  }
+                }}
+                fullWidth
+              />
+              <Button
+                label="看三闸详情"
+                variant="ghost"
+                onPress={() => {
+                  const item = selected;
+                  setSelected(null);
+                  if (item) {
+                    router.push({
+                      pathname: "/match/[id]",
+                      params: { id: item.matchId, date: tradeDateCnFromKickoff(item.kickoff) },
+                    });
+                  }
+                }}
+                fullWidth
+              />
+            </View>
+          ) : null
+        }
+      >
+        {selected ? (
+          <>
+            <View style={styles.kv}>
+              <Text variant="small" color={colors.muted}>比赛时间</Text>
+              <Text variant="bodyStrong">{formatTime(selected.kickoff)}</Text>
+            </View>
+            <View style={styles.kv}>
+              <Text variant="small" color={colors.muted}>停售时间</Text>
+              <Text variant="bodyStrong">{formatTime(selected.saleClose)}（{countdownText(selected.saleClose, now)}）</Text>
+            </View>
+            <View style={styles.kv}>
+              <Text variant="small" color={colors.muted}>抽水</Text>
+              <Text variant="bodyStrong">{selected.rake != null ? pct(selected.rake) : "待同步"}</Text>
+            </View>
+            <View style={styles.kv}>
+              <Text variant="small" color={colors.muted}>状态</Text>
+              <Text variant="bodyStrong">
+                {selected.status === "promoted"
+                  ? "三关全过"
+                  : selected.status === "screening"
+                    ? "复核中"
+                    : selected.status === "killed"
+                      ? "本期不预测"
+                      : "暂无预测"}
+              </Text>
+            </View>
+            <Text variant="caption" color={colors.muted} style={styles.sheetNote}>
+              这场还没出预测。关注后，停售前和终场会收到中性提醒；通知里不会出现队名和赔率。
+            </Text>
+          </>
+        ) : null}
+      </Sheet>
     </AppScreen>
   );
 }
@@ -186,4 +278,14 @@ const styles = StyleSheet.create({
   status: { alignItems: "center", gap: 2 },
   empty: { marginTop: spacing.x4, lineHeight: 22 },
   skeletons: { gap: spacing.sm, marginTop: spacing.base },
+  sheetFooter: { gap: spacing.sm },
+  kv: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.line,
+  },
+  sheetNote: { marginTop: spacing.base, lineHeight: 18 },
 });

@@ -31,6 +31,7 @@ import { trackInteraction } from "@/features/telemetry/interactions";
 import { ChatComposer } from "@/features/home/components/ChatComposer";
 import { MatchPickerSheet } from "@/features/home/components/MatchPickerSheet";
 import type { BriefMatchOption } from "@/features/home/components/BriefMatchPicker";
+import { buildBriefOptions } from "@/features/home/briefOptions";
 import { FocusPanel } from "@/features/home/components/FocusPanel";
 import { DataStatusSheet, LegalFooter } from "@/features/home/components/HomeSections";
 import {
@@ -160,6 +161,7 @@ export default function HomeScreen() {
     if (!focus || focus.tradeDate === date) return;
     setDate(focus.tradeDate);
     setManualDate(focus.tradeDate !== currentTradeDateCn());
+    setOpenedAll(false);
   }, [date, focus]);
 
   // 选中/换场后回到聚焦区，不要停留在旧的滚动位置。
@@ -202,34 +204,11 @@ export default function HomeScreen() {
     [onsaleQuery.data, stream?.onsale],
   );
 
-  // 开场选择条：今日在售与已发布预测按 matchId 合并，用户点哪场才展开哪场。
-  const briefOptions = useMemo<BriefMatchOption[]>(() => {
-    const byMatch = new Map<string, BriefMatchOption>();
-    const sourceOnsale = date === today ? onsale : stream?.onsale ?? [];
-    for (const verdict of verdicts) {
-      byMatch.set(verdict.matchId, {
-        matchId: verdict.matchId,
-        verdictId: verdict.id,
-        home: verdict.home,
-        away: verdict.away,
-        kickoff: verdict.kickoff,
-        status: verdict.status,
-      });
-    }
-    for (const match of sourceOnsale) {
-      if (!byMatch.has(match.matchId)) {
-        byMatch.set(match.matchId, {
-          matchId: match.matchId,
-          verdictId: match.verdictId ?? null,
-          home: match.home,
-          away: match.away,
-          kickoff: match.kickoff,
-          status: match.status,
-        });
-      }
-    }
-    return [...byMatch.values()].sort((a, b) => a.kickoff.localeCompare(b.kickoff));
-  }, [date, onsale, stream?.onsale, today, verdicts]);
+  // 开场选择条：已发布判决 + 当前竞彩日在售，点哪场才展开哪场。
+  const briefOptions = useMemo<BriefMatchOption[]>(
+    () => buildBriefOptions(verdicts, date === today ? onsale : stream?.onsale ?? [], date),
+    [date, onsale, stream?.onsale, today, verdicts],
+  );
 
   const selectBriefOption = useCallback(
     (option: BriefMatchOption) => {
@@ -285,7 +264,8 @@ export default function HomeScreen() {
   // 曝光埋点：只记 Today Hero / 当前聚焦场，避免首屏几十张卡同时上报。
   const viewedKeys = useRef<Set<string>>(new Set());
   useEffect(() => {
-    const v = heroVerdict ?? focusedVerdict;
+    // 折叠态只显示选择条，不把未展示的 Hero 记成曝光。
+    const v = focusedVerdict ?? (openedAll ? heroVerdict : null);
     if (!v) return;
     const key = v.snapshotId ?? v.id;
     if (viewedKeys.current.has(key)) return;
@@ -295,7 +275,7 @@ export default function HomeScreen() {
       verdictId: v.id,
       metadata: { snapshot_id: v.snapshotId ?? null },
     });
-  }, [focusedVerdict, heroVerdict]);
+  }, [focusedVerdict, heroVerdict, openedAll]);
 
   const openVerdict = useCallback(
     (id: string) => {
@@ -534,9 +514,13 @@ export default function HomeScreen() {
                     onOnSale={() => router.navigate("/(tabs)/matches")}
                   />
                 ) : null}
-                <AvoidMessage items={stream.avoid} onOpen={openWhyNot} />
-                <PostmortemMessage items={stream.postmortems} onOpen={openVerdict} />
-                <UnattendedMessage items={stream.unattended} onOpen={openVerdict} />
+                {openedAll ? (
+                  <>
+                    <AvoidMessage items={stream.avoid} onOpen={openWhyNot} />
+                    <PostmortemMessage items={stream.postmortems} onOpen={openVerdict} />
+                    <UnattendedMessage items={stream.unattended} onOpen={openVerdict} />
+                  </>
+                ) : null}
               </>
             ) : (
               <>

@@ -13,7 +13,8 @@ export interface BriefMatchOption {
 }
 
 function statusLabel(option: BriefMatchOption): string {
-  if (option.status === "promoted") return "已发布";
+  // promoted 只代表三关全过，不等于已经发布；避免在开场条上误标“已发布”。
+  if (option.status === "promoted") return "三关通过";
   if (option.status === "screening") return "复核中";
   if (option.status === "killed") return "未发布";
   return option.verdictId ? "已复核" : "待解读";
