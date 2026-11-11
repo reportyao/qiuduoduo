@@ -172,7 +172,11 @@ def test_public_personas_config(client, db):
     assert r.status_code == 200
     data = r.json()
     assert {p["id"] for p in data["profiles"]} == {"zhuanjia", "laopao", "meng"}
-    assert len(data["slots"]) >= 9
+    assert len(data["slots"]) >= 21  # 9 个叙述 slot + 12 个前端 slot
+    slots = {(s["persona_id"], s["slot_key"]): s["template"] for s in data["slots"]}
+    # 3 人设不变，但同一 slot 的文案必须真正不同。
+    assert slots[("zhuanjia", "brandSub")] != slots[("laopao", "brandSub")]
+    assert slots[("laopao", "emptyTitle")] != slots[("meng", "emptyTitle")]
     assert "style_prompt" not in data["profiles"][0]
 
 

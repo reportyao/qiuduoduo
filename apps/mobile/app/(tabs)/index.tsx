@@ -12,7 +12,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
-import { Button, StatusDot, Text, useToast } from "@/components/ui";
+import { Text, useToast } from "@/components/ui";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { useAuthStore } from "@/features/auth/authStore";
 import { useHideFloatingOnScroll } from "@/features/assistant/useHideFloatingOnScroll";
@@ -20,7 +20,6 @@ import {
   focusFromOnSale,
   focusFromVerdict,
   useFocusStore,
-  type FocusTarget,
 } from "@/features/home/focusStore";
 import { useChatMutation } from "@/features/assistant/queries";
 import { ChatCardContent, type ChatMessage } from "@/features/assistant/components/ChatCardContent";
@@ -32,6 +31,8 @@ import { ChatComposer } from "@/features/home/components/ChatComposer";
 import { MatchPickerSheet } from "@/features/home/components/MatchPickerSheet";
 import type { BriefMatchOption } from "@/features/home/components/BriefMatchPicker";
 import { buildBriefOptions } from "@/features/home/briefOptions";
+import { FocusPending } from "@/features/home/components/FocusPending";
+import { HeaderMetrics } from "@/features/home/components/HeaderMetrics";
 import { FocusPanel } from "@/features/home/components/FocusPanel";
 import { DataStatusSheet, LegalFooter } from "@/features/home/components/HomeSections";
 import {
@@ -53,7 +54,7 @@ import {
 import { BetSheet } from "@/features/verdict/components/BetSheet";
 import { SealSheet } from "@/features/verdict/components/SealSheet";
 import { ApiError, errorText } from "@/lib/errors";
-import { currentTradeDateCn, formatDate, formatTime, relativeTime, shiftDateCn } from "@/lib/format";
+import { currentTradeDateCn, formatDate, shiftDateCn } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
 import { colors, layout, spacing } from "@/theme/tokens";
 import type { VerdictSummary } from "@/domain/types";
@@ -369,7 +370,7 @@ export default function HomeScreen() {
             showAssistant={false}
             insetTop={false}
             border={false}
-            right={<Metrics stream={stream} pulse={pulseQuery.data} now={now} />}
+            right={<HeaderMetrics stream={stream} pulse={pulseQuery.data} now={now} />}
           />
 
           <View style={styles.conversation}>
@@ -670,89 +671,6 @@ export default function HomeScreen() {
   );
 }
 
-function FocusPending({
-  focus,
-  onOpenVerdict,
-  onWhyNot,
-  onOnSale,
-  onSwitch,
-}: {
-  focus: FocusTarget;
-  onOpenVerdict: (id: string) => void;
-  onWhyNot: (matchId: string) => void;
-  onOnSale: () => void;
-  onSwitch: () => void;
-}) {
-  const status =
-    focus.status === "promoted" ? "三关全过"
-      : focus.status === "killed" ? "未给预测"
-        : focus.status === "screening" ? "复核中"
-          : "在售";
-  const hasVerdict = Boolean(focus.verdictId);
-  return (
-    <AssistantMessage>
-      <Text variant="h3">{focus.home} vs {focus.away}</Text>
-      <Text variant="caption" color={colors.muted}>
-        {focus.matchNo} · {formatTime(focus.kickoff)} 停售 · {status}
-      </Text>
-      <Text variant="body" color={colors.ink} style={styles.focusText}>
-        {hasVerdict
-          ? "这场还没有完整预测可展示；数据没齐之前，不给你硬凑预测。"
-          : "这场还在售，助理还没算完；先看赛程，别急着下。"}
-      </Text>
-      <View style={styles.focusActions}>
-        {hasVerdict ? (
-          <>
-            <Button
-              label="看完整预测"
-              variant="primary"
-              onPress={() => focus.verdictId && onOpenVerdict(focus.verdictId)}
-              style={styles.focusAction}
-            />
-            <Button
-              label="为什么还不出"
-              variant="secondary"
-              onPress={() => onWhyNot(focus.matchId)}
-              style={styles.focusAction}
-            />
-          </>
-        ) : (
-          <>
-            <Button label="看今日在售" variant="primary" onPress={onOnSale} style={styles.focusAction} />
-            <Button label="换一场" variant="secondary" onPress={onSwitch} style={styles.focusAction} />
-          </>
-        )}
-      </View>
-    </AssistantMessage>
-  );
-}
-
-function Metrics({
-  stream,
-  pulse,
-  now,
-}: {
-  stream: ReturnType<typeof flattenStream>["page"] | null;
-  pulse: ReturnType<typeof import("@/domain/focusAdapters").adaptPulse> | null | undefined;
-  now: number;
-}) {
-  const points = pulse?.display.dataPoints ?? 0;
-  return (
-    <View style={styles.metrics}>
-      <View style={styles.metricTop}>
-        <StatusDot color={colors.greenAccent} />
-        <Text variant="caption" color={colors.muted}>在线</Text>
-      </View>
-      <Text variant="captionStrong" color={colors.green}>
-        预测引擎 v3 · {points > 0 ? `${points} 个数据点` : "等待同步"}
-      </Text>
-      <Text variant="caption" color={colors.subtle}>
-        {pulse?.asOf ? relativeTime(pulse.asOf, now) : stream?.generatedAt ? relativeTime(stream.generatedAt, now) : "实时"}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   scrollContent: { paddingBottom: spacing.x4 },
@@ -769,9 +687,6 @@ const styles = StyleSheet.create({
   },
   focusLink: { marginLeft: 0 },
   otherMatches: { alignSelf: "flex-start", paddingVertical: spacing.sm },
-  focusText: { marginTop: spacing.sm, marginBottom: spacing.sm, lineHeight: 22 },
-  focusActions: { flexDirection: "row", gap: spacing.sm },
-  focusAction: { flex: 1 },
   chatThread: { marginTop: spacing.base },
   userRow: { alignItems: "flex-end", marginTop: spacing.sm },
   userBubble: {
@@ -782,7 +697,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
   },
-  metrics: { alignItems: "flex-end", gap: 0 },
-  metricTop: { flexDirection: "row", alignItems: "center", gap: 5 },
   retry: { marginTop: spacing.xs },
 });
