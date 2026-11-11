@@ -312,3 +312,45 @@ def test_intl_sync_skips_odds_when_no_target_event(db, monkeypatch):
     assert n == 0
     assert called["odds"] == 0
     assert "不请求" in note or "0 场" in note
+
+
+def test_tier_enforce_requires_enabled_league(db, monkeypatch):
+    path = _mini_xg(monkeypatch)
+    s = Settings(xg_data_path=path, model_conf_threshold=0.45,
+                 market_div_threshold=0.30, rake_clamp_lo=0.10,
+                 tier_enforce=True)
+    monkeypatch.setattr(vz, "get_settings", lambda: s)
+    from app.models import LeagueModelConfig
+
+    kick = future_kickoff(today_cn())
+    mid = "tier-enforce-1"
+    db.merge(SPMatch(match_id=mid, match_no="周三999", league="英超",
+                     home_raw="霸主", away_raw="弱旅", home="霸主", away="弱旅",
+                     kickoff=kick, single_flag=True))
+    db.merge(SPSnapshot(match_id=mid, pool="had", goal_line="",
+                        sp_h=1.80, sp_d=3.50, sp_a=4.20,
+                        captured_at=today_cn() + "T12:00:00+08:00"))
+    cn = timezone(timedelta(hours=8))
+    kc = datetime.strptime(kick, "%Y-%m-%d %H:%M:%S").replace(tzinfo=cn)
+    utc = (kc - timedelta(hours=2)).astimezone(timezone.utc).isoformat()
+    db.merge(IntlOdds(source="pinnacle", sport="soccer_epl", league="EPL",
+                      home_raw="DOMINATOR", away_raw="WEAK",
+                      home="霸主", away="弱旅", kickoff_utc=utc,
+                      sp_h=1.82, sp_d=3.45, sp_a=4.10,
+                      retrieved_at=today_cn() + "T13:00:00+00:00"))
+    cfg = LeagueModelConfig(league="英超", dc_status="shadow")
+    db.merge(cfg)
+    db.commit()
+
+    v = build_verdicts(db, today_cn(), NOW)[0]
+    assert v.tier == "market_reference", v.gates
+    assert v.status == "screening", v.status
+    assert v.model_status == "shadow"
+
+    cfg = db.get(LeagueModelConfig, "英超")
+    cfg.dc_status = "enabled"
+    db.commit()
+    v2 = build_verdicts(db, today_cn(), NOW)[0]
+    assert v2.tier == "verified"
+    assert v2.status == "promoted"
+    assert v2.model_status == "enabled"

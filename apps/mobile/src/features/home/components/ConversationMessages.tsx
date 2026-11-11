@@ -101,7 +101,7 @@ export function AssistantBrief({
         <MiniStat label={onsaleLabel} value={String(onsaleCount)} />
       </View>
 
-      {referenceCount > 0 ? (
+      {referenceCount > 0 && publishedCount > 0 ? (
         <Text variant="caption" color={colors.amber} style={styles.publishNote}>
           另有 {referenceCount} 场市场参考：只代表市场倾向，不是模型预测。
         </Text>
