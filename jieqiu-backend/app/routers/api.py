@@ -286,6 +286,48 @@ def why_not(match_id: str, date: str | None = None, db: Session = Depends(get_db
     }
 
 
+def _devig(h: float, d: float, a: float) -> dict | None:
+    try:
+        inv = [1.0 / float(h), 1.0 / float(d), 1.0 / float(a)]
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+    total = sum(inv)
+    if total <= 0:
+        return None
+    return {"home": inv[0] / total, "draw": inv[1] / total, "away": inv[2] / total}
+
+
+def _probability_compare(db: Session, v: Verdict) -> dict:
+    """详情页概率对比：竞彩去水 / 模型 / 国际盘基准。没有的项返回 null。"""
+    sp = _devig(v.sp_h, v.sp_d, v.sp_a)
+    model_raw = (v.payload or {}).get("model") or {}
+    has_model = bool(model_raw.get("shrunk"))
+    model = (
+        {"home": v.p_home, "draw": v.p_draw, "away": v.p_away}
+        if has_model else None
+    )
+    market = None
+    match = db.get(SPMatch, v.match_id)
+    if match is not None:
+        from ..modules.intl_odds import sources_for_match
+        rows = sources_for_match(db, match)
+        if rows:
+            row = rows[0]
+            probs = _devig(row.sp_h, row.sp_d, row.sp_a)
+            if probs:
+                label = {"pinnacle": "Pinnacle", "consensus": "共识"}.get(
+                    row.source, row.source)
+                market = {"bookmaker": label, "probs": probs}
+    return {
+        "sp": sp,
+        "model": model,
+        "market": market,
+        "model_enabled": has_model,
+        "reason": None if has_model else "本场没有可用的模型概率；仅展示竞彩与市场参考。",
+        "data_cutoff": (v.payload or {}).get("data_cutoff"),
+    }
+
+
 @router.get("/verdicts/{verdict_id}")
 def verdict_detail(verdict_id: str, db: Session = Depends(get_db)):
     v = db.get(Verdict, verdict_id)
@@ -303,6 +345,7 @@ def verdict_detail(verdict_id: str, db: Session = Depends(get_db)):
         "goal_line": v.goal_line,
         "sp": {"h": v.sp_h, "d": v.sp_d, "a": v.sp_a},
         "probs": {"home": v.p_home, "draw": v.p_draw, "away": v.p_away},
+        "probability_compare": _probability_compare(db, v),
         "rake": v.rake,
         "status": v.status,
         "gates": v.gates,

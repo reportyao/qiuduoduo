@@ -6,6 +6,7 @@ import type {
   GateResult,
   OnSaleItem,
   PostmortemSummary,
+  ProbabilityCompareData,
   ProbabilityTriple,
   RestDay,
   SealResponse,
@@ -76,6 +77,32 @@ function probs(value: unknown): ProbabilityTriple {
     home: number(raw.home),
     draw: number(raw.draw),
     away: number(raw.away),
+  };
+}
+
+function compareTriple(value: unknown): ProbabilityTriple | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = record(value);
+  if (typeof raw.home !== "number" || typeof raw.draw !== "number" || typeof raw.away !== "number") {
+    return null;
+  }
+  return probs(value);
+}
+
+function probabilityCompare(value: unknown): ProbabilityCompareData | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = record(value);
+  const marketRaw = record(raw.market);
+  const marketProbs = compareTriple(marketRaw.probs);
+  return {
+    sp: compareTriple(raw.sp),
+    model: compareTriple(raw.model),
+    market: marketProbs && typeof marketRaw.bookmaker === "string"
+      ? { bookmaker: marketRaw.bookmaker, probs: marketProbs }
+      : null,
+    modelEnabled: Boolean(raw.model_enabled ?? raw.modelEnabled),
+    reason: nullableString(raw.reason),
+    dataCutoff: nullableString(raw.data_cutoff ?? raw.dataCutoff),
   };
 }
 
@@ -246,6 +273,7 @@ export function adaptVerdictDetail(value: unknown): VerdictDetail | null {
   return {
     ...base,
     tradeDate: string(raw.trade_date),
+    probabilityCompare: probabilityCompare(raw.probability_compare ?? payload.probability_compare),
     gatesDetail: gateDetails(raw.gates),
     evidence: adaptEvidence(payload.evidence),
     dataCutoff: string(payload.data_cutoff ?? raw.data_cutoff),
