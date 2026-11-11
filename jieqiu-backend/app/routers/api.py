@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..db import get_db
 from ..features.intel import service as intel_service
-from ..models import (DecisionSnapshot, IntlOdds, ModelRun, SPMatch,
+from ..models import (AIResearch, DecisionSnapshot, IntlOdds, ModelRun, SPMatch,
                        SPSnapshot, TeamAlias, Verdict)
 from ..modules.messaging import build_stream_cached
 from ..modules.timeutil import (trade_date_from_kickoff, trade_date_now,
@@ -297,6 +297,20 @@ def _devig(h: float, d: float, a: float) -> dict | None:
     return {"home": inv[0] / total, "draw": inv[1] / total, "away": inv[2] / total}
 
 
+def _ai_research(db: Session, match_id: str) -> dict | None:
+    row = db.get(AIResearch, match_id)
+    if row is None:
+        return None
+    return {
+        "status": row.status,
+        "headline": row.headline,
+        "points": row.points or [],
+        "sources": row.sources or [],
+        "captured_at": row.captured_at.isoformat() if row.captured_at else None,
+        "expires_at": row.expires_at.isoformat() if row.expires_at else None,
+    }
+
+
 def _probability_compare(db: Session, v: Verdict) -> dict:
     """详情页概率对比：竞彩去水 / 模型 / 国际盘基准。没有的项返回 null。"""
     sp = _devig(v.sp_h, v.sp_d, v.sp_a)
@@ -356,6 +370,7 @@ def verdict_detail(verdict_id: str, db: Session = Depends(get_db)):
         "sp": {"h": v.sp_h, "d": v.sp_d, "a": v.sp_a},
         "probs": {"home": v.p_home, "draw": v.p_draw, "away": v.p_away},
         "probability_compare": _probability_compare(db, v),
+        "ai_research": _ai_research(db, v.match_id),
         "rake": v.rake,
         "status": v.status,
         "gates": v.gates,

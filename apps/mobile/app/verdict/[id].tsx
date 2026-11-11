@@ -27,6 +27,7 @@ import { currentTradeDateCn, formatDateTime, pct } from "@/lib/format";
 import { colors, layout, spacing } from "@/theme/tokens";
 import { DetailHero } from "@/features/verdict/components/DetailHero";
 import { ProbabilityCompareCard } from "@/features/verdict/components/ProbabilityCompare";
+import { AiIntelCard } from "@/features/verdict/components/AiIntelCard";
 import { GateDetailsCard } from "@/features/verdict/components/GateDetailsCard";
 import { MatchAnalysisCard } from "@/features/verdict/components/MatchAnalysisCard";
 import { IntelSection } from "@/features/verdict/components/IntelSection";
@@ -180,6 +181,7 @@ export default function VerdictDetailScreen() {
           <ProbabilityCompareCard data={detail.probabilityCompare} />
         ) : null}
         <IntelSection report={buildIntelReport(detail)} />
+        {detail.aiResearch ? <AiIntelCard data={detail.aiResearch} /> : null}
         <GateDetailsCard detail={detail} />
         <MatchAnalysisCard matchId={detail.matchId} date={detail.tradeDate} />
         <EvidenceList items={detail.evidence} cutoff={detail.dataCutoff} />
