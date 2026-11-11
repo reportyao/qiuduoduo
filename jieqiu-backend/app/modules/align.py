@@ -167,6 +167,92 @@ SEED_ALIASES: dict[str, list[str]] = {
     "中央海岸": ["centralcoastmariners", "centralcoast"],
 }
 
+# 2026-11-11 生产 collector 仍出现的队名（含国家队、日韩、英冠/英乙、荷甲/葡超等）。
+# 以竞彩采集器常见中文名为 canonical；英文变体用于 The Odds API / football-data 对齐。
+EXTRA_ALIASES: dict[str, list[str]] = {
+    "上海海港": ["shanghaiport", "shanghaisipg"],
+    "北京国安": ["beijingguoan"],
+    "不伦瑞克": ["braunschweig", "eintrachtbraunschweig"],
+    "伯顿": ["burton", "burtonalbion"],
+    "博尔顿": ["bolton", "boltonwanderers"],
+    "巴恩斯利": ["barnsley"],
+    "布罗姆利": ["bromley"],
+    "德比郡": ["derbycounty", "derby"],
+    "考文垂": ["coventry", "coventrycity"],
+    "诺茨郡": ["nottscounty"],
+    "赫尔城": ["hullcity", "hull"],
+    "谢周三": ["sheffieldwednesday", "谢菲尔德星期三"],
+    "阿克宁顿": ["accringtonstanley", "accrington"],
+    "奥德汉姆": ["oldham", "oldhamathletic"],
+    "米尔顿凯恩斯": ["miltonkeynesdons", "mkdons", "米尔顿"],
+    "卡萨皮亚": ["casapia"],
+    "吉马良斯": ["vitoriaguimaraes", "guimaraes"],
+    "法马利康": ["famalicao"],
+    "阿罗卡": ["arouca"],
+    "维多利亚": ["vitoria"],
+    "威尼斯": ["venezia"],
+    "弗洛西诺内": ["frosinone", "弗洛西诺"],
+    "弗鲁米嫩塞": ["fluminense", "弗鲁米嫩"],
+    "蒙彼利埃": ["montpellier"],
+    "斯特拉斯堡": ["strasbourg", "斯特拉斯"],
+    "帕德博恩": ["paderborn", "scpaderborn"],
+    "科特布斯": ["cottbus", "energiecottbus"],
+    "兹沃勒": ["zwolle", "peczwolle"],
+    "格罗宁根": ["groningen", "fcgroningen"],
+    "特温特": ["twente", "fctwente"],
+    "特尔斯达": ["telstar", "sctelstar"],
+    "瓦尔韦克": ["waalwijk", "rkcwaalwijk"],
+    "威廉二世": ["willemii"],
+    "福图纳": ["fortuna", "fortunasittard"],
+    "奥斯": ["oss", "fcos"],
+    "阿贾克斯": ["ajax"],
+    "桑坦德": ["santander", "racingdesantander"],
+    "马拉加": ["malaga"],
+    "哈马比": ["hammarby"],
+    "埃尔夫斯堡": ["elfsborg", "ifelfsborg", "埃夫斯堡", "埃沃斯堡"],
+    "国际图尔": ["interturku", "interturkku"],
+    "赫尔火花": ["hifk", "hifkhelsinki"],
+    "奥林匹亚": ["olympiacos", "olimpia"],
+    "大阪樱花": ["cerezoosaka", "cerezo"],
+    "大阪钢巴": ["gambaosaka", "gamba"],
+    "冈山绿雉": ["fagianoOkayama", "okayama"],
+    "富山胜利": ["katallertoyama", "toyama"],
+    "川崎前锋": ["kawasakifrontale"],
+    "柏太阳神": ["kashiwareysol"],
+    "横滨水手": ["yokohamafmarinos"],
+    "浦和红钻": ["urawareds"],
+    "神户胜利": ["visselkobe"],
+    "鸟栖沙岩": ["sagantosu", "tosusagan"],
+    "鹿岛鹿角": ["kashimaantlers"],
+    "大田市民": ["daejeon", "daejeoncitizen"],
+    "安养FC": ["anyang", "fcanyang"],
+    "金泉尚武": ["gimcheonsangmu", "gimcheon"],
+    "蔚山现代": ["ulsanhyundai", "ulsan"],
+    "浦项制铁": ["pohangsteelers"],
+    "首尔FC": ["fcseoul", "seoul"],
+    "墨胜利": ["melbournevictory"],
+    "纽喷气机": ["newcastlejets", "newcastlejet"],
+    "珀斯": ["perthglory", "perth"],
+    "阿德莱德": ["adelaideunited", "adelaide"],
+    "迈国际": ["intermiami", "inter miami"],
+    "布里兰": ["buriramunited", "buriram"],
+    "曼谷港务": ["bangkokport", "bangkokportfc"],
+    "亚美尼亚": ["armenia"],
+    "克罗地亚": ["croatia"],
+    "土耳其": ["turkey", "turkiye"],
+    "塞浦路斯": ["cyprus"],
+    "拉脱维亚": ["latvia"],
+    "捷克": ["czechia", "czechrepublic"],
+    "比利时": ["belgium"],
+    "芬兰": ["finland"],
+    "英格兰": ["england"],
+    "西班牙": ["spain"],
+    "阿尔巴尼亚": ["albania", "阿尔巴尼"],
+    "阿尔维卡": ["arvika"],
+    "黑山": ["montenegro"],
+    "巴黎圣日耳曼": ["parissaintgermain", "psg", "巴黎圣曼"],
+}
+
 _WS = re.compile(r"\s+")
 
 
@@ -194,8 +280,11 @@ def seed_aliases(db: Session) -> int:
     否则 The Odds API 的英文队名会对不上竞彩中文名。
     """
     existing = set(db.scalars(select(TeamAlias.alias)).all())
+    merged: dict[str, list[str]] = {k: list(v) for k, v in SEED_ALIASES.items()}
+    for key, variants in EXTRA_ALIASES.items():
+        merged.setdefault(key, []).extend(variants)
     n = 0
-    for canonical, variants in SEED_ALIASES.items():
+    for canonical, variants in merged.items():
         for v in [canonical, *variants]:
             key = normalize(v)
             if not key or key in existing:
