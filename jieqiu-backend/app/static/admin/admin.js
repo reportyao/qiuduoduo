@@ -1242,18 +1242,121 @@ async function loadGateway() {
 async function loadPlans() {
   const root = el("#view-plans");
   root.innerHTML = '<div class="skeleton"></div>';
-  const data = await api(`/admin/api/plans-preview?date=${encodeURIComponent(state.date)}&stake=100`);
+  const [stable, balanced, aggressive] = await Promise.all([
+    api("/admin/api/plans?risk=stable&limit=20"),
+    api("/admin/api/plans?risk=balanced&limit=20"),
+    api("/admin/api/plans?risk=aggressive&limit=20"),
+  ]);
+  const blocks = [
+    ["stable", "稳健定投", stable.plans || []],
+    ["balanced", "平衡定投", balanced.plans || []],
+    ["aggressive", "进取定投", aggressive.plans || []],
+  ];
   root.innerHTML = `
-    <div class="card"><div class="toolbar"><div><h2 style="margin:0">确定性组合预览</h2><div class="card-sub" style="margin:0">候选 ${data.candidates} · 仅预览，正式发布需走推荐主链</div></div><button class="btn secondary" id="reload-plans">刷新</button></div>
-      ${data.plans.map(plan => `
-        <div class="reco-card draft">
-          <div class="reco-head"><div><div class="reco-title">${esc(plan.label)} · ${plan.legs.length} 串 1</div><div class="reco-sub">组合赔率 ${plan.check.combo.odds} · 成本 ${plan.check.combo.cost}</div></div>${statusPill("draft")}</div>
-          <div class="detail-list" style="margin-top:12px">${plan.check.legs.map(leg => `<div><b>${esc(leg.match_no)}</b> ${esc(leg.home)} vs ${esc(leg.away)} · ${esc(leg.dir_label)} @${leg.odds} · ${esc(leg.status)}</div>`).join("")}</div>
-          ${plan.note ? `<div class="model-error warn">${esc(plan.note)}</div>` : ""}
-        </div>`).join("") || '<div class="empty">' + (data.candidates ? `候选 ${data.candidates} 场，暂无满足相关性与成本条件的组合。` : '今日暂无候选场次。') + '</div>'}
+    <div class="card"><div class="toolbar"><div><h2 style="margin:0">AI 定投计划</h2><div class="card-sub">每期 4 场 · 每场 100 · 单关 / 2 串 1 · 不跟单</div></div><button class="btn secondary" id="reload-plans">刷新</button></div>
+      ${blocks.map(([risk, label, plans]) => `
+        <div style="margin-top:18px">
+          <div class="toolbar"><h3 style="margin:0">${label}</h3>${canOperate() ? `<button class="btn secondary" data-build-plan="${risk}">生成今日计划</button>` : ""}</div>
+          ${plans.map(plan => `
+            <div class="reco-card ${plan.status === "settled" ? "" : "draft"}" style="margin-top:10px">
+              <div class="reco-head"><div><div class="reco-title">第 ${plan.cycle_no} 期 · ${esc(plan.name)}</div><div class="reco-sub">${plan.match_count} 场 · ${plan.bet_count} 注 · 投入 ${num(plan.total_stake)} · 盈亏 ${num(plan.pnl)} · ROI ${plan.roi == null ? "—" : num(plan.roi * 100, 1) + "%"}</div></div>${statusPill(plan.status)}</div>
+              <div class="detail-list" style="margin-top:10px">${(plan.bets || []).map(bet => `<div><b>${esc(bet.label || bet.bet_type)}</b> · ${num(bet.stake)} @${bet.odds} · ${esc(bet.status)}${bet.pnl ? ` · ${num(bet.pnl)}` : ""}${(bet.legs || []).map(leg => `<div class="card-sub" style="margin-left:12px">${esc(leg.match_id)} · ${esc(leg.direction)} · 分配 ${num(leg.allocation)} · ${esc(leg.selection_reason || "")}</div>`).join("")}</div>`).join("")}</div>
+              ${canOperate() && plan.status !== "settled" ? `<button class="btn secondary" data-settle-plan="${plan.id}" style="margin-top:8px">结算/重算</button>` : ""}
+            </div>`).join("") || '<div class="empty">还没有计划。候选不足时不会硬凑 4 场。</div>'}
+        </div>`).join("")}
     </div>
   `;
   el("#reload-plans").onclick = loadPlans;
+  els("[data-build-plan]").forEach(btn => btn.onclick = async () => {
+    try { await post("/admin/api/plans/build", { risk: btn.dataset.buildPlan, publish: true }); toast("计划已生成"); loadPlans(); }
+    catch (e) { toast(e.message, "error"); }
+  });
+  els("[data-settle-plan]").forEach(btn => btn.onclick = async () => {
+    try { await post(`/admin/api/plans/${btn.dataset.settlePlan}/settle`); toast("已结算/重算"); loadPlans(); }
+    catch (e) { toast(e.message, "error"); }
+  });
+}
+
+async function loadAppUsers() {
+  const root = el("#view-app-users");
+  root.innerHTML = '<div class="skeleton"></div>';
+  const data = await api("/admin/api/app-users?limit=100");
+  root.innerHTML = `
+    <div class="card"><div class="toolbar"><div><h2 style="margin:0">用户与会员</h2><div class="card-sub">当前真实入口：后台手动开通 Pro / Max；充值支付暂未开放</div></div><button class="btn secondary" id="reload-app-users">刷新</button></div>
+      <div class="table-wrap"><table><thead><tr><th>用户</th><th>注册</th><th>会员</th><th>到期</th><th>操作</th></tr></thead><tbody>
+      ${(data.users || []).map(user => `<tr>
+        <td><b>${esc(user.display_name || "未命名")}</b><div class="card-sub mono">${esc(user.user_id)}</div><div class="card-sub">${esc(user.phone || user.email || "设备账户")}</div></td>
+        <td class="mono">${fmtTime(user.created_at)}</td>
+        <td>${statusPill(user.membership.tier === "free" ? "免费" : user.membership.tier.toUpperCase())}</td>
+        <td class="mono">${fmtTime(user.membership.expires_at)}</td>
+        <td>${canAdmin() ? `<button class="btn secondary" data-grant-user="${user.user_id}" data-grant-tier="pro">Pro 30 天</button> <button class="btn secondary" data-grant-user="${user.user_id}" data-grant-tier="max">Max 30 天</button> <button class="btn ghost" data-revoke-user="${user.user_id}">撤销</button>` : '<span class="card-sub">只读</span>'}</td>
+      </tr>`).join("") || '<tr><td colspan="5">暂无用户</td></tr>'}
+      </tbody></table></div>
+    </div>
+  `;
+  el("#reload-app-users").onclick = loadAppUsers;
+  els("[data-grant-user]").forEach(btn => btn.onclick = async () => {
+    try {
+      await post(`/admin/api/app-users/${btn.dataset.grantUser}/membership`, { tier: btn.dataset.grantTier, days: 30, note: "OPC 手动开通" });
+      toast("会员已开通"); loadAppUsers();
+    } catch (e) { toast(e.message, "error"); }
+  });
+  els("[data-revoke-user]").forEach(btn => btn.onclick = async () => {
+    try {
+      await post(`/admin/api/app-users/${btn.dataset.revokeUser}/membership/revoke`, { note: "OPC 手动撤销" });
+      toast("会员已撤销"); loadAppUsers();
+    } catch (e) { toast(e.message, "error"); }
+  });
+}
+
+async function loadOpsV4() {
+  const root = el("#view-ops-v4");
+  root.innerHTML = '<div class="skeleton"></div>';
+  const [data, engine] = await Promise.all([
+    api("/admin/api/ops-v4?limit=80"),
+    api("/admin/api/engine-config"),
+  ]);
+  root.innerHTML = `
+    <div class="card"><div class="toolbar"><div><h2 style="margin:0">引擎状态</h2><div class="card-sub">HeaderMetrics 展示口径</div></div><button class="btn secondary" id="reload-ops-v4">刷新</button></div>
+      <div class="detail-list">
+        <div><b>版本</b> <input id="engine-version" value="${esc(engine.version)}" ${canAdmin() ? "" : "disabled"}></div>
+        <div><b>盘口数</b> <input id="engine-markets" type="number" value="${engine.markets_monitored}" ${canAdmin() ? "" : "disabled"}></div>
+        <div><b>模型数</b> <input id="engine-models" type="number" value="${engine.models_reviewing}" ${canAdmin() ? "" : "disabled"}></div>
+        <div><b>数据点系数</b> <input id="engine-factor" type="number" step="0.1" value="${engine.data_points_factor}" ${canAdmin() ? "" : "disabled"}></div>
+      </div>
+      ${canAdmin() ? '<button class="btn primary" id="save-engine" style="margin-top:10px">保存引擎配置</button>' : ""}
+    </div>
+    <div class="card" style="margin-top:16px"><div class="toolbar"><div><h2 style="margin:0">异常队列 / 任务</h2><div class="card-sub">系统自动跑，人只看异常</div></div></div>
+      <div class="table-wrap"><table><thead><tr><th>严重度</th><th>类型</th><th>原因</th><th>状态</th><th>操作</th></tr></thead><tbody>
+      ${(data.exceptions || []).map(ex => `<tr><td>${ex.severity}</td><td>${esc(ex.type)}</td><td>${esc(ex.message)}</td><td>${statusPill(ex.status)}</td><td>${canOperate() ? `<button class="btn secondary" data-resolve-exception="${ex.id}">标记处理</button>` : ""}</td></tr>`).join("") || '<tr><td colspan="5">没有未处理异常</td></tr>'}
+      </tbody></table></div>
+    </div>
+    <div class="card" style="margin-top:16px"><h2 class="card-title">最近任务</h2><div class="table-wrap"><table><thead><tr><th>任务</th><th>状态</th><th class="num">耗时</th><th>错误</th></tr></thead><tbody>
+      ${(data.jobs || []).map(job => `<tr><td>${esc(job.job_key)}</td><td>${statusPill(job.status)}</td><td class="num">${job.duration_ms == null ? "—" : job.duration_ms + "ms"}</td><td class="card-sub">${esc(job.error || "")}</td></tr>`).join("") || '<tr><td colspan="4">暂无任务</td></tr>'}
+    </tbody></table></div></div>
+  `;
+  el("#reload-ops-v4").onclick = loadOpsV4;
+  if (canAdmin()) {
+    el("#save-engine").onclick = async () => {
+      try {
+        await api("/admin/api/engine-config", {
+          method: "PUT",
+          body: {
+            version: el("#engine-version").value,
+            markets_monitored: Number(el("#engine-markets").value),
+            models_reviewing: Number(el("#engine-models").value),
+            data_points_factor: Number(el("#engine-factor").value),
+          },
+        });
+        toast("引擎配置已保存");
+        loadOpsV4();
+      } catch (e) { toast(e.message, "error"); }
+    };
+  }
+  els("[data-resolve-exception]").forEach(btn => btn.onclick = async () => {
+    try { await post(`/admin/api/ops-v4/exceptions/${btn.dataset.resolveException}`, { status: "resolved" }); toast("已标记处理"); loadOpsV4(); }
+    catch (e) { toast(e.message, "error"); }
+  });
 }
 
 async function loadData() {
@@ -1641,14 +1744,16 @@ const views = {
   gateway: { title: "调用用量", kicker: "调用与成本", loader: loadGateway },
   personas: { title: "人设文案", kicker: "文案语气", loader: loadPersonas },
   recommendations: { title: "推荐主链", kicker: "判断发布", loader: loadRecommendations },
-  plans: { title: "组合预览", kicker: "风险组合", loader: loadPlans },
+  plans: { title: "AI 计划", kicker: "定投方案", loader: loadPlans },
+  "app-users": { title: "用户与会员", kicker: "手动开通", loader: loadAppUsers },
+  "ops-v4": { title: "异常队列", kicker: "OPC", loader: loadOpsV4 },
   data: { title: "数据源", kicker: "数据供给", loader: loadData },
   "model-eval": { title: "模型效果", kicker: "概率质量", loader: loadModelEval },
   logs: { title: "运行日志", kicker: "运行输出", loader: loadLogs },
 };
 
 let autoTimer = null;
-const AUTO_VIEWS = new Set(["workbench", "overview", "recommendations", "gateway", "data", "model-eval", "models", "integrations", "collector"]);
+const AUTO_VIEWS = new Set(["workbench", "overview", "recommendations", "gateway", "data", "model-eval", "models", "integrations", "collector", "plans"]);
 
 function scheduleAutoRefresh() {
   clearInterval(autoTimer);

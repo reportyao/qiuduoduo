@@ -16,7 +16,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -27,11 +27,13 @@ from ..features.recommendations import service as recommendation_service
 from ..features.tools import service as parlay_service
 from ..features.tools.schemas import ParlayPlanRequest
 from ..models import (AIResearch, AdminAudit, AdminUser, CollectorStatus,
-                      DecisionSnapshot, InteractionEvent, LeagueModelConfig, LLMProfile,
-                      Notification, PersonaLLMModel, PushToken,
+                      DecisionSnapshot, EngineConfig, InteractionEvent, LeagueModelConfig, LLMProfile,
+                      Notification, PersonaLLMModel, PlanCycle, PushToken,
                       RecommendationEvent, RecommendationPlan, ReviewRun,
-                      SPMatch, SPSnapshot, SportmonksMatchData, Verdict)
-from ..modules import admin_auth, api_football, llm_gateway, persona_llm, persona_registry, supply
+                      SPMatch, SPSnapshot, SportmonksMatchData, User,
+                      UserMembership, Verdict)
+from ..modules import (admin_auth, api_football, engine, llm_gateway, membership,
+                       ops, persona_llm, persona_registry, plan_service, supply)
 from ..modules.sealchain import latest_chain_status
 from ..modules.timeutil import CN, trade_date_now, trade_window
 
@@ -859,6 +861,203 @@ def admin_plans_preview(date: str | None = None, stake: float = 100,
         raise
     except Exception as exc:  # noqa: BLE001 - 预览失败返回业务错误
         raise HTTPException(400, str(exc))
+
+
+class MembershipGrantBody(BaseModel):
+    tier: Literal["pro", "max"]
+    days: int = Field(default=30, ge=1, le=3650)
+    note: str = Field(default="", max_length=200)
+
+
+class MembershipRevokeBody(BaseModel):
+    note: str = Field(default="", max_length=200)
+
+
+class PlanBuildBody(BaseModel):
+    risk: Literal["stable", "balanced", "aggressive"] = "stable"
+    date: str | None = None
+    publish: bool = True
+
+
+def _app_user(row: User, member: UserMembership | None) -> dict:
+    from ..modules.auth import mask_email, mask_phone
+    return {
+        "user_id": row.id,
+        "display_name": row.display_name,
+        "phone": mask_phone(row.phone) if row.phone else None,
+        "email": mask_email(row.email) if row.email else None,
+        "persona": row.persona,
+        "region": row.region,
+        "created_at": _iso(row.created_at),
+        "membership": ({
+            "tier": member.tier,
+            "status": member.status,
+            "expires_at": _iso(member.expires_at),
+            "source": member.source,
+        } if member else {"tier": "free", "status": "none",
+                          "expires_at": None, "source": ""}),
+    }
+
+
+@router.get("/api/app-users")
+def admin_app_users(query: str = "", limit: int = 50,
+                    db: Session = Depends(get_db),
+                    _: None = Depends(admin_auth.require_role("operator"))):
+    limit = max(1, min(limit, 200))
+    q = select(User).where(User.deleted_at.is_(None))
+    text = query.strip()
+    if text:
+        like = f"%{text}%"
+        q = q.where(or_(User.phone.like(like), User.email.like(like),
+                        User.display_name.like(like), User.id.like(like)))
+    rows = list(db.scalars(q.order_by(User.created_at.desc()).limit(limit)).all())
+    ids = [u.id for u in rows]
+    members = {m.user_id: m for m in db.scalars(
+        select(UserMembership).where(
+            UserMembership.user_id.in_(ids),
+            UserMembership.status == "active")
+    ).all()} if ids else {}
+    return {"users": [_app_user(u, members.get(u.id)) for u in rows]}
+
+
+@router.post("/api/app-users/{user_id}/membership")
+def admin_grant_membership(user_id: str, body: MembershipGrantBody,
+                           request: Request, db: Session = Depends(get_db),
+                           principal: admin_auth.AdminPrincipal = Depends(
+                               admin_auth.require_role("admin"))):
+    user = db.get(User, user_id)
+    if user is None or user.deleted_at is not None:
+        raise HTTPException(404, "user not found")
+    before = membership.membership_payload(db, user_id)
+    try:
+        row = membership.grant(db, user_id, body.tier, body.days,
+                               actor=principal.username, note=body.note)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    after = membership.membership_payload(db, user_id)
+    _audit(db, principal, "app_user.membership.grant", "app_user", user_id,
+           before=before, after=after, request=request)
+    return {"ok": True, "membership": after,
+            "expires_at": _iso(row.expires_at)}
+
+
+@router.post("/api/app-users/{user_id}/membership/revoke")
+def admin_revoke_membership(user_id: str, body: MembershipRevokeBody,
+                            request: Request, db: Session = Depends(get_db),
+                            principal: admin_auth.AdminPrincipal = Depends(
+                                admin_auth.require_role("admin"))):
+    before = membership.membership_payload(db, user_id)
+    ok = membership.revoke(db, user_id, actor=principal.username,
+                           note=body.note)
+    after = membership.membership_payload(db, user_id)
+    _audit(db, principal, "app_user.membership.revoke", "app_user", user_id,
+           before=before, after=after, request=request)
+    return {"ok": ok, "membership": after}
+
+
+@router.post("/api/plans/build")
+def admin_build_plan(body: PlanBuildBody, request: Request,
+                     db: Session = Depends(get_db),
+                     principal: admin_auth.AdminPrincipal = Depends(
+                         admin_auth.require_role("operator"))):
+    try:
+        cycle = plan_service.build_cycle(
+            db, risk=body.risk, date=_valid_date(body.date),
+            publish=body.publish)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    if cycle is None:
+        raise HTTPException(404, "没有足够候选场次")
+    _audit(db, principal, "plan.build", "plan_cycle", cycle.id,
+           after={"risk": cycle.risk_level, "cycle_no": cycle.cycle_no},
+           request=request)
+    return {"plan": plan_service.cycle_detail(db, cycle, include_legs=True)}
+
+
+@router.post("/api/plans/{cycle_id}/settle")
+def admin_settle_plan(cycle_id: str, request: Request,
+                      db: Session = Depends(get_db),
+                      principal: admin_auth.AdminPrincipal = Depends(
+                          admin_auth.require_role("operator"))):
+    cycle = db.get(PlanCycle, cycle_id)
+    if cycle is None:
+        raise HTTPException(404, "plan cycle not found")
+    changed = plan_service.settle_cycle(db, cycle)
+    _audit(db, principal, "plan.settle", "plan_cycle", cycle_id,
+           after={"changed": changed, "pnl": cycle.pnl}, request=request)
+    return {"ok": True, "changed": changed,
+            "plan": plan_service.cycle_detail(db, cycle, include_legs=True)}
+
+
+@router.get("/api/plans")
+def admin_plans(risk: str = "stable", limit: int = 30,
+                db: Session = Depends(get_db),
+                _: None = Depends(admin_auth.require_role("viewer"))):
+    return {"plans": plan_service.history(db, risk, limit=limit,
+                                          include_legs=True)}
+
+
+@router.get("/api/ops-v4")
+def admin_ops_v4(limit: int = 50, db: Session = Depends(get_db),
+                 _: None = Depends(admin_auth.require_role("viewer"))):
+    return ops.list_ops(db, limit=max(1, min(limit, 200)))
+
+
+class ExceptionResolveBody(BaseModel):
+    status: Literal["open", "ack", "resolved"] = "resolved"
+
+
+@router.post("/api/ops-v4/exceptions/{exception_id}")
+def admin_resolve_exception(exception_id: int, body: ExceptionResolveBody,
+                            request: Request, db: Session = Depends(get_db),
+                            principal: admin_auth.AdminPrincipal = Depends(
+                                admin_auth.require_role("operator"))):
+    ok = ops.resolve_exception(db, exception_id, body.status)
+    _audit(db, principal, "ops.exception", "ops_exception", exception_id,
+           after={"status": body.status}, request=request)
+    return {"ok": ok}
+
+
+class EngineConfigBody(BaseModel):
+    version: str = Field(min_length=1, max_length=16)
+    markets_monitored: int = Field(ge=1, le=50)
+    models_reviewing: int = Field(ge=1, le=50)
+    data_points_factor: float = Field(ge=1, le=100)
+
+
+@router.get("/api/engine-config")
+def admin_engine_config(db: Session = Depends(get_db),
+                        _: None = Depends(admin_auth.require_role("viewer"))):
+    row = engine.config(db)
+    return {"version": row.version, "markets_monitored": row.markets_monitored,
+            "models_reviewing": row.models_reviewing,
+            "data_points_factor": row.data_points_factor}
+
+
+@router.put("/api/engine-config")
+def admin_update_engine_config(body: EngineConfigBody, request: Request,
+                               db: Session = Depends(get_db),
+                               principal: admin_auth.AdminPrincipal = Depends(
+                                   admin_auth.require_role("admin"))):
+    row = engine.config(db)
+    before = {"version": row.version, "markets": row.markets_monitored,
+              "models": row.models_reviewing, "factor": row.data_points_factor}
+    row.version = body.version.strip()
+    row.markets_monitored = body.markets_monitored
+    row.models_reviewing = body.models_reviewing
+    row.data_points_factor = body.data_points_factor
+    row.updated_by = principal.username
+    db.commit()
+    _audit(db, principal, "engine.config", "engine_config", 1,
+           before=before, after={"version": row.version,
+                                 "markets": row.markets_monitored,
+                                 "models": row.models_reviewing,
+                                 "factor": row.data_points_factor},
+           request=request)
+    return {"ok": True, "config": {"version": row.version,
+                                   "markets_monitored": row.markets_monitored,
+                                   "models_reviewing": row.models_reviewing,
+                                   "data_points_factor": row.data_points_factor}}
 
 
 @router.get("/api/gateway")

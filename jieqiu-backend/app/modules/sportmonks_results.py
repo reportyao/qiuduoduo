@@ -26,18 +26,11 @@ _FINISHED = {"FT", "AET", "PEN", "FINISHED"}
 _SCORE_RE = re.compile(r"(\d+)\s*[-:]\s*(\d+)")
 
 
-def parse_score(fixture: dict) -> tuple[int, int] | None:
-    """从 fixture.scores / result_info 取主客进球；只接受已完赛状态。"""
-    state = str((fixture.get("state") or {}).get("short_name") or "").upper()
-    if state not in _FINISHED:
-        return None
-    rows = [row for row in fixture.get("scores") or []
-            if str(row.get("description") or "").upper() == "CURRENT"]
-    if not rows:
-        rows = [row for row in fixture.get("scores") or []
-                if row.get("type_id") == 1525]
+def _goals_from_rows(rows: list[dict], descriptions: set[str]) -> tuple[int, int] | None:
+    picked = [row for row in rows
+              if str(row.get("description") or "").upper() in descriptions]
     goals: dict[str, int] = {}
-    for row in rows:
+    for row in picked:
         score = row.get("score") or {}
         side = str(score.get("participant") or "").lower()
         if side in ("home", "away") and score.get("goals") is not None:
@@ -47,10 +40,36 @@ def parse_score(fixture: dict) -> tuple[int, int] | None:
                 return None
     if "home" in goals and "away" in goals:
         return goals["home"], goals["away"]
-    match = _SCORE_RE.search(str(fixture.get("result_info") or ""))
-    if match:
-        return int(match.group(1)), int(match.group(2))
     return None
+
+
+def parse_result(fixture: dict) -> dict | None:
+    """解析 FT90 / HT / 状态。
+
+    CURRENT 在 AET/PEN 后可能含加时点球比分，不能用于 1X2。
+    AET/PEN 必须找到明确的 FT 行才返回；没有就保持未结算。
+    """
+    state = str((fixture.get("state") or {}).get("short_name") or "").upper()
+    if state not in _FINISHED:
+        return None
+    rows = fixture.get("scores") or []
+    ft = _goals_from_rows(rows, {"FT", "2ND_HALF"})
+    if ft is None and state in ("FT", "FINISHED"):
+        ft = _goals_from_rows(rows, {"CURRENT"})
+    if ft is None and state in ("FT", "FINISHED"):
+        match = _SCORE_RE.search(str(fixture.get("result_info") or ""))
+        if match:
+            ft = (int(match.group(1)), int(match.group(2)))
+    if ft is None:
+        return None
+    ht = _goals_from_rows(rows, {"HT", "1ST_HALF"})
+    return {"ft": ft, "ht": ht, "status": "FT" if state == "FINISHED" else state}
+
+
+def parse_score(fixture: dict) -> tuple[int, int] | None:
+    """兼容旧调用：只返回 FT90。"""
+    parsed = parse_result(fixture)
+    return parsed["ft"] if parsed else None
 
 
 def sync_results(db: Session, days: int = 2, limit: int = 80) -> dict:
@@ -89,24 +108,28 @@ def sync_results(db: Session, days: int = 2, limit: int = 80) -> dict:
                        f"api_token={token}&include=participants;scores;state;league&locale=zh")
         time.sleep(0.15)
         fixture = (payload or {}).get("data") or {}
-        score = parse_score(fixture)
-        if score is None:
+        parsed = parse_result(fixture)
+        if parsed is None:
             skipped += 1
             continue
+        score, ht = parsed["ft"], parsed["ht"]
         db.add(MatchResult(
             source="sportmonks", league=match.league,
             home_raw=sm.home_name, away_raw=sm.away_name,
             home=match.home, away=match.away, match_date=match_date,
+            fixture_id=sm.fixture_id, status=parsed["status"],
+            ft_home=score[0], ft_away=score[1],
+            ht_home=ht[0] if ht else None, ht_away=ht[1] if ht else None,
             goals_home=score[0], goals_away=score[1],
             retrieved_at=utcnow().isoformat(),
         ))
         seen.add(key)
         inserted += 1
     db.commit()
-    settled = 0
-    if inserted:
-        from .settle import settle_verdicts
-        settled = settle_verdicts(db)
+    from .settlement import settle_pending
+    from .plan_service import settle_open_cycles
+    settled = settle_pending(db)
+    settle_open_cycles(db)
     return {"ok": True, "checked": len(rows), "inserted": inserted,
             "skipped": skipped, "settled": settled}
 
@@ -169,9 +192,10 @@ def backfill_verdict_results(db: Session, days: int = 14) -> dict:
             fixture = match_fixture(proxy, fixtures)
             if fixture is None:
                 continue
-            score = parse_score(fixture)
-            if score is None:
+            parsed = parse_result(fixture)
+            if parsed is None:
                 continue
+            score, ht = parsed["ft"], parsed["ht"]
             participants = {p.get("meta", {}).get("location"): p.get("name", "")
                             for p in fixture.get("participants") or []}
             db.add(MatchResult(
@@ -179,15 +203,18 @@ def backfill_verdict_results(db: Session, days: int = 14) -> dict:
                 home_raw=participants.get("home", ""),
                 away_raw=participants.get("away", ""),
                 home=verdict.home, away=verdict.away, match_date=day,
+                fixture_id=fixture.get("id"), status=parsed["status"],
+                ft_home=score[0], ft_away=score[1],
+                ht_home=ht[0] if ht else None, ht_away=ht[1] if ht else None,
                 goals_home=score[0], goals_away=score[1],
                 retrieved_at=utcnow().isoformat(),
             ))
             existing.add(key)
             inserted += 1
     db.commit()
-    settled = 0
-    if inserted:
-        from .settle import settle_verdicts
-        settled = settle_verdicts(db)
+    from .settlement import settle_pending
+    from .plan_service import settle_open_cycles
+    settled = settle_pending(db)
+    settle_open_cycles(db)
     return {"ok": True, "checked": checked, "inserted": inserted,
             "settled": settled, "days": days}

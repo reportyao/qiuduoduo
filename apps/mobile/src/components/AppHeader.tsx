@@ -18,6 +18,8 @@ interface AppHeaderProps {
   border?: boolean;
   /** 首页把 Header 放进 ScrollView 时关掉安全区内边距，避免双倍顶部留白。 */
   insetTop?: boolean;
+  /** 首页 HeaderMetrics 4 行时需要更高的头部。 */
+  height?: number;
 }
 
 /**
@@ -34,6 +36,7 @@ export function AppHeader({
   backLabel = "返回",
   border = true,
   insetTop = true,
+  height,
 }: AppHeaderProps) {
   const insets = useSafeAreaInsets();
   const { meta } = usePersonaContent();
@@ -43,7 +46,7 @@ export function AppHeader({
     <View
       style={[
         styles.wrap,
-        { paddingTop: top, height: top + layout.headerHeight },
+        { paddingTop: top, height: top + (height ?? layout.headerHeight) },
         border && styles.border,
       ]}
     >

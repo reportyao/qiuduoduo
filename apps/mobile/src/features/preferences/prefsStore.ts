@@ -13,6 +13,7 @@ interface PersistedPrefs {
   ageDecision: AgeDecision;
   notificationPromptDismissed: boolean;
   avatarUri: string | null;
+  lastDailyRecordDate: string;
 }
 
 interface PrefsState extends PersistedPrefs {
@@ -23,6 +24,7 @@ interface PrefsState extends PersistedPrefs {
   setAvatarUri: (uri: string | null) => void;
   setAgeDecision: (decision: AgeDecision) => void;
   dismissNotificationPrompt: () => void;
+  setLastDailyRecordDate: (date: string) => void;
 }
 
 const DEFAULTS: PersistedPrefs = {
@@ -31,6 +33,7 @@ const DEFAULTS: PersistedPrefs = {
   ageDecision: "unknown",
   notificationPromptDismissed: false,
   avatarUri: null,
+  lastDailyRecordDate: "",
 };
 
 function isOddsFormat(value: unknown): value is OddsFormat {
@@ -44,6 +47,7 @@ function snapshot(state: PrefsState): PersistedPrefs {
     ageDecision: state.ageDecision,
     notificationPromptDismissed: state.notificationPromptDismissed,
     avatarUri: state.avatarUri,
+    lastDailyRecordDate: state.lastDailyRecordDate,
   };
 }
 
@@ -74,6 +78,8 @@ export const usePrefsStore = create<PrefsState>((set, get) => ({
             : "unknown",
         notificationPromptDismissed: Boolean(parsed.notificationPromptDismissed),
         avatarUri: typeof parsed.avatarUri === "string" ? parsed.avatarUri : null,
+        lastDailyRecordDate: typeof parsed.lastDailyRecordDate === "string"
+          ? parsed.lastDailyRecordDate : "",
         hydrated: true,
       });
     } catch {
@@ -103,6 +109,11 @@ export const usePrefsStore = create<PrefsState>((set, get) => ({
 
   dismissNotificationPrompt: () => {
     set({ notificationPromptDismissed: true });
+    persist(get());
+  },
+
+  setLastDailyRecordDate: (lastDailyRecordDate) => {
+    set({ lastDailyRecordDate });
     persist(get());
   },
 }));

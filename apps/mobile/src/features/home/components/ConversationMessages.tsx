@@ -49,6 +49,7 @@ export function AssistantBrief({
   publishedReady,
   publishedMessage,
   referenceCount,
+  recordText,
   onsaleCount,
   onsaleLabel,
   options,
@@ -68,6 +69,7 @@ export function AssistantBrief({
   publishedReady: boolean;
   publishedMessage?: string | null;
   referenceCount: number;
+  recordText?: string | null;
   onsaleCount: number;
   onsaleLabel: string;
   options: BriefMatchOption[];
@@ -87,6 +89,9 @@ export function AssistantBrief({
   const killed = Math.max(0, stats.total - stats.promoted - stats.screening);
   return (
     <AssistantMessage>
+      {recordText ? (
+        <Text variant="body" style={styles.lead}>{recordText}</Text>
+      ) : null}
       <Text variant="body" style={styles.lead}>
         {copy.conversationOpen(dayLabel, stats.total, stats.promoted, publishedCount, stats.screening, killed)}
       </Text>

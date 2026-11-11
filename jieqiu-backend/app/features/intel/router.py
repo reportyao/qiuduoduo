@@ -119,10 +119,28 @@ def create_match_analysis(match_id: str, request: Request,
     rate_key = request.client.host if request.client else "anon"
     if not _rate_ok("analysis:" + rate_key):
         raise HTTPException(429, "解读请求过于频繁")
+    tier = "free"
+    trade_date = None
+    if user is not None:
+        from ...modules import membership
+        from ...modules.timeutil import trade_date_now
+        trade_date = trade_date_now()
+        tier = membership.tier_for(db, user.id)
+        ok, reason = membership.can_analyze(
+            db, user.id, trade_date, match_id, tier)
+        if not ok:
+            raise HTTPException(429, detail={
+                "error": "quota_exhausted", "message": reason,
+                "upgrade": "pro/max",
+            })
     try:
-        return analysis_service.generate(db, match_id, date=date)
+        result = analysis_service.generate(db, match_id, date=date)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+    if (user is not None and trade_date is not None
+            and result.get("status") == "ready"):
+        membership.consume_analysis(db, user.id, trade_date, match_id, tier)
+    return result
 
 
 @router.post("/interactions", response_model=InteractionResponse)

@@ -29,6 +29,9 @@ def attribute(v: Verdict) -> dict:
     """对已结算判决归因。win/lose 都给；未结算返回 status-only。"""
     if v.settled is None:
         return {"settled": False, "class": None, "note": "赛果未出，不作归因"}
+    if v.settled == "void":
+        return {"settled": True, "class": "走水",
+                "note": f"结果走水（{v.result_score or '—'}），本金退回，不计输赢。"}
     if v.settled == "win":
         shrunk = (v.payload or {}).get("model", {}).get("shrunk") or [0, 0, 0]
         top = max(shrunk)
@@ -92,6 +95,8 @@ def postmortem(v: Verdict) -> dict:
 
 
 def _whatif_promoted(v: Verdict) -> str:
+    if v.settled == "void":
+        return f"走水（{v.result_score or '—'}）。本金退回，不计盈亏。"
     if v.settled == "win":
         return "中了。预测与成本账都在封存里可复算。"
     if v.settled == "lose":
@@ -132,7 +137,7 @@ def weekly_report(db: Session, user_id: str | None = None) -> dict:
         .order_by(Verdict.trade_date.desc())).all()
     recent = [v for v in rows if _within_days(v.trade_date, 7)]
     promoted = [v for v in recent if v.status == "promoted"]
-    settled = [v for v in promoted if v.settled]
+    settled = [v for v in promoted if v.settled in ("win", "lose")]
     attr = {}
     for v in settled:
         a = attribute(v)["class"]
@@ -159,7 +164,8 @@ def weekly_report(db: Session, user_id: str | None = None) -> dict:
         vmap = {v.id: v for v in rows}
         # 周报只统计近 7 天窗口内的注单，不能拿累计注数冒充“本周”。
         bets = [b for b in all_bets if b.verdict_id in vmap]
-        settled_bets = [(b, vmap[b.verdict_id]) for b in bets if vmap[b.verdict_id].settled]
+        settled_bets = [(b, vmap[b.verdict_id]) for b in bets
+                        if vmap[b.verdict_id].settled in ("win", "lose")]
         pnl = sum((bet_pnl(b, v) or 0) for b, v in settled_bets)
         bet_clv = []
         for bet, verdict in settled_bets:

@@ -31,6 +31,20 @@ DEFAULT_PROFILES = {
     },
 }
 
+ASSISTANT_SLOTS = {
+    "assistant_daily_record": "昨天 {picks} 场，{hits} 中；最近 30 天，{hit_days} 天有命中。",
+    "assistant_buy_tonight": "{home} vs {away}：{pick}。",
+    "assistant_why_not": "{home} vs {away} 这场我没给预测，原因在卡片里。",
+    "assistant_postmortem": "最近的复盘在卡片里，输赢都写清楚。",
+    "assistant_memory": "记下了：{key} = {value}。",
+    "assistant_empty": "今天没有足够值得主看的场次。",
+    "assistant_fallback": "我主要看今日预测、未出原因、复盘和你的偏好。",
+    "assistant_status": "我在看今天的场次。",
+    "plan_summary": "本期计划 {cycles} 期，累计模拟收益 {pnl}。",
+    "plan_locked": "Pro 含竞彩分析，不含 AI 计划；Max 可看完整方案。",
+    "plan_history": "历史期数在这里，输赢都展示。",
+}
+
 DEFAULT_SLOTS = {
     "today_pick": "{address}，今天主看 {home} vs {away}。倾向：{direction}。把握度：{confidence}。因为：{reason}。除非：{invalidator}。",
     "plan_intro": "{address}，今天参考组合是 {legs} 串 1。",
@@ -126,7 +140,7 @@ def ensure_seeded(db: Session) -> None:
                       for s in db.scalars(select(PersonaCopySlot)).all()}
     changed = False
     for pid in DEFAULT_PROFILES:
-        for key, template in DEFAULT_SLOTS.items():
+        for key, template in {**DEFAULT_SLOTS, **ASSISTANT_SLOTS}.items():
             if (pid, key) not in existing_slots:
                 db.add(PersonaCopySlot(persona_id=pid, slot_key=key,
                                        template=template, version=1, enabled=True))
@@ -209,7 +223,8 @@ def update_slot(db: Session, persona_id: str, slot_key: str, template: str) -> P
     ensure_seeded(db)
     if get_profile(db, persona_id) is None:
         raise ValueError("persona not found")
-    if slot_key not in DEFAULT_SLOTS:
+    allowed = set(DEFAULT_SLOTS) | set(PERSONA_COPY_SLOTS.get(persona_id, {})) | set(ASSISTANT_SLOTS)
+    if slot_key not in allowed:
         raise ValueError("slot not found")
     row = db.scalar(select(PersonaCopySlot).where(
         PersonaCopySlot.persona_id == persona_id,

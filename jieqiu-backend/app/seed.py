@@ -109,6 +109,16 @@ def main() -> int:
               f"fail(价/市/模)={n_fail['price']}/{n_fail['market']}/{n_fail['model']} "
               f"pending(市/模)={n_pending['market']}/{n_pending['model']} "
               f"threshold={vs[0].rake_threshold if vs else '-'} sealed={sealed}")
+        from .modules.membership import expire_all
+        n_expired = expire_all(db)
+        from .modules.performance import rebuild_ai_record_daily
+        n_perf = rebuild_ai_record_daily(db)
+        from .modules.plan_service import ensure_today_cycles, settle_open_cycles
+        settle_open_cycles(db)
+        cycles = ensure_today_cycles(db, trade_date)
+        print(f"[membership] 到期 {n_expired} · [performance] {n_perf} 天")
+        print(f"[plans] 新建 {len(cycles)} 期 " + ", ".join(
+            f"{c.risk_level}#{c.cycle_no}" for c in cycles) if cycles else "[plans] 今日已有计划")
         return 0
     finally:
         db.close()

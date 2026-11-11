@@ -15,6 +15,7 @@ export const INTENT_LABEL: Record<string, string> = {
   buy_tonight: "今日预测",
   why_not: "未出原因",
   postmortem: "复盘",
+  record: "AI 战绩",
   memory_write: "记忆",
   memory_query: "记忆",
   rest: "休息",

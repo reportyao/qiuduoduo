@@ -194,19 +194,9 @@ def settle_verdicts(db: Session, trade_date: str | None = None) -> int:
                 break
         if result is None:
             continue
-        if v.pool == "hhad" and v.goal_line:
-            try:
-                line_val = float(v.goal_line)
-            except ValueError:
-                line_val = 0.0
-            actual = _outcome_handicap(result.goals_home, result.goals_away, line_val)
-        else:
-            actual = _outcome_1x2(result.goals_home, result.goals_away)
-        v.settled = "win" if actual == v.pick.get("dir") else "lose"
-        v.result_score = f"{result.goals_home}-{result.goals_away}"
-        v.settled_at = utcnow()
-        _fill_clv(db, v)
-        n += 1
+        # 90 分钟口径 + MarketSettlement 写入统一走 settlement.settle_verdict。
+        from .settlement import settle_verdict
+        n += settle_verdict(db, v, result)
     db.commit()
     return n
 
@@ -218,10 +208,14 @@ def ledger_stats(db: Session) -> dict:
         Verdict.status == "promoted")) or 0
     settled_rows = db.scalars(
         select(Verdict.settled).where(
-            Verdict.status == "promoted", Verdict.settled.isnot(None))
+            Verdict.status == "promoted",
+            Verdict.settled.isnot(None),
+            Verdict.settled != "void")
         .order_by(Verdict.kickoff)
     ).all()
     wins = sum(1 for s in settled_rows if s == "win")
+    void_n = db.scalar(select(func.count(Verdict.id)).where(
+        Verdict.status == "promoted", Verdict.settled == "void")) or 0
     streak = 0
     for s in reversed(settled_rows):
         if s == "lose":
@@ -234,5 +228,6 @@ def ledger_stats(db: Session) -> dict:
         "wins": wins,
         "losses": len(settled_rows) - wins,
         "current_losing_streak": streak,
-        "unsettled": promoted_total - len(settled_rows),
+        "unsettled": max(0, promoted_total - len(settled_rows) - int(void_n)),
+        "void": int(void_n),
     }

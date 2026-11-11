@@ -24,6 +24,8 @@ from .routers.auth_w5 import router as auth_router
 from .routers.collector import router as collector_router
 from .features.assistant.router import router as assistant_router
 from .features.compliance.router import router as compliance_router
+from .features.plans.router import router as plans_router
+from .features.v4_router import router as v4_router
 
 logger = logging.getLogger("jieqiu.startup")
 
@@ -71,6 +73,8 @@ app.include_router(w8_router, tags=["w8-review"])
 app.include_router(auth_router, tags=["w5-auth"])
 app.include_router(assistant_router, tags=["assistant"])
 app.include_router(compliance_router)
+app.include_router(plans_router)
+app.include_router(v4_router)
 app.include_router(collector_router)
 
 
@@ -100,6 +104,16 @@ def _warm_models() -> None:
 @app.on_event("startup")
 def _startup() -> None:
     init_db()
+    try:
+        from .db import SessionLocal
+        from .modules import membership
+        _db = SessionLocal()
+        try:
+            membership.seed_market_access(_db)
+        finally:
+            _db.close()
+    except Exception:
+        logger.warning("membership seed skipped", exc_info=True)
     from .config import get_settings
     st = get_settings()
     if not st.odds_api_key:

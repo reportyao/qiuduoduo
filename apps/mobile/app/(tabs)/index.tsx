@@ -14,6 +14,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
 import { Text, useToast } from "@/components/ui";
 import { usePersonaContent } from "@/features/personas/usePersona";
+import { usePrefsStore } from "@/features/preferences/prefsStore";
 import { useAuthStore } from "@/features/auth/authStore";
 import { useHideFloatingOnScroll } from "@/features/assistant/useHideFloatingOnScroll";
 import {
@@ -24,7 +25,7 @@ import {
 import { useChatMutation } from "@/features/assistant/queries";
 import { ChatCardContent, type ChatMessage } from "@/features/assistant/components/ChatCardContent";
 import { useMemoryMutations } from "@/features/account/queries";
-import { flattenStream, useFocusQuery, useOnSaleQuery, usePulseQuery, useRecommendationsTodayQuery, useStreamQuery } from "@/features/home/queries";
+import { flattenStream, useEngineStatusQuery, useFocusQuery, useOnSaleQuery, usePulseQuery, useRecommendationsTodayQuery, useRecordSummaryQuery, useStreamQuery } from "@/features/home/queries";
 import { useBetsQuery } from "@/features/records/queries";
 import { trackInteraction } from "@/features/telemetry/interactions";
 import { ChatComposer } from "@/features/home/components/ChatComposer";
@@ -84,6 +85,10 @@ export default function HomeScreen() {
   const setFocus = useFocusStore((s) => s.setFocus);
   const clearFocus = useFocusStore((s) => s.clearFocus);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const lastDailyRecordDate = usePrefsStore((s) => s.lastDailyRecordDate);
+  const setLastDailyRecordDate = usePrefsStore((s) => s.setLastDailyRecordDate);
+  const prefsHydrated = usePrefsStore((s) => s.hydrated);
+  const [recordVisible, setRecordVisible] = useState(false);
   const [confirmedConflicts, setConfirmedConflicts] = useState<string[]>([]);
   const scrollRef = useRef<ScrollView>(null);
   const autoScroll = useRef(false);
@@ -173,6 +178,21 @@ export default function HomeScreen() {
   const streamQuery = useStreamQuery(date);
   const recommendationsQuery = useRecommendationsTodayQuery(date);
   const pulseQuery = usePulseQuery(date);
+  const engineQuery = useEngineStatusQuery();
+  const recordQuery = useRecordSummaryQuery();
+
+  useEffect(() => {
+    setRecordVisible(false);
+  }, [today]);
+
+  useEffect(() => {
+    if (!prefsHydrated) return;
+    const yesterday = recordQuery.data?.yesterday;
+    if (!yesterday || yesterday.settled <= 0) return;
+    if (lastDailyRecordDate === today) return;
+    setRecordVisible(true);
+    setLastDailyRecordDate(today);
+  }, [lastDailyRecordDate, prefsHydrated, recordQuery.data, setLastDailyRecordDate, today]);
   const focusQuery = useFocusQuery(focus?.matchId ?? null, focus?.tradeDate ?? date, Boolean(focus));
   const onsaleQuery = useOnSaleQuery();
   const betsQuery = useBetsQuery(Boolean(session));
@@ -384,7 +404,8 @@ export default function HomeScreen() {
             showAssistant={false}
             insetTop={false}
             border={false}
-            right={<HeaderMetrics stream={stream} pulse={pulseQuery.data} now={now} />}
+            height={82}
+            right={<HeaderMetrics engine={engineQuery.data ?? null} />}
           />
 
           <View style={styles.conversation}>
@@ -398,6 +419,13 @@ export default function HomeScreen() {
                 publishedReady={recommendationsQuery.isSuccess}
                 publishedMessage={recommendationsQuery.data?.message ?? null}
                 referenceCount={references.length}
+                recordText={recordVisible && recordQuery.data?.yesterday
+                  ? copy.dailyRecord(
+                      recordQuery.data.yesterday.picks,
+                      recordQuery.data.yesterday.hits,
+                      recordQuery.data.last_30_days.hit_days,
+                    )
+                  : null}
                 onsaleCount={viewingToday ? onsale.length : briefStream.onsale.length}
                 onsaleLabel={viewingToday ? "在售场次" : "当日场次"}
                 options={briefOptions}

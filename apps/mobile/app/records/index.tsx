@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
+import { goBackOr } from "@/lib/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
 import { Button, Card, Chip, EmptyState, ErrorState, Skeleton, Text } from "@/components/ui";
@@ -41,6 +42,8 @@ export default function RecordsScreen() {
       <AppHeader
         title="我的记录"
         subtitle="球多多 · AI 预测"
+        onBack={() => goBackOr(router)}
+        backLabel="返回"
         showAssistant={false}
         right={<Chip label={session?.mode === "jwt" ? "已登录" : "设备账户"} tone="neutral" />}
       />
