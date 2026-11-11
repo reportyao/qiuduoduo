@@ -57,6 +57,7 @@ def build_narration(v: Verdict, persona: str = "zhuanjia", db=None) -> tuple[str
         "top": _fmt_pct(max(shrunk)),
         "pick": (v.pick or {}).get("dir", "无 pick（复核中）"),
         "div": _fmt_pct((gates.get("market", {}).get("detail") or {}).get("divergence")),
+        "address": "你",
     }
     # 等待原因：首个 pending 闸
     wait = "在等数据源覆盖"
@@ -87,13 +88,22 @@ def build_narration(v: Verdict, persona: str = "zhuanjia", db=None) -> tuple[str
             slots = {row.slot_key: row.template
                      for row in persona_registry.list_slots(db, persona)
                      if row.enabled}
+            profile = persona_registry.get_profile(db, persona)
+            if profile is not None and profile.address:
+                ctx["address"] = profile.address
             tpl = slots.get(f"narration_{status}")
         except Exception:  # noqa: BLE001 - 文案兜底不能阻塞
             tpl = None
-    if not tpl:
-        tpl_set = TEMPLATES.get(persona, TEMPLATES["zhuanjia"])
-        tpl = tpl_set.get(status) or tpl_set["screening"]
-    return tpl.format(**ctx), f"{persona}.{status}"
+    tpl_set = TEMPLATES.get(persona, TEMPLATES["zhuanjia"])
+    fallback = tpl_set.get(status) or tpl_set["screening"]
+    for candidate in (tpl, fallback):
+        if not candidate:
+            continue
+        try:
+            return candidate.format(**ctx), f"{persona}.{status}"
+        except (KeyError, IndexError, ValueError):
+            continue
+    return f"{v.home} vs {v.away}：数据整理中。", "fallback.minimal"
 
 
 def stream_chunks(text: str, chunk: int = 10):
