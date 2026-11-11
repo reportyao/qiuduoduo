@@ -31,9 +31,8 @@ import { ChatComposer } from "@/features/home/components/ChatComposer";
 import { MatchPickerSheet } from "@/features/home/components/MatchPickerSheet";
 import type { BriefMatchOption } from "@/features/home/components/BriefMatchPicker";
 import { buildBriefOptions } from "@/features/home/briefOptions";
-import { FocusPending } from "@/features/home/components/FocusPending";
+import { FocusSection } from "@/features/home/components/FocusSection";
 import { HeaderMetrics } from "@/features/home/components/HeaderMetrics";
-import { FocusPanel } from "@/features/home/components/FocusPanel";
 import { DataStatusSheet, LegalFooter } from "@/features/home/components/HomeSections";
 import {
   AssistantMessage,
@@ -290,6 +289,17 @@ export default function HomeScreen() {
     [date, router],
   );
 
+  const focusSwitch = useCallback(() => setPickerOpen(true), []);
+  const focusClearAll = useCallback(() => {
+    clearFocus();
+    setOpenedAll(true);
+  }, [clearFocus]);
+  const expandAll = useCallback(() => {
+    clearFocus();
+    setOpenedAll(true);
+  }, [clearFocus]);
+  const goMatches = useCallback(() => router.navigate("/(tabs)/matches"), [router]);
+
   const offerWhyNot = useCallback(() => {
     const target = stream?.avoid[0]?.matchId
       ?? verdicts.find((verdict) => verdict.status === "screening")?.matchId;
@@ -389,12 +399,9 @@ export default function HomeScreen() {
                 optionsTotal={briefOptions.length}
                 expanded={openedAll}
                 onSelectOption={selectBriefOption}
-                onExpandAll={() => {
-                  clearFocus();
-                  setOpenedAll(true);
-                }}
+                onExpandAll={expandAll}
                 onPicker={() => setPickerOpen(true)}
-                onOnSale={() => router.navigate("/(tabs)/matches")}
+                onOnSale={goMatches}
                 onParlay={() => router.push({
                   pathname: "/tools/parlay",
                   params: { seed: String(Date.now()) },
@@ -408,72 +415,21 @@ export default function HomeScreen() {
             ) : null}
 
             {focus ? (
-              <View style={styles.focus}>
-                <View style={styles.focusHead}>
-                  <View style={styles.flex}>
-                    <Text variant="overline" color={colors.green}>正在看</Text>
-                    <Text variant="bodyStrong" numberOfLines={1}>
-                      {focus.home} vs {focus.away}
-                    </Text>
-                    <Text variant="caption" color={colors.muted}>
-                      {focus.matchNo} · {focus.league || "联赛待同步"}
-                    </Text>
-                  </View>
-                  <Pressable
-                    onPress={() => setPickerOpen(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel="换一场比赛"
-                    hitSlop={8}
-                  >
-                    <Text variant="captionStrong" color={colors.green}>换一场</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      clearFocus();
-                      setOpenedAll(true);
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel="回到今日全部"
-                    hitSlop={8}
-                  >
-                    <Text variant="caption" color={colors.subtle}>今日全部</Text>
-                  </Pressable>
-                </View>
-
-                <FocusPanel focus={focusQuery.data} loading={focusQuery.isLoading} />
-
-                {focusedVerdict ? (
-                  <VerdictMessage
-                    verdict={focusedVerdict}
-                    betExists={betIds.has(focusedVerdict.id)}
-                    onOpen={openVerdict}
-                    onBet={setBetTarget}
-                    onWhyNot={openWhyNot}
-                    onSeal={setSealTarget}
-                  />
-                ) : (
-                  <FocusPending
-                    focus={focus}
-                    onOpenVerdict={openVerdict}
-                    onWhyNot={openWhyNot}
-                    onOnSale={() => router.navigate("/(tabs)/matches")}
-                    onSwitch={() => setPickerOpen(true)}
-                  />
-                )}
-
-                {verdicts.length > (focusedVerdict ? 1 : 0) ? (
-                  <Pressable
-                    onPress={() => setPickerOpen(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel="看今日其他比赛"
-                    style={styles.otherMatches}
-                  >
-                    <Text variant="caption" color={colors.muted}>
-                      今日其他 {verdicts.length - (focusedVerdict ? 1 : 0)} 场 · 选一场 ›
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </View>
+              <FocusSection
+                focus={focus}
+                focusData={focusQuery.data}
+                focusLoading={focusQuery.isLoading}
+                focusedVerdict={focusedVerdict}
+                otherCount={verdicts.length - (focusedVerdict ? 1 : 0)}
+                betExists={Boolean(focusedVerdict && betIds.has(focusedVerdict.id))}
+                onOpenVerdict={openVerdict}
+                onBet={setBetTarget}
+                onWhyNot={openWhyNot}
+                onSeal={setSealTarget}
+                onSwitch={focusSwitch}
+                onClearAll={focusClearAll}
+                onOnSale={goMatches}
+              />
             ) : null}
 
             {streamQuery.isLoading || (recommendationsQuery.isLoading && !recommendationsQuery.isError) ? (
@@ -494,7 +450,7 @@ export default function HomeScreen() {
                 body="稍后下拉刷新，或先看看今日在售。"
                 secondaryLabel="看昨日复盘"
                 onSecondary={() => chooseDate(shiftDateCn(currentTradeDateCn(), -1))}
-                onOnSale={() => router.navigate("/(tabs)/matches")}
+                onOnSale={goMatches}
               />
             ) : stream.restDay ? (
               <RestMessage
@@ -512,7 +468,7 @@ export default function HomeScreen() {
                     onSecondary={() =>
                       chooseDate(viewingToday ? shiftDateCn(currentTradeDateCn(), -1) : currentTradeDateCn())
                     }
-                    onOnSale={() => router.navigate("/(tabs)/matches")}
+                    onOnSale={goMatches}
                   />
                 ) : null}
                 {openedAll ? (
@@ -678,15 +634,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.pagePadding,
     paddingTop: spacing.sm,
   },
-  focus: { marginTop: spacing.base },
-  focusHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.base,
-    paddingTop: spacing.xs,
-  },
-  focusLink: { marginLeft: 0 },
-  otherMatches: { alignSelf: "flex-start", paddingVertical: spacing.sm },
   chatThread: { marginTop: spacing.base },
   userRow: { alignItems: "flex-end", marginTop: spacing.sm },
   userBubble: {
