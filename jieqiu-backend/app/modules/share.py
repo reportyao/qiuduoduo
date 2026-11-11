@@ -74,7 +74,7 @@ def share_verdict(db: Session, verdict_id: str, persona: str = "zhuanjia",
     v = db.get(Verdict, verdict_id)
     if v is None:
         return None, "verdict not found"
-    text, _ = build_narration(v, persona)
+    text, _ = build_narration(v, persona, db=db)
     payload = {
         "kind": "verdict",
         "match_no": v.match_no,

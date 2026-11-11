@@ -1,6 +1,7 @@
 """narrate 人设模板的最小回归：meng 不得再出现旧称呼/表情。"""
 from types import SimpleNamespace
 
+from app.models import PersonaCopySlot
 from app.modules.narrate import build_narration
 
 
@@ -25,3 +26,12 @@ def test_meng_template_has_no_old_address_or_heart():
         assert "主人" not in text
         assert "♡" not in text
         assert "～" in text or "…" in text
+
+
+def test_admin_slot_overrides_narration(db):
+    db.merge(PersonaCopySlot(
+        persona_id="laopao", slot_key="narration_promoted",
+        template="自定义 {home} vs {away}，{pick}", version=1, enabled=True))
+    db.commit()
+    text, _ = build_narration(_verdict(), "laopao", db=db)
+    assert text.startswith("自定义 曼城 vs 布莱顿")

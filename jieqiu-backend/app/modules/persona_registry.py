@@ -59,6 +59,9 @@ PERSONA_COPY_SLOTS = {
         "restBody": "歇一天不是放弃，是纪律的一部分。明天预测照常等你。",
         "chatGreeting": "我在。问今日预测、问为什么不出、问复盘，或者让我记住你的偏好。",
         "whyNotLead": "不出预测不是它不会赢，是我们算不清。算不清就不预测。",
+        "narration_promoted": "{home} vs {away}。{pick}，模型置信 {top}%。抽水 {rake}%（阈值 {thr}%），市场离散 {div}。成本已算清，判断已封存。剩下的交给比赛。",
+        "narration_screening": "{home} vs {away}：复核中。价闸已过（抽水 {rake}%）。{wait}—— 过了我会说，没过我不推。",
+        "narration_killed": "{home} vs {away}，不推。死因：{why}。看不懂的不碰，这是纪律。",
     },
     "laopao": {
         "brandSub": "AI 赛前预测 · 老炮坐镇",
@@ -73,6 +76,9 @@ PERSONA_COPY_SLOTS = {
         "restBody": "输钱不输阵。歇一晚，明天再预测。",
         "chatGreeting": "来了兄弟。今天看哪场预测、为啥不出、昨天咋样，直接问。",
         "whyNotLead": "不出预测不代表它不会赢。是这账咱算不清，算不清就不瞎给。",
+        "narration_promoted": "兄弟，{home}打{away}，这场能上：{pick}，人家模型有 {top}% 的底。抽水才 {rake}%，市场也没吵起来。账我给你算明白了，上不上你定。",
+        "narration_screening": "兄弟，{home}对{away}还在复核。价钱还行（{rake}%），{wait}。别急，好饭不怕晚。",
+        "narration_killed": "兄弟，{home}这场咱撤：{why}。省下的都是赚的，输钱不输阵。",
     },
     "meng": {
         "brandSub": "AI 赛前预测 · 陪你看方向",
@@ -87,6 +93,9 @@ PERSONA_COPY_SLOTS = {
         "restBody": "歇一天不是放弃，是纪律的一部分。明天我照常给你预测。",
         "chatGreeting": "我在呢。今天看哪场预测、为什么不出、昨天怎么样，都可以问我。",
         "whyNotLead": "不出预测不是它不会赢，是我算不清。算不清就不预测。",
+        "narration_promoted": "你～{home} vs {away}，我检查完啦！{pick}，置信 {top}% 哦～抽水只有 {rake}%，三关都过了呢！详情我都封好啦～",
+        "narration_screening": "你～{home}对{away}我还在复核中…{wait}。复核完我第一时间来报～",
+        "narration_killed": "呜…{home}这场我不能让你上：{why}。不放行的时候，我最认真！",
     },
 }
 

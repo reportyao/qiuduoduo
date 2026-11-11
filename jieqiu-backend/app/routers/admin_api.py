@@ -590,7 +590,10 @@ def admin_personas(db: Session = Depends(get_db), _: None = Depends(admin_auth.r
             "template": s.template, "version": s.version, "enabled": s.enabled,
             "updated_at": _iso(s.updated_at),
         } for s in slots],
-        "slot_keys": list(persona_registry.DEFAULT_SLOTS),
+        "slot_keys": sorted({
+            *persona_registry.DEFAULT_SLOTS,
+            *(key for group in persona_registry.PERSONA_COPY_SLOTS.values() for key in group),
+        }),
     }
 
 
