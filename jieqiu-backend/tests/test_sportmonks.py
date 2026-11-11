@@ -43,3 +43,13 @@ def test_devig_sums_to_one():
 
 def test_devig_bad_values():
     assert _devig([0, 3, 4]) is None
+
+
+def test_match_fixture_chinese_abbreviations():
+    fixture = _fixture(2, "谢菲尔德星期三", "阿克灵顿斯坦利", "2026-11-11 19:00:00")
+    assert match_fixture(_match("谢周三", "阿克宁顿", "2026-11-12 03:00:00"), [fixture]) is fixture
+
+
+def test_match_fixture_never_guesses_weak_second_team():
+    fixture = _fixture(3, "曼城", "布伦特福德", "2026-11-11 12:00:00")
+    assert match_fixture(_match("曼城", "布莱顿"), [fixture]) is None

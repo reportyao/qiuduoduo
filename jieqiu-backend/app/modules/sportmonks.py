@@ -28,6 +28,7 @@ CN_TZ = timezone(timedelta(hours=8))
 def _norm(name: str) -> str:
     value = (name or "").lower()
     value = re.sub(r"[\s\-_.·,，。()（）]", "", value)
+    value = value.replace("星期", "周")
     for suffix in ("足球俱乐部", "俱乐部", "足球会", "队", "fc"):
         value = value.replace(suffix, "")
     return value
@@ -42,6 +43,14 @@ def _similar(a: str, b: str) -> float:
     if a in b or b in a:
         return 0.92
     return SequenceMatcher(None, a, b).ratio()
+
+
+def _char_overlap(a: str, b: str) -> float:
+    """中文缩写覆盖：竞彩“谢周三” vs SM“谢菲尔德星期三”字符全覆盖。"""
+    left, right = set(_norm(a)), set(_norm(b))
+    if not left or not right:
+        return 0.0
+    return len(left & right) / min(len(left), len(right))
 
 
 def _kickoff_utc(match: SPMatch) -> datetime | None:
@@ -81,7 +90,17 @@ def match_fixture(match: SPMatch, fixtures: list[dict]) -> dict | None:
         elif min(hs, as_) >= 0.85:
             candidate = (score, fixture)
         else:
-            continue
+            # 中文缩写补充：开球 45 分钟内，一队几乎完全命中、另一队字符覆盖 ≥70%。
+            minutes = abs((fk - kickoff).total_seconds()) / 60
+            if minutes <= 45:
+                hc = max(hs, _char_overlap(match.home, parts.get("home", "")))
+                ac = max(as_, _char_overlap(match.away, parts.get("away", "")))
+                if min(hc, ac) >= 0.7 and max(hc, ac) >= 0.95:
+                    candidate = (hc + ac, fixture)
+                else:
+                    continue
+            else:
+                continue
         if best is None or candidate[0] > best[0]:
             best = candidate
     return best[1] if best else None
