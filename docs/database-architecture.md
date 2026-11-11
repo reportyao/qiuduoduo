@@ -85,7 +85,7 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 
 ### 4.1 聚焦决策流 / LLM 表（部分实现）
 
-> 目标契约见 [focused-decision-flow.md](./focused-decision-flow.md) 与 [api-football.md](./api-football.md)。当前 Alembic head 为 `20261111_22`：`interaction_events`、API-Football 5 张表、LLM 4 张表 + AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表已创建；intel/analysis 表仍未创建。
+> 目标契约见 [focused-decision-flow.md](./focused-decision-flow.md) 与 [api-football.md](./api-football.md)。当前 Alembic head 为 `20261112_23`：`interaction_events`、API-Football 5 张表、LLM 4 张表 + AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表，以及 v4 的结算/计划/会员/OPC/记忆/训练 19 张表已创建；intel/analysis 表仍未创建。
 
 | 表 | 用途 | 关键约束/索引 |
 |---|---|---|
