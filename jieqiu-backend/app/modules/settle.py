@@ -178,6 +178,8 @@ def settle_verdicts(db: Session, trade_date: str | None = None) -> int:
     verdicts = db.scalars(q).all()
     n = 0
     for v in verdicts:
+        if not isinstance(v.pick, dict) or not v.pick.get("dir"):
+            continue
         ko = datetime.strptime(v.kickoff, "%Y-%m-%d %H:%M:%S")
         cands = []
         for offset in (0, 1):

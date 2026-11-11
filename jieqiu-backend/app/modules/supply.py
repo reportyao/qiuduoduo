@@ -1,9 +1,9 @@
 """内容供给诊断：回答“为什么今天没有可发布的判断”。
 
-推荐主链的前置条件是市闸至少有两个去水口径（竞彩官方 + 至少一条国际盘）。
-国际盘未配置/覆盖不足时，所有判决会停在 pending_data，不会 promoted，也不会有
-published 内容。这个模块把这条链路的每一环计数暴露给后台/健康检查，避免“首页空”
-却没人知道卡在哪。
+推荐主链的前置条件是市闸至少有两个去水口径（竞彩官方 + 至少一条市场源）。
+市场源优先使用 Sportmonks Pinnacle，The Odds API 作为兜底；两者都未覆盖时，
+判决会停在 pending_data，不会 promoted，也不会有 published 内容。这个模块把
+这条链路的每一环计数暴露给后台/健康检查，避免“首页空”却没人知道卡在哪。
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import (DecisionSnapshot, IntlOdds, RecommendationPlan, SPMatch,
-                      SPSnapshot, Verdict)
+                      SPSnapshot, SportmonksMatchData, Verdict)
 from .timeutil import CN, trade_date_now, trade_window
 
 
@@ -85,12 +85,18 @@ def content_supply(db: Session, date: str | None = None) -> dict:
             IntlOdds.home.in_(homes), IntlOdds.away.in_(aways))).all()
         for row in rows:
             by_pair.setdefault((row.home, row.away), []).append(row)
+    sm_rows = {r.match_id: r for r in db.scalars(
+        select(SportmonksMatchData).where(
+            SportmonksMatchData.match_id.in_([m.match_id for m in matches]))
+    ).all()} if matches else {}
     per_match = []
     for m in matches:
         sources = []
         for row in by_pair.get((m.home, m.away), []):
             if row.source not in sources:
                 sources.append(row.source)
+        sm = sm_rows.get(m.match_id)
+        sm_market = bool(sm is not None and sm.odds)
         per_match.append({
             "match_id": m.match_id,
             "match_no": m.match_no,
@@ -99,7 +105,11 @@ def content_supply(db: Session, date: str | None = None) -> dict:
             "kickoff": m.kickoff,
             "intl_sources": sources,
             "intl_covered": bool(sources),
+            "sm_market": sm_market,
+            "sm_bookmaker": sm.bookmaker if sm else "",
+            "market_covered": bool(sources) or sm_market,
         })
+    sm_market_covered = sum(1 for row in per_match if row["sm_market"])
 
     odds_configured = bool(get_settings().odds_api_key)
     blocked_reason = None
@@ -107,10 +117,10 @@ def content_supply(db: Session, date: str | None = None) -> dict:
         blocked_reason = "今日无在售场次"
     elif not verdicts:
         blocked_reason = "采集/判决未生成"
-    elif not odds_configured or intl_total == 0:
-        blocked_reason = "国际盘未接入，市闸无法通过"
+    elif intl_total == 0 and sm_market_covered == 0:
+        blocked_reason = "Sportmonks Pinnacle 与国际盘均未接入，市闸无法通过"
     elif market["pending_data"] >= len(verdicts):
-        blocked_reason = "市闸全部 pending（国际盘覆盖不足）"
+        blocked_reason = "市闸全部 pending（市场覆盖不足）"
     elif published_snaps + published_plans == 0:
         blocked_reason = "暂无已发布判断"
     return {
@@ -129,6 +139,11 @@ def content_supply(db: Session, date: str | None = None) -> dict:
             "covered_matches": sum(1 for m in per_match if m["intl_covered"]),
             "missing_matches": sum(1 for m in per_match if not m["intl_covered"]),
         },
+        "sportmonks_market": {
+            "covered_matches": sm_market_covered,
+            "missing_matches": sum(1 for m in per_match if not m["sm_market"]),
+        },
+        "market_covered_matches": sum(1 for m in per_match if m["market_covered"]),
         "per_match": per_match,
         "blocked_reason": blocked_reason,
     }

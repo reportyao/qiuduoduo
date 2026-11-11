@@ -331,6 +331,9 @@ WantedBy=multi-user.target
                  rf"venv/bin/python -m app.sportmonks_cli sync --date $(date +\%F) >> {ROOT}/sportmonks.log 2>&1" + "\n")
         cron += (f"10,40 * * * * {cron_prefix}"
                  rf"venv/bin/python -m app.intel_cli sync --date $(date +\%F) >> {ROOT}/intel.log 2>&1" + "\n")
+        # 赛果回填：每小时的 :20 拉最近 2 天已完赛 fixture，写 match_results 并结算。
+        cron += (f"20 * * * * {cron_prefix}"
+                 f"venv/bin/python -m app.sportmonks_cli results --days 2 >> {ROOT}/sportmonks.log 2>&1\n")
     if os.environ.get("JQ_API_FOOTBALL_KEY") or remote_env.get("JQ_API_FOOTBALL_KEY"):
         # 免费档每日一次 fixtures；未配 key 的部署不装这条，避免无意义失败日志。
         cron += (f"15 6 * * * {cron_prefix}"

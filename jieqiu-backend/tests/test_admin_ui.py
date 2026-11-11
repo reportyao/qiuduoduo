@@ -296,3 +296,134 @@ def test_admin_llm_profile_test_uses_saved_profile(client, db, monkeypatch):
     body = response.json()
     assert body["ok"] is True
     assert body["model"] == "deepseek-v4.1-flash-1017"
+
+
+def test_admin_sportmonks_matrix_and_manual_map(client, db, monkeypatch):
+    from datetime import datetime, timezone
+
+    from app.models import AIResearch, SPMatch, SportmonksMatchData, Verdict
+    from app.modules import sportmonks
+    from tests.conftest import future_kickoff
+
+    login(client)
+    mid = "sm-matrix-1"
+    kickoff = future_kickoff(today_cn())
+    db.merge(SPMatch(match_id=mid, match_no="周五991", league="英超",
+                     home_raw="曼城", away_raw="曼联", home="曼城", away="曼联",
+                     kickoff=kickoff, single_flag=True))
+    db.merge(SportmonksMatchData(
+        match_id=mid, fixture_id=999001, league="英超",
+        home_name="曼城", away_name="曼联", kickoff_utc=kickoff,
+        probs={"home": 0.52, "draw": 0.26, "away": 0.22},
+        odds={"home": 0.50, "draw": 0.27, "away": 0.23},
+        bookmaker="Pinnacle", source="manual", data_cutoff="2026-11-11T12:00:00"))
+    db.merge(AIResearch(match_id=mid, status="ready", headline="曼城主场占优",
+                        points=["无新增伤停"], sources=[{"name": "Sportmonks"}]))
+    db.merge(Verdict(
+        id=f"v-{mid}", trade_date=today_cn(), match_id=mid, match_no="周五991",
+        league="英超", home="曼城", away="曼联", kickoff=kickoff,
+        pool="had", goal_line="", sp_h=1.80, sp_d=3.50, sp_a=4.20,
+        rake=0.121, p_home=0.52, p_draw=0.27, p_away=0.21,
+        model_h=0.56, model_d=0.24, model_a=0.20,
+        rake_threshold=0.13, status="promoted",
+        gates={}, payload={}, payload_hash="e" * 64,
+    ))
+    db.commit()
+
+    matrix = client.get("/admin/api/sportmonks/matrix").json()
+    row = next(r for r in matrix["rows"] if r["match_id"] == mid)
+    assert row["mapped"] is True and row["source"] == "manual"
+    assert row["intel"]["status"] == "ready"
+    assert row["verdict"]["status"] == "promoted"
+    assert matrix["summary"]["mapped"] >= 1
+
+    monkeypatch.setattr(sportmonks, "candidate_fixtures", lambda _db, _mid: {
+        "ok": True,
+        "match": {"match_id": mid, "match_no": "周五991", "home": "曼城",
+                  "away": "曼联", "kickoff": kickoff},
+        "candidates": [{"fixture_id": 999001, "league": "英超", "home": "曼城",
+                        "away": "曼联", "kickoff_utc": kickoff, "delta_min": 0,
+                        "home_sim": 1.0, "away_sim": 1.0, "suggested": True,
+                        "mapped_to": mid}],
+    })
+    candidates = client.get("/admin/api/sportmonks/candidates",
+                            params={"match_id": mid}).json()
+    assert candidates["candidates"][0]["fixture_id"] == 999001
+
+    monkeypatch.setattr(sportmonks, "map_match", lambda _db, _mid, fid: {
+        "ok": True, "match_id": mid, "fixture_id": fid, "probs": True,
+        "odds": True, "intel": True,
+    })
+    mapped = client.post("/admin/api/sportmonks/map",
+                         json={"match_id": mid, "fixture_id": 999001})
+    assert mapped.status_code == 200 and mapped.json()["fixture_id"] == 999001
+
+    monkeypatch.setattr(sportmonks, "unmap_match",
+                        lambda _db, _mid: {"ok": True, "match_id": mid})
+    removed = client.delete(f"/admin/api/sportmonks/map/{mid}")
+    assert removed.status_code == 200 and removed.json()["ok"] is True
+
+
+def test_admin_model_eval_brier_uses_settled_scores(client, db):
+    from app.models import SPMatch, SportmonksMatchData, Verdict
+    from tests.conftest import future_kickoff
+
+    login(client)
+    mid = "eval-1"
+    kickoff = future_kickoff(today_cn())
+    db.merge(SPMatch(match_id=mid, match_no="周五992", league="英超",
+                     home_raw="阿森纳", away_raw="切尔西", home="阿森纳",
+                     away="切尔西", kickoff=kickoff, single_flag=False))
+    db.merge(SportmonksMatchData(
+        match_id=mid, fixture_id=999002, league="英超", home_name="阿森纳",
+        away_name="切尔西", kickoff_utc=kickoff,
+        probs={"home": 0.50, "draw": 0.27, "away": 0.23},
+        odds={"home": 0.48, "draw": 0.28, "away": 0.24},
+        bookmaker="Pinnacle", source="sportmonks", data_cutoff="2026-11-11T12:00:00"))
+    db.merge(Verdict(
+        id=f"v-{mid}", trade_date=today_cn(), match_id=mid, match_no="周五992",
+        league="英超", home="阿森纳", away="切尔西", kickoff=kickoff,
+        pool="had", goal_line="", sp_h=1.90, sp_d=3.60, sp_a=4.10,
+        rake=0.120, p_home=0.50, p_draw=0.27, p_away=0.23,
+        model_h=0.60, model_d=0.22, model_a=0.18,
+        rake_threshold=0.13, status="promoted", settled="win",
+        result_score="2-1",
+        gates={}, payload={}, payload_hash="f" * 64,
+    ))
+    db.commit()
+
+    body = client.get("/admin/api/model-eval", params={"days": 30}).json()
+    assert body["overall"]["samples"] >= 1
+    assert body["overall"]["model_samples"] >= 1
+    assert body["overall"]["model_brier"] is not None
+    assert body["overall"]["sm_odds_samples"] >= 1
+    assert body["leagues"][0]["league"] == "英超"
+    assert body["recent"][0]["outcome"] == "home"
+
+
+def test_admin_sportmonks_results_endpoint(client, monkeypatch):
+    from app.modules import sportmonks_results
+
+    login(client)
+    monkeypatch.setattr(sportmonks_results, "sync_results",
+                        lambda _db, days=2: {"ok": True, "checked": 3,
+                                             "inserted": 2, "skipped": 1,
+                                             "settled": 1, "days": days})
+    response = client.post("/admin/api/sportmonks/results", json={"days": 2})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["inserted"] == 2 and body["settled"] == 1
+
+
+def test_admin_sportmonks_backfill_endpoint(client, monkeypatch):
+    from app.modules import sportmonks_results
+
+    login(client)
+    monkeypatch.setattr(sportmonks_results, "backfill_verdict_results",
+                        lambda _db, days=14: {"ok": True, "checked": 10,
+                                              "inserted": 4, "settled": 3,
+                                              "days": days})
+    response = client.post("/admin/api/sportmonks/results/backfill",
+                           json={"days": 14})
+    assert response.status_code == 200
+    assert response.json()["inserted"] == 4

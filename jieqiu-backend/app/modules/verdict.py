@@ -5,7 +5,7 @@
   2) 第一阶段：算全部候选场的抽水 → 动态阈值（当日中位数 + 3pp，夹 [10%,13%]）
   3) 第二阶段：逐场过三关
      价  抽水 ≤ 动态阈值
-     市  竞彩去水 ⊕ 国际盘（the-odds-api，±4h 窗口同对阵）逐结果最大离散 < 5pp
+     市  竞彩去水 ⊕ Sportmonks Pinnacle / 国际盘（±4h 窗口同对阵）逐结果最大离散 < 5pp
      模  DC v1.1（W1 同参移植，xG 衰减拟合）收缩后最优方向 ≥ 53% 可推线
   4) 三关全过 → promoted；任一 fail → killed；否则 screening（诚实）
   5) 证据链逐条标注（源 + 时间），写 model_runs 审计，修订史追加
@@ -20,7 +20,8 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..models import ModelRun, SPMatch, SPSnapshot, Verdict, VerdictRevision, utcnow
+from ..models import (ModelRun, SPMatch, SPSnapshot, SportmonksMatchData,
+                      Verdict, VerdictRevision, utcnow)
 from .align import Aligner
 from .dc_model import DCModel, add_alias, fit as dc_fit, load_xg, predict as dc_predict, predict_line
 from .gates import (breakeven_prob, dynamic_threshold, implied_probs,
@@ -227,6 +228,18 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
                 key = f"{r.source}({r.home_raw})"
                 if key not in sources:
                     sources[key] = implied_probs(r.sp_h, r.sp_d, r.sp_a)[:3]
+            # Sportmonks Pinnacle 1X2 已是去水概率，可与竞彩官方直接做同口径对照；
+            # 有它时不再依赖 The Odds API 才能过市闸。
+            sm = db.get(SportmonksMatchData, m.match_id)
+            if sm is not None and isinstance(sm.odds, dict):
+                try:
+                    triple = (float(sm.odds["home"]), float(sm.odds["draw"]),
+                              float(sm.odds["away"]))
+                    if abs(sum(triple) - 1.0) < 0.05 and min(triple) > 0:
+                        key = f"Sportmonks({sm.bookmaker or 'market'})"
+                        sources.setdefault(key, triple)
+                except (KeyError, TypeError, ValueError):
+                    pass
         except Exception as e:
             intl_err = f"{type(e).__name__}: {e}"[:120]
         mg = market_gate(sources, st.market_div_threshold)

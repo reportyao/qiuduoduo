@@ -146,7 +146,21 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
         ["restart_collector"] if not c_ok else [],
     ))
 
-    # 2 情报：Sportmonks 预测/市场 + AI 情报
+    # 2 入库
+    ingest_ok = no_matches or (len(matches) > 0 and snapshots_today > 0)
+    stages.append(_stage(
+        "ingest", "入库", "采集数据有没有正确进入后端？",
+        "采集器推送 sp_data.db 后，seed 把场次和 SP 快照写入后端数据库。",
+        _state(ingest_ok, ingest_ok and not no_matches and missing_league > 0),
+        "当前销售日无在售场次" if no_matches else f"{len(matches)} 场已入库，今日 {snapshots_today} 条 SP 快照",
+        [{"label": "场次", "value": str(len(matches))},
+         {"label": "今日 SP 快照", "value": str(snapshots_today)},
+         {"label": "空联赛", "value": str(missing_league)}],
+        ["seed 每 30 分钟运行一次"],
+        "检查 seed/cron" if not ingest_ok else "正常",
+    ))
+
+    # 3 情报：Sportmonks 预测/市场 + AI 情报
     if match_ids:
         sm_count = int(db.scalar(select(func.count()).select_from(SportmonksMatchData).where(
             SportmonksMatchData.match_id.in_(match_ids))) or 0)
@@ -167,44 +181,35 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
             {"label": "AI 情报就绪", "value": f"{intel_ready}/{len(matches)}"},
         ],
         "同步 Sportmonks" if sm_count < len(matches) else ("同步 AI 情报" if intel_ready < len(matches) else "正常"),
-        [],
+        (["sync_sportmonks"] if sm_count < len(matches) else [])
+        + (["sync_intel"] if intel_ready < len(matches) else []),
     ))
 
-    # 3 入库
-    ingest_ok = no_matches or (len(matches) > 0 and snapshots_today > 0)
-    stages.append(_stage(
-        "ingest", "入库", "采集数据有没有正确进入后端？",
-        "采集器推送 sp_data.db 后，seed 把场次和 SP 快照写入后端数据库。",
-        _state(ingest_ok, ingest_ok and not no_matches and missing_league > 0),
-        "当前销售日无在售场次" if no_matches else f"{len(matches)} 场已入库，今日 {snapshots_today} 条 SP 快照",
-        [{"label": "场次", "value": str(len(matches))},
-         {"label": "今日 SP 快照", "value": str(snapshots_today)},
-         {"label": "空联赛", "value": str(missing_league)}],
-        ["seed 每 30 分钟运行一次"],
-        "检查 seed/cron" if not ingest_ok else "正常",
-    ))
-
-    # 3 市场
+    # 4 市场
     intl = supply["intl_odds"]
-    cover = intl["covered_matches"]
+    sm_market = supply.get("sportmonks_market", {})
+    cover = supply.get("market_covered_matches", intl["covered_matches"])
     total = supply["matches"]
-    market_ok = no_matches or bool(intl["configured"] and cover > 0)
+    market_ok = no_matches or cover > 0
     stages.append(_stage(
-        "market", "市场数据", "国际盘和阵容够不够？",
-        "市闸需要竞彩官方 + 至少一条国际盘；API-Football 补阵容、伤停、积分榜。",
+        "market", "市场数据", "Sportmonks 市场与国际盘够不够？",
+        "市闸需要竞彩官方 + 至少一条市场源（Sportmonks Pinnacle 或国际盘）；API-Football 只补阵容、伤停。",
         _state(market_ok, market_ok and not no_matches and cover < total),
-        "当前销售日无在售场次，不需要请求国际盘" if no_matches else f"国际盘覆盖 {cover}/{total} 场；API-Football 今日已用 {af.get('used_today', 0)}/{af.get('daily_limit', 0)} 次",
-        [{"label": "国际盘覆盖", "value": f"{cover}/{total}"},
+        ("当前销售日无在售场次，不需要请求市场数据" if no_matches else
+         f"市场覆盖 {cover}/{total} 场（Sportmonks {sm_market.get('covered_matches', 0)} · 国际盘 {intl['covered_matches']}）；API-Football 今日已用 {af.get('used_today', 0)}/{af.get('daily_limit', 0)} 次"),
+        [{"label": "市场覆盖", "value": f"{cover}/{total}"},
+         {"label": "SM Pinnacle", "value": str(sm_market.get("covered_matches", 0))},
          {"label": "今日国际盘", "value": str(intl["total"])},
          {"label": "阵容行", "value": str(af.get("target", {}).get("lineups", 0))},
          {"label": "伤停", "value": str(af.get("target", {}).get("injuries", 0))}],
         [intl.get("configured") and "Odds API 已配置" or "Odds API 未配置",
          "API-Football 积分榜当前关闭" if not af.get("standings_enabled") else "积分榜开启"],
-        "补齐国际盘覆盖" if not market_ok else ("覆盖仍不完整" if cover < total else "正常"),
-        ["sync_odds"] if not market_ok else [],
+        "补齐 Sportmonks 映射/赔率" if not market_ok else ("覆盖仍不完整" if cover < total else "正常"),
+        (["sync_sportmonks"] if sm_market.get("covered_matches", 0) < total else [])
+        + (["sync_odds"] if intl["covered_matches"] < total else []),
     ))
 
-    # 4 模型
+    # 5 模型
     v_status = supply["verdicts"]
     model_ok = no_matches or (v_status["total"] > 0 and model_runs > 0)
     stages.append(_stage(
@@ -219,7 +224,7 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
         "正常" if model_ok else "检查 build_verdicts/model",
     ))
 
-    # 5 三闸
+    # 6 三闸
     gates = supply["market_gate"]
     price_pass = sum(1 for v in verdicts
                      if (v.gates or {}).get("price", {}).get("result") == "pass")
@@ -237,7 +242,7 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
         "先补市场/模型数据" if not gates_ok else "正常",
     ))
 
-    # 6 封存
+    # 7 封存
     stages.append(_stage(
         "seal", "封存", "判决有没有写入不可篡改链？", _DEFINITIONS["封存"],
         _state(no_matches or (bool(chain.get("ok")) and sealed > 0),
@@ -250,7 +255,7 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
         "检查封存链" if not chain.get("ok") else "正常",
     ))
 
-    # 7 复核
+    # 8 复核
     failed_snaps = sum(1 for s in snaps if s.status == "review_failed")
     failed_plans = sum(1 for p in plans if p.status == "review_failed")
     passed_runs = sum(1 for r in review_runs if r.status == "passed")
@@ -267,7 +272,7 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
         "检查复核失败层" if not review_ok else "正常",
     ))
 
-    # 8 发布
+    # 9 发布
     published = supply["published"]
     stages.append(_stage(
         "publish", "发布", "前端今天能看到几条？", _DEFINITIONS["published"],
@@ -281,7 +286,7 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
         ["run_pipeline"] if published == 0 and promoted > 0 else [],
     ))
 
-    # 9 LLM
+    # 10 LLM
     llm_ok = bool(fast.get("configured") and deep.get("configured"))
     stages.append(_stage(
         "llm", "LLM", "对话/复核/解读是否可用？",
@@ -297,7 +302,7 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
         ["test_llm"] if not llm_ok else [],
     ))
 
-    # 10 推送
+    # 11 推送
     push_ok = tokens_enabled > 0
     stages.append(_stage(
         "push", "推送", "设备推送有没有绑定？",
@@ -364,6 +369,8 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
 _ACTIONS = {
     "restart_collector": {"label": "重启采集器", "safe": True},
     "sync_odds": {"label": "同步国际盘", "safe": False},
+    "sync_sportmonks": {"label": "同步 Sportmonks", "safe": False},
+    "sync_intel": {"label": "同步 AI 情报", "safe": False},
     "test_llm": {"label": "测试 LLM", "safe": True},
     "run_pipeline": {"label": "运行主链", "safe": False},
 }
@@ -518,6 +525,18 @@ def run_action(db: Session, action: str, date: str | None = None) -> dict:
             db, Aligner(db), datetime.now(timezone.utc), sports=sports,
             trade_date=date)
         return {"ok": n > 0, "message": note, "synced": n, "sports": sports}
+    if action == "sync_sportmonks":
+        from ...modules.sportmonks import sync_trade_date as sync_sm
+        result = sync_sm(db, date)
+        return {"ok": bool(result.get("ok")),
+                "message": f"Sportmonks 同步 {result.get('synced', 0)}/{result.get('matches', 0)} 场",
+                **result}
+    if action == "sync_intel":
+        from ...modules.intel_research import sync_trade_date as sync_intel
+        result = sync_intel(db, date)
+        return {"ok": bool(result.get("ok")),
+                "message": f"AI 情报同步 {result.get('synced', 0)}/{result.get('matches', 0)} 场",
+                **result}
     if action == "test_llm":
         results = []
         for name in ("fast", "deep"):

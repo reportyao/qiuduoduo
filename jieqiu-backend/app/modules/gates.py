@@ -84,7 +84,7 @@ def market_gate(sources: dict[str, tuple[float, float, float]],
         return GateResult(
             gate="market", result="pending_data",
             detail={"sources": sorted(sources.keys()),
-                    "reason": "国际盘源不足（未配置 the-odds-api key 或该场未覆盖）"},
+                    "reason": "市场源不足（竞彩官方之外至少需要 Sportmonks Pinnacle 或国际盘一条）"},
         )
     div = divergence(sources)
     per_source = {k: [round(x, 4) for x in v] for k, v in sources.items()}

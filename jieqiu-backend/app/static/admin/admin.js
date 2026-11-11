@@ -7,6 +7,7 @@ const state = {
   recoOffset: 0,
   recoItems: [],
   logName: "sync",
+  modelEvalDays: 90,
   autoRefresh: true,
   role: "",
   auditOffset: 0,
@@ -103,6 +104,9 @@ function applyRole() {
 function statusPill(status) {
   const map = {
     published: ["green", "已发布"], approved: ["blue", "已过审"],
+    promoted: ["green", "已过三关"], screening: ["amber", "复核中"],
+    killed: ["red", "已砍"], ready: ["green", "就绪"],
+    unavailable: ["amber", "不可用"],
     review_failed: ["red", "复核失败"], reviewing: ["amber", "复核中"],
     draft: ["amber", "草稿"], expired: ["muted", "已过期"],
     withdrawn: ["muted", "已撤回"], pass: ["green", "通过"],
@@ -786,13 +790,15 @@ function wbActionLabel(id) {
   return ({
     restart_collector: "重启采集器",
     sync_odds: "同步国际盘",
+    sync_sportmonks: "同步 Sportmonks",
+    sync_intel: "同步 AI 情报",
     test_llm: "测试 LLM",
     run_pipeline: "运行主链",
   })[id] || id;
 }
 
 async function wbRunAction(id) {
-  const unsafe = ["sync_odds", "run_pipeline"].includes(id);
+  const unsafe = ["sync_odds", "sync_sportmonks", "sync_intel", "run_pipeline"].includes(id);
   const run = async () => {
     const body = { action: id };
     if (state.date) body.date = state.date;
@@ -801,9 +807,13 @@ async function wbRunAction(id) {
     await loadWorkbench();
   };
   if (!unsafe) return run();
-  confirmModal(wbActionLabel(id), id === "run_pipeline"
-    ? "会运行 build→复核→发布，可能改变前端内容。确认执行？"
-    : "会请求 The Odds API 并消耗额度，只请求竞彩目标场次。确认执行？", run);
+  const prompts = {
+    run_pipeline: "会运行 build→复核→发布，可能改变前端内容。确认执行？",
+    sync_sportmonks: "会请求 Sportmonks API 并消耗额度，只同步今日竞彩目标场次。确认执行？",
+    sync_intel: "会请求 Sportmonks 事实并调用 LLM 生成中文摘要，可能消耗额度。确认执行？",
+    sync_odds: "会请求 The Odds API 并消耗额度，只请求竞彩目标场次。确认执行？",
+  };
+  confirmModal(wbActionLabel(id), prompts[id] || "确认执行？", run);
 }
 
 function renderWorkbenchDiagnosis(diagnosis) {
@@ -1015,6 +1025,8 @@ async function loadIntegrations() {
   const personaEnabled = personaModels.filter(m => m.enabled);
   const personaFailing = personaEnabled.filter(m => (m.fail_count || 0) >= 3);
   const af = data.api_football || {};
+  const sm = data.sportmonks || {};
+  const ai = data.ai_research || {};
   const intl = (data.supply || {}).intl_odds || {};
   const sync = data.sync || {};
   const pushChannel = overview.push_channel || {};
@@ -1066,12 +1078,52 @@ async function loadIntegrations() {
       </div>
     </div>
 
-    <h2 class="section-title">数据源</h2>
+    <h2 class="section-title">主数据链路</h2>
     <div class="integration-grid">
       <div class="card integration-card">
         <div class="card-head">
-          <div><h2 class="card-title">API-Football</h2><div class="card-sub">阵容 / 伤停 / 积分榜</div></div>
-          ${integrationStatus(Boolean(af.configured))}
+          <div><h2 class="card-title">Sportmonks</h2><div class="card-sub">预测 1X2 + Pinnacle 市场 · 主链路</div></div>
+          ${!sm.configured ? '<span class="pill amber">未配置</span>' : Number(sm.covered) > 0 ? `<span class="pill green">覆盖 ${sm.covered}/${sm.matches}</span>` : '<span class="pill amber">待同步</span>'}
+        </div>
+        <div class="integration-meta">
+          <b>今日覆盖</b><span>${sm.covered ?? 0}/${sm.matches ?? 0} 场${sm.missing_count ? ` · 缺失 ${sm.missing_count}` : ""}</span>
+          <b>数据完整</b><span>预测 ${sm.with_probs ?? 0} · 市场 ${sm.with_odds ?? 0}</span>
+          <b>最新同步</b><span>${esc(fmtTime(sm.latest, true))} · 每 30 分钟</span>
+        </div>
+        <div class="integration-actions"><button class="btn secondary small" data-goto="data">逐场映射与同步</button></div>
+      </div>
+      <div class="card integration-card">
+        <div class="card-head">
+          <div><h2 class="card-title">AI 情报</h2><div class="card-sub">Sportmonks 事实 → 中文摘要 · 主链路</div></div>
+          ${Number(ai.ready) > 0 ? `<span class="pill green">就绪 ${ai.ready}/${ai.matches}</span>` : Number(ai.matches) > 0 ? '<span class="pill amber">待同步</span>' : '<span class="pill muted">今日无场次</span>'}
+        </div>
+        <div class="integration-meta">
+          <b>今日就绪</b><span>${ai.ready ?? 0}/${ai.matches ?? 0} 场 · 不可用 ${ai.unavailable ?? 0}</span>
+          <b>最新同步</b><span>${esc(fmtTime(ai.latest, true))} · 每 30 分钟</span>
+          <b>展示</b><span>详情页「AI 情报」；只陈述事实，不输出概率</span>
+        </div>
+        <div class="integration-actions"><button class="btn secondary small" data-goto="data">查看逐场状态</button></div>
+      </div>
+      <div class="card integration-card">
+        <div class="card-head">
+          <div><h2 class="card-title">竞彩 SP 采集器</h2><div class="card-sub">官方在售赔率 · 主链路</div></div>
+          ${sync.latest ? '<span class="pill green">有数据</span>' : '<span class="pill amber">无数据</span>'}
+        </div>
+        <div class="integration-meta">
+          <b>最新快照</b><span>${esc(fmtTime(sync.latest, true))}</span>
+          <b>同步延迟</b><span>${sync.lag_seconds == null ? "—" : `${sync.lag_seconds}s`}（超过 1800s 视为异常）</span>
+          <b>位置</b><span>家宽机器 collector.py → SFTP → seed</span>
+        </div>
+        <div class="integration-actions"><button class="btn secondary small" data-goto="collector">查看采集器</button></div>
+      </div>
+    </div>
+
+    <h2 class="section-title">兜底数据源</h2>
+    <div class="integration-grid">
+      <div class="card integration-card">
+        <div class="card-head">
+          <div><h2 class="card-title">API-Football</h2><div class="card-sub">阵容 / 伤停 / 积分榜 · 兜底</div></div>
+          <span class="pill muted">非主链路</span>
         </div>
         <div class="integration-meta">
           <b>今日额度</b><span>${af.used_today ?? 0}/${af.daily_limit ?? 0} 次 · 剩余 ${af.remaining ?? 0}</span>
@@ -1082,25 +1134,13 @@ async function loadIntegrations() {
       </div>
       <div class="card integration-card">
         <div class="card-head">
-          <div><h2 class="card-title">The Odds API</h2><div class="card-sub">国际盘 / 市场闸</div></div>
-          ${integrationStatus(Boolean(intl.configured))}
+          <div><h2 class="card-title">The Odds API</h2><div class="card-sub">国际盘对照 · 兜底</div></div>
+          <span class="pill muted">非主链路</span>
         </div>
         <div class="integration-meta">
           <b>当前数据</b><span>${intl.total ?? 0} 条 · 覆盖 ${intl.covered_matches ?? 0} 场</span>
-          <b>同步</b><span>最新 ${esc(fmtTime(sync.latest, true))} · 延迟 ${sync.lag_seconds == null ? "—" : `${sync.lag_seconds}s`}</span>
-          <b>额度提醒</b><span>免费 500/月；8 联赛 × 6h 约 960/月，需降到 18h 或升级</span>
-        </div>
-        <div class="integration-actions"><button class="btn secondary small" data-goto="data">查看数据源</button></div>
-      </div>
-      <div class="card integration-card">
-        <div class="card-head">
-          <div><h2 class="card-title">竞彩 SP 采集器</h2><div class="card-sub">官方在售赔率 · 5 分钟快照</div></div>
-          ${sync.latest ? '<span class="pill green">有数据</span>' : '<span class="pill amber">无数据</span>'}
-        </div>
-        <div class="integration-meta">
-          <b>最新快照</b><span>${esc(fmtTime(sync.latest, true))}</span>
-          <b>同步延迟</b><span>${sync.lag_seconds == null ? "—" : `${sync.lag_seconds}s`}（超过 1800s 视为异常）</span>
-          <b>位置</b><span>家宽机器 collector.py → SFTP → seed</span>
+          <b>同步</b><span>最新 ${esc(fmtTime(sync.latest, true))}</span>
+          <b>额度提醒</b><span>免费 500/月；只在 Sportmonks 缺市场时用于对照</span>
         </div>
         <div class="integration-actions"><button class="btn secondary small" data-goto="data">查看数据源</button></div>
       </div>
@@ -1252,18 +1292,57 @@ async function loadPlans() {
 async function loadData() {
   const root = el("#view-data");
   root.innerHTML = '<div class="skeleton"></div>';
-  const data = await api("/admin/api/data");
+  const [data, matrix] = await Promise.all([
+    api("/admin/api/data"),
+    api("/admin/api/sportmonks/matrix"),
+  ]);
   const supply = data.supply || {};
   const gate = supply.market_gate || {};
   const intl = supply.intl_odds || {};
   const published = supply.published ?? 0;
+  const summary = matrix.summary || {};
+  const pct = value => value == null ? "—" : `${Math.round(Number(value) * 100)}%`;
+  const triple = probs => {
+    if (!probs) return '<span class="card-sub">—</span>';
+    return `<div class="triple"><span>主 ${pct(probs.home)}</span><span>平 ${pct(probs.draw)}</span><span>客 ${pct(probs.away)}</span></div>`;
+  };
+  const rows = (matrix.rows || []).map(row => {
+    const sm = row.mapped
+      ? `<span class="pill ${row.source === "manual" ? "blue" : "green"}">${row.source === "manual" ? "手动" : "自动"}</span><div class="card-sub mono">#${row.fixture_id}</div>`
+      : '<span class="pill amber">未映射</span>';
+    const intel = row.intel.status === "ready"
+      ? `<span class="pill green">就绪</span><div class="card-sub ellipsis" title="${esc(row.intel.headline)}">${esc(row.intel.headline || "")}</div>`
+      : row.intel.status
+        ? `<span class="pill amber">${esc(row.intel.status)}</span>`
+        : '<span class="pill muted">未同步</span>';
+    const v = row.verdict;
+    const verdict = v
+      ? `${statusPill(v.status)}${v.pick && v.pick.dir ? `<div class="card-sub">${esc(v.pick.dir)}</div>` : ""}${v.result_score ? `<div class="card-sub mono">${esc(v.result_score)} · ${esc(v.settled || "待结算")}</div>` : ""}`
+      : '<span class="pill muted">无判决</span>';
+    return `<tr>
+      <td><b>${esc(row.match_no)}</b>${row.single_flag ? '<div class="card-sub">单关</div>' : ""}</td>
+      <td class="teams"><b>${esc(row.home)}</b><span>vs ${esc(row.away)}</span><div class="card-sub">${esc(row.league)}</div></td>
+      <td class="mono">${esc((row.kickoff || "").slice(5, 16))}</td>
+      <td>${sm}</td>
+      <td>${triple(row.probs)}</td>
+      <td>${triple(row.odds)}${row.bookmaker ? `<div class="card-sub">${esc(row.bookmaker)}</div>` : ""}</td>
+      <td>${intel}</td>
+      <td>${verdict}</td>
+      <td class="row-actions">
+        <button class="btn ghost small" data-sm-map="${esc(row.match_id)}">${row.mapped ? "改映射" : "手动映射"}</button>
+        ${row.mapped ? `<button class="btn secondary small" data-sm-resync="${esc(row.match_id)}" data-fixture="${row.fixture_id}">重拉</button>` : ""}
+        ${row.mapped ? `<button class="btn ghost small danger" data-sm-unmap="${esc(row.match_id)}">解除</button>` : ""}
+      </td>
+    </tr>`;
+  }).join("");
+
   root.innerHTML = `
-    ${supply.blocked_reason ? `<div class="card notice"><b>内容供给受阻：${esc(supply.blocked_reason)}</b><div class="card-sub" style="margin-top:8px">场次 ${supply.matches ?? 0} · 判决 ${supply.verdicts?.total ?? 0} · 市闸 pending ${gate.pending_data ?? 0} · 国际盘 ${intl.total ?? 0}（覆盖 ${intl.covered_matches ?? 0}/${supply.matches ?? 0} 场）</div></div>` : ""}
+    ${supply.blocked_reason ? `<div class="card notice"><b>内容供给受阻：${esc(supply.blocked_reason)}</b><div class="card-sub" style="margin-top:8px">场次 ${supply.matches ?? 0} · 判决 ${supply.verdicts?.total ?? 0} · 市闸 pending ${gate.pending_data ?? 0} · 市场覆盖 ${supply.market_covered_matches ?? 0}/${supply.matches ?? 0} 场（SM ${supply.sportmonks_market?.covered_matches ?? 0} · 国际盘 ${intl.covered_matches ?? 0}）</div></div>` : ""}
     <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-label">判决总量</div><div class="kpi-value">${data.verdicts.total}</div><div class="kpi-foot">今日 ${data.verdicts.today}</div></div>
-      <div class="kpi green accent"><div class="kpi-label">已过三关</div><div class="kpi-value">${data.verdicts.promoted}</div><div class="kpi-foot">复核中 ${data.verdicts.screening}</div></div>
-      <div class="kpi red"><div class="kpi-label">已砍</div><div class="kpi-value">${data.verdicts.killed}</div><div class="kpi-foot">含历史</div></div>
-      <div class="kpi"><div class="kpi-label">SP 快照</div><div class="kpi-value">${data.snapshots.total}</div><div class="kpi-foot">${esc(fmtTime(data.snapshots.latest, true))}</div></div>
+      <div class="kpi"><div class="kpi-label">今日场次</div><div class="kpi-value">${summary.matches ?? 0}</div><div class="kpi-foot">已发布 ${published}</div></div>
+      <div class="kpi green accent"><div class="kpi-label">SM 映射</div><div class="kpi-value">${summary.mapped ?? 0}/${summary.matches ?? 0}</div><div class="kpi-foot">手动 ${summary.manual ?? 0} · 缺失 ${summary.missing ?? 0}</div></div>
+      <div class="kpi"><div class="kpi-label">模型概率</div><div class="kpi-value">${summary.with_probs ?? 0}</div><div class="kpi-foot">市场赔率 ${summary.with_odds ?? 0}</div></div>
+      <div class="kpi"><div class="kpi-label">AI 情报</div><div class="kpi-value">${summary.intel_ready ?? 0}</div><div class="kpi-foot">就绪 / ${summary.matches ?? 0} 场</div></div>
     </div>
     <div class="card"><h2 class="card-title">内容供给</h2>
       <div class="flow">
@@ -1273,9 +1352,9 @@ async function loadData() {
           <div class="flow-meta">SP 快照 ${supply.sp_snapshots ?? 0} 行</div>
         </div>
         <div class="flow-step">
-          <div class="flow-index">02</div><div class="flow-label">国际盘</div>
-          <div class="flow-value">${intl.total ?? 0}</div>
-          <div class="flow-meta">${intl.configured ? "已配置" : "未配置"} · 覆盖 ${intl.covered_matches ?? 0}/${supply.matches ?? 0} 场</div>
+          <div class="flow-index">02</div><div class="flow-label">Sportmonks</div>
+          <div class="flow-value">${summary.mapped ?? 0}</div>
+          <div class="flow-meta">预测 ${summary.with_probs ?? 0} · 市场 ${summary.with_odds ?? 0}</div>
         </div>
         <div class="flow-step">
           <div class="flow-index">03</div><div class="flow-label">市闸</div>
@@ -1289,42 +1368,192 @@ async function loadData() {
         </div>
       </div>
     </div>
-    <div class="card"><h2 class="card-title">数据同步</h2>
-      <div class="status-grid">
-        <div class="status-item"><div><b>SP 最新快照</b><div class="status-label">采集器 → SFTP → seed</div></div><span class="mono">${esc(fmtTime(data.sync?.latest, true))}</span></div>
-        <div class="status-item"><div><b>同步延迟</b><div class="status-label">超过 1800s 视为异常</div></div>${data.sync?.lag_seconds == null ? statusPill("skip") : data.sync.lag_seconds > 1800 ? statusPill("fail") : statusPill("ok")}</div>
+    <div class="card sm-matrix">
+      <div class="toolbar">
+        <div><h2 style="margin:0">今日数据矩阵</h2><div class="card-sub" style="margin:0">${esc(matrix.date)} · 竞彩场次 × Sportmonks × AI 情报 × 判决；30 分钟自动同步</div></div>
+        <div class="actions">
+          <button class="btn secondary small" id="sm-sync">同步 Sportmonks</button>
+          <button class="btn secondary small" id="intel-sync">同步 AI 情报</button>
+          <button class="btn ghost small" id="results-sync">回填赛果</button>
+        </div>
       </div>
+      ${rows ? `<div class="table-wrap"><table><thead><tr>
+        <th>场次</th><th>对阵</th><th>开赛</th><th>SM 映射</th>
+        <th>模型概率</th><th>市场概率</th><th>AI 情报</th><th>判决</th><th>操作</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="empty">今日暂无竞彩场次</div>'}
+      <div class="card-sub" style="margin-top:10px">SP 最新快照 ${esc(fmtTime(data.sync?.latest, true))} · 延迟 ${data.sync?.lag_seconds == null ? "—" : `${data.sync.lag_seconds}s`} · 手动映射会立即拉取预测、Pinnacle 1X2 与中文情报。</div>
     </div>
-    ${footballCard(data.api_football || {})}
-    <div class="card">
-      <div class="toolbar"><div><h2 style="margin:0">Sportmonks</h2><div class="card-sub" style="margin:0">预测 1X2 + 市场 1X2；30 分钟自动同步</div></div>
-        <button class="btn secondary small" id="sm-sync">立即同步</button></div>
-      <div class="status-grid">
-        <div class="status-item"><div><b>配置</b><div class="status-label">JQ_SPORTMONKS_TOKEN</div></div>${data.sportmonks.configured ? statusPill("ok") : statusPill("fail")}</div>
-        <div class="status-item"><div><b>覆盖</b><div class="status-label">${data.sportmonks.covered}/${data.sportmonks.matches} 场 · 赔率 ${data.sportmonks.with_odds} · 预测 ${data.sportmonks.with_probs}</div></div><span class="mono">${esc(fmtTime(data.sportmonks.latest, true))}</span></div>
-      </div>
-      ${data.sportmonks.missing_count ? `<div class="card-sub" style="margin-top:10px">未映射 ${data.sportmonks.missing_count} 场：${data.sportmonks.missing.map(m => esc(m.match_no + " " + m.home + " vs " + m.away)).join("；")}</div>` : ""}
-    </div>
-    <div class="card">
-      <div class="toolbar"><div><h2 style="margin:0">AI 情报</h2><div class="card-sub" style="margin:0">Sportmonks 事实 + 中文摘要；30 分钟自动同步</div></div>
-        <button class="btn secondary small" id="intel-sync">立即同步</button></div>
-      <div class="status-grid">
-        <div class="status-item"><div><b>就绪</b><div class="status-label">${data.ai_research.ready}/${data.ai_research.matches} 场 · 不可用 ${data.ai_research.unavailable}</div></div><span class="mono">${esc(fmtTime(data.ai_research.latest, true))}</span></div>
-      </div>
+    <div class="card legacy-sources">
+      <details>
+        <summary>兜底数据源（API-Football / 国际盘）</summary>
+        <div class="card-sub" style="margin:8px 0 12px">主链路已切到 Sportmonks + 竞彩 SP；以下只作缺口兜底与对照，不再作为发布前置。</div>
+        ${footballCard(data.api_football || {})}
+        <div class="status-grid" style="margin-top:12px">
+          <div class="status-item"><div><b>The Odds API</b><div class="status-label">国际盘对照 · 非主链路</div></div><span class="mono">${intl.covered_matches ?? 0}/${supply.matches ?? 0} 场</span></div>
+        </div>
+      </details>
     </div>
   `;
+
   const smSync = el("#sm-sync");
   if (smSync) smSync.onclick = async () => {
     smSync.disabled = true; smSync.textContent = "同步中…";
     try { const r = await post("/admin/api/sportmonks/sync", {}); toast(`Sportmonks 同步：${r.synced}/${r.matches}`); await loadData(); }
-    catch (e) { toast(e.message, "error"); smSync.disabled = false; smSync.textContent = "立即同步"; }
+    catch (e) { toast(e.message, "error"); smSync.disabled = false; smSync.textContent = "同步 Sportmonks"; }
   };
   const intelSync = el("#intel-sync");
   if (intelSync) intelSync.onclick = async () => {
     intelSync.disabled = true; intelSync.textContent = "同步中…";
     try { const r = await post("/admin/api/ai-research/sync", {}); toast(`AI 情报：${r.synced}/${r.matches}`); await loadData(); }
-    catch (e) { toast(e.message, "error"); intelSync.disabled = false; intelSync.textContent = "立即同步"; }
+    catch (e) { toast(e.message, "error"); intelSync.disabled = false; intelSync.textContent = "同步 AI 情报"; }
   };
+  const resultsSync = el("#results-sync");
+  if (resultsSync) resultsSync.onclick = async () => {
+    resultsSync.disabled = true; resultsSync.textContent = "回填中…";
+    try {
+      const r = await post("/admin/api/sportmonks/results", { days: 2 });
+      const b = await post("/admin/api/sportmonks/results/backfill", { days: 14 });
+      toast(`赛果：新增 ${r.inserted} 场 · 历史 ${b.inserted} 场 · 结算 ${Number(r.settled || 0) + Number(b.settled || 0)} 注`);
+      await loadData();
+    } catch (e) { toast(e.message, "error"); resultsSync.disabled = false; resultsSync.textContent = "回填赛果"; }
+  };
+  els("[data-sm-map]").forEach(btn => btn.onclick = () => openSportmonksMapping(btn.dataset.smMap));
+  els("[data-sm-resync]").forEach(btn => btn.onclick = async () => {
+    const matchId = btn.dataset.smResync;
+    const fixtureId = Number(btn.dataset.fixture);
+    if (!matchId || !fixtureId) return;
+    btn.disabled = true; btn.textContent = "同步中…";
+    try {
+      const r = await post("/admin/api/sportmonks/map", { match_id: matchId, fixture_id: fixtureId });
+      toast(`已重拉 ${r.home || ""} vs ${r.away || ""}${r.intel ? " · 情报已刷新" : ""}`);
+      await loadData();
+    } catch (e) { toast(e.message, "error"); btn.disabled = false; btn.textContent = "重拉"; }
+  });
+  els("[data-sm-unmap]").forEach(btn => btn.onclick = async () => {
+    const matchId = btn.dataset.smUnmap;
+    if (!confirm("解除映射会同时删除该场 AI 情报，确认？")) return;
+    try { await del(`/admin/api/sportmonks/map/${encodeURIComponent(matchId)}`); toast("已解除映射"); await loadData(); }
+    catch (e) { toast(e.message, "error"); }
+  });
+}
+
+async function openSportmonksMapping(matchId) {
+  modal("映射 Sportmonks fixture", '<div class="skeleton"></div>');
+  try {
+    const data = await api(`/admin/api/sportmonks/candidates?match_id=${encodeURIComponent(matchId)}`);
+    const match = data.match || {};
+    const candidates = data.candidates || [];
+    const bind = async fixtureId => {
+      try {
+        const r = await post("/admin/api/sportmonks/map", { match_id: matchId, fixture_id: fixtureId });
+        toast(`已绑定 fixture ${r.fixture_id}${r.intel ? " · 情报已刷新" : ""}`);
+        closeModal();
+        await loadData();
+      } catch (error) { toast(error.message, "error"); }
+    };
+    el("#modal-card").innerHTML = `<h3>映射 Sportmonks fixture</h3>
+      <div class="card-sub" style="margin-bottom:12px">竞彩 ${esc(match.match_no || "")} · ${esc(match.home || "")} vs ${esc(match.away || "")} · ${esc(match.kickoff || "")}<br>候选范围：开球前后 6 小时；只绑定确认是同一场的 fixture。</div>
+      ${candidates.length ? `<div class="table-wrap"><table><thead><tr>
+        <th>Fixture</th><th>联赛</th><th>Sportmonks 对阵</th><th>开球差</th><th>相似度</th><th>状态</th><th></th>
+      </tr></thead><tbody>${candidates.map(c => `<tr>
+        <td class="mono">#${c.fixture_id}</td>
+        <td>${esc(c.league)}</td>
+        <td>${esc(c.home)} vs ${esc(c.away)}</td>
+        <td class="mono">${c.delta_min > 0 ? "+" : ""}${c.delta_min} 分</td>
+        <td class="mono">${c.home_sim} / ${c.away_sim}</td>
+        <td>${c.mapped_to && c.mapped_to !== matchId ? `<span class="pill amber">已绑 ${esc(c.mapped_to)}</span>` : c.suggested ? '<span class="pill green">自动匹配</span>' : '<span class="pill muted">候选</span>'}</td>
+        <td><button class="btn primary small" data-pick="${c.fixture_id}" ${c.mapped_to && c.mapped_to !== matchId ? "disabled" : ""}>绑定</button></td>
+      </tr>`).join("")}</tbody></table></div>` : '<div class="empty">前后 6 小时没有 Sportmonks fixture；检查联赛是否在 Sportmonks 覆盖范围。</div>'}
+      <div class="actions" style="margin-top:12px"><button class="btn ghost" id="map-cancel">取消</button></div>`;
+    els("[data-pick]").forEach(btn => btn.onclick = () => bind(Number(btn.dataset.pick)));
+    const cancel = el("#map-cancel");
+    if (cancel) cancel.onclick = closeModal;
+  } catch (error) {
+    el("#modal-card").innerHTML = `<h3>映射 Sportmonks fixture</h3><div class="empty">${esc(error.message)}</div>`;
+  }
+}
+
+async function loadModelEval() {
+  const root = el("#view-model-eval");
+  root.innerHTML = '<div class="skeleton"></div>';
+  const days = state.modelEvalDays || 90;
+  const data = await api(`/admin/api/model-eval?days=${days}`);
+  const overall = data.overall || {};
+  const pct = value => value == null ? "—" : `${Math.round(Number(value) * 100)}%`;
+  const brier = value => value == null ? "—" : Number(value).toFixed(3);
+  const top = probs => {
+    if (!probs) return "—";
+    const key = ["home", "draw", "away"].reduce(
+      (best, k) => Number(probs[k] || 0) > Number(probs[best] || 0) ? k : best, "home");
+    return `${({ home: "主", draw: "平", away: "客" })[key]} ${pct(probs[key])}`;
+  };
+  const delta = overall.model_brier != null && overall.market_brier != null
+    ? Number(overall.market_brier) - Number(overall.model_brier) : null;
+  const leagueRows = (data.leagues || []).map(row => {
+    const diff = row.model_brier != null && row.market_brier != null
+      ? Number(row.market_brier) - Number(row.model_brier) : null;
+    const signal = row.model_samples < 10
+      ? '<span class="pill muted">样本不足</span>'
+      : diff != null && diff > 0
+        ? '<span class="pill green">模型更优</span>'
+        : '<span class="pill amber">基线更优</span>';
+    return `<tr>
+      <td><b>${esc(row.league)}</b></td>
+      <td class="num">${row.samples}</td>
+      <td class="num">${row.model_samples}</td>
+      <td class="num">${brier(row.model_brier)}</td>
+      <td class="num">${brier(row.market_brier)}</td>
+      <td class="num">${brier(row.sm_odds_brier)}<div class="card-sub">${row.sm_odds_samples} 场</div></td>
+      <td class="num">${brier(row.sm_model_brier)}<div class="card-sub">${row.sm_model_samples} 场</div></td>
+      <td class="num">${row.model_top_rate == null ? "—" : pct(row.model_top_rate)}</td>
+      <td>${signal}</td>
+    </tr>`;
+  }).join("");
+  const recentRows = (data.recent || []).map(row => `<tr>
+    <td class="mono">${esc(row.trade_date)}</td>
+    <td>${esc(row.league)}<div class="card-sub">${esc(row.home)} vs ${esc(row.away)}</div></td>
+    <td class="mono">${esc(row.score || "—")}</td>
+    <td>${({ home: "主胜", draw: "平", away: "客胜" })[row.outcome] || esc(row.outcome)}</td>
+    <td>${top(row.model)}</td>
+    <td>${top(row.market)}</td>
+    <td>${top(row.sm_odds)}</td>
+    <td>${top(row.sm_model)}</td>
+    <td>${statusPill(row.status)}</td>
+  </tr>`).join("");
+  root.innerHTML = `
+    <div class="card">
+      <div class="toolbar">
+        <div><h2 style="margin:0">概率质量对比</h2><div class="card-sub" style="margin:0">已结算场次 · Brier 越低越好 · 样本窗口内只统计有赛果的比赛</div></div>
+        <select id="eval-days" style="max-width:160px">
+          ${[30, 90, 180, 365].map(d => `<option value="${d}" ${days === d ? "selected" : ""}>近 ${d} 天</option>`).join("")}
+        </select>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">结算样本</div><div class="kpi-value">${overall.samples ?? 0}</div><div class="kpi-foot">模型样本 ${overall.model_samples ?? 0}</div></div>
+        <div class="kpi ${delta != null && delta > 0 ? "green accent" : ""}"><div class="kpi-label">模型 Brier</div><div class="kpi-value">${brier(overall.model_brier)}</div><div class="kpi-foot">Top1 命中 ${overall.model_top_rate == null ? "—" : pct(overall.model_top_rate)}</div></div>
+        <div class="kpi"><div class="kpi-label">竞彩去水基线</div><div class="kpi-value">${brier(overall.market_brier)}</div><div class="kpi-foot">SP 隐含概率</div></div>
+        <div class="kpi"><div class="kpi-label">SM 市场</div><div class="kpi-value">${brier(overall.sm_odds_brier)}</div><div class="kpi-foot">Pinnacle 1X2 · ${overall.sm_odds_samples ?? 0} 场</div></div>
+        <div class="kpi"><div class="kpi-label">SM 预测</div><div class="kpi-value">${brier(overall.sm_model_brier)}</div><div class="kpi-foot">模型 237 · ${overall.sm_model_samples ?? 0} 场</div></div>
+      </div>
+      <div class="card-sub">${delta == null ? "模型样本不足，暂不能判断模型是否优于竞彩基线。" : delta > 0 ? `模型 Brier 比竞彩基线低 ${delta.toFixed(3)}，当前样本下模型有增量。` : `模型 Brier 比竞彩基线高 ${Math.abs(delta).toFixed(3)}，当前样本下不具备优势。`} 分联赛样本 ≥10 才显示结论；上线前仍需按联赛做样本外验证。</div>
+    </div>
+    <div class="card"><h2 class="card-title">分联赛</h2>
+      ${leagueRows ? `<div class="table-wrap"><table><thead><tr>
+        <th>联赛</th><th class="num">结算</th><th class="num">模型样本</th>
+        <th class="num">模型</th><th class="num">竞彩基线</th>
+        <th class="num">SM 市场</th><th class="num">SM 预测</th>
+        <th class="num">Top1</th><th>结论</th>
+      </tr></thead><tbody>${leagueRows}</tbody></table></div>` : '<div class="empty">窗口内还没有已结算且带赛果的场次。</div>'}
+    </div>
+    <div class="card"><h2 class="card-title">最近结算</h2>
+      ${recentRows ? `<div class="table-wrap"><table><thead><tr>
+        <th>日期</th><th>场次</th><th>比分</th><th>赛果</th>
+        <th>模型 Top1</th><th>竞彩 Top1</th><th>SM 市场 Top1</th><th>SM 预测 Top1</th><th>判决</th>
+      </tr></thead><tbody>${recentRows}</tbody></table></div>` : '<div class="empty">暂无结算记录。</div>'}
+    </div>
+  `;
+  const select = el("#eval-days");
+  if (select) select.onchange = () => { state.modelEvalDays = Number(select.value); loadModelEval(); };
 }
 
 async function loadLogs() {
@@ -1358,11 +1587,12 @@ const views = {
   recommendations: { title: "推荐主链", kicker: "判断发布", loader: loadRecommendations },
   plans: { title: "组合预览", kicker: "风险组合", loader: loadPlans },
   data: { title: "数据源", kicker: "数据供给", loader: loadData },
+  "model-eval": { title: "模型效果", kicker: "概率质量", loader: loadModelEval },
   logs: { title: "运行日志", kicker: "运行输出", loader: loadLogs },
 };
 
 let autoTimer = null;
-const AUTO_VIEWS = new Set(["workbench", "overview", "recommendations", "gateway", "data", "models", "integrations", "collector"]);
+const AUTO_VIEWS = new Set(["workbench", "overview", "recommendations", "gateway", "data", "model-eval", "models", "integrations", "collector"]);
 
 function scheduleAutoRefresh() {
   clearInterval(autoTimer);
