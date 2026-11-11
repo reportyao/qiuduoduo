@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import re
 from datetime import timedelta
 
 from sqlalchemy import select
@@ -11,6 +13,8 @@ from ..config import get_settings
 from ..models import AIResearch, SPMatch, SportmonksMatchData, utcnow
 from .sportmonks import _get
 from .timeutil import trade_window
+
+log = logging.getLogger(__name__)
 
 
 def _fetch(fixture_id: int) -> tuple[list[str], int]:
@@ -34,6 +38,14 @@ def _fetch(fixture_id: int) -> tuple[list[str], int]:
     return facts[:6], injured
 
 
+def _extract_json(text: str) -> dict:
+    """容忍 ```json 包裹、前后说明文字；只取第一个 { 到最后一个 }。"""
+    start, end = text.find("{"), text.rfind("}")
+    if start < 0 or end <= start:
+        raise ValueError("no json object")
+    return json.loads(text[start:end + 1])
+
+
 def _summarize(db: Session, facts: list[str], injured: int) -> tuple[str, list[str]]:
     if facts:
         from .llm_gateway import complete
@@ -49,14 +61,13 @@ def _summarize(db: Session, facts: list[str], injured: int) -> tuple[str, list[s
                 max_tokens=420,
             )
             if res is not None and not res.degraded and res.text:
-                raw = res.text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-                obj = json.loads(raw)
+                obj = _extract_json(res.text)
                 headline = str(obj.get("headline") or "")[:200]
                 points = [str(x)[:160] for x in (obj.get("points") or [])][:3]
                 if headline:
                     return headline, points
         except Exception:  # noqa: BLE001 - 摘要失败用确定性兜底
-            pass
+            log.exception("intel summary failed; fallback to deterministic copy")
     headline = f"Sportmonks 赛前情报：{len(facts)} 条公开事实"
     points = [f"伤停/停赛 {injured} 人"] if injured else []
     if facts:
