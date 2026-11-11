@@ -274,4 +274,52 @@ sm_dead_letter        (endpoint, fixture_id, error, payload, created_at)
 
 ---
 
-*附：回测明细 `docs/sm_backtest_2026-10.csv`（168 行，字段含 SM/Pinnacle 概率与逐场 RPS/logloss）；探测脚本 `sm_probe*.py`、`sm_backtest.py` 在仓库根目录，token 从临时文件读取，不含明文。*
+*附：回测明细 `docs/sm_backtest_2026-10.csv`（168 行，字段含 SM/Pinnacle 概率与逐场 RPS/logloss）；探测脚本 `scripts/sm/sm_probe*.py`、`scripts/sm/sm_backtest.py`，token 从环境变量/临时文件读取，不含明文。*
+
+---
+
+## 12. 2026-11-11 实际换槽执行结果（已保存并 API 复核）
+
+### 12.1 已移除（7 个废槽）
+
+Bundesliga Play-offs 163、La Liga 2 567、Primeira Liga 1100（死条目）、Eredivisie Playoffs 1353、Ligue 1 Play-offs 1673、Ligue 2 Play-offs 1674、Eredivisie Cup 2037。
+
+### 12.2 已加入（8 个）
+
+Liga Portugal 462（真葡超）、Carabao Cup 27（英联杯）、2. Bundesliga 85（德乙）、Allsvenskan 573（瑞超）、J1 League 968（日职）、AFC Champions League Elite 1085（亚冠精英）、Eliteserien 444（挪超）、J1/Eliteserien Play-offs 1768/1760（随主联赛自动带上的附加项，无害）。
+
+### 12.3 当前状态
+
+- API `/v3/my/leagues`：**31 个条目** = UI 27 个 Growth 名额 + 4 个 specials（UCL/UEL/UECL/UEFA Super Cup）；
+- Growth 名额：**27/30，剩 3 个空位**（未填，留给月度换槽/赛季轮换）；
+- 欧国联仍不可用：点击时提示属于 **International Tournaments 专项（€129/月）**，不在 Growth 30 名额内——当前 6 场欧国联只能维持"无 SM 数据"；
+- 芬超/解放者杯/沙特联/亚冠2/德国杯：有竞彩场次但本次未加，3 个空位可后续按赛季补。
+
+### 12.4 重要计费警告
+
+订阅页显示：**试用 11-25 到期后自动扣费 €197/月**（不是之前估算的 €114）。包含 Growth + Euro Club Tournaments 等组合；到期前需在 Billing 页确认是否保留全部组成，否则会自动按 €197 扣款。
+
+### 12.5 新发现：Pinnacle 不是全联赛都有
+
+换入后立即验证（2026-11-20 前后场次）：
+
+| 联赛 | 预测 237 | 1X2 书商数 | Pinnacle |
+|---|---|---|---|
+| Allsvenskan | ✅ | 8 | ✅ |
+| 2. Bundesliga | ✅ | 有 | ✅（3 行） |
+| Eliteserien | ✅ | 5（Dafabet/Marathonbet/1xbet/MelBet/bet365） | ❌ |
+| J1 | ✅ | 0（距开赛 8 天，赔率未挂） | ❌ |
+| Liga Portugal | ✅ | 1 | ❌ |
+| ACL Elite | ✅ | 2 | ❌ |
+| Carabao Cup | ❌（场次太远） | 0 | ❌ |
+
+**结论：市场闸不能写死"Pinnacle 唯一基准"，必须做书商降级链**：
+
+```text
+Pinnacle(20) 有 → 用 Pinnacle 去水
+否则 bet365(2) 有 → 用 bet365 去水
+否则用该场可用书商的中位数（≥3 家才计算）
+都没有 → market=pending，不发布
+```
+
+并按联赛记录 `bookmaker_availability`（哪家可用、最后更新时间），J1 这类"赔率晚挂"的联赛要在 T-2h/T-30m 再拉一次。
