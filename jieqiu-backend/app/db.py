@@ -137,6 +137,12 @@ _REQUIRED_COLUMNS = {
         "self_exclusion_reason": "TEXT",
         "compliance_json": "JSON",
     },
+    "ai_research": {
+        "facts_hash": "VARCHAR(64) DEFAULT ''",
+    },
+    "llm_profiles": {
+        "reasoning": "VARCHAR(8) DEFAULT 'auto'",
+    },
     "memories": {
         "category": "VARCHAR(16) DEFAULT 'preference'",
         "confidence": "FLOAT DEFAULT 1.0",

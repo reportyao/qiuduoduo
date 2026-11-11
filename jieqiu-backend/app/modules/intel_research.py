@@ -1,6 +1,7 @@
 """AI 情报：Sportmonks 结构化事实 → 中文摘要；LLM 不可用时用确定性中文摘要。"""
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
@@ -92,7 +93,19 @@ def sync_match(db: Session, match_id: str) -> bool:
     if sm is None:
         return False
     facts, injured = _fetch(sm.fixture_id)
+    facts_hash = hashlib.sha256(json.dumps(
+        {"facts": facts, "injured": injured}, ensure_ascii=False,
+        sort_keys=True).encode("utf-8")).hexdigest()
     row = db.get(AIResearch, match_id)
+    now = utcnow()
+    # 事实没变且缓存仍在有效期：不重复调 LLM，只续期。确定性兜底文案不算有效缓存。
+    if (row is not None and row.status == "ready" and row.facts_hash == facts_hash
+            and row.expires_at is not None and row.expires_at > now
+            and row.headline and not row.headline.startswith("Sportmonks 赛前情报：")):
+        row.captured_at = now
+        row.expires_at = now + timedelta(hours=6)
+        db.commit()
+        return True
     if row is None:
         row = AIResearch(match_id=match_id)
         db.add(row)
@@ -109,8 +122,9 @@ def sync_match(db: Session, match_id: str) -> bool:
         row.points = points
         row.sources = [{"name": "Sportmonks", "fixture_id": sm.fixture_id}]
         row.error = ""
-    row.captured_at = utcnow()
-    row.expires_at = row.captured_at + timedelta(hours=6)
+    row.facts_hash = facts_hash
+    row.captured_at = now
+    row.expires_at = now + timedelta(hours=6)
     db.commit()
     return True
 

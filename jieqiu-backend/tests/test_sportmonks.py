@@ -60,3 +60,51 @@ def test_extract_json_tolerates_markdown_and_prefix():
     text = '说明' + chr(10) + '```json' + chr(10) + '{"headline":"x","points":["y"]}' + chr(10) + '```'
     assert _extract_json(text)["headline"] == "x"
     assert _extract_json('prefix {"a":1} suffix')["a"] == 1
+
+
+def test_get_retries_429_then_succeeds(monkeypatch):
+    import urllib.error
+    from app.modules import sportmonks
+
+    class _Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b'{"data": [1]}'
+
+    calls = {"n": 0}
+
+    def fake_urlopen(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise urllib.error.HTTPError(
+                "https://example.invalid", 429, "Too Many",
+                {"Retry-After": "0"}, None)
+        return _Response()
+
+    sleeps = []
+    monkeypatch.setattr(sportmonks.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(sportmonks.time, "sleep", lambda s: sleeps.append(s))
+    assert sportmonks._get("https://example.invalid", "/fixtures", "api_token=x") == {"data": [1]}
+    assert calls["n"] == 2
+    assert sleeps == [1.0]
+
+
+def test_get_does_not_retry_auth_error(monkeypatch):
+    import urllib.error
+    from app.modules import sportmonks
+
+    calls = {"n": 0}
+
+    def fake_urlopen(*args, **kwargs):
+        calls["n"] += 1
+        raise urllib.error.HTTPError(
+            "https://example.invalid", 401, "Unauthorized", {}, None)
+
+    monkeypatch.setattr(sportmonks.urllib.request, "urlopen", fake_urlopen)
+    assert sportmonks._get("https://example.invalid", "/fixtures", "api_token=x") is None
+    assert calls["n"] == 1

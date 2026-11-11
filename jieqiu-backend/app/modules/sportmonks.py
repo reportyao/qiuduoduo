@@ -151,14 +151,40 @@ def _devig(values: list[float]) -> dict | None:
     return {"home": inv[0] / total, "draw": inv[1] / total, "away": inv[2] / total}
 
 
+_RETRY_STATUS = {429, 500, 502, 503, 504}
+_MAX_RETRIES = 2
+
+
+def _retry_delay(exc: urllib.error.HTTPError, attempt: int) -> float:
+    try:
+        value = float(exc.headers.get("Retry-After", "")) if exc.headers else 0.0
+    except (TypeError, ValueError):
+        value = 0.0
+    return min(5.0, value) if value > 0 else float(attempt + 1)
+
+
 def _get(base: str, path: str, params: str, timeout: int = 25) -> dict | None:
     url = f"{base}{path}?{params}"
-    try:
-        with urllib.request.urlopen(urllib.request.Request(
-                url, headers={"Accept": "application/json"}), timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError):
-        return None
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(
+                    url, headers={"Accept": "application/json"}), timeout=timeout) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            if exc.code not in _RETRY_STATUS or attempt >= _MAX_RETRIES:
+                log.warning("sportmonks GET %s failed: HTTP %s", path, exc.code)
+                return None
+            delay = _retry_delay(exc, attempt)
+            log.warning("sportmonks GET %s HTTP %s; retry in %.1fs (%s/%s)",
+                        path, exc.code, delay, attempt + 1, _MAX_RETRIES)
+            time.sleep(delay)
+        except (urllib.error.URLError, TimeoutError, ValueError,
+                json.JSONDecodeError) as exc:
+            if attempt >= _MAX_RETRIES:
+                log.warning("sportmonks GET %s failed: %s", path, type(exc).__name__)
+                return None
+            time.sleep(float(attempt + 1))
+    return None
 
 
 def _fetch_fixtures(base: str, token: str, start_day: str, end_day: str) -> list[dict]:
