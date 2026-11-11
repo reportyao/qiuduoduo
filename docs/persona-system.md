@@ -1,6 +1,6 @@
 # 人设与文案配置（三种语气，同一事实）
 
-> 状态：**部分实现。** 2026-11-05：模型池/加密 Key/后台配置/failover/缓存/预生成 CLI、narration 缓存、persona_profiles/persona_copy_slots 与 `GET /personas` 已落地；copy slots 目前只建表/可编辑，运行时尚未消费；模型 HTTP 调用已统一走 `llm_gateway.call_profile`。AI 复核已接入推荐主链（L1–L5），recommendation_copies、前端服务端文案切换仍待开发。
+> 状态：**已实现（chat / 助理），推荐三套文案仍待补。** 2026-11-12：模型池/加密 Key/后台配置/failover/缓存/预生成 CLI、persona_profiles/persona_copy_slots 与 `GET /personas` 已落地；`POST /chat` 接受 `persona`，`assistant_copy.render` 已消费 DB copy slots；`recommendation_copies` 与推荐文案三套生成仍未建/未接。模型 HTTP 调用统一走 `llm_gateway.call_profile`；AI 复核已接入推荐主链（L1–L5）。
 >
 > 目标：`zhuanjia` / `laopao` / `meng` 三种人设只改变**语气与表达**，绝不改变方向、概率、条件、成本、组合腿、复核状态。
 
@@ -86,19 +86,19 @@ recommendation_copies
   review_run_id, prompt_ver, created_at
 ```
 
-`persona_copy_slots` 已建表并可后台编辑，目标是作为 LLM 失败时的兜底模板；当前运行时尚未消费，实际回退仍是 `narrate.py` 的 `TEMPLATES`。`recommendation_copies` 尚未建表。
+`persona_copy_slots` 已建表并可后台编辑；`/chat` 运行时已通过 `assistant_copy.render` 消费 `assistant_*` 系列 slot（DB 有值优先，无值回退内置模板）。推荐卡片的 `recommendation_copies` 尚未建表，推荐文案三套仍走 `narrate.py`/前端 fallback。
 
 ## 4. API（部分实现）
 
 ```text
-GET  /personas                  返回 profile + copy slots + version（✅ 已实现；移动端尚未消费）
+GET  /personas                  返回 profile + copy slots + version（✅ 已实现；移动端文案仍以 bundled fallback 为主）
 GET  /admin/api/personas         后台读取 profile + slots（页面：/admin 人设文案）
 PUT  /admin/api/personas/{id}    改 profile（admin）
 PUT  /admin/api/personas/{id}/slots/{slot}  改槽位（admin）
 POST /admin/api/persona/test     人设翻译测试（operator）
 ```
 
-移动端当前仍使用 bundled `COPY`；服务端版本更新后的异步刷新待接入。
+`POST /chat` 的请求体已带 `persona`，后端按该 persona 渲染回复；移动端 bundled `COPY` 仍作离线 fallback。服务端版本更新后的异步刷新未接。
 
 ## 5. 三种人设的语气矩阵
 
@@ -190,7 +190,7 @@ LLM 只输出槽位，不输出最终数字：
 复核失败：
 
 - 只重写该 persona 的文案；
-- 重写 2 次仍失败 → 目标回退到 `persona_copy_slots`（运行时接入待做）；当前回退到 `narrate.py` 模板；
+- 重写 2 次仍失败 → 回退到 `persona_copy_slots`（chat 已接；推荐卡片仍走 `narrate.py` 模板）；
 - 模板也失败 → 该 persona 不展示推荐，只展示数据卡。
 
 ## 8.5 人设稳定性指标

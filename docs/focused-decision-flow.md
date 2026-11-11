@@ -1,6 +1,6 @@
 # 球多多 · 聚焦决策流 / 数据脉搏 / 情报层
 
-> **状态：部分实现。** 前端已实现 `focusStore`、头像/首页选择器选中后回首页聚焦、聚焦卡（复用现有判决）、详情页“让助理看这场”；**后端 `/stats/pulse`、`/matches/{id}/focus`、`/interactions` 已实现**；`intel_items`/`match_coverage`/`pulse_daily` 仍未建表；前端已接 `/stats/pulse`、`/matches/{id}/focus` 与在售 coverage；`GET /matches/on-sale` 已带 `coverage`。当前 OpenAPI 为 **131 路径 / 146 方法**、Alembic head `20261106_14`。
+> **状态：部分实现。** 前端已实现 `focusStore`、头像/首页选择器选中后回首页聚焦、聚焦卡（复用现有判决）、详情页“让助理看这场”；**后端 `/stats/pulse`、`/matches/{id}/focus`、`/interactions` 已实现**；`intel_items`/`match_coverage`/`pulse_daily` 仍未建表；前端已接 `/stats/pulse`、`/matches/{id}/focus` 与在售 coverage；`GET /matches/on-sale` 已带 `coverage`。v4.1 当前 OpenAPI 为 **158 路径 / 174 方法**、Alembic head `20261112_23`；4 Tab 已改为助理/比赛/计划/我的。
 >
 > 目标：把首页从“12 张判决卡 + 常驻输入框”改成 **数据脉搏 + 一场聚焦 + 客观情报 + 动作按钮**；用户点头像选比赛，选中后回首页围绕这一场展开，而不是跳详情页。
 >

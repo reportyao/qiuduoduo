@@ -3,18 +3,23 @@
 > 状态：已采纳（ADR-0001 / 0002 / 0003）。**本文描述目标态，不等同于当前目录。**
 > 目标：让 AI 开发“每次只在一个小上下文里写对”，并让错误在类型、契约、测试层被立刻发现。
 
-## 0. 当前实现（2026-11-05）
+## 0. 当前实现（2026-11-12）
 
 - 生产后端仍在 `jieqiu-backend/`，尚未迁到 `services/api/`；`services/` 只有迁移说明。
 - 生产前端在 `apps/mobile/`；`apps/web/`、`apps/admin/` 仍是规划，当前管理后台是后端同进程的 `/admin`。
-- OpenAPI 138 路径 / 154 方法；后端 295 tests；Alembic head `20261106_16`。
+- OpenAPI **158 路径 / 174 方法**；后端 **338 tests**；前端 **47 tests**；Alembic head `20261112_23`。
 - Postgres 是目标生产库；未设置 `JQ_PROD_DATABASE_URL` 时生产部署仍可能是旧 SQLite 兼容模式。
 - 新增的 catalog/actions 已按 feature slice 落地；verdict/assistant 仍是混合目录，迁移未完成。
+- **v4.1 产品结构已落地**：移动端 4 Tab = 助理/比赛/计划/我的；`app/features/plans/` + `app/features/v4_router.py` 提供计划、会员、引擎指标、每日战绩；`app/modules/plan_service.py`、`membership.py`、`settlement.py`、`performance.py`、`assistant_copy.py`、`ops.py` 为 v4 领域模块。
+- **计划 v1**：`plan_cycles / plan_bets / plan_bet_legs`；每期最多 4 场、每场 100、预算 400；只处理竞彩 1X2/让球；正 edge/EV 才入池；不足 4 场不硬凑。全市场与自训练模型未实现。
+- **会员**：`user_memberships / membership_events / analysis_quota / market_access`；免费每日 1 场，Pro/Max 不限；后台手动开通是唯一真实开通路径；充值页是假 UI。
+- **赛果结算**：`match_results` 90 分钟字段 + `market_settlements` + `settle_pending`；1X2/让球/OU/BTTS/比分按 FT90，整数亚盘 void/push；`performance_daily` 为战绩读模型。
+- **人设**：`ChatBody.persona` → `assistant_copy` + `persona_copy_slots`；三种语气共享同一事实包。
+- **OPC 后台**：用户与会员、AI 计划、异常队列、引擎配置已接；持久化告警外发、完整任务编排仍未做。
 - **聚焦决策流部分实现**：前端已有 `focusStore`、头像/选择器选中回首页聚焦、聚焦卡、详情页“让助理看这场”；后端 `/stats/pulse`、`/matches/{id}/focus`、`/interactions`、`interaction_events` 已实现；`/matches/on-sale` 已返回与 focus 同一判定的 `coverage`；`intel_items`/`match_coverage`/`pulse_daily` 与前端数据脉搏首屏仍未实现。目标契约见 [focused-decision-flow.md](./focused-decision-flow.md)。
 - **API-Football 已接入但默认关闭**：配置 `JQ_API_FOOTBALL_KEY` 后同步 fixtures/lineups/injuries/standings；未配置时 focus 明确返回 missing，不伪造。见 [api-football.md](./api-football.md)。
-- **产品口径 2026-11-05 转向**：允许经 AI 复核的赛前预测/参考组合/串关参谋；推荐主链（`decision_snapshots`/`recommendation_plans` + AI 复核/发布）已实现，Today Hero 优先消费 published snapshot，`/tools/parlay/plan` 保留未复核预览，付费/权益待做，见 [recommendation-product.md](./recommendation-product.md)。
-- **LLM Gateway Phase 1 已实现**：`open_chat` fallback → fast，带缓存、原子预算、PII 脱敏、调用账本与 后台 `/admin` 模型用量页只读看板；persona 传输已走 `call_profile`；deep 分析与 focus 解读待 Phase 2。见 [llm-gateway.md](./llm-gateway.md)。
 - **推荐主链已实现**：`decision_snapshots` + `recommendation_plans` + `review_runs` + `recommendation_events`；build → L1–L5 review → publish → expire/withdraw；`GET /recommendations/today` 只返回 published；Today Hero 已优先消费 snapshot，组合页已优先 published，preview 仅回退。见 [recommendation-product.md](./recommendation-product.md)。
+- **LLM Gateway Phase 1 已实现**：`open_chat` fallback → fast，带缓存、原子预算、PII 脱敏、调用账本与后台 `/admin` 模型用量页只读看板；persona 传输已走 `call_profile`；deep 分析与 focus 解读待 Phase 2。见 [llm-gateway.md](./llm-gateway.md)。
 
 ## 1. 架构原则
 
@@ -124,7 +129,7 @@ packages/api       生成的 client
 - Alembic 是 schema 事实源；
 - SQLite 仅允许纯单元测试、一次性工具或尚未切换的旧部署；
 - OpenAPI 由 FastAPI 生成；后端导出 `packages/api-client/openapi.json` 快照，client 从快照离线生成；
-- Postgres 迁移先于应用启动；Alembic head 为 `20261106_16`，baseline 24 张表，当前 ORM 共 46 张表（新增 interaction_events、API-Football 5 张表、LLM 4 张表、AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表与管理账号/审计 2 张表）；
+- Postgres 迁移先于应用启动；Alembic head 为 `20261112_23`，baseline 24 张表，当前 ORM 共 68 张表（新增 interaction_events、API-Football 5 张表、LLM 4 张表、AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表，以及 v4 的结算/计划/会员/OPC/记忆/训练 19 张表）；
 - AI 输出必须通过 Pydantic / JSON Schema 校验；
 - 领域事件必须有 `dedupe_key`、`payload_hash`、`data_cutoff`。
 
@@ -148,7 +153,7 @@ packages/api       生成的 client
 | 前端单测 | Vitest + RNTL | hooks / 组件 |
 | E2E | Maestro | 核心用户流程 |
 
-> 当前实际（2026-11-06）：后端 pytest 271 项仍主要跑 SQLite；未接真实 Postgres CI；前端 Vitest 30 项 + typecheck/lint + Expo Android bundle；Maestro/E2E 尚未接入。
+> 当前实际（2026-11-12）：后端 pytest 338 项仍主要跑 SQLite；未接真实 Postgres CI；前端 Vitest 47 项 + typecheck/lint + Expo Android bundle；Maestro/E2E 尚未接入。
 
 ## 8. 迁移路线
 

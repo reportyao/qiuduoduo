@@ -1,4 +1,4 @@
-# 球多多后端 · W8 + Assistant（当前线上 `b48a913`；W8 冻结基线需随 API 变更重新采纳）
+# 球多多后端 · v4.1（当前开发分支 `feat/v4-plan-settlement`；W8 冻结基线需随 API 变更重新采纳）
 
 认证（方案 B·自建）：
 `/auth/sms/send|verify`（CN 手机号）· `/auth/wechat/callback|bind-phone`（微信后强制绑手机）·
@@ -8,7 +8,22 @@
 
 ---
 
-# 2026-11-04 API 补全（当前 128 路径 / 143 方法）
+# v4.1 核心（2026-11-12）
+
+当前事实：OpenAPI **158 路径 / 174 方法**，**338 tests**，Alembic head `20261112_23`。生产仍未部署本分支。
+
+- **移动端 4 Tab 对应接口**：`/stats/engine`、`/stats/record/summary`、`/membership/me`、`/membership/markets`、`/me/profile`；计划 `/plans/summary|current|history|cycles/{id}`。
+- **计划**：`plan_cycles / plan_bets / plan_bet_legs`；每期最多 4 场、每场 100、预算 400；稳健=4 单关、平衡=1 个 2 串 1 + 2 单关、进取=2 个 2 串 1；v1 只处理竞彩 1X2/让球，要求正 edge/EV，不足 4 场不硬凑。
+- **会员**：`user_memberships / membership_events / analysis_quota / analysis_usage / market_access`；免费每日 1 场，Pro/Max 不限；后台手动开通/撤销；充值没有支付实现。
+- **结算**：`match_results` 增加 FT90 字段；`market_settlements` 统一挂 verdict/plan_bet；`settle_pending` 独立扫描；`performance_daily` 为战绩读模型；整数亚盘 push 记 void。
+- **人设**：`ChatBody.persona`，`assistant_copy.render` + `persona_copy_slots`；三种语气不改变事实。
+- **OPC**：`ops_jobs / ops_exceptions`、`engine_config`、`/admin` 用户与会员、AI 计划、异常队列、引擎配置。
+- **训练脚手架**：`feature_snapshots / model_registry / training_runs` 已建表，**训练和影子上线未实现**。
+- **未完成**：真实支付、多盘口完整数据、计划提醒/收藏、生产 Postgres 切库、v4 正式 APK、JPush 真机验收。
+
+---
+
+# 2026-11-04 API 补全（历史；当前 158 路径 / 174 方法）
 
 补齐 Feature-API-Mapping 中有数据支撑但未暴露的接口：`/matches`、`/verdicts/today`、
 `/matches/{id}/cost|evidence|live`、`/avoid-list`、`/water-rank`、`/calendar`、`/sp/movements`、
@@ -20,7 +35,7 @@
 
 **串关四维体检（已实现）**：`POST /tools/parlay/check`，2–4 腿返回成本/信息/模型/结构、逐腿 facts/coverage/unknowns、组合模型概率（仅全腿覆盖时）、风险与结构优化项；移动端串关页已接入，缺模型不伪造组合概率。
 
-**推荐主链（已实现）**：`decision_snapshots` + `recommendation_plans` + `review_runs` + `recommendation_events`；build → L1–L5 复核（L1 含 24h 数据新鲜度、L2 含来源哈希校验）→ publish → expire/withdraw。`GET /recommendations/today` 只返回 published 且未过期；公开契约带方向/把握度/成立条件/失效条件/AI 复核徽章。`POST /tools/parlay/plan` 仍是**未复核预览**（UI 标注"参考·未复核"），组合页 published 优先、preview 回退。付费/权益待做。见 [docs/recommendation-product.md](../docs/recommendation-product.md)。
+**推荐主链（已实现）**：`decision_snapshots` + `recommendation_plans` + `review_runs` + `recommendation_events`；build → L1–L5 复核（L1 含 24h 数据新鲜度、L2 含来源哈希校验）→ publish → expire/withdraw。`GET /recommendations/today` 只返回 published 且未过期；公开契约带方向/把握度/成立条件/失效条件/AI 复核徽章。`POST /tools/parlay/plan` 仍是**未复核预览**（UI 标注"参考·未复核"），组合页 published 优先、preview 回退。会员权益已接 v4，充值仍是假 UI。见 [docs/recommendation-product.md](../docs/recommendation-product.md)。
 
 **习惯闭环（2026-11-05 已实现）**：结算时写入收盘 SP 与 CLV（迁移 `20261105_13`），周报汇总 `clv.n/avg/positive` 与个人 `you.clv_n/clv_avg`；`calibration.interval` 用已结算 promoted 判决的残差经验分布给 `prob_low/prob_high`，样本 <20 返回 `accumulating`，不伪造区间；`/stream` 增加 `unattended`（看过但没记注的已结算场次）；worker 增加 T-3h/T-30m 赛前提醒与去重扇出。真实 JPush 客户端仍待接。
 
@@ -28,7 +43,7 @@
 
 **API-Football（已接入并配置）**：生产使用 API-Sports `apisports` Free（100/日、10/分钟），fixtures 当天+次日、lineups/injuries、自动/人工链接；代码内 7 秒节流。cron 每日 06:15 `sync --next-day`，0–4/10–23 点每小时 `sync-enrich`。**当前赛季 standings 被 Free 档拒绝**；lineups 通常在停售前发布。`apifootball.com` 是另一家 provider，当前未接入。见 [docs/api-football.md](../docs/api-football.md)。
 
-**LLM Gateway Phase 1（已实现）**：`open_chat` fallback → fast，`llm_usage`/`llm_cache`/`llm_budgets`、原子预算、PII 脱敏与 `/admin` 模型用量页只读看板；deep 分析与 focus 解读待 Phase 2。见 [docs/llm-gateway.md](../docs/llm-gateway.md)。当前 OpenAPI 为 128/143。
+**LLM Gateway Phase 1（已实现）**：`open_chat` fallback → fast，`llm_usage`/`llm_cache`/`llm_budgets`、原子预算、PII 脱敏与 `/admin` 模型用量页只读看板；deep 分析与 focus 解读待 Phase 2。见 [docs/llm-gateway.md](../docs/llm-gateway.md)。当前 OpenAPI 为 158/174。
 
 **管理后台（`/admin`，已上线）**：旧 `/console/*` 全部 302 到 `/admin`，W8 `/review/*` 也改用 `admin_t` 会话。
 - 认证/RBAC：`admin_users` + PBKDF2；`viewer` 只读 / `operator` 可复核发布 / `admin` 可改模型/人设/账号；登录 5 次失败锁 10 分钟。
@@ -38,7 +53,7 @@
 - 页面：总览/模型池/用量/人设文案/推荐主链/组合预览/数据源/运维/账号/审计/日志。
 
 > **W8 冻结纪律**：新增路由后需登录 `/admin` 调用 `POST /review/freeze/adopt` 重新采纳基线，
-> 否则 `/review/freeze` 会把本次新增路由报为违规。这是预期行为，不是运行时 bug。当前基线 145 路由。
+> 否则 `/review/freeze` 会把本次新增路由报为违规。这是预期行为，不是运行时 bug。当前基线以最近一次 `/review/freeze/adopt` 为准；v4 新增路由后必须重新采纳，旧记录的 145 已过期。
 
 ---
 
@@ -67,7 +82,7 @@ FastAPI 模块化单体。W2-W4：流/判决三关/封存链/账本/叙述/校�
 
 登录分流：`POST /auth/device` 带 `region: cn|global`（非法 422）。
 
-## API 全景（128 路径 / 143 方法）· 测试 271
+## API 全景（158 路径 / 174 方法）· 测试 338
 
 W8 + assistant 的实际契约以 `packages/api-client/openapi.json` 为准；新增目录/成本/日历/哨兵/实况与兼容别名见上节。
 

@@ -2,7 +2,7 @@
 
 本文件是 AI 与人类协作开发的**仓库级上下文入口**。任何 AI/开发者在改动代码前必须先读本文件；提交前必须按 Definition of Done 自检。
 
-当前事实（2026-11-06）：生产代码仍在 `jieqiu-backend/`，OpenAPI **138 路径 / 154 方法**，后端 **295 tests**；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。文档索引见 [docs/README.md](./docs/README.md)。
+当前事实（2026-11-12）：生产代码仍在 `jieqiu-backend/`，OpenAPI **158 路径 / 174 方法**，后端 **338 tests**，前端 **47 tests**，Alembic head `20261112_23`；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。v4.1 代码在本分支，**尚未部署生产、尚未构建正式 APK**。文档索引见 [docs/README.md](./docs/README.md)。
 
 ## 1. 架构地图
 
@@ -18,6 +18,23 @@ packages/
   config/        ESLint / TS / 共享配置（规划中）
 services/
   api/           FastAPI 模块化单体（自 jieqiu-backend 迁移目标；当前旧目录仍可用）
+```
+
+v4.1 新增入口：
+
+```text
+apps/mobile/app/(tabs)/plans.tsx        计划 Tab
+apps/mobile/app/plans/[id].tsx          计划详情（Max 完整 legs）
+apps/mobile/app/membership.tsx          会员权益（充值假 UI）
+apps/mobile/src/features/plans/         计划/会员查询
+jieqiu-backend/app/features/plans/      计划 API
+jieqiu-backend/app/features/v4_router.py  engine/membership/record/profile API
+jieqiu-backend/app/modules/plan_service.py
+jieqiu-backend/app/modules/settlement.py
+jieqiu-backend/app/modules/membership.py
+jieqiu-backend/app/modules/performance.py
+jieqiu-backend/app/modules/assistant_copy.py
+jieqiu-backend/app/modules/ops.py
 ```
 
 当前过渡期保留：
@@ -111,12 +128,17 @@ app/features/<feature>/
 - AI 不得把业务逻辑放进 router 或 UI 组件。
 - AI 提交前必须运行 `just api-test` 和相关前端测试。
 
-## 7. 产品内容规则（2026-11-06 修订）
+## 7. 产品内容规则（2026-11-12 修订）
 
 - 允许经审核的赛前预测、参考组合、参考预算；不承诺收益。
 - 公开文案明确使用“预测方向/预测概率/置信度”；不得使用“精准预测/必中/稳赚”，付费详情必须写明方向、条件、失效条件与成本。
 - 推荐观点与组合必须经 `decision_snapshots` / `recommendation_plans` → `review_runs`（L1 规则/事实、L2 数字、L3 人设、L4 对抗、L5 发布门）→ `published` 后才能作为正式内容；Today Hero 只读 `/recommendations/today` 的 published。`/tools/parlay/plan` 仍是**preview**，UI 必须标注“参考·未复核”，不得进入付费区。
-- 推送/锁屏只写“今日预测已更新”等中性提示，不写具体赔率、投注或赛事结果。
+- **AI 计划是 4 场模拟定投，不是跟单**：每期最多 4 场、每场 100、预算 400；不做 `plan_follows`、不自动记注、不代购、不托管资金；文案必须写“模拟方案/模拟收益”。
+- **计划分级**：免费/Pro 只能看历史摘要与锁定态，Max 才能看完整 bets/legs；Pro 文案不得暗示含 AI 计划。
+- **会员**：权益、额度、计划门控、后台手动开通是真实能力；充值/支付 UI 是假的，不得创建订单、不得伪造支付成功。会员只能由 `/admin` 手动开通/撤销。
+- **计划与战绩数字**：收益按 `risk_level` 分开，不把三套相加；只算已结算注单；void 不计赢/输；没有数据返回空态，不补假数字。
+- **多盘口边界**：HeaderMetrics 的“5 盘口/7 模型”是配置展示；大小球/BTTS/半全场未完整入库时，不得在计划或付费区宣称已可用。
+- 推送/锁屏只写“今日预测已更新”等中性提示，不写具体赔率、投注或赛事结果；计划提醒不做跟单。
 - 保留年龄确认、自排除、连败保护作为支付/上架合规能力，不是内容禁区。
 - 不收集未成年人数据；不向第三方上传用户原始下注数据。
 
