@@ -161,6 +161,21 @@ class SportmonksMatchData(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
+class AIResearch(Base):
+    """单场 AI 情报：Sportmonks 结构化事实 + LLM 中文摘要。"""
+
+    __tablename__ = "ai_research"
+
+    match_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    status: Mapped[str] = mapped_column(String(16), default="unavailable")
+    headline: Mapped[str] = mapped_column(String(200), default="")
+    points: Mapped[list] = mapped_column(JSON, default=list)
+    sources: Mapped[list] = mapped_column(JSON, default=list)
+    captured_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    error: Mapped[str] = mapped_column(String(300), default="")
+
+
 class VerdictRevision(Base):
     """判决修订史（追加式）：同一 verdict 随 SP 更新重建时，每个不同 payload 都留档。
 

@@ -196,9 +196,19 @@ export interface ProbabilityCompareData {
   dataCutoff?: string | null;
 }
 
+export interface AIResearchData {
+  status: string;
+  headline: string;
+  points: string[];
+  sources: { name?: string; fixture_id?: number }[];
+  capturedAt?: string | null;
+  expiresAt?: string | null;
+}
+
 export interface VerdictDetail extends VerdictSummary {
   tradeDate: string;
   probabilityCompare?: ProbabilityCompareData | null;
+  aiResearch?: AIResearchData | null;
   gatesDetail: Partial<Record<GateKey, GateDetail>>;
   evidence: EvidenceItem[];
   dataCutoff: string;

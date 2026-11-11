@@ -6,6 +6,7 @@ import type {
   GateResult,
   OnSaleItem,
   PostmortemSummary,
+  AIResearchData,
   ProbabilityCompareData,
   ProbabilityTriple,
   RestDay,
@@ -87,6 +88,27 @@ function compareTriple(value: unknown): ProbabilityTriple | null {
     return null;
   }
   return probs(value);
+}
+
+function aiResearch(value: unknown): AIResearchData | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = record(value);
+  const status = string(raw.status);
+  if (!status) return null;
+  return {
+    status,
+    headline: string(raw.headline),
+    points: array(raw.points).map((x) => string(x)).filter(Boolean),
+    sources: array(raw.sources).map((x) => {
+      const item = record(x);
+      return {
+        name: nullableString(item.name) ?? undefined,
+        fixture_id: typeof item.fixture_id === "number" ? item.fixture_id : undefined,
+      };
+    }),
+    capturedAt: nullableString(raw.captured_at),
+    expiresAt: nullableString(raw.expires_at),
+  };
 }
 
 function probabilityCompare(value: unknown): ProbabilityCompareData | null {
@@ -274,6 +296,7 @@ export function adaptVerdictDetail(value: unknown): VerdictDetail | null {
     ...base,
     tradeDate: string(raw.trade_date),
     probabilityCompare: probabilityCompare(raw.probability_compare ?? payload.probability_compare),
+    aiResearch: aiResearch(raw.ai_research),
     gatesDetail: gateDetails(raw.gates),
     evidence: adaptEvidence(payload.evidence),
     dataCutoff: string(payload.data_cutoff ?? raw.data_cutoff),
