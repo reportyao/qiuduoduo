@@ -1,5 +1,9 @@
-import { COPY, PERSONAS, type PersonaCopy, type PersonaMeta } from "./personas";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { callApi } from "@/lib/callApi";
 import { usePersonaId } from "@/features/preferences/prefsStore";
+import { mergePersonaContent, type PersonaConfigResponse } from "./merge";
+import { COPY, PERSONAS, type PersonaCopy, type PersonaMeta } from "./personas";
 
 export interface PersonaContent {
   id: ReturnType<typeof usePersonaId>;
@@ -7,8 +11,18 @@ export interface PersonaContent {
   copy: PersonaCopy;
 }
 
-/** 页面只依赖这个 hook 取人设文案；切换人设时所有订阅组件自动重渲染。 */
+/**
+ * 页面只依赖这个 hook 取人设文案；切换人设时所有订阅组件自动重渲染。
+ * 启动拉一次 /personas（5 分钟缓存）；失败/未加载时用 bundled COPY 兜底。
+ */
 export function usePersonaContent(): PersonaContent {
   const id = usePersonaId();
-  return { id, meta: PERSONAS[id], copy: COPY[id] };
+  const { data } = useQuery({
+    queryKey: ["personas"],
+    queryFn: async () =>
+      (await callApi(api.client.GET("/personas"))) as unknown as PersonaConfigResponse,
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+  return { id, ...mergePersonaContent(id, data, PERSONAS[id], COPY[id]) };
 }

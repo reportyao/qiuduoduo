@@ -44,6 +44,53 @@ DEFAULT_SLOTS = {
 }
 
 
+# 前端可见文案：3 个人设不变，每人设独立一套（共 12 个前端 slot + 9 个叙述 slot ≈ 20+）。
+PERSONA_COPY_SLOTS = {
+    "zhuanjia": {
+        "brandSub": "AI 赛前预测",
+        "saleTitle": "最近停售",
+        "parlayTitle": "串关参谋 · 免费",
+        "parlaySub": "从预测生成组合，也可以自己体检",
+        "parlayCta": "去参谋",
+        "typing": "正在生成预测…",
+        "emptyTitle": "今晚没有值得发布的预测。",
+        "emptyBody": "没有把握就不发预测。你可以看今天在售、翻昨日复盘，或者看两分钟为什么。",
+        "restTitle": "今天歇一天。",
+        "restBody": "歇一天不是放弃，是纪律的一部分。明天预测照常等你。",
+        "chatGreeting": "我在。问今日预测、问为什么不出、问复盘，或者让我记住你的偏好。",
+        "whyNotLead": "不出预测不是它不会赢，是我们算不清。算不清就不预测。",
+    },
+    "laopao": {
+        "brandSub": "AI 赛前预测 · 老炮坐镇",
+        "saleTitle": "最近停售",
+        "parlayTitle": "串关参谋，免费",
+        "parlaySub": "把预测拆成组合，别让串关把账搅浑",
+        "parlayCta": "去参谋",
+        "typing": "正在生成预测…",
+        "emptyTitle": "兄弟，今晚没值得发的预测。",
+        "emptyBody": "不是没场，是没一场有把握。咱不硬凑，翻翻昨天，或者看今天在售。",
+        "restTitle": "兄弟，今晚收手。",
+        "restBody": "输钱不输阵。歇一晚，明天再预测。",
+        "chatGreeting": "来了兄弟。今天看哪场预测、为啥不出、昨天咋样，直接问。",
+        "whyNotLead": "不出预测不代表它不会赢。是这账咱算不清，算不清就不瞎给。",
+    },
+    "meng": {
+        "brandSub": "AI 赛前预测 · 陪你看方向",
+        "saleTitle": "最近停售啦",
+        "parlayTitle": "串关参谋 · 免费",
+        "parlaySub": "把预测拆成组合，我 30 秒算给你看",
+        "parlayCta": "去参谋",
+        "typing": "我正在生成预测…",
+        "emptyTitle": "今晚没有值得发布的预测。",
+        "emptyBody": "场次都看完啦，没把握就不发预测。可以看看在售，或者翻昨日复盘。",
+        "restTitle": "今天休息嘛。",
+        "restBody": "歇一天不是放弃，是纪律的一部分。明天我照常给你预测。",
+        "chatGreeting": "我在呢。今天看哪场预测、为什么不出、昨天怎么样，都可以问我。",
+        "whyNotLead": "不出预测不是它不会赢，是我算不清。算不清就不预测。",
+    },
+}
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
@@ -71,6 +118,11 @@ def ensure_seeded(db: Session) -> None:
     changed = False
     for pid in DEFAULT_PROFILES:
         for key, template in DEFAULT_SLOTS.items():
+            if (pid, key) not in existing_slots:
+                db.add(PersonaCopySlot(persona_id=pid, slot_key=key,
+                                       template=template, version=1, enabled=True))
+                changed = True
+        for key, template in PERSONA_COPY_SLOTS.get(pid, {}).items():
             if (pid, key) not in existing_slots:
                 db.add(PersonaCopySlot(persona_id=pid, slot_key=key,
                                        template=template, version=1, enabled=True))
