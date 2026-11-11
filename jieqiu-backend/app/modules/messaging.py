@@ -136,7 +136,7 @@ def build_stream(db: Session, trade_date: str, cursor: str | None = None,
             "rake_threshold": v.rake_threshold,
             "probs": {"home": v.p_home, "draw": v.p_draw, "away": v.p_away},
             "model": payload.get("model"),
-            "pick": v.pick,
+            "pick": v.pick if v.tier != "market_reference" else None,
             "status": v.status,
             "tier": v.tier,
             "model_status": v.model_status,
@@ -148,7 +148,7 @@ def build_stream(db: Session, trade_date: str, cursor: str | None = None,
         }
 
     # 避雷：所有被砍场（任一闸 fail），按抽水深→浅排序，why = 首道死闸（F6 死因可对拍）
-    killed = [v for v in verdicts if v.status == "killed"]
+    killed = [v for v in verdicts if v.status == "killed" and v.tier != "market_reference"]
 
     def kill_why(v: Verdict) -> tuple[str, str]:
         return avoid_reason(v)

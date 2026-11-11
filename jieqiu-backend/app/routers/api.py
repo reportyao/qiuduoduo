@@ -358,7 +358,7 @@ def verdict_detail(verdict_id: str, db: Session = Depends(get_db)):
         "data_quality": v.data_quality or {},
         "gates": v.gates,
         "model": (v.payload or {}).get("model"),
-        "pick": v.pick,
+        "pick": v.pick if v.tier != "market_reference" else None,
         "payload": v.payload,
         "payload_hash": v.payload_hash,
         "sealed_at": v.sealed_at.isoformat() if v.sealed_at else None,

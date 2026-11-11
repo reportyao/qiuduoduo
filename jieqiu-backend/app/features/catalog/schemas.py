@@ -107,27 +107,6 @@ class AvoidListResponse(BaseModel):
     items: list[AvoidItem]
 
 
-class WaterRankItem(BaseModel):
-    rank: int
-    verdict_id: str
-    match_id: str
-    match_no: str
-    home: str
-    away: str
-    league: str
-    kickoff: str
-    rake: float
-    return_pct: float
-    status: str
-    gates: dict[str, str]
-
-
-class WaterRankResponse(BaseModel):
-    date: str
-    count: int
-    items: list[WaterRankItem]
-
-
 class CalendarDay(BaseModel):
     date: str
     matches: int
@@ -143,64 +122,3 @@ class CalendarResponse(BaseModel):
     days: list[CalendarDay]
 
 
-class SPMovementItem(BaseModel):
-    match_id: str
-    match_no: str
-    home: str
-    away: str
-    pool: str
-    goal_line: str
-    captured_at: str
-    prev_captured_at: str | None = None
-    sp: dict[str, float]
-    prev_sp: dict[str, float] | None = None
-    delta: dict[str, float] | None = None
-    delta_pct: dict[str, float] | None = None
-
-
-class SPMovementResponse(BaseModel):
-    date: str
-    count: int
-    items: list[SPMovementItem]
-
-
-class SentinelItem(BaseModel):
-    id: int
-    type: str
-    severity: int
-    match_id: str | None = None
-    match_no: str | None = None
-    home: str | None = None
-    away: str | None = None
-    payload: dict
-    data_cutoff: str
-    created_at: str
-    fanned_out: bool
-
-
-class SentinelResponse(BaseModel):
-    count: int
-    items: list[SentinelItem]
-
-
-class LiveTimelineItem(BaseModel):
-    captured_at: str
-    pool: str
-    goal_line: str
-    sp: dict[str, float]
-
-
-class MatchLiveResponse(BaseModel):
-    match_id: str
-    match_no: str
-    league: str
-    home: str
-    away: str
-    kickoff: str
-    state: str = Field(description="scheduled / awaiting_result / finished")
-    live_feed: bool = Field(description="是否接入实时事件源；false 时不伪造进球时间线")
-    score: str | None = None
-    result_source: str | None = None
-    updated_at: str | None = None
-    timeline: list[LiveTimelineItem]
-    note: str

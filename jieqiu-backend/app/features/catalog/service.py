@@ -1,4 +1,4 @@
-"""公开目录查询：比赛列表、判决流、真实成本、避雷/水位、日历、SP 异动、哨兵、实况。"""
+"""公开目录查询：比赛列表、判决流、真实成本、避雷、日历。"""
 from __future__ import annotations
 
 import calendar as _calendar
@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ...config import get_settings
-from ...models import Event, MatchResult, SPMatch, SPSnapshot, Verdict
+from ...models import SPMatch, SPSnapshot, Verdict
 from ...modules.messaging import avoid_reason
 from ...modules.timeutil import trade_date_from_kickoff
 
@@ -64,7 +64,7 @@ def _card(v: Verdict) -> dict:
         "rake": v.rake,
         "rake_threshold": v.rake_threshold,
         "probs": {"home": v.p_home, "draw": v.p_draw, "away": v.p_away},
-        "pick": v.pick,
+        "pick": v.pick if v.tier != "market_reference" else None,
         "status": v.status,
         "tier": v.tier,
         "model_status": v.model_status,
@@ -196,24 +196,6 @@ def avoid_list(db: Session, date: str, limit: int = 50) -> dict:
     return {"date": d.isoformat(), "count": len(items), "items": items}
 
 
-def water_rank(db: Session, date: str, limit: int = 3) -> dict:
-    d = parse_date(date)
-    rows = db.scalars(
-        select(Verdict).where(Verdict.trade_date == d.isoformat())
-        .order_by(Verdict.rake.asc())).all()
-    items = []
-    for i, v in enumerate(rows[:limit], 1):
-        items.append({
-            "rank": i, "verdict_id": v.id, "match_id": v.match_id,
-            "match_no": v.match_no, "home": v.home, "away": v.away,
-            "league": v.league, "kickoff": v.kickoff, "rake": v.rake,
-            "return_pct": round((1 - v.rake) * 100, 2),
-            "status": v.status,
-            "gates": _gate_results(v) or {},
-        })
-    return {"date": d.isoformat(), "count": len(items), "items": items}
-
-
 def calendar_month(db: Session, month: str | None = None) -> dict:
     now_cn = datetime.now(CN)
     if month is None:
@@ -252,115 +234,3 @@ def calendar_month(db: Session, month: str | None = None) -> dict:
                 by_date[key][v.status] += 1
     days = list(by_date.values())
     return {"month": f"{year:04d}-{mon:02d}", "total_matches": len(matches), "days": days}
-
-
-def sp_movements(db: Session, date: str | None = None, limit: int = 50) -> dict:
-    d = parse_date(date) if date else datetime.now(CN).date()
-    rows = db.scalars(
-        select(SPSnapshot).where(
-            SPSnapshot.captured_at >= d.isoformat(),
-            SPSnapshot.captured_at < (d + timedelta(days=1)).isoformat())
-        .order_by(SPSnapshot.captured_at.desc(), SPSnapshot.id.desc())
-        .limit(5000)).all()
-    grouped: dict[tuple[str, str], list[SPSnapshot]] = {}
-    for s in rows:
-        key = (s.match_id, s.pool)
-        bucket = grouped.setdefault(key, [])
-        if len(bucket) < 2:
-            bucket.append(s)
-    ids = list({mid for mid, _pool in grouped})
-    matches = {m.match_id: m for m in db.scalars(
-        select(SPMatch).where(SPMatch.match_id.in_(ids)))} if ids else {}
-    items = []
-    for (match_id, pool), snaps in grouped.items():
-        latest = snaps[0]
-        prev = snaps[1] if len(snaps) > 1 else None
-        m = matches.get(match_id)
-        delta = None
-        delta_pct = None
-        if prev is not None:
-            delta = {k: round(getattr(latest, f"sp_{k}") - getattr(prev, f"sp_{k}"), 3)
-                     for k in ("h", "d", "a")}
-            delta_pct = {k: (round((getattr(latest, f"sp_{k}") / getattr(prev, f"sp_{k}") - 1) * 100, 2)
-                             if getattr(prev, f"sp_{k}") else None)
-                         for k in ("h", "d", "a")}
-        items.append({
-            "match_id": match_id,
-            "match_no": m.match_no if m else "",
-            "home": m.home if m else "",
-            "away": m.away if m else "",
-            "pool": pool, "goal_line": latest.goal_line or "",
-            "captured_at": latest.captured_at,
-            "prev_captured_at": prev.captured_at if prev else None,
-            "sp": {"h": latest.sp_h, "d": latest.sp_d, "a": latest.sp_a},
-            "prev_sp": ({"h": prev.sp_h, "d": prev.sp_d, "a": prev.sp_a}
-                        if prev else None),
-            "delta": delta, "delta_pct": delta_pct,
-        })
-    items.sort(key=lambda x: (abs(sum((x["delta"] or {}).values())), x["captured_at"]),
-               reverse=True)
-    items = items[:limit]
-    return {"date": d.isoformat(), "count": len(items), "items": items}
-
-
-def sentinel_feed(db: Session, match_id: str | None = None, limit: int = 50) -> dict:
-    q = select(Event)
-    if match_id:
-        q = q.where(Event.match_id == match_id)
-    rows = db.scalars(q.order_by(Event.id.desc()).limit(limit)).all()
-    ids = {e.match_id for e in rows if e.match_id}
-    matches = {m.match_id: m for m in db.scalars(
-        select(SPMatch).where(SPMatch.match_id.in_(ids)))} if ids else {}
-    items = []
-    for e in rows:
-        m = matches.get(e.match_id or "")
-        items.append({
-            "id": e.id, "type": e.type, "severity": e.severity,
-            "match_id": e.match_id, "match_no": m.match_no if m else None,
-            "home": m.home if m else None, "away": m.away if m else None,
-            "payload": e.payload or {}, "data_cutoff": e.data_cutoff,
-            "created_at": e.created_at.isoformat(),
-            "fanned_out": e.fanout_at is not None,
-        })
-    return {"count": len(items), "items": items}
-
-
-def match_live(db: Session, match_id: str) -> dict | None:
-    m = db.get(SPMatch, match_id)
-    if m is None:
-        return None
-    kickoff = datetime.strptime(m.kickoff[:19], "%Y-%m-%d %H:%M:%S")
-    now_cn = datetime.now(CN).replace(tzinfo=None)
-    d = kickoff.date()
-    result = db.scalar(
-        select(MatchResult).where(
-            MatchResult.home == m.home, MatchResult.away == m.away,
-            MatchResult.match_date >= (d - timedelta(days=1)).isoformat(),
-            MatchResult.match_date <= (d + timedelta(days=1)).isoformat())
-        .order_by(MatchResult.id.desc()).limit(1))
-    snaps = db.scalars(
-        select(SPSnapshot).where(SPSnapshot.match_id == match_id)
-        .order_by(SPSnapshot.id.desc()).limit(20)).all()
-    timeline = [{
-        "captured_at": s.captured_at, "pool": s.pool,
-        "goal_line": s.goal_line or "",
-        "sp": {"h": s.sp_h, "d": s.sp_d, "a": s.sp_a},
-    } for s in reversed(snaps)]
-    if result is not None:
-        state = "finished"
-        score = f"{result.goals_home}-{result.goals_away}"
-    elif now_cn < kickoff:
-        state, score = "scheduled", None
-    else:
-        state, score = "awaiting_result", None
-    return {
-        "match_id": m.match_id, "match_no": m.match_no, "league": m.league,
-        "home": m.home, "away": m.away, "kickoff": m.kickoff,
-        "state": state, "live_feed": False, "score": score,
-        "result_source": result.source if result else None,
-        "updated_at": (result.retrieved_at if result else
-                       (snaps[0].captured_at if snaps else None)),
-        "timeline": timeline,
-        "note": ("实时事件源尚未接入：这里只展示已同步赛果与 SP 快照，"
-                 "不生成虚构的进球时间线。终场结果由赛果同步任务回填。"),
-    }

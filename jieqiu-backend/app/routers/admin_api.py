@@ -1428,7 +1428,7 @@ class ModelConfigBody(BaseModel):
 def _model_config_dict(row: LeagueModelConfig | None, league: str) -> dict:
     return {
         "league": league,
-        "dc_status": row.dc_status if row else "disabled",
+        "dc_status": row.dc_status if row else "shadow",
         "sm_status": row.sm_status if row else "disabled",
         "dc_weight": row.dc_weight if row else 1.0,
         "sm_weight": row.sm_weight if row else 0.0,
