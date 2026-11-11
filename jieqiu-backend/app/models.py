@@ -462,6 +462,8 @@ class LLMProfile(Base):
     input_price_cny_per_m: Mapped[float] = mapped_column(Float, default=0.0)
     output_price_cny_per_m: Mapped[float] = mapped_column(Float, default=0.0)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    # auto=按模型默认（可能推理）；off=请求时 enable_thinking=false
+    reasoning: Mapped[str] = mapped_column(String(8), default="auto")
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 

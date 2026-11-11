@@ -905,6 +905,7 @@ def _llm_profile_view(name: str, db: Session) -> dict:
         "configured": effective["configured"],
         "source": effective["source"],  # admin | env | none
         "enabled": effective.get("enabled", True),
+        "reasoning": effective.get("reasoning", "auto"),
         "input_price_cny_per_m": effective["input_price_cny_per_m"],
         "output_price_cny_per_m": effective["output_price_cny_per_m"],
         "admin_key_set": bool(row and row.api_key_enc),
@@ -921,6 +922,7 @@ class LLMProfileUpdate(BaseModel):
     input_price_cny_per_m: float = Field(default=0, ge=0, le=10000)
     output_price_cny_per_m: float = Field(default=0, ge=0, le=10000)
     enabled: bool = True
+    reasoning: str = Field(default="auto", pattern="^(auto|off)$")
 
 
 @router.get("/api/llm/profiles")
@@ -949,6 +951,7 @@ def admin_llm_profile_update(name: str, body: LLMProfileUpdate, request: Request
     row.input_price_cny_per_m = body.input_price_cny_per_m
     row.output_price_cny_per_m = body.output_price_cny_per_m
     row.enabled = body.enabled
+    row.reasoning = body.reasoning
     if body.clear_key:
         row.api_key_enc = ""
     elif body.api_key is not None and body.api_key.strip():
