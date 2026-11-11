@@ -413,7 +413,7 @@ export default function HomeScreen() {
                   setOpenedAll(true);
                 }}
                 onPicker={() => setPickerOpen(true)}
-                onOnSale={() => router.push("/tools/on-sale")}
+                onOnSale={() => router.navigate("/(tabs)/matches")}
                 onParlay={() => router.push({
                   pathname: "/tools/parlay",
                   params: { seed: String(Date.now()) },
@@ -475,7 +475,7 @@ export default function HomeScreen() {
                     focus={focus}
                     onOpenVerdict={openVerdict}
                     onWhyNot={openWhyNot}
-                    onOnSale={() => router.push("/tools/on-sale")}
+                    onOnSale={() => router.navigate("/(tabs)/matches")}
                     onSwitch={() => setPickerOpen(true)}
                   />
                 )}
@@ -513,7 +513,7 @@ export default function HomeScreen() {
                 body="稍后下拉刷新，或先看看今日在售。"
                 secondaryLabel="看昨日复盘"
                 onSecondary={() => chooseDate(shiftDateCn(currentTradeDateCn(), -1))}
-                onOnSale={() => router.push("/tools/on-sale")}
+                onOnSale={() => router.navigate("/(tabs)/matches")}
               />
             ) : stream.restDay ? (
               <RestMessage
@@ -531,7 +531,7 @@ export default function HomeScreen() {
                     onSecondary={() =>
                       chooseDate(viewingToday ? shiftDateCn(currentTradeDateCn(), -1) : currentTradeDateCn())
                     }
-                    onOnSale={() => router.push("/tools/on-sale")}
+                    onOnSale={() => router.navigate("/(tabs)/matches")}
                   />
                 ) : null}
                 <AvoidMessage items={stream.avoid} onOpen={openWhyNot} />

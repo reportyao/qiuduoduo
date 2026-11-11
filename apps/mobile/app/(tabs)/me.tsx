@@ -154,6 +154,40 @@ export default function MeScreen() {
           />
         </SettingsGroup>
 
+        <SettingsGroup title="助理技能">
+          <SettingsRow
+            title="串关参谋"
+            subtitle="2–6 场组合、相关性与四维体检"
+            icon="git-merge-outline"
+            onPress={() => router.push("/tools/parlay")}
+          />
+          <SettingsRow
+            title="抽水计算"
+            subtitle="三向赔率 → 真实抽水"
+            icon="water-outline"
+            onPress={() => router.push("/tools/rake")}
+          />
+          <SettingsRow
+            title="赔率换算"
+            subtitle="欧 / 港 / 印尼 / 美式"
+            icon="swap-horizontal-outline"
+            onPress={() => router.push("/tools/odds")}
+          />
+          <SettingsRow
+            title="仓位计算"
+            subtitle="凯利分数与单注上限"
+            icon="stats-chart-outline"
+            onPress={() => router.push("/tools/stake")}
+          />
+          <SettingsRow
+            title="回本线"
+            subtitle="这个赔率要赢多少才不亏"
+            icon="analytics-outline"
+            onPress={() => router.push("/tools/break-even")}
+            last
+          />
+        </SettingsGroup>
+
         <SettingsGroup title="纪律">
           <SettingsRow
             title="连败保护"
