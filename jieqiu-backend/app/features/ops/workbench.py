@@ -13,9 +13,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ...config import get_settings
-from ...models import (AIAnalysis, CollectorStatus, DecisionSnapshot,
+from ...models import (AIAnalysis, AIResearch, CollectorStatus, DecisionSnapshot,
                        ModelRun, PushToken, RecommendationPlan, ReviewRun,
-                       SPMatch, SPSnapshot, Verdict)
+                       SPMatch, SPSnapshot, SportmonksMatchData, Verdict)
 from ...modules import api_football, llm_gateway
 from ...modules.sealchain import latest_chain_status
 from ...modules.supply import content_supply
@@ -146,7 +146,31 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
         ["restart_collector"] if not c_ok else [],
     ))
 
-    # 2 入库
+    # 2 情报：Sportmonks 预测/市场 + AI 情报
+    if match_ids:
+        sm_count = int(db.scalar(select(func.count()).select_from(SportmonksMatchData).where(
+            SportmonksMatchData.match_id.in_(match_ids))) or 0)
+        intel_ready = int(db.scalar(select(func.count()).select_from(AIResearch).where(
+            AIResearch.match_id.in_(match_ids), AIResearch.status == "ready")) or 0)
+    else:
+        sm_count = intel_ready = 0
+    info_ok = no_matches or (sm_count == len(matches) and intel_ready == len(matches))
+    info_warn = (not no_matches) and (sm_count > 0 or intel_ready > 0)
+    stages.append(_stage(
+        "intel", "情报", "Sportmonks 预测/市场和 AI 情报是否齐全？",
+        "Sportmonks 提供 1X2 预测与 Pinnacle 市场；AI 情报是公开事实的中文摘要，不是概率。",
+        "idle" if no_matches else _state(info_ok, info_warn),
+        (f"Sportmonks 覆盖 {sm_count}/{len(matches)} 场，AI 情报就绪 {intel_ready}/{len(matches)} 场"
+         if not no_matches else "无在售场次，情报同步待下一销售日"),
+        [
+            {"label": "Sportmonks 覆盖", "value": f"{sm_count}/{len(matches)}"},
+            {"label": "AI 情报就绪", "value": f"{intel_ready}/{len(matches)}"},
+        ],
+        "同步 Sportmonks" if sm_count < len(matches) else ("同步 AI 情报" if intel_ready < len(matches) else "正常"),
+        [],
+    ))
+
+    # 3 入库
     ingest_ok = no_matches or (len(matches) > 0 and snapshots_today > 0)
     stages.append(_stage(
         "ingest", "入库", "采集数据有没有正确进入后端？",

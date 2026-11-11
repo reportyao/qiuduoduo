@@ -976,6 +976,7 @@ function llmProfileCard(profile, usage, lastError) {
       <div class="integration-meta">
         <b>作用</b><span>${esc(profile.purpose)}</span>
         <b>模型</b><span class="mono">${esc(profile.provider)} · ${esc(profile.model || "—")}</span>
+        <b>推理</b><span>${profile.reasoning === "off" ? "关闭（enable_thinking=false）" : "自动"}</span>
         <b>接口</b><span class="mono">${esc(profile.base_url || "—")}</span>
         <b>来源</b><span>${source} · ${keyState}</span>
         <b>今日</b><span>${usage.calls} 次调用 · ¥${num(usage.cost, 4)}${lastError ? ` · 最近失败 ${esc(lastError)}` : ""}</span>
@@ -1295,7 +1296,35 @@ async function loadData() {
       </div>
     </div>
     ${footballCard(data.api_football || {})}
+    <div class="card">
+      <div class="toolbar"><div><h2 style="margin:0">Sportmonks</h2><div class="card-sub" style="margin:0">预测 1X2 + 市场 1X2；30 分钟自动同步</div></div>
+        <button class="btn secondary small" id="sm-sync">立即同步</button></div>
+      <div class="status-grid">
+        <div class="status-item"><div><b>配置</b><div class="status-label">JQ_SPORTMONKS_TOKEN</div></div>${data.sportmonks.configured ? statusPill("ok") : statusPill("fail")}</div>
+        <div class="status-item"><div><b>覆盖</b><div class="status-label">${data.sportmonks.covered}/${data.sportmonks.matches} 场 · 赔率 ${data.sportmonks.with_odds} · 预测 ${data.sportmonks.with_probs}</div></div><span class="mono">${esc(fmtTime(data.sportmonks.latest, true))}</span></div>
+      </div>
+      ${data.sportmonks.missing_count ? `<div class="card-sub" style="margin-top:10px">未映射 ${data.sportmonks.missing_count} 场：${data.sportmonks.missing.map(m => esc(m.match_no + " " + m.home + " vs " + m.away)).join("；")}</div>` : ""}
+    </div>
+    <div class="card">
+      <div class="toolbar"><div><h2 style="margin:0">AI 情报</h2><div class="card-sub" style="margin:0">Sportmonks 事实 + 中文摘要；30 分钟自动同步</div></div>
+        <button class="btn secondary small" id="intel-sync">立即同步</button></div>
+      <div class="status-grid">
+        <div class="status-item"><div><b>就绪</b><div class="status-label">${data.ai_research.ready}/${data.ai_research.matches} 场 · 不可用 ${data.ai_research.unavailable}</div></div><span class="mono">${esc(fmtTime(data.ai_research.latest, true))}</span></div>
+      </div>
+    </div>
   `;
+  const smSync = el("#sm-sync");
+  if (smSync) smSync.onclick = async () => {
+    smSync.disabled = true; smSync.textContent = "同步中…";
+    try { const r = await post("/admin/api/sportmonks/sync", {}); toast(`Sportmonks 同步：${r.synced}/${r.matches}`); await loadData(); }
+    catch (e) { toast(e.message, "error"); smSync.disabled = false; smSync.textContent = "立即同步"; }
+  };
+  const intelSync = el("#intel-sync");
+  if (intelSync) intelSync.onclick = async () => {
+    intelSync.disabled = true; intelSync.textContent = "同步中…";
+    try { const r = await post("/admin/api/ai-research/sync", {}); toast(`AI 情报：${r.synced}/${r.matches}`); await loadData(); }
+    catch (e) { toast(e.message, "error"); intelSync.disabled = false; intelSync.textContent = "立即同步"; }
+  };
 }
 
 async function loadLogs() {

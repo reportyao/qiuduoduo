@@ -26,14 +26,14 @@ from ..features.ops import workbench as ops_workbench
 from ..features.recommendations import service as recommendation_service
 from ..features.tools import service as parlay_service
 from ..features.tools.schemas import ParlayPlanRequest
-from ..models import (AdminAudit, AdminUser, ApiFootballFixture,
+from ..models import (AIResearch, AdminAudit, AdminUser, ApiFootballFixture,
                       DecisionSnapshot, InteractionEvent, LLMProfile, CollectorStatus,
                       Notification, PersonaLLMModel, PushToken,
                       RecommendationEvent, RecommendationPlan, ReviewRun,
-                      SPSnapshot, Verdict)
+                      SPMatch, SPSnapshot, SportmonksMatchData, Verdict)
 from ..modules import admin_auth, api_football, llm_gateway, persona_llm, persona_registry, supply
 from ..modules.sealchain import latest_chain_status
-from ..modules.timeutil import CN, trade_date_now
+from ..modules.timeutil import CN, trade_date_now, trade_window
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin-ui"],
@@ -1126,8 +1126,76 @@ def admin_data(db: Session = Depends(get_db), _: None = Depends(admin_auth.requi
                                 .order_by(SPSnapshot.captured_at.desc())),
         },
         "api_football": af,
+        "sportmonks": _sportmonks_status(db, date),
+        "ai_research": _ai_research_status(db, date),
         "supply": supply.content_supply(db, date),
     }
+
+
+def _sportmonks_status(db: Session, date: str) -> dict:
+    start, end = trade_window(date)
+    matches = list(db.scalars(select(SPMatch).where(
+        SPMatch.kickoff >= start, SPMatch.kickoff <= end)).all())
+    rows = {row.match_id: row for row in db.scalars(select(SportmonksMatchData)).all()}
+    missing = [{"match_no": m.match_no, "home": m.home, "away": m.away,
+                "kickoff": m.kickoff, "league": m.league}
+               for m in matches if m.match_id not in rows]
+    latest = max((r.captured_at for r in rows.values() if r.captured_at), default=None)
+    covered = [rows[m.match_id] for m in matches if m.match_id in rows]
+    return {
+        "configured": bool(get_settings().sportmonks_token),
+        "matches": len(matches),
+        "covered": len(covered),
+        "missing": missing[:12],
+        "missing_count": len(missing),
+        "with_odds": sum(1 for r in covered if r.odds),
+        "with_probs": sum(1 for r in covered if r.probs),
+        "latest": latest.isoformat() if latest else None,
+    }
+
+
+def _ai_research_status(db: Session, date: str) -> dict:
+    start, end = trade_window(date)
+    ids = [m.match_id for m in db.scalars(select(SPMatch).where(
+        SPMatch.kickoff >= start, SPMatch.kickoff <= end)).all()]
+    rows = list(db.scalars(select(AIResearch).where(AIResearch.match_id.in_(ids))).all()) if ids else []
+    latest = max((r.captured_at for r in rows if r.captured_at), default=None)
+    return {
+        "matches": len(ids),
+        "ready": sum(1 for r in rows if r.status == "ready"),
+        "unavailable": sum(1 for r in rows if r.status != "ready"),
+        "latest": latest.isoformat() if latest else None,
+    }
+
+
+class SyncBody(BaseModel):
+    date: str | None = None
+
+
+@router.post("/api/sportmonks/sync")
+def admin_sportmonks_sync(body: SyncBody, request: Request,
+                          db: Session = Depends(get_db),
+                          principal: admin_auth.AdminPrincipal = Depends(
+                              admin_auth.require_role("operator"))):
+    from ..modules.sportmonks import sync_trade_date
+    date = body.date or trade_date_now()
+    result = sync_trade_date(db, date)
+    _audit(db, principal, "sportmonks.sync", "data", date,
+           after=result, request=request)
+    return result
+
+
+@router.post("/api/ai-research/sync")
+def admin_ai_research_sync(body: SyncBody, request: Request,
+                           db: Session = Depends(get_db),
+                           principal: admin_auth.AdminPrincipal = Depends(
+                               admin_auth.require_role("operator"))):
+    from ..modules.intel_research import sync_trade_date
+    date = body.date or trade_date_now()
+    result = sync_trade_date(db, date)
+    _audit(db, principal, "ai_research.sync", "data", date,
+           after=result, request=request)
+    return result
 
 
 @router.get("/api/logs")
