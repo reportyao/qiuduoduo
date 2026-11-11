@@ -794,37 +794,6 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
 
 .status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
 
-.football-card .af-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  padding: 14px 0 12px;
-  border-top: 1px solid var(--line);
-}
-
-.af-metric span { display: block; color: var(--muted); font-size: 11px; }
-.af-metric b {
-  display: block;
-  margin-top: 4px;
-  color: var(--ink);
-  font-family: var(--mono);
-  font-size: 18px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-
-.af-quota { height: 4px; overflow: hidden; border-radius: 2px; background: var(--surface-3); }
-.af-quota span { display: block; height: 100%; border-radius: 2px; background: var(--brand); }
-.af-foot { margin-top: 8px; color: var(--muted); font-size: 11px; }
-.af-warnings { margin-top: 12px; border-top: 1px solid var(--line); }
-.af-warning {
-  padding: 7px 0 7px 10px;
-  border-left: 2px solid var(--amber);
-  color: var(--amber);
-  font-size: 12px;
-}
-.af-warning + .af-warning { margin-top: 2px; }
-
 .status-grid.tight { grid-template-columns: 1fr; }
 
 .status-item {
@@ -1004,7 +973,6 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
   .flow-step { padding: 12px 0; border-top: 1px solid var(--line); border-left: 0; }
   .flow-step:first-child { border-top: 0; padding-left: 0; }
   .status-grid { grid-template-columns: 1fr; }
-  .football-card .af-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .toolbar { align-items: flex-start; flex-direction: column; }
   .toolbar input, .toolbar select { width: 100%; }
   .form-grid { grid-template-columns: 1fr; }
@@ -1065,6 +1033,4 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
 .sm-matrix .row-actions { min-width: 150px; }
 .sm-matrix .row-actions .btn { margin: 0 4px 4px 0; }
 .sm-matrix .ellipsis { max-width: 180px; }
-.legacy-sources details > summary { cursor: pointer; color: var(--ink-2); font-size: 14px; font-weight: 500; }
-.legacy-sources details[open] > summary { margin-bottom: 10px; }
-.btn.danger { color: var(--red); }
+.sm-matrix .btn.danger { color: var(--red); }

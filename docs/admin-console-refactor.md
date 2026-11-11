@@ -105,3 +105,11 @@ node --check app/static/admin/admin.js
 - 候选 fixture 查询、绑定、解除接口。
 - 模型效果 Brier 聚合。
 - Sportmonks Pinnacle 单独作为第二市场源时市闸 `pass`。
+
+## 数据源界面收口（2026-11-11 晚）
+
+- 接入中心只保留「主数据链路」三张大卡：Sportmonks、AI 情报、竞彩 SP 采集器。
+- API-Football、The Odds API 从大卡片降为一张「辅助数据（只补缺口）」表格，明确阵容/伤停/国际盘兜底用途，不再作为发布前置。
+- 数据源页删除旧 `footballCard` 大卡和折叠的「兜底数据源」，改为矩阵下方的紧凑辅助数据卡。
+- 数据矩阵表头改为「SM 预测 / SM 市场」，避免和自有融合模型混淆；KPI 同步改为「SM 预测」。
+- 移除旧 `.football-card/.af-*` 样式；危险按钮样式收窄到矩阵行内，避免影响全局 `.btn.danger`。
