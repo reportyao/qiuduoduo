@@ -96,7 +96,7 @@
 
 ## 二、验证结果
 
-- 后端：`321 passed`。
+- 后端：`324 passed`。
 - 移动端：`45 passed`，`tsc --noEmit`、`eslint` 通过。
 - 生产：
   - 今日 6 场全部映射，预测/赔率/AI 情报均为 6/6，赔率全部 fresh。
@@ -110,9 +110,13 @@
 1. **按联赛开关模型**：`model_enabled` 仍是“有模型概率即展示”，没有按联赛 Brier/样本外验证自动关闭。模型效果页已具备判断依据，但需要样本 ≥30 再动发布逻辑。
 2. **Sportmonks Prediction Model 只做展示/对照**：还没有进入 DC 模型特征或按联赛融合；当前只用于后台矩阵和模型效果页。
 3. **AI 情报没有“全网搜索”**：目前只翻译 Sportmonks match-facts + sidelined，不是 web search。用户之前提过“未启用的联赛调用 LLM 全网搜索”，这块需要搜索供应商/浏览能力与事实引用规范，不能靠模型记忆编造。
-4. **AI 情报每 30 分钟重复调用 LLM**：事实未变也会重算。后续应存 facts hash，只有事实变化或过期才调用，控制成本。
-5. **Sportmonks 错误可观测性不足**：`_get` 对 429/5xx 直接返回 None，没有重试/退避，也没有结构化错误日志；同步失败时后台只能看到 missing。
-6. **Sportmonks 覆盖受订阅限制**：当前计划每天只有约 21 场 fixture，竞彩超出部分只能显示 missing 并走人工映射；候选里没有的场次无法补。
-7. **分享页仍未按“AI 情报不进分享”重新设计**：当前分享仍只带判决叙述，未带 AI 情报，但没有做专门的分享内容分层。
-8. **生产仍是 SQLite**：Postgres 迁移、备份/PITR 仍是上线阻塞项。
-9. **回填赛果的对账**：历史 71 条 Sportmonks 回填结果只做了严格队名+开球时间匹配，建议抽样与 football-data 重叠场次对账后再扩大回填窗口。
+4. **Sportmonks 覆盖受订阅限制**：当前计划每天只有约 21 场 fixture，竞彩超出部分只能显示 missing 并走人工映射；候选里没有的场次无法补。
+5. **分享页仍未按“AI 情报不进分享”重新设计**：当前分享仍只带判决叙述，未带 AI 情报，但没有做专门的分享内容分层。
+6. **生产仍是 SQLite**：Postgres 迁移、备份/PITR 仍是上线阻塞项。
+7. **回填赛果的对账**：历史 71 条 Sportmonks 回填结果只做了严格队名+开球时间匹配，建议抽样与 football-data 重叠场次对账后再扩大回填窗口。
+
+## 四、本轮追加完成（深审后继续）
+
+- **Sportmonks 429/5xx 重试**：`_get` 对 429/500/502/503/504 最多重试 2 次，支持 `Retry-After`，日志只记录 path 和状态码，不泄露 token。
+- **AI 情报 facts hash 缓存**：`ai_research.facts_hash`（Alembic `20261111_20`）记录事实+伤停摘要；事实不变且未过期时只续期，不重复调用 LLM；确定性兜底文案不算有效缓存，会继续重试。
+- **SQLite 启动期兼容**：`_REQUIRED_COLUMNS` 补 `ai_research.facts_hash`、`llm_profiles.reasoning`，生产 SQLite 启动会自动 ALTER，不依赖手工改表。

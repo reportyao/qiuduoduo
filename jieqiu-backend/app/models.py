@@ -171,6 +171,7 @@ class AIResearch(Base):
     headline: Mapped[str] = mapped_column(String(200), default="")
     points: Mapped[list] = mapped_column(JSON, default=list)
     sources: Mapped[list] = mapped_column(JSON, default=list)
+    facts_hash: Mapped[str] = mapped_column(String(64), default="")
     captured_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     error: Mapped[str] = mapped_column(String(300), default="")

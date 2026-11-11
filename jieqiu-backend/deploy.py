@@ -283,6 +283,8 @@ WantedBy=multi-user.target
     cron_env = {
         "JQ_DATABASE_URL": PROD_DB_URL,
         "JQ_ENV": "prod",
+        # cron 里的 intel/persona 需要解密后台保存的 LLM Key；不给 JWT 会悄悄降级成模板。
+        "JQ_JWT_SECRET": jwt_secret,
         "JQ_XG_DATA_PATH": f"{ROOT}/xg_matches.csv",
         "JQ_XG_EXTRA_DIR": f"{DATA}/xg_dumps",
         "JQ_FREEZE_BASELINE": f"{DATA}/freeze_baseline.json",
