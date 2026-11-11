@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { callApi } from "@/lib/callApi";
@@ -24,5 +25,9 @@ export function usePersonaContent(): PersonaContent {
     staleTime: 5 * 60_000,
     retry: 1,
   });
-  return { id, ...mergePersonaContent(id, data, PERSONAS[id], COPY[id]) };
+  // 避免每次父组件渲染都生成新 meta/copy，导致整棵订阅树无谓重渲染。
+  return useMemo(
+    () => ({ id, ...mergePersonaContent(id, data, PERSONAS[id], COPY[id]) }),
+    [data, id],
+  );
 }

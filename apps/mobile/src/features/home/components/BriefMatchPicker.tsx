@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui";
 import { formatTime } from "@/lib/format";
@@ -24,7 +25,7 @@ function statusLabel(option: BriefMatchOption): string {
  * 首页开场的选择条：助理先问“先看哪场”，用户点一场才展开该场预测。
  * 默认只露前 5 场，其余通过“全部 N 场”进入完整列表。
  */
-export function BriefMatchPicker({
+export const BriefMatchPicker = memo(function BriefMatchPicker({
   options,
   total,
   expanded,
@@ -88,7 +89,7 @@ export function BriefMatchPicker({
       </Text>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm, marginTop: spacing.sm },
