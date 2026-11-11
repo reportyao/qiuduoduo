@@ -1332,7 +1332,7 @@ async function loadLogs() {
   root.innerHTML = `
     <div class="card">
       <div class="toolbar"><div><h2 style="margin:0">运行日志</h2><div class="card-sub" style="margin:0">只读最近日志，不做文件遍历</div></div>
-      <select id="log-name">${["sync", "recommendations", "persona", "assistant", "purge", "db_maint", "backtest"].map(x => `<option value="${x}" ${state.logName === x ? "selected" : ""}>${x}.log</option>`).join("")}</select></div>
+      <select id="log-name">${["sync", "sportmonks", "intel", "recommendations", "persona", "assistant", "purge", "db_maint", "backtest"].map(x => `<option value="${x}" ${state.logName === x ? "selected" : ""}>${x}.log</option>`).join("")}</select></div>
       <div id="log-box" class="terminal">加载中…</div>
     </div>
   `;
