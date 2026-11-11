@@ -465,7 +465,7 @@ async function loadPersonas() {
       </div>
       <div class="card">
         <h2 class="card-title">文案槽位</h2>
-        <div class="card-sub">作为 LLM 失败时的兜底模板。</div>
+        <div class="card-sub">3 个人设不变；每人设 ${data.slot_keys.length} 个槽位，控制前端可见文案与叙述兜底。只改语气，不改数字。</div>
         <div id="slot-editor">${renderSlot(data)}</div>
       </div>
     </div>
@@ -532,11 +532,38 @@ async function loadPersonas() {
   }
 }
 
+const SLOT_LABELS = {
+  brandSub: "品牌副标题",
+  saleTitle: "最近停售标题",
+  parlayTitle: "串关标题",
+  parlaySub: "串关副标题",
+  parlayCta: "串关按钮",
+  typing: "生成中提示",
+  emptyTitle: "空态标题",
+  emptyBody: "空态正文",
+  restTitle: "休息日标题",
+  restBody: "休息日正文",
+  chatGreeting: "聊天问候",
+  whyNotLead: "为什么不出",
+  narration_promoted: "已发布叙述",
+  narration_screening: "复核中叙述",
+  narration_killed: "被砍叙述",
+  today_pick: "今日主看",
+  plan_intro: "组合开场",
+  plan_why_not: "组合劝退",
+  locked: "锁定提示",
+  paywall: "付费墙",
+  empty: "空态兜底",
+  postmatch: "赛后复盘",
+  review_badge: "复核徽章",
+  push: "推送文案",
+};
+
 function renderSlot(data) {
   return `
     <form id="slot-form" class="form-grid">
       <div><label>人设</label><select id="slot-persona">${data.profiles.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("")}</select></div>
-      <div><label>槽位</label><select id="slot-key">${data.slot_keys.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join("")}</select></div>
+      <div><label>槽位</label><select id="slot-key">${data.slot_keys.map(k => `<option value="${esc(k)}">${esc((SLOT_LABELS[k] || k) + " · " + k)}</option>`).join("")}</select></div>
       <div class="full"><label>兜底模板</label><textarea id="slot-template"></textarea></div>
       <div class="actions full"><button class="btn primary">保存槽位</button></div>
     </form>

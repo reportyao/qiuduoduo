@@ -191,6 +191,8 @@ def test_admin_update_profile_and_slot(client, db, monkeypatch):
         "template": "老铁，今天看 {home} vs {away}。", "enabled": True,
     }).status_code == 200
     data = client.get("/admin/api/personas").json()
+    assert "brandSub" in data["slot_keys"]
+    assert "narration_promoted" in data["slot_keys"]
     profile = next(p for p in data["profiles"] if p["id"] == "laopao")
     assert profile["address"] == "老铁"
     assert profile["max_chars"] == 180

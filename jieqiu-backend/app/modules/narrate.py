@@ -45,7 +45,7 @@ def _fmt_pct(x: float | None, default: str = "—") -> str:
     return f"{x*100:.1f}" if x is not None else default
 
 
-def build_narration(v: Verdict, persona: str = "zhuanjia") -> tuple[str, str]:
+def build_narration(v: Verdict, persona: str = "zhuanjia", db=None) -> tuple[str, str]:
     """(text, template_id)。结构数字全部取自 payload/列，模板不出错兜底在 stream 层。"""
     p = (v.payload or {})
     gates = v.gates or {}
@@ -79,8 +79,20 @@ def build_narration(v: Verdict, persona: str = "zhuanjia") -> tuple[str, str]:
     ctx["why"] = why
 
     status = v.status if v.status in ("promoted", "screening", "killed") else "screening"
-    tpl_set = TEMPLATES.get(persona, TEMPLATES["zhuanjia"])
-    tpl = tpl_set.get(status) or tpl_set["screening"]
+    tpl = None
+    # 后台槽位优先；DB 不可用时回退代码内模板。
+    if db is not None:
+        try:
+            from . import persona_registry
+            slots = {row.slot_key: row.template
+                     for row in persona_registry.list_slots(db, persona)
+                     if row.enabled}
+            tpl = slots.get(f"narration_{status}")
+        except Exception:  # noqa: BLE001 - 文案兜底不能阻塞
+            tpl = None
+    if not tpl:
+        tpl_set = TEMPLATES.get(persona, TEMPLATES["zhuanjia"])
+        tpl = tpl_set.get(status) or tpl_set["screening"]
     return tpl.format(**ctx), f"{persona}.{status}"
 
 
@@ -111,10 +123,10 @@ def generate_stream(v: Verdict, persona: str = "zhuanjia", db=None):
         if text is None:
             if llm_available():
                 raise NotImplementedError  # v1.5 接入；当前必然走模板
-            text, tid = build_narration(v, persona)
+            text, tid = build_narration(v, persona, db=db)
     except Exception:
         try:
-            text, tid = build_narration(v, "zhuanjia")  # 兜底人设再兜底
+            text, tid = build_narration(v, "zhuanjia", db=db)  # 兜底人设再兜底
         except Exception:
             text, tid = f"{v.home} vs {v.away}：数据整理中。", "fallback.minimal"
     for chunk in stream_chunks(text):
