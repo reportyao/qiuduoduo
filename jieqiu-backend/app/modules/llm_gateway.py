@@ -88,7 +88,7 @@ def _env_profile(name: str) -> dict:
             "input_price": st.llm_deep_input_price_cny_per_m,
             "output_price": st.llm_deep_output_price_cny_per_m,
             "source": "env" if st.llm_deep_api_key else "none",
-            "enabled": True,
+            "enabled": True, "reasoning": "auto",
         }
     return {
         "name": "fast", "provider": st.llm_fast_provider,
@@ -97,7 +97,7 @@ def _env_profile(name: str) -> dict:
         "input_price": st.llm_fast_input_price_cny_per_m,
         "output_price": st.llm_fast_output_price_cny_per_m,
         "source": "env" if st.llm_fast_api_key else "none",
-        "enabled": True,
+        "enabled": True, "reasoning": "auto",
     }
 
 
@@ -113,6 +113,7 @@ def _admin_profile(name: str, db: Session) -> dict | None:
         "input_price": row.input_price_cny_per_m,
         "output_price": row.output_price_cny_per_m,
         "source": "admin", "enabled": row.enabled,
+        "reasoning": getattr(row, "reasoning", "auto") or "auto",
     }
     if not row.enabled:
         return {**base, "api_key": ""}
@@ -143,6 +144,7 @@ def profile_status(db: Session | None = None) -> list[dict]:
             "name": name, "provider": p["provider"], "model": p["model"],
             "base_url": p["base_url"], "configured": bool(p["api_key"]),
             "source": p["source"], "enabled": p.get("enabled", True),
+            "reasoning": p.get("reasoning", "auto"),
             "input_price_cny_per_m": p["input_price"],
             "output_price_cny_per_m": p["output_price"],
         })
@@ -319,6 +321,8 @@ def _call(profile: dict, messages: list[dict], *, max_tokens: int,
         "model": profile["model"], "messages": messages,
         "max_tokens": max_tokens, "temperature": temperature,
     }
+    if profile.get("reasoning") == "off":
+        body["enable_thinking"] = False
     if schema:
         body["response_format"] = {"type": "json_object"}
     headers = {"Authorization": f"Bearer {profile['api_key']}",

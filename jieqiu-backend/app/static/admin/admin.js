@@ -1151,6 +1151,10 @@ function openLLMProfileModal(profile) {
       <div><label>输入价 ¥/百万 tokens</label><input id="llm-in" type="number" min="0" step="0.01" value="${profile.input_price_cny_per_m ?? 0}"></div>
       <div><label>输出价 ¥/百万 tokens</label><input id="llm-out" type="number" min="0" step="0.01" value="${profile.output_price_cny_per_m ?? 0}"></div>
       <div><label>启用</label><select id="llm-enabled"><option value="true" ${profile.enabled ? "selected" : ""}>启用</option><option value="false" ${!profile.enabled ? "selected" : ""}>停用</option></select></div>
+      <div><label>推理</label><select id="llm-reasoning">
+        <option value="auto" ${(profile.reasoning || "auto") === "auto" ? "selected" : ""}>自动（模型默认）</option>
+        <option value="off" ${profile.reasoning === "off" ? "selected" : ""}>关闭（enable_thinking=false）</option>
+      </select></div>
       ${profile.admin_key_set ? '<div><label>清除已保存 Key</label><select id="llm-clear"><option value="false">否</option><option value="true">是</option></select></div>' : ""}
       <div class="actions full">
         <button class="btn primary" type="submit">保存</button>
@@ -1169,6 +1173,7 @@ function openLLMProfileModal(profile) {
       input_price_cny_per_m: Number(el("#llm-in").value || 0),
       output_price_cny_per_m: Number(el("#llm-out").value || 0),
       enabled: el("#llm-enabled").value === "true",
+      reasoning: el("#llm-reasoning").value,
     };
     await put(`/admin/api/llm/profiles/${profile.name}`, body);
   };
