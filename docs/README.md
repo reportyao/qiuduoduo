@@ -33,6 +33,7 @@
 | [ui-unslop-2026-11-06.md](./ui-unslop-2026-11-06.md) | Unslop 逐页 UI 审计：方向、页面处理、全局 tokens 与交互细节 |
 | [jpush.md](./jpush.md) | JPush Android 6.3.0 接入、registration id 上报、系统通知权限、厂商通道后续配置 |
 | [workbench.md](./workbench.md) | 运营工作台：全链路阶段、状态语义、AI 体检与安全动作 |
+| [admin-console-refactor.md](./admin-console-refactor.md) | 2026-11-11 后台重构：逐场数据矩阵、Sportmonks 手动映射、SM Pinnacle 市闸、模型效果页 |
 | [xg-providers.md](./xg-providers.md) | xG 第三方数据源选型：Sportmonks / StatsBomb / FBref / SofaScore / Understat 的适用边界 |
 | [open-source-watchlist.md](./open-source-watchlist.md) | 开源引用/候选清单：维护状态、许可证、采纳/降级结论 |
 

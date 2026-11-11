@@ -1091,7 +1091,8 @@ def admin_workbench_diagnose(date: str | None = None,
 
 
 class WorkbenchActionBody(BaseModel):
-    action: Literal["restart_collector", "sync_odds", "test_llm", "run_pipeline"]
+    action: Literal["restart_collector", "sync_odds", "sync_sportmonks",
+                    "sync_intel", "test_llm", "run_pipeline"]
     date: str | None = None
 
 
@@ -1138,7 +1139,9 @@ def _sportmonks_status(db: Session, date: str) -> dict:
     start, end = trade_window(date)
     matches = list(db.scalars(select(SPMatch).where(
         SPMatch.kickoff >= start, SPMatch.kickoff <= end)).all())
-    rows = {row.match_id: row for row in db.scalars(select(SportmonksMatchData)).all()}
+    rows = {row.match_id: row for row in db.scalars(select(SportmonksMatchData).where(
+        SportmonksMatchData.match_id.in_([m.match_id for m in matches])
+    )).all()} if matches else {}
     missing = [{"match_no": m.match_no, "home": m.home, "away": m.away,
                 "kickoff": m.kickoff, "league": m.league}
                for m in matches if m.match_id not in rows]
@@ -1170,6 +1173,231 @@ def _ai_research_status(db: Session, date: str) -> dict:
     }
 
 
+@router.get("/api/sportmonks/matrix")
+def admin_sm_matrix(date: str | None = None,
+                    db: Session = Depends(get_db),
+                    _: None = Depends(admin_auth.require_role("viewer"))):
+    """今日逐场数据矩阵：竞彩场次 × SM 映射/预测/赔率 × AI 情报 × 判决。"""
+    date = _valid_date(date) if date else trade_date_now()
+    start, end = trade_window(date)
+    matches = list(db.scalars(select(SPMatch).where(
+        SPMatch.kickoff >= start, SPMatch.kickoff <= end)
+        .order_by(SPMatch.kickoff)).all())
+    ids = [m.match_id for m in matches]
+    sm_rows = {r.match_id: r for r in db.scalars(
+        select(SportmonksMatchData).where(SportmonksMatchData.match_id.in_(ids))).all()} if ids else {}
+    intel_rows = {r.match_id: r for r in db.scalars(
+        select(AIResearch).where(AIResearch.match_id.in_(ids))).all()} if ids else {}
+    verdict_rows = db.scalars(select(Verdict).where(Verdict.match_id.in_(ids))
+                              .order_by(Verdict.created_at.desc())).all() if ids else []
+    verdicts: dict[str, Verdict] = {}
+    for verdict in verdict_rows:
+        verdicts.setdefault(verdict.match_id, verdict)
+
+    rows = []
+    for match in matches:
+        sm = sm_rows.get(match.match_id)
+        intel = intel_rows.get(match.match_id)
+        verdict = verdicts.get(match.match_id)
+        rows.append({
+            "match_id": match.match_id,
+            "match_no": match.match_no,
+            "league": match.league,
+            "home": match.home,
+            "away": match.away,
+            "kickoff": match.kickoff,
+            "single_flag": match.single_flag,
+            "mapped": sm is not None,
+            "fixture_id": sm.fixture_id if sm else None,
+            "source": sm.source if sm else "",
+            "sm_home": sm.home_name if sm else "",
+            "sm_away": sm.away_name if sm else "",
+            "sm_kickoff_utc": sm.kickoff_utc if sm else "",
+            "probs": sm.probs if sm else None,
+            "odds": sm.odds if sm else None,
+            "bookmaker": sm.bookmaker if sm else "",
+            "captured_at": _iso(sm.captured_at) if sm else None,
+            "intel": {
+                "status": intel.status if intel else "",
+                "headline": intel.headline if intel else "",
+                "captured_at": _iso(intel.captured_at) if intel else None,
+            },
+            "verdict": {
+                "id": verdict.id, "status": verdict.status,
+                "pick": verdict.pick, "settled": verdict.settled,
+                "result_score": verdict.result_score,
+                "has_model": verdict.model_h is not None,
+            } if verdict else None,
+        })
+    return {
+        "date": date,
+        "summary": {
+            "matches": len(rows),
+            "mapped": sum(1 for r in rows if r["mapped"]),
+            "manual": sum(1 for r in rows if r["source"] == "manual"),
+            "missing": sum(1 for r in rows if not r["mapped"]),
+            "with_probs": sum(1 for r in rows if r["probs"]),
+            "with_odds": sum(1 for r in rows if r["odds"]),
+            "intel_ready": sum(1 for r in rows if r["intel"]["status"] == "ready"),
+            "promoted": sum(1 for r in rows if r["verdict"] and r["verdict"]["status"] == "promoted"),
+        },
+        "rows": rows,
+    }
+
+
+@router.get("/api/sportmonks/candidates")
+def admin_sm_candidates(match_id: str,
+                        db: Session = Depends(get_db),
+                        _: None = Depends(admin_auth.require_role("viewer"))):
+    from ..modules.sportmonks import candidate_fixtures
+    result = candidate_fixtures(db, match_id)
+    if not result.get("ok"):
+        raise HTTPException(400, result.get("reason") or "查询失败")
+    return result
+
+
+class MapBody(BaseModel):
+    match_id: str
+    fixture_id: int
+
+
+@router.post("/api/sportmonks/map")
+def admin_sm_map(body: MapBody, request: Request,
+                 db: Session = Depends(get_db),
+                 principal: admin_auth.AdminPrincipal = Depends(
+                     admin_auth.require_role("operator"))):
+    from ..modules.sportmonks import map_match
+    result = map_match(db, body.match_id, body.fixture_id)
+    if not result.get("ok"):
+        raise HTTPException(400, result.get("reason") or "映射失败")
+    _audit(db, principal, "sportmonks.map", "data",
+           f"{body.match_id}->{body.fixture_id}", after=result, request=request)
+    return result
+
+
+@router.delete("/api/sportmonks/map/{match_id}")
+def admin_sm_unmap(match_id: str, request: Request,
+                   db: Session = Depends(get_db),
+                   principal: admin_auth.AdminPrincipal = Depends(
+                       admin_auth.require_role("operator"))):
+    from ..modules.sportmonks import unmap_match
+    result = unmap_match(db, match_id)
+    if not result.get("ok"):
+        raise HTTPException(400, result.get("reason") or "解除失败")
+    _audit(db, principal, "sportmonks.unmap", "data", match_id,
+           after=result, request=request)
+    return result
+
+
+def _actual_outcome(score: str | None) -> str | None:
+    if not score:
+        return None
+    try:
+        home, away = (int(x) for x in score.replace(":", "-").split("-")[:2])
+    except (TypeError, ValueError):
+        return None
+    return "home" if home > away else "away" if away > home else "draw"
+
+
+def _brier(probs: dict | None, outcome: str) -> float | None:
+    if not isinstance(probs, dict):
+        return None
+    try:
+        values = [float(probs[k]) for k in ("home", "draw", "away")]
+    except (KeyError, TypeError, ValueError):
+        return None
+    if any(v < 0 or v > 1 for v in values):
+        return None
+    return sum((v - (1.0 if k == outcome else 0.0)) ** 2
+               for v, k in zip(values, ("home", "draw", "away")))
+
+
+def _bucket() -> dict:
+    return {"samples": 0, "market_sum": 0.0, "model_n": 0, "model_sum": 0.0,
+            "top_hits": 0, "sm_odds_n": 0, "sm_odds_sum": 0.0,
+            "sm_model_n": 0, "sm_model_sum": 0.0}
+
+
+def _bucket_out(bucket: dict) -> dict:
+    return {
+        "samples": bucket["samples"],
+        "model_samples": bucket["model_n"],
+        "model_brier": round(bucket["model_sum"] / bucket["model_n"], 4) if bucket["model_n"] else None,
+        "market_brier": round(bucket["market_sum"] / bucket["samples"], 4) if bucket["samples"] else None,
+        "sm_odds_samples": bucket["sm_odds_n"],
+        "sm_odds_brier": round(bucket["sm_odds_sum"] / bucket["sm_odds_n"], 4) if bucket["sm_odds_n"] else None,
+        "sm_model_samples": bucket["sm_model_n"],
+        "sm_model_brier": round(bucket["sm_model_sum"] / bucket["sm_model_n"], 4) if bucket["sm_model_n"] else None,
+        "model_top_rate": round(bucket["top_hits"] / bucket["model_n"], 3) if bucket["model_n"] else None,
+    }
+
+
+@router.get("/api/model-eval")
+def admin_model_eval(days: int = 90, db: Session = Depends(get_db),
+                     _: None = Depends(admin_auth.require_role("viewer"))):
+    """已结算场次的 Brier 对比：竞彩去水 / 模型 / SM 市场 / SM 预测。"""
+    days = max(7, min(int(days), 365))
+    since = (datetime.strptime(trade_date_now(), "%Y-%m-%d")
+             - timedelta(days=days)).strftime("%Y-%m-%d")
+    verdicts = db.scalars(select(Verdict).where(
+        Verdict.trade_date >= since, Verdict.settled.isnot(None),
+        Verdict.result_score.isnot(None)).order_by(Verdict.trade_date.desc())).all()
+    ids = [v.match_id for v in verdicts]
+    sm_rows = {r.match_id: r for r in db.scalars(
+        select(SportmonksMatchData).where(SportmonksMatchData.match_id.in_(ids))).all()} if ids else {}
+    overall = _bucket()
+    by_league: dict[str, dict] = {}
+    recent = []
+    for verdict in verdicts:
+        outcome = _actual_outcome(verdict.result_score)
+        if outcome is None:
+            continue
+        market = {"home": verdict.p_home, "draw": verdict.p_draw, "away": verdict.p_away}
+        model = ({"home": verdict.model_h, "draw": verdict.model_d,
+                  "away": verdict.model_a} if verdict.model_h is not None else None)
+        sm = sm_rows.get(verdict.match_id)
+        market_brier = _brier(market, outcome)
+        if market_brier is None:
+            continue
+        buckets = [overall, by_league.setdefault(verdict.league or "未知", _bucket())]
+        for bucket in buckets:
+            bucket["samples"] += 1
+            bucket["market_sum"] += market_brier
+        if model:
+            model_brier = _brier(model, outcome)
+            if model_brier is not None:
+                for bucket in buckets:
+                    bucket["model_n"] += 1
+                    bucket["model_sum"] += model_brier
+                    bucket["top_hits"] += 1 if max(model, key=model.get) == outcome else 0
+        if sm and sm.odds:
+            sm_odds_brier = _brier(sm.odds, outcome)
+            if sm_odds_brier is not None:
+                for bucket in buckets:
+                    bucket["sm_odds_n"] += 1
+                    bucket["sm_odds_sum"] += sm_odds_brier
+        if sm and sm.probs:
+            sm_model_brier = _brier(sm.probs, outcome)
+            if sm_model_brier is not None:
+                for bucket in buckets:
+                    bucket["sm_model_n"] += 1
+                    bucket["sm_model_sum"] += sm_model_brier
+        if len(recent) < 40:
+            recent.append({
+                "id": verdict.id, "trade_date": verdict.trade_date,
+                "league": verdict.league, "home": verdict.home, "away": verdict.away,
+                "score": verdict.result_score, "outcome": outcome,
+                "model": model, "market": market, "sm_odds": sm.odds if sm else None,
+                "sm_model": sm.probs if sm else None,
+                "status": verdict.status, "settled": verdict.settled,
+            })
+    leagues = [{"league": league, **_bucket_out(bucket)}
+               for league, bucket in sorted(
+                   by_league.items(), key=lambda kv: kv[1]["samples"], reverse=True)]
+    return {"days": days, "since": since, "overall": _bucket_out(overall),
+            "leagues": leagues, "recent": recent}
+
+
 class SyncBody(BaseModel):
     date: str | None = None
 
@@ -1189,13 +1417,45 @@ def admin_sportmonks_sync(body: SyncBody, request: Request,
 
 @router.post("/api/ai-research/sync")
 def admin_ai_research_sync(body: SyncBody, request: Request,
-                           db: Session = Depends(get_db),
-                           principal: admin_auth.AdminPrincipal = Depends(
-                               admin_auth.require_role("operator"))):
+                          db: Session = Depends(get_db),
+                          principal: admin_auth.AdminPrincipal = Depends(
+                              admin_auth.require_role("operator"))):
     from ..modules.intel_research import sync_trade_date
     date = body.date or trade_date_now()
     result = sync_trade_date(db, date)
     _audit(db, principal, "ai_research.sync", "data", date,
+           after=result, request=request)
+    return result
+
+
+class ResultsSyncBody(BaseModel):
+    days: int = Field(default=2, ge=1, le=14)
+
+
+@router.post("/api/sportmonks/results")
+def admin_sm_results(body: ResultsSyncBody, request: Request,
+                     db: Session = Depends(get_db),
+                     principal: admin_auth.AdminPrincipal = Depends(
+                         admin_auth.require_role("operator"))):
+    from ..modules.sportmonks_results import sync_results
+    result = sync_results(db, days=body.days)
+    _audit(db, principal, "sportmonks.results", "data", str(body.days),
+           after=result, request=request)
+    return result
+
+
+class BackfillBody(BaseModel):
+    days: int = Field(default=14, ge=7, le=60)
+
+
+@router.post("/api/sportmonks/results/backfill")
+def admin_sm_results_backfill(body: BackfillBody, request: Request,
+                              db: Session = Depends(get_db),
+                              principal: admin_auth.AdminPrincipal = Depends(
+                                  admin_auth.require_role("operator"))):
+    from ..modules.sportmonks_results import backfill_verdict_results
+    result = backfill_verdict_results(db, days=body.days)
+    _audit(db, principal, "sportmonks.results.backfill", "data", str(body.days),
            after=result, request=request)
     return result
 
@@ -1395,19 +1655,22 @@ def admin_ops(db: Session = Depends(get_db),
         alerts.append({"level": "medium", "title": "API-Football 覆盖不完整",
                        "detail": "；".join(football["warnings"])})
     intl = supply_data["intl_odds"]
-    if not intl["configured"] and supply_data["matches"] > 0:
-        alerts.append({"level": "high", "title": "国际盘未配置（The Odds API）",
-                       "detail": "市闸需要 ≥2 个去水口径；未配置时全部判决停在 pending_data，推荐主链不会产出"})
-    elif intl["total"] == 0 and supply_data["matches"] > 0:
-        alerts.append({"level": "high", "title": "国际盘 0 条",
-                       "detail": f"今日 {supply_data['matches']} 场，但 intl_odds 为空；检查 JQ_ODDS_API_KEY 与同步日志"})
-    elif intl["covered_matches"] == 0 and supply_data["matches"] > 0:
-        alerts.append({"level": "high", "title": "今日国际盘未覆盖任何场次",
-                       "detail": f"intl_odds 有 {intl['total']} 行，但今日 {supply_data['matches']} 场都没匹配上；检查队名对齐/开赛时间/源覆盖"})
+    sm_market = supply_data.get("sportmonks_market", {})
+    market_covered = supply_data.get("market_covered_matches", 0)
+    if supply_data["matches"] > 0 and market_covered == 0:
+        alerts.append({"level": "high", "title": "市场源未覆盖任何场次",
+                       "detail": "Sportmonks Pinnacle 与 The Odds API 都没有今日市场数据；市闸会全部停在 pending_data"})
+    elif (not intl["configured"] and supply_data["matches"] > 0
+          and sm_market.get("covered_matches", 0) < supply_data["matches"]):
+        alerts.append({"level": "medium", "title": "国际盘兜底未配置",
+                       "detail": f"Sportmonks 已覆盖 {sm_market.get('covered_matches', 0)}/{supply_data['matches']} 场；未覆盖场次没有第二对照源"})
+    elif intl["total"] == 0 and sm_market.get("covered_matches", 0) == 0 and supply_data["matches"] > 0:
+        alerts.append({"level": "high", "title": "市场数据 0 条",
+                       "detail": f"今日 {supply_data['matches']} 场，Sportmonks 与国际盘均为空；检查同步日志"})
     if (supply_data["verdicts"]["total"] > 0
             and supply_data["market_gate"]["pending_data"] >= supply_data["verdicts"]["total"]):
         alerts.append({"level": "high", "title": "市闸全部 pending",
-                       "detail": "国际盘覆盖不足，今日不会产生 promoted/published"})
+                       "detail": "市场覆盖不足，今日不会产生 promoted/published"})
     elif supply_data["published"] == 0 and supply_data["verdicts"]["total"] > 0:
         alerts.append({"level": "low", "title": "今日无已发布判断",
                        "detail": "主链仍在复核，或数据不足；首页应显示“今天不硬推”"})

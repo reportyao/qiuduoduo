@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 
 from app.config import Settings
-from app.models import IntlOdds, SPMatch, SPSnapshot
+from app.models import IntlOdds, SPMatch, SPSnapshot, SportmonksMatchData
 from app.modules import verdict as vz
 from app.modules.align import Aligner, seed_aliases
 from app.modules.dc_model import fit, predict, predict_line
@@ -207,6 +207,32 @@ def test_hhad_market_gate_uses_had_not_hhad(db, monkeypatch):
     mg = v.gates["market"]
     assert mg["detail"]["market_pool"] == "had"
     assert mg["detail"]["verdict_pool"] == "hhad"
+    assert mg["detail"]["divergence"] < 0.05
+
+
+def test_market_gate_uses_sportmonks_pinnacle_without_odds_api(db, monkeypatch):
+    """Sportmonks Pinnacle 1X2 可作为竞彩官方之外的第二市场源，不依赖 Odds API。"""
+    _mini_xg(monkeypatch)
+    kick = future_kickoff(today_cn())
+    mid = "2043011"
+    db.merge(SPMatch(match_id=mid, match_no="周三891", league="欧罗巴",
+                     home_raw="霸主", away_raw="弱旅", home="霸主", away="弱旅",
+                     kickoff=kick, single_flag=True))
+    db.merge(SPSnapshot(match_id=mid, pool="had", goal_line="",
+                        sp_h=1.80, sp_d=3.50, sp_a=4.20,
+                        captured_at=today_cn() + "T12:00:00+08:00"))
+    db.merge(SportmonksMatchData(
+        match_id=mid, fixture_id=880011, league="欧罗巴",
+        home_name="霸主", away_name="弱旅", kickoff_utc=kick,
+        odds={"home": 0.53, "draw": 0.26, "away": 0.21},
+        bookmaker="Pinnacle", source="manual",
+        data_cutoff="2026-11-11T12:00:00"))
+    db.commit()
+
+    v = build_verdicts(db, today_cn(), NOW)[0]
+    mg = v.gates["market"]
+    assert mg["result"] == "pass", mg
+    assert "Sportmonks(Pinnacle)" in mg["detail"]["sources"]
     assert mg["detail"]["divergence"] < 0.05
 
 
