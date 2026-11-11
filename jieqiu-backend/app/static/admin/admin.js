@@ -128,40 +128,6 @@ function gatePills(gates = {}) {
   }).join("")}</span>`;
 }
 
-function footballCard(af = {}) {
-  const target = af.target || {};
-  const warnings = af.warnings || [];
-  const configured = Boolean(af.configured);
-  const quotaLabels = { ok: "可用", low: "偏低", exhausted: "已用尽", unconfigured: "未配置" };
-  const quotaLabel = quotaLabels[af.quota_state] || "—";
-  const pct = Math.max(0, Math.min(100, Number(af.quota_pct || 0)));
-  const state = !configured
-    ? '<span class="pill muted">未配置</span>'
-    : warnings.length
-      ? '<span class="pill amber">待补</span>'
-      : '<span class="pill green">正常</span>';
-  return `
-    <div class="card football-card">
-      <div class="card-head">
-        <div>
-          <h2 class="card-title">API-Football</h2>
-          <div class="card-sub">${esc(af.provider || "—")} · 7s 节流 · 今日 ${af.used_today ?? 0}/${af.daily_limit ?? 0} 次</div>
-        </div>
-        ${state}
-      </div>
-      <div class="af-metrics">
-        <div class="af-metric"><span>今日场次</span><b>${target.today_linked ?? 0}/${target.today_matches ?? 0}</b></div>
-        <div class="af-metric"><span>明日场次</span><b>${target.tomorrow_linked ?? 0}/${target.tomorrow_matches ?? 0}</b></div>
-        <div class="af-metric"><span>目标阵容</span><b>${target.lineups ?? 0} 行</b></div>
-        <div class="af-metric"><span>目标伤停</span><b>${target.injuries ?? 0} 条</b></div>
-      </div>
-      <div class="af-quota"><span style="width:${pct}%"></span></div>
-      <div class="af-foot">剩余 ${af.remaining ?? 0} 次 · ${esc(quotaLabel)} · 积分榜 ${af.standings ?? 0} 行${target.tomorrow_pending ? " · 明日赛程待 06:15" : ""}</div>
-      ${warnings.length ? `<div class="af-warnings">${warnings.map(w => `<div class="af-warning">${esc(w)}</div>`).join("")}</div>` : ""}
-    </div>
-  `;
-}
-
 function skeleton(count = 3) {
   return Array.from({ length: count }, () => '<div class="skeleton"></div>').join("");
 }
@@ -1041,7 +1007,7 @@ async function loadIntegrations() {
       <div class="card-head">
         <div>
           <h2 class="card-title">先选“做什么”，再配“用哪个接口”</h2>
-          <div class="card-sub">LLM 接口可在本页直接上传 Base URL / Model / Key；保存 Key 后后台配置优先于环境变量。数据源与推送密钥仍在服务器环境变量，页面只做状态核对。Key 加密存储，不回显。</div>
+          <div class="card-sub">LLM 接口可在本页直接上传 Base URL / Model / Key；保存 Key 后后台配置优先于环境变量。Sportmonks、推送等密钥仍在服务器环境变量，本页只做状态核对。LLM Key 加密存储，不回显。</div>
         </div>
       </div>
     </div>
@@ -1071,7 +1037,7 @@ async function loadIntegrations() {
           ${integrationStatus(Boolean(deepProfile?.configured), deepProfile?.enabled ?? true)}
         </div>
         <div class="integration-meta">
-          <b>作用</b><span>把 SP、国际盘、阵容、伤停、积分榜、概率与三闸交给 deep 模型，生成可引用的赛前解读。</span>
+          <b>作用</b><span>把 SP、Sportmonks 预测/市场、阵容、伤停、积分榜、概率与三闸交给 deep 模型，生成可引用的赛前解读。</span>
           <b>入口</b><span>详情页「生成 AI 解读」；只对 deep_eligible 场次生成。</span>
           <b>缓存</b><span>事实包 hash + 6 小时过期；数据变化自动重算。</span>
         </div>
@@ -1121,32 +1087,28 @@ async function loadIntegrations() {
       </div>
     </div>
 
-    <h2 class="section-title">兜底数据源</h2>
-    <div class="integration-grid">
-      <div class="card integration-card">
-        <div class="card-head">
-          <div><h2 class="card-title">API-Football</h2><div class="card-sub">阵容 / 伤停 / 积分榜 · 兜底</div></div>
-          <span class="pill muted">非主链路</span>
-        </div>
-        <div class="integration-meta">
-          <b>今日额度</b><span>${af.used_today ?? 0}/${af.daily_limit ?? 0} 次 · 剩余 ${af.remaining ?? 0}</span>
-          <b>目标覆盖</b><span>阵容 ${af.target?.lineups ?? 0} 行 · 伤停 ${af.target?.injuries ?? 0} 条</span>
-          <b>积分榜</b><span>${af.standings ?? 0} 行（免费档当前赛季不可用）</span>
-        </div>
-        <div class="integration-actions"><button class="btn secondary small" data-goto="data">查看数据源</button></div>
-      </div>
-      <div class="card integration-card">
-        <div class="card-head">
-          <div><h2 class="card-title">The Odds API</h2><div class="card-sub">国际盘对照 · 兜底</div></div>
-          <span class="pill muted">非主链路</span>
-        </div>
-        <div class="integration-meta">
-          <b>当前数据</b><span>${intl.total ?? 0} 条 · 覆盖 ${intl.covered_matches ?? 0} 场</span>
-          <b>同步</b><span>最新 ${esc(fmtTime(sync.latest, true))}</span>
-          <b>额度提醒</b><span>免费 500/月；只在 Sportmonks 缺市场时用于对照</span>
-        </div>
-        <div class="integration-actions"><button class="btn secondary small" data-goto="data">查看数据源</button></div>
-      </div>
+    <h2 class="section-title">辅助数据（只补缺口）</h2>
+    <div class="card aux-sources">
+      <div class="card-sub" style="margin-bottom:10px">主链路已收口到 Sportmonks + 竞彩 SP。下面两项只在缺口时使用，不作为发布前置。</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>来源</th><th>用途</th><th>状态</th><th>覆盖 / 额度</th><th></th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>API-Football</b></td>
+            <td>阵容 / 伤停 / 积分榜</td>
+            <td>${af.configured ? '<span class="pill green">已配置</span>' : '<span class="pill muted">未配置</span>'}</td>
+            <td>今日 ${af.used_today ?? 0}/${af.daily_limit ?? 0} 次 · 阵容 ${af.target?.lineups ?? 0} 行 · 伤停 ${af.target?.injuries ?? 0} 条</td>
+            <td><button class="btn ghost small" data-goto="data">查看</button></td>
+          </tr>
+          <tr>
+            <td><b>The Odds API</b></td>
+            <td>Sportmonks 缺市场时的国际盘对照</td>
+            <td>${intl.configured ? '<span class="pill green">已配置</span>' : '<span class="pill muted">未配置</span>'}</td>
+            <td>覆盖 ${intl.covered_matches ?? 0} 场 · 总量 ${intl.total ?? 0} 条</td>
+            <td><button class="btn ghost small" data-goto="data">查看</button></td>
+          </tr>
+        </tbody>
+      </table></div>
     </div>
 
     <h2 class="section-title">推送通道</h2>
@@ -1302,6 +1264,7 @@ async function loadData() {
   const supply = data.supply || {};
   const gate = supply.market_gate || {};
   const intl = supply.intl_odds || {};
+  const af = data.api_football || {};
   const published = supply.published ?? 0;
   const summary = matrix.summary || {};
   const pct = value => value == null ? "—" : `${Math.round(Number(value) * 100)}%`;
@@ -1340,11 +1303,11 @@ async function loadData() {
   }).join("");
 
   root.innerHTML = `
-    ${supply.blocked_reason ? `<div class="card notice"><b>内容供给受阻：${esc(supply.blocked_reason)}</b><div class="card-sub" style="margin-top:8px">场次 ${supply.matches ?? 0} · 判决 ${supply.verdicts?.total ?? 0} · 市闸 pending ${gate.pending_data ?? 0} · 市场覆盖 ${supply.market_covered_matches ?? 0}/${supply.matches ?? 0} 场（SM ${supply.sportmonks_market?.covered_matches ?? 0} · 国际盘 ${intl.covered_matches ?? 0}）</div></div>` : ""}
+    ${supply.blocked_reason ? `<div class="card notice"><b>内容供给受阻：${esc(supply.blocked_reason)}</b><div class="card-sub" style="margin-top:8px">场次 ${supply.matches ?? 0} · 判决 ${supply.verdicts?.total ?? 0} · 市闸 pending ${gate.pending_data ?? 0} · 市场覆盖 ${supply.market_covered_matches ?? 0}/${supply.matches ?? 0} 场（SM ${supply.sportmonks_market?.covered_matches ?? 0} · 辅助国际盘 ${intl.covered_matches ?? 0}）</div></div>` : ""}
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-label">今日场次</div><div class="kpi-value">${summary.matches ?? 0}</div><div class="kpi-foot">已发布 ${published}</div></div>
       <div class="kpi green accent"><div class="kpi-label">SM 映射</div><div class="kpi-value">${summary.mapped ?? 0}/${summary.matches ?? 0}</div><div class="kpi-foot">手动 ${summary.manual ?? 0} · 缺失 ${summary.missing ?? 0}</div></div>
-      <div class="kpi"><div class="kpi-label">模型概率</div><div class="kpi-value">${summary.with_probs ?? 0}</div><div class="kpi-foot">市场赔率 ${summary.with_odds ?? 0}</div></div>
+      <div class="kpi"><div class="kpi-label">SM 预测</div><div class="kpi-value">${summary.with_probs ?? 0}</div><div class="kpi-foot">市场赔率 ${summary.with_odds ?? 0}</div></div>
       <div class="kpi"><div class="kpi-label">AI 情报</div><div class="kpi-value">${summary.intel_ready ?? 0}</div><div class="kpi-foot">就绪 / ${summary.matches ?? 0} 场</div></div>
     </div>
     <div class="card"><h2 class="card-title">内容供给</h2>
@@ -1382,19 +1345,18 @@ async function loadData() {
       </div>
       ${rows ? `<div class="table-wrap"><table><thead><tr>
         <th>场次</th><th>对阵</th><th>开赛</th><th>SM 映射</th>
-        <th>模型概率</th><th>市场概率</th><th>AI 情报</th><th>判决</th><th>操作</th>
+        <th>SM 预测</th><th>SM 市场</th><th>AI 情报</th><th>判决</th><th>操作</th>
       </tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="empty">今日暂无竞彩场次</div>'}
       <div class="card-sub" style="margin-top:10px">SP 最新快照 ${esc(fmtTime(data.sync?.latest, true))} · 延迟 ${data.sync?.lag_seconds == null ? "—" : `${data.sync.lag_seconds}s`} · 手动映射会立即拉取预测、Pinnacle 1X2 与中文情报。</div>
     </div>
-    <div class="card legacy-sources">
-      <details>
-        <summary>兜底数据源（API-Football / 国际盘）</summary>
-        <div class="card-sub" style="margin:8px 0 12px">主链路已切到 Sportmonks + 竞彩 SP；以下只作缺口兜底与对照，不再作为发布前置。</div>
-        ${footballCard(data.api_football || {})}
-        <div class="status-grid" style="margin-top:12px">
-          <div class="status-item"><div><b>The Odds API</b><div class="status-label">国际盘对照 · 非主链路</div></div><span class="mono">${intl.covered_matches ?? 0}/${supply.matches ?? 0} 场</span></div>
-        </div>
-      </details>
+    <div class="card">
+      <div class="toolbar"><div><h2 style="margin:0">辅助数据</h2><div class="card-sub" style="margin:0">只补阵容/伤停和国际盘缺口；不作为发布前置</div></div>
+        <button class="btn ghost small" data-goto="integrations">接入中心</button></div>
+      <div class="status-grid">
+        <div class="status-item"><div><b>API-Football</b><div class="status-label">阵容 / 伤停 / 积分榜</div></div><span class="mono">今日 ${af.used_today ?? 0}/${af.daily_limit ?? 0} 次 · 阵容 ${af.target?.lineups ?? 0} 行 · 伤停 ${af.target?.injuries ?? 0} 条</span></div>
+        <div class="status-item"><div><b>The Odds API</b><div class="status-label">Sportmonks 缺市场时的国际盘对照</div></div><span class="mono">${intl.covered_matches ?? 0}/${supply.matches ?? 0} 场</span></div>
+      </div>
+      ${(af.warnings || []).length ? `<div class="card-sub" style="margin-top:10px">${af.warnings.map(w => esc(w)).join("；")}</div>` : ""}
     </div>
   `;
 
@@ -1450,6 +1412,7 @@ async function loadData() {
     try { await del(`/admin/api/sportmonks/map/${encodeURIComponent(matchId)}`); toast("已解除映射"); await loadData(); }
     catch (e) { toast(e.message, "error"); }
   });
+  els("[data-goto]").forEach(btn => btn.onclick = () => showView(btn.dataset.goto));
 }
 
 async function openSportmonksMapping(matchId) {
