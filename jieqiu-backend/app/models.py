@@ -141,6 +141,26 @@ class IntlOdds(Base):
     retrieved_at: Mapped[str] = mapped_column(String(32), index=True)
 
 
+class SportmonksMatchData(Base):
+    """Sportmonks 单场增强数据：预测 1X2 + 市场 1X2（按竞彩 match_id 挂接）。"""
+
+    __tablename__ = "sportmonks_match_data"
+
+    match_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    fixture_id: Mapped[int] = mapped_column(Integer, index=True)
+    league: Mapped[str] = mapped_column(String(64), default="")
+    home_name: Mapped[str] = mapped_column(String(128), default="")
+    away_name: Mapped[str] = mapped_column(String(128), default="")
+    kickoff_utc: Mapped[str] = mapped_column(String(32), default="")
+    probs: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    odds: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    bookmaker: Mapped[str] = mapped_column(String(32), default="")
+    source: Mapped[str] = mapped_column(String(24), default="sportmonks")
+    captured_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    data_cutoff: Mapped[str] = mapped_column(String(32), default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 class VerdictRevision(Base):
     """判决修订史（追加式）：同一 verdict 随 SP 更新重建时，每个不同 payload 都留档。
 

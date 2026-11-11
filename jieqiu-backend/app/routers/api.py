@@ -307,17 +307,27 @@ def _probability_compare(db: Session, v: Verdict) -> dict:
         if has_model else None
     )
     market = None
-    match = db.get(SPMatch, v.match_id)
-    if match is not None:
-        from ..modules.intl_odds import sources_for_match
-        rows = sources_for_match(db, match)
-        if rows:
-            row = rows[0]
-            probs = _devig(row.sp_h, row.sp_d, row.sp_a)
-            if probs:
-                label = {"pinnacle": "Pinnacle", "consensus": "共识"}.get(
-                    row.source, row.source)
-                market = {"bookmaker": label, "probs": probs}
+    # 优先 Sportmonks 市场 1X2；没有再用现有国际盘。
+    from ..modules.sportmonks import latest_for_match
+    sm = latest_for_match(db, v.match_id)
+    if sm is not None and sm.odds:
+        market = {
+            "bookmaker": f"Sportmonks · {sm.bookmaker or '市场'}",
+            "probs": sm.odds,
+            "source": "sportmonks",
+        }
+    if market is None:
+        match = db.get(SPMatch, v.match_id)
+        if match is not None:
+            from ..modules.intl_odds import sources_for_match
+            rows = sources_for_match(db, match)
+            if rows:
+                row = rows[0]
+                probs = _devig(row.sp_h, row.sp_d, row.sp_a)
+                if probs:
+                    label = {"pinnacle": "Pinnacle", "consensus": "共识"}.get(
+                        row.source, row.source)
+                    market = {"bookmaker": label, "probs": probs}
     return {
         "sp": sp,
         "model": model,
