@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import re
+import time
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -21,7 +22,7 @@ from ..models import MatchResult, SPMatch, SportmonksMatchData, Verdict, utcnow
 from .sportmonks import _get, match_fixture
 
 CN = timezone(timedelta(hours=8))
-_FINISHED = {"FT", "AET", "PEN"}
+_FINISHED = {"FT", "AET", "PEN", "FINISHED"}
 _SCORE_RE = re.compile(r"(\d+)\s*[-:]\s*(\d+)")
 
 
@@ -86,6 +87,7 @@ def sync_results(db: Session, days: int = 2, limit: int = 80) -> dict:
             continue
         payload = _get(base, f"/fixtures/{sm.fixture_id}",
                        f"api_token={token}&include=participants;scores;state;league&locale=zh")
+        time.sleep(0.15)
         fixture = (payload or {}).get("data") or {}
         score = parse_score(fixture)
         if score is None:
@@ -121,6 +123,7 @@ def _fetch_day(base: str, token: str, day: str) -> list[dict]:
             f"&per_page=50&page={page}&locale=zh")
         rows = (payload or {}).get("data") or []
         out.extend(rows)
+        time.sleep(0.15)
         if len(rows) < 50:
             break
     return out

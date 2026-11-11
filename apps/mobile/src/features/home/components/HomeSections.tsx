@@ -57,12 +57,15 @@ export function DataStatusSheet({
         name: source.label,
         status: source.status === "ok"
           ? "已同步"
-          : source.status === "stale" ? "数据偏旧" : "未覆盖",
+          : source.status === "partial" ? "部分覆盖"
+            : source.status === "stale" ? "数据偏旧" : "未覆盖",
         ok: source.status === "ok",
       }))
     : [
         { name: "竞彩官方 SP", status: "已接入", ok: true },
-        { name: "国际盘口", status: marketPending ? "部分未覆盖" : "已接入", ok: !marketPending },
+        { name: "Sportmonks 预测/市场", status: marketPending ? "部分未覆盖" : "已接入", ok: !marketPending },
+        { name: "AI 情报", status: "已接入", ok: true },
+        { name: "国际盘（兜底）", status: marketPending ? "部分未覆盖" : "已接入", ok: !marketPending },
         { name: "xG 强度模型", status: modelPending ? "部分未覆盖" : "已接入", ok: !modelPending },
         { name: "赛程 / 停售", status: "已同步", ok: true },
       ];

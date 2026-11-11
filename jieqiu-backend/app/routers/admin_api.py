@@ -1160,15 +1160,18 @@ def _sportmonks_status(db: Session, date: str) -> dict:
 
 
 def _ai_research_status(db: Session, date: str) -> dict:
+    from ..modules.intel_research import effective_status
     start, end = trade_window(date)
     ids = [m.match_id for m in db.scalars(select(SPMatch).where(
         SPMatch.kickoff >= start, SPMatch.kickoff <= end)).all()]
     rows = list(db.scalars(select(AIResearch).where(AIResearch.match_id.in_(ids))).all()) if ids else []
+    statuses = [effective_status(r) for r in rows]
     latest = max((r.captured_at for r in rows if r.captured_at), default=None)
     return {
         "matches": len(ids),
-        "ready": sum(1 for r in rows if r.status == "ready"),
-        "unavailable": sum(1 for r in rows if r.status != "ready"),
+        "ready": sum(1 for status in statuses if status == "ready"),
+        "expired": sum(1 for status in statuses if status == "expired"),
+        "unavailable": sum(1 for status in statuses if status != "ready"),
         "latest": latest.isoformat() if latest else None,
     }
 
@@ -1178,6 +1181,8 @@ def admin_sm_matrix(date: str | None = None,
                     db: Session = Depends(get_db),
                     _: None = Depends(admin_auth.require_role("viewer"))):
     """今日逐场数据矩阵：竞彩场次 × SM 映射/预测/赔率 × AI 情报 × 判决。"""
+    from ..modules.intel_research import effective_status
+    from ..modules.sportmonks import market_is_fresh
     date = _valid_date(date) if date else trade_date_now()
     start, end = trade_window(date)
     matches = list(db.scalars(select(SPMatch).where(
@@ -1215,10 +1220,11 @@ def admin_sm_matrix(date: str | None = None,
             "sm_kickoff_utc": sm.kickoff_utc if sm else "",
             "probs": sm.probs if sm else None,
             "odds": sm.odds if sm else None,
+            "odds_fresh": market_is_fresh(sm),
             "bookmaker": sm.bookmaker if sm else "",
             "captured_at": _iso(sm.captured_at) if sm else None,
             "intel": {
-                "status": intel.status if intel else "",
+                "status": effective_status(intel) if intel else "",
                 "headline": intel.headline if intel else "",
                 "captured_at": _iso(intel.captured_at) if intel else None,
             },
@@ -1259,6 +1265,7 @@ def admin_sm_candidates(match_id: str,
 class MapBody(BaseModel):
     match_id: str
     fixture_id: int
+    force: bool = False
 
 
 @router.post("/api/sportmonks/map")
@@ -1267,7 +1274,7 @@ def admin_sm_map(body: MapBody, request: Request,
                  principal: admin_auth.AdminPrincipal = Depends(
                      admin_auth.require_role("operator"))):
     from ..modules.sportmonks import map_match
-    result = map_match(db, body.match_id, body.fixture_id)
+    result = map_match(db, body.match_id, body.fixture_id, force=body.force)
     if not result.get("ok"):
         raise HTTPException(400, result.get("reason") or "映射失败")
     _audit(db, principal, "sportmonks.map", "data",
@@ -1314,6 +1321,7 @@ def _brier(probs: dict | None, outcome: str) -> float | None:
 
 def _bucket() -> dict:
     return {"samples": 0, "market_sum": 0.0, "model_n": 0, "model_sum": 0.0,
+            "model_market_sum": 0.0,
             "top_hits": 0, "sm_odds_n": 0, "sm_odds_sum": 0.0,
             "sm_model_n": 0, "sm_model_sum": 0.0}
 
@@ -1324,6 +1332,9 @@ def _bucket_out(bucket: dict) -> dict:
         "model_samples": bucket["model_n"],
         "model_brier": round(bucket["model_sum"] / bucket["model_n"], 4) if bucket["model_n"] else None,
         "market_brier": round(bucket["market_sum"] / bucket["samples"], 4) if bucket["samples"] else None,
+        # 与模型同一批样本的基线，避免“模型覆盖的场次恰好更容易/更难”造成假差异。
+        "market_model_brier": (round(bucket["model_market_sum"] / bucket["model_n"], 4)
+                               if bucket["model_n"] else None),
         "sm_odds_samples": bucket["sm_odds_n"],
         "sm_odds_brier": round(bucket["sm_odds_sum"] / bucket["sm_odds_n"], 4) if bucket["sm_odds_n"] else None,
         "sm_model_samples": bucket["sm_model_n"],
@@ -1369,6 +1380,7 @@ def admin_model_eval(days: int = 90, db: Session = Depends(get_db),
                 for bucket in buckets:
                     bucket["model_n"] += 1
                     bucket["model_sum"] += model_brier
+                    bucket["model_market_sum"] += market_brier
                     bucket["top_hits"] += 1 if max(model, key=model.get) == outcome else 0
         if sm and sm.odds:
             sm_odds_brier = _brier(sm.odds, outcome)
@@ -1408,7 +1420,7 @@ def admin_sportmonks_sync(body: SyncBody, request: Request,
                           principal: admin_auth.AdminPrincipal = Depends(
                               admin_auth.require_role("operator"))):
     from ..modules.sportmonks import sync_trade_date
-    date = body.date or trade_date_now()
+    date = _valid_date(body.date) if body.date else trade_date_now()
     result = sync_trade_date(db, date)
     _audit(db, principal, "sportmonks.sync", "data", date,
            after=result, request=request)
@@ -1421,7 +1433,7 @@ def admin_ai_research_sync(body: SyncBody, request: Request,
                           principal: admin_auth.AdminPrincipal = Depends(
                               admin_auth.require_role("operator"))):
     from ..modules.intel_research import sync_trade_date
-    date = body.date or trade_date_now()
+    date = _valid_date(body.date) if body.date else trade_date_now()
     result = sync_trade_date(db, date)
     _audit(db, principal, "ai_research.sync", "data", date,
            after=result, request=request)

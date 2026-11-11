@@ -350,7 +350,7 @@ def test_admin_sportmonks_matrix_and_manual_map(client, db, monkeypatch):
                             params={"match_id": mid}).json()
     assert candidates["candidates"][0]["fixture_id"] == 999001
 
-    monkeypatch.setattr(sportmonks, "map_match", lambda _db, _mid, fid: {
+    monkeypatch.setattr(sportmonks, "map_match", lambda _db, _mid, fid, force=False: {
         "ok": True, "match_id": mid, "fixture_id": fid, "probs": True,
         "odds": True, "intel": True,
     })
@@ -396,6 +396,7 @@ def test_admin_model_eval_brier_uses_settled_scores(client, db):
     assert body["overall"]["samples"] >= 1
     assert body["overall"]["model_samples"] >= 1
     assert body["overall"]["model_brier"] is not None
+    assert body["overall"]["market_model_brier"] is not None
     assert body["overall"]["sm_odds_samples"] >= 1
     assert body["leagues"][0]["league"] == "英超"
     assert body["recent"][0]["outcome"] == "home"
@@ -427,3 +428,10 @@ def test_admin_sportmonks_backfill_endpoint(client, monkeypatch):
                            json={"days": 14})
     assert response.status_code == 200
     assert response.json()["inserted"] == 4
+
+
+def test_admin_sync_rejects_invalid_date(client, db):
+    login(client)
+    for path in ("/admin/api/sportmonks/sync", "/admin/api/ai-research/sync"):
+        response = client.post(path, json={"date": "not-a-date"})
+        assert response.status_code == 400, path

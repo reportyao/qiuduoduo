@@ -1,7 +1,7 @@
 """人设 profile 与文案槽位：后台可配置的底座。
 
 - profile 只存“怎么说”，不存方向/概率/条件。
-- slot 是后台可编辑的兜底模板，当前供后台/API 读取；运行时回退仍在 narrate.py，前端尚未消费。
+- slot 是后台可编辑的兜底模板：12 个前端可见槽位由 /personas 下发、前端 merge；9 个叙述槽位供 narrate.py 使用。
 - 任何字段变更只 bump version，不改历史推荐文案。
 """
 from __future__ import annotations

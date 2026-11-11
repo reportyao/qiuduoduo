@@ -2,7 +2,7 @@ import type { FocusCoverage } from "@/domain/focusAdapters";
 
 const LABELS: Record<string, string> = {
   price: "赔率",
-  market: "国际盘",
+  market: "市场数据",
   model: "模型",
   lineups: "阵容",
   standings: "积分榜",

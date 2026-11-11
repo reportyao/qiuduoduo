@@ -33,6 +33,9 @@ export const useParlayStore = create<ParlayState>((set, get) => ({
     if (legs.some((item) => item.verdictId === leg.verdictId)) {
       return { ok: false, reason: "这场已经在串关里了" };
     }
+    if (legs.some((item) => item.matchId === leg.matchId)) {
+      return { ok: false, reason: "同一场比赛只能选一个方向" };
+    }
     if (legs.length >= PARLAY_MAX_LEGS) {
       return { ok: false, reason: `串关最多 ${PARLAY_MAX_LEGS} 场，腿越多相关性和成本越高` };
     }

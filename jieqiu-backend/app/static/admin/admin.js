@@ -1316,7 +1316,7 @@ async function loadData() {
     const intel = row.intel.status === "ready"
       ? `<span class="pill green">就绪</span><div class="card-sub ellipsis" title="${esc(row.intel.headline)}">${esc(row.intel.headline || "")}</div>`
       : row.intel.status
-        ? `<span class="pill amber">${esc(row.intel.status)}</span>`
+        ? statusPill(row.intel.status)
         : '<span class="pill muted">未同步</span>';
     const v = row.verdict;
     const verdict = v
@@ -1328,7 +1328,7 @@ async function loadData() {
       <td class="mono">${esc((row.kickoff || "").slice(5, 16))}</td>
       <td>${sm}</td>
       <td>${triple(row.probs)}</td>
-      <td>${triple(row.odds)}${row.bookmaker ? `<div class="card-sub">${esc(row.bookmaker)}</div>` : ""}</td>
+      <td>${triple(row.odds)}${row.bookmaker ? `<div class="card-sub">${esc(row.bookmaker)}</div>` : ""}${row.mapped && row.odds && !row.odds_fresh ? '<div><span class="pill amber">已过期</span></div>' : ""}</td>
       <td>${intel}</td>
       <td>${verdict}</td>
       <td class="row-actions">
@@ -1401,13 +1401,23 @@ async function loadData() {
   const smSync = el("#sm-sync");
   if (smSync) smSync.onclick = async () => {
     smSync.disabled = true; smSync.textContent = "同步中…";
-    try { const r = await post("/admin/api/sportmonks/sync", {}); toast(`Sportmonks 同步：${r.synced}/${r.matches}`); await loadData(); }
+    try {
+      const r = await post("/admin/api/sportmonks/sync", {});
+      if (r.ok === false) throw new Error(r.reason || "同步失败");
+      toast(`Sportmonks 同步：${r.synced}/${r.total_matches ?? r.matches}${r.truncated ? ` · 截断 ${r.truncated}` : ""}`);
+      await loadData();
+    }
     catch (e) { toast(e.message, "error"); smSync.disabled = false; smSync.textContent = "同步 Sportmonks"; }
   };
   const intelSync = el("#intel-sync");
   if (intelSync) intelSync.onclick = async () => {
     intelSync.disabled = true; intelSync.textContent = "同步中…";
-    try { const r = await post("/admin/api/ai-research/sync", {}); toast(`AI 情报：${r.synced}/${r.matches}`); await loadData(); }
+    try {
+      const r = await post("/admin/api/ai-research/sync", {});
+      if (r.ok === false) throw new Error(r.reason || "同步失败");
+      toast(`AI 情报：${r.synced}/${r.matches}`);
+      await loadData();
+    }
     catch (e) { toast(e.message, "error"); intelSync.disabled = false; intelSync.textContent = "同步 AI 情报"; }
   };
   const resultsSync = el("#results-sync");
@@ -1415,7 +1425,9 @@ async function loadData() {
     resultsSync.disabled = true; resultsSync.textContent = "回填中…";
     try {
       const r = await post("/admin/api/sportmonks/results", { days: 2 });
+      if (r.ok === false) throw new Error(r.reason || "赛果回填失败");
       const b = await post("/admin/api/sportmonks/results/backfill", { days: 14 });
+      if (b.ok === false) throw new Error(b.reason || "历史赛果回填失败");
       toast(`赛果：新增 ${r.inserted} 场 · 历史 ${b.inserted} 场 · 结算 ${Number(r.settled || 0) + Number(b.settled || 0)} 注`);
       await loadData();
     } catch (e) { toast(e.message, "error"); resultsSync.disabled = false; resultsSync.textContent = "回填赛果"; }
@@ -1490,11 +1502,13 @@ async function loadModelEval() {
       (best, k) => Number(probs[k] || 0) > Number(probs[best] || 0) ? k : best, "home");
     return `${({ home: "主", draw: "平", away: "客" })[key]} ${pct(probs[key])}`;
   };
-  const delta = overall.model_brier != null && overall.market_brier != null
-    ? Number(overall.market_brier) - Number(overall.model_brier) : null;
+  const baseline = overall.market_model_brier ?? overall.market_brier;
+  const delta = overall.model_brier != null && baseline != null
+    ? Number(baseline) - Number(overall.model_brier) : null;
   const leagueRows = (data.leagues || []).map(row => {
-    const diff = row.model_brier != null && row.market_brier != null
-      ? Number(row.market_brier) - Number(row.model_brier) : null;
+    const rowBaseline = row.market_model_brier ?? row.market_brier;
+    const diff = row.model_brier != null && rowBaseline != null
+      ? Number(rowBaseline) - Number(row.model_brier) : null;
     const signal = row.model_samples < 10
       ? '<span class="pill muted">样本不足</span>'
       : diff != null && diff > 0
@@ -1505,7 +1519,7 @@ async function loadModelEval() {
       <td class="num">${row.samples}</td>
       <td class="num">${row.model_samples}</td>
       <td class="num">${brier(row.model_brier)}</td>
-      <td class="num">${brier(row.market_brier)}</td>
+      <td class="num">${brier(rowBaseline)}<div class="card-sub">全样本 ${brier(row.market_brier)}</div></td>
       <td class="num">${brier(row.sm_odds_brier)}<div class="card-sub">${row.sm_odds_samples} 场</div></td>
       <td class="num">${brier(row.sm_model_brier)}<div class="card-sub">${row.sm_model_samples} 场</div></td>
       <td class="num">${row.model_top_rate == null ? "—" : pct(row.model_top_rate)}</td>
@@ -1534,11 +1548,11 @@ async function loadModelEval() {
       <div class="kpi-grid">
         <div class="kpi"><div class="kpi-label">结算样本</div><div class="kpi-value">${overall.samples ?? 0}</div><div class="kpi-foot">模型样本 ${overall.model_samples ?? 0}</div></div>
         <div class="kpi ${delta != null && delta > 0 ? "green accent" : ""}"><div class="kpi-label">模型 Brier</div><div class="kpi-value">${brier(overall.model_brier)}</div><div class="kpi-foot">Top1 命中 ${overall.model_top_rate == null ? "—" : pct(overall.model_top_rate)}</div></div>
-        <div class="kpi"><div class="kpi-label">竞彩去水基线</div><div class="kpi-value">${brier(overall.market_brier)}</div><div class="kpi-foot">SP 隐含概率</div></div>
+        <div class="kpi"><div class="kpi-label">竞彩基线（同模型样本）</div><div class="kpi-value">${brier(baseline)}</div><div class="kpi-foot">全样本 ${brier(overall.market_brier)}</div></div>
         <div class="kpi"><div class="kpi-label">SM 市场</div><div class="kpi-value">${brier(overall.sm_odds_brier)}</div><div class="kpi-foot">Pinnacle 1X2 · ${overall.sm_odds_samples ?? 0} 场</div></div>
         <div class="kpi"><div class="kpi-label">SM 预测</div><div class="kpi-value">${brier(overall.sm_model_brier)}</div><div class="kpi-foot">模型 237 · ${overall.sm_model_samples ?? 0} 场</div></div>
       </div>
-      <div class="card-sub">${delta == null ? "模型样本不足，暂不能判断模型是否优于竞彩基线。" : delta > 0 ? `模型 Brier 比竞彩基线低 ${delta.toFixed(3)}，当前样本下模型有增量。` : `模型 Brier 比竞彩基线高 ${Math.abs(delta).toFixed(3)}，当前样本下不具备优势。`} 分联赛样本 ≥10 才显示结论；上线前仍需按联赛做样本外验证。</div>
+      <div class="card-sub">${delta == null ? "模型样本不足，暂不能判断模型是否优于竞彩基线。" : delta > 0 ? `模型 Brier 比同批样本的竞彩基线低 ${delta.toFixed(3)}，当前样本下模型有增量。` : `模型 Brier 比同批样本的竞彩基线高 ${Math.abs(delta).toFixed(3)}，当前样本下不具备优势。`} 分联赛样本 ≥10 才显示结论；上线前仍需按联赛做样本外验证。</div>
     </div>
     <div class="card"><h2 class="card-title">分联赛</h2>
       ${leagueRows ? `<div class="table-wrap"><table><thead><tr>

@@ -301,8 +301,9 @@ def _ai_research(db: Session, match_id: str) -> dict | None:
     row = db.get(AIResearch, match_id)
     if row is None:
         return None
+    from ..modules.intel_research import effective_status
     return {
-        "status": row.status,
+        "status": effective_status(row),
         "headline": row.headline,
         "points": row.points or [],
         "sources": row.sources or [],
@@ -314,18 +315,22 @@ def _ai_research(db: Session, match_id: str) -> dict | None:
 def _probability_compare(db: Session, v: Verdict) -> dict:
     """详情页概率对比：竞彩去水 / 模型 / 国际盘基准。没有的项返回 null。"""
     sp = _devig(v.sp_h, v.sp_d, v.sp_a)
-    model_raw = (v.payload or {}).get("model") or {}
-    has_model = bool(model_raw.get("shrunk"))
-    model = (
-        {"home": v.p_home, "draw": v.p_draw, "away": v.p_away}
-        if has_model else None
-    )
+    # 模型概率在 model_h/d/a；p_home/draw/away 是竞彩去水后的市场概率，不能混用。
+    model = ({"home": v.model_h, "draw": v.model_d, "away": v.model_a}
+             if v.model_h is not None else None)
+    if model is None:
+        shrunk = ((v.payload or {}).get("model") or {}).get("shrunk")
+        if isinstance(shrunk, list) and len(shrunk) == 3 and all(
+                isinstance(x, (int, float)) for x in shrunk):
+            model = {"home": float(shrunk[0]), "draw": float(shrunk[1]),
+                     "away": float(shrunk[2])}
+    has_model = model is not None
     market = None
     # 优先 Sportmonks 市场 1X2；没有再用现有国际盘。
-    from ..modules.sportmonks import latest_for_match
+    from ..modules.sportmonks import latest_for_match, market_is_fresh
     sm = latest_for_match(db, v.match_id)
     data_cutoff = (v.payload or {}).get("data_cutoff")
-    if sm is not None and sm.odds:
+    if sm is not None and sm.odds and market_is_fresh(sm):
         market = {
             "bookmaker": f"Sportmonks · {sm.bookmaker or '市场'}",
             "probs": sm.odds,

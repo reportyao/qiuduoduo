@@ -16,10 +16,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ...config import get_settings
-from ...models import (ApiFootballFixture, Bet, IntlOdds, MatchInjury,
+from ...models import (AIResearch, ApiFootballFixture, Bet, IntlOdds, MatchInjury,
                        MatchLineup, MatchResult, ModelRun, SPMatch, SPSnapshot,
-                       TeamStanding, User, Verdict, VerdictRevision, WatchTarget)
+                       SportmonksMatchData, TeamStanding, User, Verdict,
+                       VerdictRevision, WatchTarget)
+from ...modules.intel_research import effective_status
 from ...modules.intl_odds import sources_for_match
+from ...modules.sportmonks import market_is_fresh
 from ...modules.timeutil import CN, trade_date_from_kickoff, trade_date_now, trade_window
 from ...modules.users import user_streak
 from ..compliance import service as compliance_service
@@ -238,7 +241,17 @@ def _coverage(db: Session, match: SPMatch, date: str, v: Verdict | None,
     market_age = min((_age_seconds(r.retrieved_at, now) for r in intl
                       if _age_seconds(r.retrieved_at, now) is not None), default=None)
     price_ok = price_present and price_age is not None and price_age <= 15 * 60
-    market_ok = bool(intl) and market_age is not None and market_age <= 15 * 60
+    sm = db.get(SportmonksMatchData, match.match_id)
+    sm_ok = bool(sm is not None and sm.probs and market_is_fresh(sm))
+    sm_age = _age_seconds(sm.captured_at, now) if sm and sm.captured_at else None
+    intl_ok = bool(intl) and market_age is not None and market_age <= 15 * 60
+    market_ok = intl_ok or sm_ok
+    last_market = max(
+        [r.retrieved_at for r in intl if r.retrieved_at]
+        + ([sm.captured_at.isoformat()] if sm and sm.captured_at else []),
+        default=None)
+    market_age = min([age for age in (market_age, sm_age) if age is not None],
+                     default=None)
     fixt = _af_fixture(db, match.match_id)
     lineups = _lineups(db, match.match_id)
     lineups_ok = len({r.side for r in lineups if r.starters and r.side in ("home", "away")}) == 2
@@ -278,8 +291,8 @@ def _coverage(db: Session, match: SPMatch, date: str, v: Verdict | None,
          "last_sync": snap.captured_at if snap else None,
          "coverage": 1.0 if price_ok else 0.0},
         {"key": "market",
-         "status": "ok" if market_ok else "stale" if intl else "missing",
-         "last_sync": max((r.retrieved_at for r in intl), default=None),
+         "status": "ok" if market_ok else "stale" if (intl or sm) else "missing",
+         "last_sync": last_market,
          "coverage": 1.0 if market_ok else 0.0},
         {"key": "model", "status": "ok" if model_ok else "missing",
          "last_sync": None, "coverage": 1.0 if model_ok else 0.0},
@@ -314,7 +327,21 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
             "status": "stale" if ((_age_seconds(snap.captured_at, now) or 0) > 15 * 60) else "confirmed",
             "confidence": 1.0,
         })
-    if intl:
+    sm = db.get(SportmonksMatchData, match.match_id)
+    if sm is not None and sm.odds and market_is_fresh(sm):
+        probs = sm.odds
+        facts.append({
+            "id": "market", "kind": "market",
+            "label": f"Sportmonks · {sm.bookmaker or '市场'}",
+            "value": (f"{float(probs.get('home', 0)) * 100:.0f}% / "
+                      f"{float(probs.get('draw', 0)) * 100:.0f}% / "
+                      f"{float(probs.get('away', 0)) * 100:.0f}%"),
+            "detail": f"去水概率 · fixture {sm.fixture_id}",
+            "source": "sportmonks",
+            "captured_at": sm.captured_at.isoformat() if sm.captured_at else None,
+            "status": "confirmed", "confidence": 0.9,
+        })
+    elif intl:
         r = intl[0]
         facts.append({
             "id": "market", "kind": "market", "label": f"国际盘 · {r.source}",
@@ -533,6 +560,14 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
         select(SPSnapshot).where(SPSnapshot.match_id.in_(ids))).all() if ids else [])
         if _in_window(s.captured_at, d, win_start, win_end)]
     intl = [r for m in matches for r in sources_for_match(db, m)]
+    sm_rows = list(db.scalars(
+        select(SportmonksMatchData).where(SportmonksMatchData.match_id.in_(ids))
+    ).all()) if ids else []
+    ai_rows = list(db.scalars(
+        select(AIResearch).where(AIResearch.match_id.in_(ids))
+    ).all()) if ids else []
+    sm_ready = [r for r in sm_rows if r.probs and market_is_fresh(r)]
+    ai_ready = [r for r in ai_rows if effective_status(r) == "ready"]
     model_runs = list(db.scalars(
         select(ModelRun).where(ModelRun.run_date == d, ModelRun.match_id.in_(ids))
     ).all()) if ids else []
@@ -580,6 +615,7 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
         "killed": sum(1 for v in verdicts if v.status == "killed"),
     }
     raw_points = (len(snapshots) * 3 + len(intl) * 3 + len(model_runs)
+                  + len(sm_ready) * 3 + len(ai_ready)
                   + evidence_count + len(lineups) + len(injuries)
                   + len(standing_rows))
     last_snaps = max((s.captured_at for s in snapshots), default=None)
@@ -601,12 +637,28 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
                   + all_lineups + all_injuries + all_standings)
     snap_age = _age_seconds(last_snaps, now)
     intl_age = _age_seconds(last_intl, now)
+    last_sm = max((r.captured_at.isoformat() for r in sm_rows
+                   if r.captured_at is not None), default=None)
+    last_ai = max((r.captured_at.isoformat() for r in ai_rows
+                   if r.captured_at is not None), default=None)
+    sm_status = ("ok" if matches and len(sm_ready) >= len(matches)
+                 else "partial" if sm_ready
+                 else "stale" if sm_rows else "missing")
+    ai_status = ("ok" if matches and len(ai_ready) >= len(matches)
+                 else "partial" if ai_ready
+                 else "stale" if ai_rows else "missing")
     sources = [
+        {"key": "sportmonks", "label": "Sportmonks 预测/市场",
+         "status": sm_status, "last_sync": last_sm,
+         "coverage": (len(sm_ready) / len(matches)) if matches else 0.0},
+        {"key": "intel", "label": "AI 情报",
+         "status": ai_status, "last_sync": last_ai,
+         "coverage": (len(ai_ready) / len(matches)) if matches else 0.0},
         {"key": "sporttery", "label": "竞彩官方",
          "status": "ok" if snapshots and (snap_age is None or snap_age <= 35 * 60)
          else "stale" if snapshots else "missing",
          "last_sync": last_snaps, "coverage": 1.0 if snapshots else 0.0},
-        {"key": "intl", "label": "国际盘",
+        {"key": "intl", "label": "国际盘（兜底）",
          "status": ("ok" if intl and len(intl) >= len(matches)
                     else "partial" if intl else "missing")
          if intl_age is None or intl_age <= 35 * 60 else "stale" if intl else "missing",
@@ -638,6 +690,7 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
                    "intl_odds": len(intl), "model_runs": len(model_runs),
                    "verdicts": len(verdicts), "revisions": int(revisions),
                    "intel_items": evidence_count + len(lineups) + len(injuries) + len(standing_rows),
+                   "sportmonks": len(sm_ready), "ai_intel": len(ai_ready),
                    "sealed_links": len(sealed), "lineups": len(lineups),
                    "injuries": len(injuries), "standings": len(standing_rows)},
         "data_points": raw_points,
@@ -661,7 +714,7 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
              "status": "ok" if sealed else "missing"},
         ],
         "sources": sources, "outcomes": outcomes, "excluded": outcomes["killed"],
-        "definition": "data_points = sp_snapshots*3 + intl_odds*3 + model_runs + intel_items; "
+        "definition": "data_points = sp_snapshots*3 + intl_odds*3 + sm_ready*3 + ai_ready + model_runs + intel_items; "
                       "display = data_points × factor；不乘场次/封存/准确率",
     }
     if use_cache:

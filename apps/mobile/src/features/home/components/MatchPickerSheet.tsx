@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import type { OnSaleItem, VerdictSummary } from "@/domain/types";
-import { countdownText, formatTime, tradeDateCnFromKickoff } from "@/lib/format";
+import { saleCountdownText, formatTime, tradeDateCnFromKickoff } from "@/lib/format";
 import { colors, radii, spacing } from "@/theme/tokens";
 import { Chip, Icon, Sheet, StatusDot, Text } from "@/components/ui";
 
@@ -159,7 +159,7 @@ export function MatchPickerSheet({
                   {row.home} <Text variant="caption" color={colors.muted}>vs</Text> {row.away}
                 </Text>
                 <Text variant="caption" color={colors.muted}>
-                  {row.verdictId ? rowStatus(row.status) : `在售 · ${countdownText(row.close)}停售`}
+                  {row.verdictId ? rowStatus(row.status) : `在售 · ${saleCountdownText(row.close)}`}
                   {row.coverage ? ` · 覆盖 ${row.coverage.score}` : ""}
                 </Text>
               </View>

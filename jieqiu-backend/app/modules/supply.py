@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..models import (DecisionSnapshot, IntlOdds, RecommendationPlan, SPMatch,
                       SPSnapshot, SportmonksMatchData, Verdict)
+from .sportmonks import market_is_fresh
 from .timeutil import CN, trade_date_now, trade_window
 
 
@@ -96,7 +97,7 @@ def content_supply(db: Session, date: str | None = None) -> dict:
             if row.source not in sources:
                 sources.append(row.source)
         sm = sm_rows.get(m.match_id)
-        sm_market = bool(sm is not None and sm.odds)
+        sm_market = market_is_fresh(sm)
         per_match.append({
             "match_id": m.match_id,
             "match_no": m.match_no,
