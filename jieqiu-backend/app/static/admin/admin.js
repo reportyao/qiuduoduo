@@ -771,6 +771,9 @@ function wbMetric(metric) {
 function wbStageCard(stage) {
   const actions = (stage.actions || []).map(id =>
     `<button class="btn ghost small" data-wb-action="${esc(id)}">${esc(wbActionLabel(id))}</button>`).join("");
+  const evidence = Array.isArray(stage.evidence)
+    ? stage.evidence
+    : stage.evidence ? [String(stage.evidence)] : [];
   return `
     <div class="card wb-stage ${esc(stage.state)}">
       <div class="card-head">
@@ -779,7 +782,7 @@ function wbStageCard(stage) {
       </div>
       <div class="wb-stage-headline">${esc(stage.headline)}</div>
       <div class="wb-metrics">${(stage.metrics || []).map(wbMetric).join("")}</div>
-      ${(stage.evidence || []).length ? `<div class="wb-evidence">${stage.evidence.map(e => `<div>· ${esc(e)}</div>`).join("")}</div>` : ""}
+      ${evidence.length ? `<div class="wb-evidence">${evidence.map(e => `<div>· ${esc(e)}</div>`).join("")}</div>` : ""}
       <div class="wb-next"><b>下一步</b> ${esc(stage.next)}</div>
       ${actions ? `<div class="integration-actions">${actions}</div>` : ""}
       <details class="wb-definition"><summary>这是什么？</summary><div>${esc(stage.definition)}</div></details>
