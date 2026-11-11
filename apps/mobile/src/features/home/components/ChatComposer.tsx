@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { colors, fontFamily, radii, shadows, spacing } from "@/theme/tokens";
@@ -5,18 +6,22 @@ import { Icon, Text } from "@/components/ui";
 
 /** 首页底部的真实输入条：问题直接在这里发，回答也回到同一条对话流。 */
 export function ChatComposer({
-  value,
-  onChangeText,
   onSend,
   sending = false,
 }: {
-  value: string;
-  onChangeText: (text: string) => void;
-  onSend: () => void;
+  onSend: (text: string) => void;
   sending?: boolean;
 }) {
   const { copy } = usePersonaContent();
+  // 输入状态放在输入条内部：打字不再触发整页首页重渲染。
+  const [value, setValue] = useState("");
   const disabled = !value.trim() || sending;
+  const submit = () => {
+    const text = value.trim();
+    if (!text || sending) return;
+    setValue("");
+    onSend(text);
+  };
   return (
     <View style={styles.wrap}>
       <View style={styles.bar}>
@@ -25,7 +30,7 @@ export function ChatComposer({
         </View>
         <TextInput
           value={value}
-          onChangeText={onChangeText}
+          onChangeText={setValue}
           placeholder={copy.chatPlaceholder}
           placeholderTextColor={colors.subtle}
           style={styles.input}
@@ -36,7 +41,7 @@ export function ChatComposer({
           editable={!sending}
         />
         <Pressable
-          onPress={onSend}
+          onPress={submit}
           disabled={disabled}
           accessibilityRole="button"
           accessibilityLabel="发送"

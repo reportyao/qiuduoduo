@@ -84,7 +84,6 @@ export default function HomeScreen() {
   const focus = useFocusStore((s) => s.focus);
   const setFocus = useFocusStore((s) => s.setFocus);
   const clearFocus = useFocusStore((s) => s.clearFocus);
-  const [input, setInput] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [confirmedConflicts, setConfirmedConflicts] = useState<string[]>([]);
   const scrollRef = useRef<ScrollView>(null);
@@ -95,11 +94,10 @@ export default function HomeScreen() {
     return `${prefix}-${chatId.current}`;
   };
 
-  const sendChat = (raw?: string) => {
-    const text = (raw ?? input).trim();
+  const sendChat = (raw: string) => {
+    const text = raw.trim();
     if (!text || chat.isPending) return;
     trackInteraction("free_text_send", { metadata: { length: text.length } });
-    setInput("");
     autoScroll.current = true;
     setChatMessages((prev) => [...prev, { id: nextChatId("u"), role: "user", text }]);
     const wantsAnalysis = ["分析", "这场", "依据", "怎么看", "风险"].some((hint) => text.includes(hint));
@@ -568,9 +566,7 @@ export default function HomeScreen() {
         </ScrollView>
 
         <ChatComposer
-          value={input}
-          onChangeText={setInput}
-          onSend={() => sendChat()}
+          onSend={sendChat}
           sending={chat.isPending}
         />
       </KeyboardAvoidingView>
