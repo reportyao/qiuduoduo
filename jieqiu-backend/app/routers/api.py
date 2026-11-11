@@ -324,12 +324,14 @@ def _probability_compare(db: Session, v: Verdict) -> dict:
     # 优先 Sportmonks 市场 1X2；没有再用现有国际盘。
     from ..modules.sportmonks import latest_for_match
     sm = latest_for_match(db, v.match_id)
+    data_cutoff = (v.payload or {}).get("data_cutoff")
     if sm is not None and sm.odds:
         market = {
             "bookmaker": f"Sportmonks · {sm.bookmaker or '市场'}",
             "probs": sm.odds,
             "source": "sportmonks",
         }
+        data_cutoff = sm.data_cutoff or data_cutoff
     if market is None:
         match = db.get(SPMatch, v.match_id)
         if match is not None:
@@ -348,7 +350,7 @@ def _probability_compare(db: Session, v: Verdict) -> dict:
         "market": market,
         "model_enabled": has_model,
         "reason": None if has_model else "本场没有可用的模型概率；仅展示竞彩与市场参考。",
-        "data_cutoff": (v.payload or {}).get("data_cutoff"),
+        "data_cutoff": data_cutoff,
     }
 
 

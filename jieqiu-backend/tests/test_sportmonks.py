@@ -1,6 +1,7 @@
 """Sportmonks 同步纯函数测试：映射与去水。"""
 from types import SimpleNamespace
 
+from app.modules.intel_research import _extract_json
 from app.modules.sportmonks import _devig, match_fixture
 
 
@@ -53,3 +54,9 @@ def test_match_fixture_chinese_abbreviations():
 def test_match_fixture_never_guesses_weak_second_team():
     fixture = _fixture(3, "曼城", "布伦特福德", "2026-11-11 12:00:00")
     assert match_fixture(_match("曼城", "布莱顿"), [fixture]) is None
+
+
+def test_extract_json_tolerates_markdown_and_prefix():
+    text = '说明' + chr(10) + '```json' + chr(10) + '{"headline":"x","points":["y"]}' + chr(10) + '```'
+    assert _extract_json(text)["headline"] == "x"
+    assert _extract_json('prefix {"a":1} suffix')["a"] == 1
