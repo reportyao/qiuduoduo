@@ -165,15 +165,11 @@ def test_quota_enforced(db, monkeypatch):
         api_football.consume_quota(db, "fixtures")
 
 
-def test_admin_ops_lists_football_fixtures(client, db, monkeypatch):
-    _, kickoff_utc = _seed_match(db)
-    monkeypatch.setattr(api_football, "_request",
-                        lambda db, endpoint, params=None: [_fixture_item(kickoff_utc)])
-    api_football.sync_fixtures(db, today_cn())
+def test_admin_ops_reports_aux_football_status(client, db):
     admin_login(client)
     data = client.get("/admin/api/ops").json()
-    assert data["football_fixtures"][0]["fixture_id"] == 999001
-    assert data["football_fixtures"][0]["match_id"] == "af-match-1"
+    assert "football" in data
+    assert "football_fixtures" not in data
 
 
 def test_admin_football_link_requires_login(client):

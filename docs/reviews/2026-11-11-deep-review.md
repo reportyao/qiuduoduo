@@ -96,7 +96,7 @@
 
 ## 二、验证结果
 
-- 后端：`324 passed`。
+- 后端：`326 passed`。
 - 移动端：`45 passed`，`tsc --noEmit`、`eslint` 通过。
 - 生产：
   - 今日 6 场全部映射，预测/赔率/AI 情报均为 6/6，赔率全部 fresh。
@@ -120,3 +120,14 @@
 - **Sportmonks 429/5xx 重试**：`_get` 对 429/500/502/503/504 最多重试 2 次，支持 `Retry-After`，日志只记录 path 和状态码，不泄露 token。
 - **AI 情报 facts hash 缓存**：`ai_research.facts_hash`（Alembic `20261111_20`）记录事实+伤停摘要；事实不变且未过期时只续期，不重复调用 LLM；确定性兜底文案不算有效缓存，会继续重试。
 - **SQLite 启动期兼容**：`_REQUIRED_COLUMNS` 补 `ai_research.facts_hash`、`llm_profiles.reasoning`，生产 SQLite 启动会自动 ALTER，不依赖手工改表。
+
+## 五、后台 / 接口 / 旧资产二次清理（晚）
+
+- 运维页删除 API-Football fixture 大表和手工链接 UI；`/admin/api/ops` 不再返回 `football_fixtures`，只保留 `football` 辅助状态。
+- 运维页数据供给改为 Sportmonks 市场主口径，国际盘标为辅助兜底；删除对已移除 `footballCard()` 的调用（此前会导致运维页 `ReferenceError`）。
+- `seed.py` 在 Sportmonks 已覆盖全部未开赛市场时跳过 The Odds API，避免每 30 分钟白烧配额；缺口时才走国际盘兜底。
+- 市场覆盖率统一只统计“未开赛”场次；已开赛场次保留历史快照，不再让后台误报“市场覆盖 0/6”。
+- 标记兼容接口 deprecated：`GET/POST/DELETE /memories`、`POST /devices`、`POST /admin/api/football/link`。
+- 重新生成 `packages/api-client/openapi.json` 与 `schema.d.ts`：从旧快照 **138 路径 / 154 方法** 对齐到当前 **147 / 163**。
+- 旧研究资产（`deepseek_review.py`、`crawl_jczq_leagues.py`、`scripts/sm/sm_probe*.py`、`w1-validation/`、根目录 JSON）不参与运行时，建议后续统一移入 `archive/research/`；本次不删，避免丢研究证据。
+- 仍保留但未清理的公共旧接口：`/analysis-log`、`/model/evals`、`/water-rank`、`/sp/movements`、`/agents/sentinel/feed`。App 当前不调用，是否下线需确认 Web/分享页/旧客户端依赖。

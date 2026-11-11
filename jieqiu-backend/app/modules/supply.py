@@ -90,6 +90,7 @@ def content_supply(db: Session, date: str | None = None) -> dict:
         select(SportmonksMatchData).where(
             SportmonksMatchData.match_id.in_([m.match_id for m in matches]))
     ).all()} if matches else {}
+    now_cn = datetime.now(CN).strftime("%Y-%m-%d %H:%M:%S")
     per_match = []
     for m in matches:
         sources = []
@@ -109,8 +110,10 @@ def content_supply(db: Session, date: str | None = None) -> dict:
             "sm_market": sm_market,
             "sm_bookmaker": sm.bookmaker if sm else "",
             "market_covered": bool(sources) or sm_market,
+            "upcoming": m.kickoff >= now_cn,
         })
-    sm_market_covered = sum(1 for row in per_match if row["sm_market"])
+    upcoming = [row for row in per_match if row["upcoming"]]
+    sm_market_covered = sum(1 for row in upcoming if row["sm_market"])
 
     odds_configured = bool(get_settings().odds_api_key)
     blocked_reason = None
@@ -118,6 +121,8 @@ def content_supply(db: Session, date: str | None = None) -> dict:
         blocked_reason = "今日无在售场次"
     elif not verdicts:
         blocked_reason = "采集/判决未生成"
+    elif not upcoming:
+        blocked_reason = "今日已无未开赛场次"
     elif intl_total == 0 and sm_market_covered == 0:
         blocked_reason = "Sportmonks Pinnacle 与国际盘均未接入，市闸无法通过"
     elif market["pending_data"] >= len(verdicts):
@@ -140,11 +145,12 @@ def content_supply(db: Session, date: str | None = None) -> dict:
             "covered_matches": sum(1 for m in per_match if m["intl_covered"]),
             "missing_matches": sum(1 for m in per_match if not m["intl_covered"]),
         },
+        "upcoming_matches": len(upcoming),
         "sportmonks_market": {
             "covered_matches": sm_market_covered,
-            "missing_matches": sum(1 for m in per_match if not m["sm_market"]),
+            "missing_matches": sum(1 for m in upcoming if not m["sm_market"]),
         },
-        "market_covered_matches": sum(1 for m in per_match if m["market_covered"]),
+        "market_covered_matches": sum(1 for m in upcoming if m["market_covered"]),
         "per_match": per_match,
         "blocked_reason": blocked_reason,
     }

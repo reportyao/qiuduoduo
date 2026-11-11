@@ -1303,7 +1303,7 @@ async function loadData() {
   }).join("");
 
   root.innerHTML = `
-    ${supply.blocked_reason ? `<div class="card notice"><b>内容供给受阻：${esc(supply.blocked_reason)}</b><div class="card-sub" style="margin-top:8px">场次 ${supply.matches ?? 0} · 判决 ${supply.verdicts?.total ?? 0} · 市闸 pending ${gate.pending_data ?? 0} · 市场覆盖 ${supply.market_covered_matches ?? 0}/${supply.matches ?? 0} 场（SM ${supply.sportmonks_market?.covered_matches ?? 0} · 辅助国际盘 ${intl.covered_matches ?? 0}）</div></div>` : ""}
+    ${supply.blocked_reason ? `<div class="card notice"><b>内容供给受阻：${esc(supply.blocked_reason)}</b><div class="card-sub" style="margin-top:8px">场次 ${supply.matches ?? 0} · 判决 ${supply.verdicts?.total ?? 0} · 市闸 pending ${gate.pending_data ?? 0} · 未开赛覆盖 ${supply.market_covered_matches ?? 0}/${supply.upcoming_matches ?? supply.matches ?? 0} 场（SM ${supply.sportmonks_market?.covered_matches ?? 0} · 辅助国际盘 ${intl.covered_matches ?? 0}）</div></div>` : ""}
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-label">今日场次</div><div class="kpi-value">${summary.matches ?? 0}</div><div class="kpi-foot">已发布 ${published}</div></div>
       <div class="kpi green accent"><div class="kpi-label">SM 映射</div><div class="kpi-value">${summary.mapped ?? 0}/${summary.matches ?? 0}</div><div class="kpi-foot">手动 ${summary.manual ?? 0} · 缺失 ${summary.missing ?? 0}</div></div>

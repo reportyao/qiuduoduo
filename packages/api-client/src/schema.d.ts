@@ -864,12 +864,14 @@ export interface paths {
         };
         /**
          * Memories Root
+         * @deprecated
          * @description 兼容 TechSpec 的 GET /memories（与 /me/memories 同数据）。
          */
         get: operations["memories_root_memories_get"];
         put?: never;
         /**
          * Memory Create
+         * @deprecated
          * @description 兼容 TechSpec 的 POST /memories：key 在 body 里。
          */
         post: operations["memory_create_memories_post"];
@@ -909,6 +911,7 @@ export interface paths {
         post?: never;
         /**
          * Memory Delete Root
+         * @deprecated
          * @description 兼容 TechSpec 的 DELETE /memories/{key}。
          */
         delete: operations["memory_delete_root_memories__key__delete"];
@@ -1718,6 +1721,165 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/api/sportmonks/matrix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin Sm Matrix
+         * @description 今日逐场数据矩阵：竞彩场次 × SM 映射/预测/赔率 × AI 情报 × 判决。
+         */
+        get: operations["admin_sm_matrix_admin_api_sportmonks_matrix_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/api/sportmonks/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Sm Candidates */
+        get: operations["admin_sm_candidates_admin_api_sportmonks_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/api/sportmonks/map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Sm Map */
+        post: operations["admin_sm_map_admin_api_sportmonks_map_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/api/sportmonks/map/{match_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Admin Sm Unmap */
+        delete: operations["admin_sm_unmap_admin_api_sportmonks_map__match_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/api/model-eval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin Model Eval
+         * @description 已结算场次的 Brier 对比：竞彩去水 / 模型 / SM 市场 / SM 预测。
+         */
+        get: operations["admin_model_eval_admin_api_model_eval_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/api/sportmonks/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Sportmonks Sync */
+        post: operations["admin_sportmonks_sync_admin_api_sportmonks_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/api/ai-research/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Ai Research Sync */
+        post: operations["admin_ai_research_sync_admin_api_ai_research_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/api/sportmonks/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Sm Results */
+        post: operations["admin_sm_results_admin_api_sportmonks_results_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/api/sportmonks/results/backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Sm Results Backfill */
+        post: operations["admin_sm_results_backfill_admin_api_sportmonks_results_backfill_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/api/logs": {
         parameters: {
             query?: never;
@@ -1744,7 +1906,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Admin Football Link */
+        /**
+         * Admin Football Link
+         * @deprecated
+         */
         post: operations["admin_football_link_admin_api_football_link_post"];
         delete?: never;
         options?: never;
@@ -1831,7 +1996,7 @@ export interface paths {
         };
         /**
          * Admin Ops
-         * @description 运维聚合：告警、API-Football、封存链、通知、Push、互动与推荐覆盖。
+         * @description 运维聚合：告警、主/辅助数据源、封存链、通知、Push、互动与推荐覆盖。
          */
         get: operations["admin_ops_admin_api_ops_get"];
         put?: never;
@@ -2387,6 +2552,7 @@ export interface paths {
         put?: never;
         /**
          * Devices Alias
+         * @deprecated
          * @description 兼容 POST /devices；实现与 /push/register 完全一致。
          */
         post: operations["devices_alias_devices_post"];
@@ -2616,6 +2782,14 @@ export interface components {
             count: number;
             /** Items */
             items: components["schemas"]["AvoidItem"][];
+        };
+        /** BackfillBody */
+        BackfillBody: {
+            /**
+             * Days
+             * @default 14
+             */
+            days: number;
         };
         /** BatchAction */
         BatchAction: {
@@ -3092,6 +3266,11 @@ export interface components {
              * @default true
              */
             enabled: boolean;
+            /**
+             * Reasoning
+             * @default auto
+             */
+            reasoning: string;
         };
         /** LiveTimelineItem */
         LiveTimelineItem: {
@@ -3112,6 +3291,18 @@ export interface components {
             username: string;
             /** Password */
             password: string;
+        };
+        /** MapBody */
+        MapBody: {
+            /** Match Id */
+            match_id: string;
+            /** Fixture Id */
+            fixture_id: number;
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
         };
         /** MatchAnalysisResponse */
         MatchAnalysisResponse: {
@@ -3776,6 +3967,16 @@ export interface components {
             revisions: number;
             /** Intel Items */
             intel_items: number;
+            /**
+             * Sportmonks
+             * @default 0
+             */
+            sportmonks: number;
+            /**
+             * Ai Intel
+             * @default 0
+             */
+            ai_intel: number;
             /** Sealed Links */
             sealed_links: number;
             /** Lineups */
@@ -3963,6 +4164,14 @@ export interface components {
         RefreshBody: {
             /** Refresh Token */
             refresh_token: string;
+        };
+        /** ResultsSyncBody */
+        ResultsSyncBody: {
+            /**
+             * Days
+             * @default 2
+             */
+            days: number;
         };
         /** SPMovementItem */
         SPMovementItem: {
@@ -4153,6 +4362,11 @@ export interface components {
              * @default
              */
             reason: string;
+        };
+        /** SyncBody */
+        SyncBody: {
+            /** Date */
+            date?: string | null;
         };
         /** TrueCostResponse */
         TrueCostResponse: {
@@ -4405,7 +4619,7 @@ export interface components {
              * Action
              * @enum {string}
              */
-            action: "restart_collector" | "sync_odds" | "test_llm" | "run_pipeline";
+            action: "restart_collector" | "sync_odds" | "sync_sportmonks" | "sync_intel" | "test_llm" | "run_pipeline";
             /** Date */
             date?: string | null;
         };
@@ -7514,6 +7728,295 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    admin_sm_matrix_admin_api_sportmonks_matrix_get: {
+        parameters: {
+            query?: {
+                date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_sm_candidates_admin_api_sportmonks_candidates_get: {
+        parameters: {
+            query: {
+                match_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_sm_map_admin_api_sportmonks_map_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MapBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_sm_unmap_admin_api_sportmonks_map__match_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_model_eval_admin_api_model_eval_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_sportmonks_sync_admin_api_sportmonks_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_ai_research_sync_admin_api_ai_research_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyncBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_sm_results_admin_api_sportmonks_results_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResultsSyncBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_sm_results_backfill_admin_api_sportmonks_results_backfill_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BackfillBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

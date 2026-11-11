@@ -202,14 +202,16 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
     intl = supply["intl_odds"]
     sm_market = supply.get("sportmonks_market", {})
     cover = supply.get("market_covered_matches", intl["covered_matches"])
-    total = supply["matches"]
-    market_ok = no_matches or cover > 0
+    total = supply.get("upcoming_matches", supply["matches"])
+    no_upcoming = not no_matches and total == 0
+    market_ok = no_matches or no_upcoming or cover > 0
     stages.append(_stage(
         "market", "市场数据", "Sportmonks 市场与国际盘够不够？",
         "市闸需要竞彩官方 + 至少一条市场源（Sportmonks Pinnacle 或国际盘）；API-Football 只补阵容、伤停。",
-        _state(market_ok, market_ok and not no_matches and cover < total),
+        "idle" if (no_matches or no_upcoming) else _state(market_ok, cover < total),
         ("当前销售日无在售场次，不需要请求市场数据" if no_matches else
-         f"市场覆盖 {cover}/{total} 场（Sportmonks {sm_market.get('covered_matches', 0)} · 国际盘 {intl['covered_matches']}）；API-Football 今日已用 {af.get('used_today', 0)}/{af.get('daily_limit', 0)} 次"),
+         "今日已无未开赛场次，市场数据仅保留历史快照" if no_upcoming else
+         f"未开赛市场覆盖 {cover}/{total} 场（Sportmonks {sm_market.get('covered_matches', 0)} · 国际盘 {intl['covered_matches']}）；API-Football 今日已用 {af.get('used_today', 0)}/{af.get('daily_limit', 0)} 次"),
         [{"label": "市场覆盖", "value": f"{cover}/{total}"},
          {"label": "SM Pinnacle", "value": str(sm_market.get("covered_matches", 0))},
          {"label": "今日国际盘", "value": str(intl["total"])},
@@ -217,9 +219,10 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
          {"label": "伤停", "value": str(af.get("target", {}).get("injuries", 0))}],
         [intl.get("configured") and "Odds API 已配置" or "Odds API 未配置",
          "API-Football 积分榜当前关闭" if not af.get("standings_enabled") else "积分榜开启"],
-        "补齐 Sportmonks 映射/赔率" if not market_ok else ("覆盖仍不完整" if cover < total else "正常"),
-        (["sync_sportmonks"] if sm_market.get("covered_matches", 0) < total else [])
-        + (["sync_odds"] if intl["covered_matches"] < total else []),
+        ("今日已无未开赛场次" if no_upcoming else "补齐 Sportmonks 映射/赔率") if not market_ok else ("覆盖仍不完整" if cover < total else "正常"),
+        ([] if no_upcoming else
+         (["sync_sportmonks"] if sm_market.get("covered_matches", 0) < total else [])
+         + (["sync_odds"] if intl["covered_matches"] < total else [])),
     ))
 
     # 5 模型

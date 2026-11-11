@@ -2401,6 +2401,7 @@
         "summary": "Memories Root",
         "description": "兼容 TechSpec 的 GET /memories（与 /me/memories 同数据）。",
         "operationId": "memories_root_memories_get",
+        "deprecated": true,
         "parameters": [
           {
             "name": "authorization",
@@ -2453,6 +2454,7 @@
         "summary": "Memory Create",
         "description": "兼容 TechSpec 的 POST /memories：key 在 body 里。",
         "operationId": "memory_create_memories_post",
+        "deprecated": true,
         "parameters": [
           {
             "name": "authorization",
@@ -2635,6 +2637,7 @@
         "summary": "Memory Delete Root",
         "description": "兼容 TechSpec 的 DELETE /memories/{key}。",
         "operationId": "memory_delete_root_memories__key__delete",
+        "deprecated": true,
         "parameters": [
           {
             "name": "key",
@@ -4796,6 +4799,380 @@
         }
       }
     },
+    "/admin/api/sportmonks/matrix": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Sm Matrix",
+        "description": "今日逐场数据矩阵：竞彩场次 × SM 映射/预测/赔率 × AI 情报 × 判决。",
+        "operationId": "admin_sm_matrix_admin_api_sportmonks_matrix_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/sportmonks/candidates": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Sm Candidates",
+        "operationId": "admin_sm_candidates_admin_api_sportmonks_candidates_get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/sportmonks/map": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Sm Map",
+        "operationId": "admin_sm_map_admin_api_sportmonks_map_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MapBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/sportmonks/map/{match_id}": {
+      "delete": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Sm Unmap",
+        "operationId": "admin_sm_unmap_admin_api_sportmonks_map__match_id__delete",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/model-eval": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Model Eval",
+        "description": "已结算场次的 Brier 对比：竞彩去水 / 模型 / SM 市场 / SM 预测。",
+        "operationId": "admin_model_eval_admin_api_model_eval_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 90,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/sportmonks/sync": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Sportmonks Sync",
+        "operationId": "admin_sportmonks_sync_admin_api_sportmonks_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/ai-research/sync": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Ai Research Sync",
+        "operationId": "admin_ai_research_sync_admin_api_ai_research_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/sportmonks/results": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Sm Results",
+        "operationId": "admin_sm_results_admin_api_sportmonks_results_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResultsSyncBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/sportmonks/results/backfill": {
+      "post": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Sm Results Backfill",
+        "operationId": "admin_sm_results_backfill_admin_api_sportmonks_results_backfill_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackfillBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/api/logs": {
       "get": {
         "tags": [
@@ -4885,7 +5262,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/admin/api/users": {
@@ -5146,7 +5524,7 @@
           "admin-ui"
         ],
         "summary": "Admin Ops",
-        "description": "运维聚合：告警、API-Football、封存链、通知、Push、互动与推荐覆盖。",
+        "description": "运维聚合：告警、主/辅助数据源、封存链、通知、Push、互动与推荐覆盖。",
         "operationId": "admin_ops_admin_api_ops_get",
         "responses": {
           "200": {
@@ -6644,6 +7022,7 @@
         "summary": "Devices Alias",
         "description": "兼容 POST /devices；实现与 /push/register 完全一致。",
         "operationId": "devices_alias_devices_post",
+        "deprecated": true,
         "parameters": [
           {
             "name": "authorization",
@@ -7458,6 +7837,19 @@
           "items"
         ],
         "title": "AvoidListResponse"
+      },
+      "BackfillBody": {
+        "properties": {
+          "days": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 7.0,
+            "title": "Days",
+            "default": 14
+          }
+        },
+        "type": "object",
+        "title": "BackfillBody"
       },
       "BatchAction": {
         "properties": {
@@ -8695,6 +9087,12 @@
             "type": "boolean",
             "title": "Enabled",
             "default": true
+          },
+          "reasoning": {
+            "type": "string",
+            "pattern": "^(auto|off)$",
+            "title": "Reasoning",
+            "default": "auto"
           }
         },
         "type": "object",
@@ -8756,6 +9154,29 @@
           "password"
         ],
         "title": "LoginBody"
+      },
+      "MapBody": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "fixture_id": {
+            "type": "integer",
+            "title": "Fixture Id"
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id",
+          "fixture_id"
+        ],
+        "title": "MapBody"
       },
       "MatchAnalysisResponse": {
         "properties": {
@@ -10616,6 +11037,16 @@
             "type": "integer",
             "title": "Intel Items"
           },
+          "sportmonks": {
+            "type": "integer",
+            "title": "Sportmonks",
+            "default": 0
+          },
+          "ai_intel": {
+            "type": "integer",
+            "title": "Ai Intel",
+            "default": 0
+          },
           "sealed_links": {
             "type": "integer",
             "title": "Sealed Links"
@@ -11123,6 +11554,19 @@
           "refresh_token"
         ],
         "title": "RefreshBody"
+      },
+      "ResultsSyncBody": {
+        "properties": {
+          "days": {
+            "type": "integer",
+            "maximum": 14.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "default": 2
+          }
+        },
+        "type": "object",
+        "title": "ResultsSyncBody"
       },
       "SPMovementItem": {
         "properties": {
@@ -11695,6 +12139,23 @@
         },
         "type": "object",
         "title": "SubjectAction"
+      },
+      "SyncBody": {
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          }
+        },
+        "type": "object",
+        "title": "SyncBody"
       },
       "TrueCostResponse": {
         "properties": {
@@ -12371,6 +12832,8 @@
             "enum": [
               "restart_collector",
               "sync_odds",
+              "sync_sportmonks",
+              "sync_intel",
               "test_llm",
               "run_pipeline"
             ],
