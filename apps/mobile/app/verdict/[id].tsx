@@ -19,6 +19,7 @@ import {
 } from "@/features/verdict/queries";
 import { buildIntelReport } from "@/domain/intel";
 import { focusFromDetail, useFocusStore } from "@/features/home/focusStore";
+import { useParlayStore, type ParlayDir } from "@/features/tools/parlayStore";
 import { errorText } from "@/lib/errors";
 import { api } from "@/lib/api";
 import { currentTradeDateCn, formatDateTime, pct } from "@/lib/format";
@@ -41,6 +42,8 @@ export default function VerdictDetailScreen() {
   const [betOpen, setBetOpen] = useState(false);
   const [sealOpen, setSealOpen] = useState(false);
   const setFocus = useFocusStore((s) => s.setFocus);
+  const parlayLegs = useParlayStore((s) => s.legs);
+  const addParlayLeg = useParlayStore((s) => s.add);
 
   const detailQuery = useVerdictDetailQuery(id);
   const detail = detailQuery.data;
@@ -83,6 +86,44 @@ export default function VerdictDetailScreen() {
     } catch (e) {
       toast.show(errorText(e), "error");
     }
+  };
+
+  const addToParlay = () => {
+    if (!detail) return;
+    const dir = detail.pick?.dir;
+    if (dir !== "home" && dir !== "draw" && dir !== "away") {
+      toast.show("这场还没有预测方向，暂时不能加入串关", "warning");
+      return;
+    }
+    const odds = detail.pick?.sp
+      ?? (dir === "home" ? detail.sp.h : dir === "draw" ? detail.sp.d : detail.sp.a);
+    if (!odds || odds <= 1) {
+      toast.show("这场赔率还不完整，暂时不能加入串关", "warning");
+      return;
+    }
+    const result = addParlayLeg({
+      verdictId: detail.id,
+      matchId: detail.matchId,
+      tradeDate: detail.tradeDate,
+      home: detail.home,
+      away: detail.away,
+      kickoff: detail.kickoff,
+      dir: dir as ParlayDir,
+      odds,
+      rake: detail.rake,
+      marketOnly: detail.status !== "promoted"
+        || !Array.isArray(detail.model?.shrunk)
+        || detail.model.shrunk.length !== 3,
+    });
+    if (!result.ok) {
+      toast.show(result.reason ?? "加入串关失败", "warning");
+    } else {
+      toast.show("已加入串关，最多 6 场", "success");
+    }
+    router.push({
+      pathname: "/tools/parlay",
+      params: { seed: String(Date.now()), date: detail.tradeDate },
+    });
   };
 
   if (detailQuery.isLoading) {
@@ -194,6 +235,8 @@ export default function VerdictDetailScreen() {
           setFocus(focusFromDetail(detail));
           router.navigate("/(tabs)");
         }}
+        onParlay={addToParlay}
+        parlayAdded={parlayLegs.some((leg) => leg.verdictId === detail.id)}
       />
 
       <BetSheet

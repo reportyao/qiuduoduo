@@ -20,6 +20,7 @@ import { DateStrip } from "@/features/home/components/HomeSections";
 import { ParlayReport } from "@/features/tools/ParlayReport";
 import { ParlayPlans } from "@/features/tools/ParlayPlans";
 import { useParlayCheckMutation, useParlayPlanMutation, type ParlayCheck, type ParlayPlan } from "@/features/tools/queries";
+import { PARLAY_MAX_LEGS, useParlayStore } from "@/features/tools/parlayStore";
 import type { VerdictSummary } from "@/domain/types";
 import { errorText } from "@/lib/errors";
 import { currentTradeDateCn, decimalToFormat, oddsFormatLabel, pct, pickDirectionLabel, shiftDateCn } from "@/lib/format";
@@ -34,7 +35,7 @@ const DIR_KEY: Record<Dir, "h" | "d" | "a"> = { home: "h", draw: "d", away: "a" 
 
 export default function ParlayToolScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ date?: string }>();
+  const params = useLocalSearchParams<{ date?: string; seed?: string }>();
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const oddsFormat = useOddsFormat();
@@ -46,6 +47,9 @@ export default function ParlayToolScreen() {
   const [stake, setStake] = useState(100);
   const check = useParlayCheckMutation();
   const plan = useParlayPlanMutation();
+  const storeLegs = useParlayStore((s) => s.legs);
+  const removeStoreLeg = useParlayStore((s) => s.remove);
+  const clearStore = useParlayStore((s) => s.clear);
   const scrollRef = useRef<ScrollView>(null);
   const reportY = useRef(0);
   const pendingScroll = useRef(false);
@@ -71,6 +75,22 @@ export default function ParlayToolScreen() {
     ).slice(0, 12),
     [stream],
   );
+  // 从详情页“加入串关”带 seed 进来时，把共享腿池合并进本页选择。
+  useEffect(() => {
+    if (!params.seed || matches.length === 0) return;
+    setSelection((prev) => {
+      const next = { ...prev };
+      const ids = new Set(matches.map((match) => match.id));
+      for (const leg of storeLegs) {
+        if (leg.tradeDate !== date || !ids.has(leg.verdictId)) continue;
+        if (Object.keys(next).length >= PARLAY_MAX_LEGS) break;
+        next[leg.verdictId] = leg.dir;
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.seed, matches, date]);
+
   const legs = useMemo(
     () =>
       Object.entries(selection)
@@ -92,6 +112,10 @@ export default function ParlayToolScreen() {
     const shrunk = leg.match.model?.shrunk;
     return Array.isArray(shrunk) && shrunk.length === 3;
   }).length;
+  const hasMarketOnly = legs.some((leg) => {
+    const shrunk = leg.match.model?.shrunk;
+    return !Array.isArray(shrunk) || shrunk.length !== 3 || leg.match.status !== "promoted";
+  });
 
   const resetReport = () => {
     checkSeq.current += 1;
@@ -155,10 +179,11 @@ export default function ParlayToolScreen() {
       const next = { ...prev };
       if (next[verdict.id] === dir) {
         delete next[verdict.id];
+        removeStoreLeg(verdict.id);
         return next;
       }
-      if (!next[verdict.id] && Object.keys(next).length >= 4) {
-        toast.show("串关最多选 4 腿，腿越多越难算清", "warning");
+      if (!next[verdict.id] && Object.keys(next).length >= PARLAY_MAX_LEGS) {
+        toast.show(`串关最多选 ${PARLAY_MAX_LEGS} 腿，腿越多相关性和成本越高`, "warning");
         return prev;
       }
       next[verdict.id] = dir;
@@ -240,7 +265,7 @@ export default function ParlayToolScreen() {
         <Text variant="overline" color={colors.green}>串关参谋 · 帮我配</Text>
         <Text variant="display" style={styles.title}>先看组合，再自己改</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
-          从今日有预测的场次生成参考组合；也可以往下自己选 2–4 场做四维体检。
+          从今日有预测的场次生成参考组合；也可以往下自己选 2–6 场做四维体检。
           当前显示：{oddsFormatLabel(oddsFormat)}。
         </Text>
         <DateStrip
@@ -249,11 +274,20 @@ export default function ParlayToolScreen() {
             if (next === date) return; // 重复点当前日期不应清空已选腿
             chooseDate(next);
             setSelection({});
+            clearStore();
             resetReport();
             setPlanData(null);
             plan.reset();
           }}
         />
+
+        {hasMarketOnly ? (
+          <View style={styles.marketWarning}>
+            <Text variant="caption" color={colors.amber}>
+              含市场参考腿：整组标「未复核·仅市场参考」，不构成模型预测。
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.planBox}>
           <Text variant="captionStrong" color={colors.muted}>帮我配</Text>
@@ -381,7 +415,7 @@ export default function ParlayToolScreen() {
         ) : (
           <Text variant="small" color={colors.muted} style={styles.hint}>
             {legs.length === 0
-              ? "先选 2–4 场，再点底部「开始体检」。"
+              ? "先选 2–6 场，再点底部「开始体检」。"
               : legs.length < 2
                 ? "再选 1 场，底部按钮就会亮起。"
                 : `已选好，${modelCovered}/${legs.length} 腿有模型；点底部「开始体检」。`}
@@ -391,7 +425,7 @@ export default function ParlayToolScreen() {
 
       <View style={[styles.ctaBar, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
         <View style={styles.ctaInfo}>
-          <Text variant="captionStrong">已选 {legs.length} / 4 腿</Text>
+          <Text variant="captionStrong">已选 {legs.length} / {PARLAY_MAX_LEGS} 腿</Text>
           <Text variant="caption" color={colors.muted}>
             {legs.length < 2
               ? `至少 2 腿，还差 ${2 - legs.length} 场`
@@ -450,6 +484,15 @@ const styles = StyleSheet.create({
   warning: { marginTop: spacing.sm, lineHeight: 18 },
   actions: { marginTop: spacing.base, gap: spacing.sm },
   hint: { marginTop: spacing.base, lineHeight: 19 },
+  marketWarning: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    borderRadius: radii.md,
+    backgroundColor: colors.amberSoft,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.amberLine,
+  },
   report: { marginTop: spacing.x4, gap: spacing.xs },
   ctaBar: {
     position: "absolute",

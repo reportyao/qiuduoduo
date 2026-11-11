@@ -16,6 +16,8 @@ interface DetailActionBarProps {
   onWatch: () => void;
   onShare: () => void;
   onFocus: () => void;
+  onParlay: () => void;
+  parlayAdded: boolean;
 }
 
 export function DetailActionBar({
@@ -28,6 +30,8 @@ export function DetailActionBar({
   onWatch,
   onShare,
   onFocus,
+  onParlay,
+  parlayAdded,
 }: DetailActionBarProps) {
   const insets = useSafeAreaInsets();
   const { copy } = usePersonaContent();
@@ -35,40 +39,49 @@ export function DetailActionBar({
   const locked = promoted && published === false;
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
-      <View style={styles.row}>
+      <Button
+        label={
+          locked
+            ? "未发布，暂不可记"
+            : promoted
+              ? betExists
+                ? copy.bought
+                : copy.buy
+              : detail.status === "killed"
+                ? "看原因"
+                : copy.pendingCta
+        }
+        onPress={promoted && !locked ? onBet : onWhyNot}
+        disabled={promoted && (betExists || locked)}
+        fullWidth
+      />
+      <View style={styles.secondaryRow}>
         <Button
-          label={
-            locked
-              ? "未发布，暂不可记"
-              : promoted
-                ? betExists
-                  ? copy.bought
-                  : copy.buy
-                : detail.status === "killed"
-                  ? "看原因"
-                  : copy.pendingCta
-          }
-          onPress={promoted && !locked ? onBet : onWhyNot}
-          disabled={promoted && (betExists || locked)}
-          style={styles.primary}
+          label={parlayAdded ? "已加入串关" : "加入串关"}
+          variant="secondary"
+          size="sm"
+          onPress={onParlay}
+          style={styles.parlay}
         />
-        <IconButton
-          name="chatbubble-ellipses-outline"
-          onPress={onFocus}
-          accessibilityLabel="让助理看这场"
-        />
-        <IconButton
-          name={watching ? "heart" : "heart-outline"}
-          onPress={onWatch}
-          accessibilityLabel={watching ? "取消关注" : "关注这场比赛"}
-          color={watching ? colors.danger : colors.ink}
-        />
-        <IconButton
-          name="share-social-outline"
-          onPress={locked ? undefined : onShare}
-          accessibilityLabel={locked ? "未发布预测，暂不可分享" : "分享这场预测"}
-          color={locked ? colors.subtle : colors.ink}
-        />
+        <View style={styles.icons}>
+          <IconButton
+            name="chatbubble-ellipses-outline"
+            onPress={onFocus}
+            accessibilityLabel="让助理看这场"
+          />
+          <IconButton
+            name={watching ? "heart" : "heart-outline"}
+            onPress={onWatch}
+            accessibilityLabel={watching ? "取消关注" : "关注这场比赛"}
+            color={watching ? colors.danger : colors.ink}
+          />
+          <IconButton
+            name="share-social-outline"
+            onPress={locked ? undefined : onShare}
+            accessibilityLabel={locked ? "未发布预测，暂不可分享" : "分享这场预测"}
+            color={locked ? colors.subtle : colors.ink}
+          />
+        </View>
       </View>
     </View>
   );
@@ -82,6 +95,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.pagePadding,
     paddingTop: spacing.sm,
   },
-  row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  primary: { flex: 1 },
+  secondaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  parlay: { paddingHorizontal: spacing.sm },
+  icons: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
 });
