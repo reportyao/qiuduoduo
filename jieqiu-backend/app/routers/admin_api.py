@@ -47,6 +47,8 @@ LOG_FILES = {
     "purge": "purge.log",
     "db_maint": "db_maint.log",
     "backtest": "backtest.log",
+    "sportmonks": "sportmonks.log",
+    "intel": "intel.log",
 }
 
 
