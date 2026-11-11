@@ -201,7 +201,7 @@ def narration_stream(verdict_id: str, persona: str = "zhuanjia",
                              headers={"Cache-Control": "no-cache"})
 
 
-@router.get("/model/evals")
+@router.get("/model/evals", deprecated=True)
 def model_evals(db: Session = Depends(get_db)):
     rows = db.scalars(select(ModelEval).order_by(ModelEval.run_at.desc()).limit(20)).all()
     return [{"id": r.id, "label": r.label, "run_at": r.run_at.isoformat(),

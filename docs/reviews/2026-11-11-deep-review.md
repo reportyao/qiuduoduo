@@ -96,7 +96,7 @@
 
 ## 二、验证结果
 
-- 后端：`326 passed`。
+- 后端：`327 passed`。
 - 移动端：`45 passed`，`tsc --noEmit`、`eslint` 通过。
 - 生产：
   - 今日 6 场全部映射，预测/赔率/AI 情报均为 6/6，赔率全部 fresh。
@@ -130,4 +130,4 @@
 - 标记兼容接口 deprecated：`GET/POST/DELETE /memories`、`POST /devices`、`POST /admin/api/football/link`。
 - 重新生成 `packages/api-client/openapi.json` 与 `schema.d.ts`：从旧快照 **138 路径 / 154 方法** 对齐到当前 **147 / 163**。
 - 旧研究资产（`deepseek_review.py`、`crawl_jczq_leagues.py`、`scripts/sm/sm_probe*.py`、`w1-validation/`、根目录 JSON）不参与运行时，建议后续统一移入 `archive/research/`；本次不删，避免丢研究证据。
-- 仍保留但未清理的公共旧接口：`/analysis-log`、`/model/evals`、`/water-rank`、`/sp/movements`、`/agents/sentinel/feed`。App 当前不调用，是否下线需确认 Web/分享页/旧客户端依赖。
+- 公共旧接口 `/analysis-log`、`/model/evals`、`/water-rank`、`/sp/movements`、`/agents/sentinel/feed`、`/matches/{id}/live` 已标记 deprecated；App 当前不调用，保留兼容，确认 Web/旧客户端无依赖后再删除。

@@ -334,6 +334,7 @@
         "summary": "Water Rank",
         "description": "水位榜：当日抽水最浅的场次（默认 3 场）。",
         "operationId": "water_rank_water_rank_get",
+        "deprecated": true,
         "parameters": [
           {
             "name": "date",
@@ -444,6 +445,7 @@
         "summary": "Sp Movements",
         "description": "SP 异动：同日同场同玩法最近两次快照的赔率变化。",
         "operationId": "sp_movements_sp_movements_get",
+        "deprecated": true,
         "parameters": [
           {
             "name": "date",
@@ -504,6 +506,7 @@
         "summary": "Sentinel Feed",
         "description": "盘口哨兵事件流（events 表；只读公开事件）。",
         "operationId": "sentinel_feed_agents_sentinel_feed_get",
+        "deprecated": true,
         "parameters": [
           {
             "name": "match_id",
@@ -564,6 +567,7 @@
         "summary": "Match Live",
         "description": "实况卡：当前只展示已同步赛果+SP 快照，不伪造实时进球时间线。",
         "operationId": "match_live_matches__match_id__live_get",
+        "deprecated": true,
         "parameters": [
           {
             "name": "match_id",
@@ -1310,6 +1314,7 @@
         "summary": "Analysis Log",
         "description": "引擎分析日志（UI「引擎状态」弹层）：当日各场各闸最新一次结果，按时间倒序。",
         "operationId": "analysis_log_analysis_log_get",
+        "deprecated": true,
         "parameters": [
           {
             "name": "date",
@@ -1833,7 +1838,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/auth/device": {

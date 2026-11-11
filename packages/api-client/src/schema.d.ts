@@ -113,6 +113,7 @@ export interface paths {
         };
         /**
          * Water Rank
+         * @deprecated
          * @description 水位榜：当日抽水最浅的场次（默认 3 场）。
          */
         get: operations["water_rank_water_rank_get"];
@@ -153,6 +154,7 @@ export interface paths {
         };
         /**
          * Sp Movements
+         * @deprecated
          * @description SP 异动：同日同场同玩法最近两次快照的赔率变化。
          */
         get: operations["sp_movements_sp_movements_get"];
@@ -173,6 +175,7 @@ export interface paths {
         };
         /**
          * Sentinel Feed
+         * @deprecated
          * @description 盘口哨兵事件流（events 表；只读公开事件）。
          */
         get: operations["sentinel_feed_agents_sentinel_feed_get"];
@@ -193,6 +196,7 @@ export interface paths {
         };
         /**
          * Match Live
+         * @deprecated
          * @description 实况卡：当前只展示已同步赛果+SP 快照，不伪造实时进球时间线。
          */
         get: operations["match_live_matches__match_id__live_get"];
@@ -445,6 +449,7 @@ export interface paths {
         };
         /**
          * Analysis Log
+         * @deprecated
          * @description 引擎分析日志（UI「引擎状态」弹层）：当日各场各闸最新一次结果，按时间倒序。
          */
         get: operations["analysis_log_analysis_log_get"];
@@ -694,7 +699,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Model Evals */
+        /**
+         * Model Evals
+         * @deprecated
+         */
         get: operations["model_evals_model_evals_get"];
         put?: never;
         post?: never;
