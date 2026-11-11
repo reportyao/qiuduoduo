@@ -57,8 +57,8 @@ def _summarize(db: Session, facts: list[str], injured: int) -> tuple[str, list[s
                   '{"headline":"一句话","points":["要点1","要点2"]}。'
                   "只翻译事实，不预测、不编造；最多 3 条要点。"},
                  {"role": "user", "content": json.dumps(
-                     {"facts": facts, "injured_count": injured}, ensure_ascii=False)}],
-                max_tokens=420,
+                     {"facts": facts[:2], "injured_count": injured}, ensure_ascii=False)}],
+                max_tokens=1000,
             )
             if res is not None and not res.degraded and res.text:
                 obj = _extract_json(res.text)
