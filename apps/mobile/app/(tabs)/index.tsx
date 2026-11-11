@@ -32,6 +32,7 @@ import { MatchPickerSheet } from "@/features/home/components/MatchPickerSheet";
 import type { BriefMatchOption } from "@/features/home/components/BriefMatchPicker";
 import { buildBriefOptions } from "@/features/home/briefOptions";
 import { FocusSection } from "@/features/home/components/FocusSection";
+import { StreamFeed } from "@/features/home/components/StreamFeed";
 import { HeaderMetrics } from "@/features/home/components/HeaderMetrics";
 import { DataStatusSheet, LegalFooter } from "@/features/home/components/HomeSections";
 import {
@@ -44,11 +45,9 @@ import {
   AvoidMessage,
   EmptyMessage,
   ErrorMessage,
-  LoadMore,
   PostmortemMessage,
   RestMessage,
   UnattendedMessage,
-  VerdictMessage,
 } from "@/features/home/components/ConversationMessages";
 import { BetSheet } from "@/features/verdict/components/BetSheet";
 import { SealSheet } from "@/features/verdict/components/SealSheet";
@@ -494,44 +493,21 @@ export default function HomeScreen() {
                 ) : null}
 
                 {(focus || openedAll) ? (
-                  <>
-                {heroVerdict ? (
-                  <VerdictMessage
-                    verdict={heroVerdict}
-                    hero
-                    betExists={betIds.has(heroVerdict.id)}
-                    onOpen={openVerdict}
+                  <StreamFeed
+                    stream={stream}
+                    heroVerdict={heroVerdict}
+                    restVerdicts={restVerdicts}
+                    betIds={betIds}
+                    showRest={!focus}
+                    hasNextPage={streamQuery.hasNextPage}
+                    fetchingNext={streamQuery.isFetchingNextPage}
+                    onOpenVerdict={openVerdict}
                     onBet={setBetTarget}
                     onWhyNot={openWhyNot}
                     onSeal={setSealTarget}
                     onParlay={() => router.push({ pathname: "/tools/parlay", params: { date } })}
+                    onFetchNext={() => streamQuery.fetchNextPage()}
                   />
-                ) : null}
-
-                {!focus ? restVerdicts.map((verdict, index) => (
-                  <VerdictMessage
-                    key={verdict.id}
-                    delay={Math.min(index * 45, 360)}
-                    verdict={verdict}
-                    betExists={betIds.has(verdict.id)}
-                    onOpen={openVerdict}
-                    onBet={setBetTarget}
-                    onWhyNot={openWhyNot}
-                    onSeal={setSealTarget}
-                  />
-                )) : null}
-
-                {!focus && streamQuery.hasNextPage ? (
-                  <LoadMore
-                    loading={streamQuery.isFetchingNextPage}
-                    onPress={() => streamQuery.fetchNextPage()}
-                  />
-                ) : null}
-
-                <AvoidMessage items={stream.avoid} onOpen={openWhyNot} />
-                <PostmortemMessage items={stream.postmortems} onOpen={openVerdict} />
-                <UnattendedMessage items={stream.unattended} onOpen={openVerdict} />
-                  </>
                 ) : null}
               </>
             )}
