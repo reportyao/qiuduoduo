@@ -1,5 +1,7 @@
 # 球多多 × Sportmonks 重构方案 v2（数据源收编 + Prediction Model 主力）
 
+> **2026-11-11 实测更新：** 用真实 token 验证后，本文部分假设已被推翻（如"非五大 SM 单引擎"、覆盖范围、价值投注作用）。最新结论以 [sportmonks-v3-real-data-plan.md](./sportmonks-v3-real-data-plan.md) 为准。
+
 > 前提约束：**数据源收敛为两个** —— ① 自建竞彩采集器（SP/让球/单关/销售窗口，唯一竞彩口径事实源）；② Sportmonks Football API v3（国际数据 + 预测模型）。
 > 依据：`Sportmonks调研报告.md` + docs.sportmonks.com/v3 全量文档 + 当前代码审查 + **DeepSeek 独立评审 12 条（已全部采纳，见 §11 与 [sm_deepseek_review.md](./sm_deepseek_review.md)）**。
 > v2 变更：预算上限修正、市场闸判据修正、验证管线改影子模式、结算双源对账、排期改四门制、合规与授权缺口补齐。
