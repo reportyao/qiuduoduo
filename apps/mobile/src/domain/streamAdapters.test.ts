@@ -2,6 +2,38 @@ import { describe, expect, it } from "vitest";
 import { adaptStream, adaptVerdictDetail, adaptWhyNot } from "./streamAdapters";
 
 describe("adaptVerdictDetail", () => {
+  it("parses probability_compare when backend provides it", () => {
+    const detail = adaptVerdictDetail({
+      id: "v2",
+      trade_date: "2026-11-11",
+      match_no: "周三002",
+      league: "英超",
+      home: "甲",
+      away: "乙",
+      kickoff: "2026-11-11 20:00:00",
+      pool: "had",
+      sp: { h: 2, d: 3, a: 4 },
+      probs: { home: 0.5, draw: 0.3, away: 0.2 },
+      rake: 0.03,
+      status: "promoted",
+      gates: {},
+      pick: { dir: "主胜" },
+      payload_hash: "b".repeat(64),
+      created_at: "2026-11-11T12:00:00",
+      probability_compare: {
+        sp: { home: 0.48, draw: 0.31, away: 0.21 },
+        model: { home: 0.52, draw: 0.28, away: 0.2 },
+        market: { bookmaker: "Pinnacle", probs: { home: 0.5, draw: 0.29, away: 0.21 } },
+        model_enabled: true,
+        data_cutoff: "2026-11-11T12:00:00+08:00",
+      },
+      payload: { match_id: "2043001" },
+    });
+    expect(detail?.probabilityCompare?.model?.home).toBe(0.52);
+    expect(detail?.probabilityCompare?.market?.bookmaker).toBe("Pinnacle");
+    expect(detail?.probabilityCompare?.modelEnabled).toBe(true);
+  });
+
   it("reads match_id from payload and gate objects", () => {
     const detail = adaptVerdictDetail({
       id: "v1",

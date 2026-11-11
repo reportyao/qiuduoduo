@@ -187,8 +187,18 @@ export interface SealResponse {
   verifyHint: string;
 }
 
+export interface ProbabilityCompareData {
+  sp: ProbabilityTriple | null;
+  model: ProbabilityTriple | null;
+  market: { bookmaker: string; probs: ProbabilityTriple } | null;
+  modelEnabled: boolean;
+  reason?: string | null;
+  dataCutoff?: string | null;
+}
+
 export interface VerdictDetail extends VerdictSummary {
   tradeDate: string;
+  probabilityCompare?: ProbabilityCompareData | null;
   gatesDetail: Partial<Record<GateKey, GateDetail>>;
   evidence: EvidenceItem[];
   dataCutoff: string;
