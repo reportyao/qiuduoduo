@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { memo, useCallback, useMemo, useState } from "react";
+import { FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
@@ -18,7 +18,61 @@ import { colors, layout, radii, spacing } from "@/theme/tokens";
 
 type Filter = "all" | "single" | "promoted" | "screening";
 
-/** 比赛 Tab：在售雷达 + 顶部串关入口。 */
+/** 比赛行：memo 化，父层筛选/弹层状态变化不重绘所有行。 */
+const MatchRow = memo(function MatchRow({
+  item,
+  now,
+  onPress,
+}: {
+  item: OnSaleItem;
+  now: number;
+  onPress: (item: OnSaleItem) => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => onPress(item)}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.home} 对 ${item.away}，${formatTime(item.kickoff)} 开赛`}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+    >
+      <View style={styles.time}>
+        <Text variant="bodyStrong">{formatTime(item.kickoff)}</Text>
+        <Text variant="caption" color={colors.subtle}>{item.matchNo}</Text>
+      </View>
+      <View style={styles.flex}>
+        <Text variant="bodyStrong" numberOfLines={1}>
+          {item.home} <Text variant="caption" color={colors.muted}>vs</Text> {item.away}
+        </Text>
+        <View style={styles.metaRow}>
+          <Text variant="caption" color={colors.muted}>
+            {countdownText(item.saleClose, now)}停售
+            {item.rake != null ? ` · 抽水 ${pct(item.rake)}` : " · 待复核"}
+            {item.league ? ` · ${item.league}` : ""}
+          </Text>
+          {item.single ? <Chip label="单关" tone="green" /> : null}
+        </View>
+      </View>
+      <View style={styles.status}>
+        <StatusDot
+          color={
+            item.status === "promoted"
+              ? colors.green
+              : item.status === "screening"
+                ? colors.amber
+                : item.status === "killed"
+                  ? colors.danger
+                  : colors.subtle
+          }
+        />
+        <Text variant="caption" color={item.status === "killed" ? colors.danger : colors.muted}>
+          {onSaleStatusLabel(item.status)}
+        </Text>
+      </View>
+    </Pressable>
+  );
+});
+
+/** 比赛 Tab：在售雷达 + 顶部串关入口；列表用 FlatList 虚拟化。 */
 export default function MatchesScreen() {
   const router = useRouter();
   const toast = useToast();
@@ -46,14 +100,41 @@ export default function MatchesScreen() {
     });
   }, [filter, query.data]);
 
-  const open = (item: OnSaleItem) => {
+  const open = useCallback((item: OnSaleItem) => {
     if (item.verdictId) {
       router.push({ pathname: "/verdict/[id]", params: { id: item.verdictId } });
       return;
     }
     // 没有判决的场次先给关注/详情，不直接跳走。
     setSelected(item);
-  };
+  }, [router]);
+
+  const renderRow = useCallback(
+    ({ item }: { item: OnSaleItem }) => (
+      <MatchRow item={item} now={now} onPress={open} />
+    ),
+    [now, open],
+  );
+
+  const listHeader = (
+    <View>
+      <Text variant="overline" color={colors.green}>在售 · 官方停售时间</Text>
+      <Text variant="display" style={styles.title}>今天能看的场</Text>
+      <Text variant="body" color={colors.muted} style={styles.lead}>
+        停售时刻 = 官方开赛时刻。点一场看三闸与依据；也可以先加入串关，最多 6 场。
+      </Text>
+      <View style={styles.filters}>
+        {([
+          ["all", "全部"],
+          ["single", "单关"],
+          ["promoted", "三关通过"],
+          ["screening", "复核中"],
+        ] as [Filter, string][]).map(([key, label]) => (
+          <Chip key={key} label={label} selected={filter === key} onPress={() => setFilter(key)} />
+        ))}
+      </View>
+    </View>
+  );
 
   return (
     <AppScreen bottom={false}>
@@ -72,11 +153,27 @@ export default function MatchesScreen() {
           />
         }
       />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
+      <FlatList
+        data={rows}
+        keyExtractor={(item) => item.matchId}
+        renderItem={renderRow}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={
+          query.isLoading ? (
+            <View style={styles.skeletons}>
+              <Skeleton height={68} radius={16} />
+              <Skeleton height={68} radius={16} />
+              <Skeleton height={68} radius={16} />
+            </View>
+          ) : query.isError ? (
+            <ErrorState message={errorText(query.error)} onRetry={() => query.refetch()} />
+          ) : (
+            <Text variant="body" color={colors.muted} style={styles.empty}>
+              当前筛选下没有在售场次。可能是休息日，或数据还没同步。
+            </Text>
+          )
+        }
         contentContainerStyle={styles.content}
-        onScroll={onScroll}
-        scrollEventThrottle={48}
         refreshControl={
           <RefreshControl
             refreshing={pulling}
@@ -91,84 +188,14 @@ export default function MatchesScreen() {
             tintColor={colors.green}
           />
         }
-      >
-        <Text variant="overline" color={colors.green}>在售 · 官方停售时间</Text>
-        <Text variant="display" style={styles.title}>今天能看的场</Text>
-        <Text variant="body" color={colors.muted} style={styles.lead}>
-          停售时刻 = 官方开赛时刻。点一场看三闸与依据；也可以先加入串关，最多 6 场。
-        </Text>
-
-        <View style={styles.filters}>
-          {([
-            ["all", "全部"],
-            ["single", "单关"],
-            ["promoted", "三关通过"],
-            ["screening", "复核中"],
-          ] as [Filter, string][]).map(([key, label]) => (
-            <Chip key={key} label={label} selected={filter === key} onPress={() => setFilter(key)} />
-          ))}
-        </View>
-
-        {query.isLoading ? (
-          <View style={styles.skeletons}>
-            <Skeleton height={68} radius={16} />
-            <Skeleton height={68} radius={16} />
-            <Skeleton height={68} radius={16} />
-          </View>
-        ) : query.isError ? (
-          <ErrorState message={errorText(query.error)} onRetry={() => query.refetch()} />
-        ) : rows.length === 0 ? (
-          <Text variant="body" color={colors.muted} style={styles.empty}>
-            当前筛选下没有在售场次。可能是休息日，或数据还没同步。
-          </Text>
-        ) : (
-          <View style={styles.list}>
-            {rows.map((item) => (
-              <Pressable
-                key={item.matchId}
-                onPress={() => open(item)}
-                accessibilityRole="button"
-                accessibilityLabel={`${item.home} 对 ${item.away}，${formatTime(item.kickoff)} 开赛`}
-                style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-              >
-                <View style={styles.time}>
-                  <Text variant="bodyStrong">{formatTime(item.kickoff)}</Text>
-                  <Text variant="caption" color={colors.subtle}>{item.matchNo}</Text>
-                </View>
-                <View style={styles.flex}>
-                  <Text variant="bodyStrong" numberOfLines={1}>
-                    {item.home} <Text variant="caption" color={colors.muted}>vs</Text> {item.away}
-                  </Text>
-                  <View style={styles.metaRow}>
-                    <Text variant="caption" color={colors.muted}>
-                      {countdownText(item.saleClose, now)}停售
-                      {item.rake != null ? ` · 抽水 ${pct(item.rake)}` : " · 待复核"}
-                      {item.league ? ` · ${item.league}` : ""}
-                    </Text>
-                    {item.single ? <Chip label="单关" tone="green" /> : null}
-                  </View>
-                </View>
-                <View style={styles.status}>
-                  <StatusDot
-                    color={
-                      item.status === "promoted"
-                        ? colors.green
-                        : item.status === "screening"
-                          ? colors.amber
-                          : item.status === "killed"
-                            ? colors.danger
-                            : colors.subtle
-                    }
-                  />
-                  <Text variant="caption" color={item.status === "killed" ? colors.danger : colors.muted}>
-                    {onSaleStatusLabel(item.status)}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+        onScroll={onScroll}
+        scrollEventThrottle={48}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={8}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews
+      />
 
       <Sheet
         visible={Boolean(selected)}
@@ -259,7 +286,6 @@ const styles = StyleSheet.create({
   title: { marginTop: spacing.xs },
   lead: { marginTop: spacing.sm, lineHeight: 22 },
   filters: { flexDirection: "row", gap: spacing.xs, flexWrap: "wrap", marginTop: spacing.base },
-  list: { gap: spacing.sm, marginTop: spacing.base },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -270,6 +296,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     padding: spacing.base,
     minHeight: 68,
+    marginTop: spacing.sm,
   },
   pressed: { opacity: 0.72 },
   time: { width: 50, gap: 1 },
