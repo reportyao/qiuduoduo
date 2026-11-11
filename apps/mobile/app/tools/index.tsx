@@ -1,5 +1,6 @@
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
+import { goBackOr } from "@/lib/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
 import { Card, Icon, SettingsGroup, SettingsRow, Text } from "@/components/ui";
@@ -24,9 +25,7 @@ const TOOLS: Tool[] = [
   { key: "odds", title: "赔率换算", subtitle: "欧 / 港 / 印尼 / 美式", icon: "swap-horizontal-outline", route: "/tools/odds" },
   { key: "stake", title: "仓位计算", subtitle: "凯利分数与单注上限", icon: "stats-chart-outline", route: "/tools/stake" },
   { key: "breakeven", title: "回本线", subtitle: "这个赔率要赢多少才不亏", icon: "analytics-outline", route: "/tools/break-even" },
-  { key: "onsale", title: "今日在售", subtitle: "停售时间与过闸状态", icon: "calendar-outline", route: "/tools/on-sale" },
   { key: "whynot", title: "为什么不出", subtitle: "没给预测的场次，原因全公开", icon: "close-circle-outline", route: "/tools/why-not" },
-  { key: "ledger", title: "公开账本", subtitle: "全部预测与连败都在", icon: "book-outline", route: "/records/ledger" },
 ];
 
 export default function ToolsScreen() {
@@ -40,10 +39,11 @@ export default function ToolsScreen() {
   return (
     <AppScreen bottom={false}>
       <AppHeader
-        title="工具箱"
-        subtitle="球多多 · AI 预测"
+        title="助理技能"
+        subtitle="球多多 · 计算与体检"
         showAssistant={false}
-        right={<Text variant="caption" color={colors.muted}>8 个工具</Text>}
+        onBack={() => goBackOr(router)}
+        right={<Text variant="caption" color={colors.muted}>{TOOLS.length} 个工具</Text>}
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -89,26 +89,16 @@ export default function ToolsScreen() {
           </SettingsGroup>
 
           <SettingsGroup title="看比赛">
-            {TOOLS.slice(5, 7).map((tool, index) => (
+            {TOOLS.slice(5).map((tool) => (
               <SettingsRow
                 key={tool.key}
                 title={tool.title}
                 subtitle={tool.subtitle}
                 icon={tool.icon}
                 onPress={() => router.push(tool.route as never)}
-                last={index === 1}
+                last
               />
             ))}
-          </SettingsGroup>
-
-          <SettingsGroup title="记录">
-            <SettingsRow
-              title={TOOLS[7].title}
-              subtitle={TOOLS[7].subtitle}
-              icon={TOOLS[7].icon}
-              onPress={() => router.push(TOOLS[7].route as never)}
-              last
-            />
           </SettingsGroup>
         </View>
 
