@@ -428,10 +428,12 @@ def latest_for_match(db: Session, match_id: str) -> SportmonksMatchData | None:
 
 
 def market_coverage(db: Session, date: str) -> tuple[int, int]:
-    """当日 Sportmonks 市场覆盖（新鲜赔率场次数, 总场次数）。"""
+    """当日未开赛 Sportmonks 市场覆盖（新鲜赔率场次数, 总场次数）。"""
     start, end = trade_window(date)
+    now_cn = datetime.now(CN_TZ).strftime("%Y-%m-%d %H:%M:%S")
     matches = list(db.scalars(select(SPMatch).where(
-        SPMatch.kickoff >= start, SPMatch.kickoff <= end)).all())
+        SPMatch.kickoff >= max(start, now_cn),
+        SPMatch.kickoff <= end)).all())
     if not matches:
         return 0, 0
     ids = [m.match_id for m in matches]
