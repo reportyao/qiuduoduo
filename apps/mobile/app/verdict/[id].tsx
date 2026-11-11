@@ -19,7 +19,8 @@ import {
 } from "@/features/verdict/queries";
 import { buildIntelReport } from "@/domain/intel";
 import { focusFromDetail, useFocusStore } from "@/features/home/focusStore";
-import { useParlayStore, type ParlayDir } from "@/features/tools/parlayStore";
+import { useParlayStore } from "@/features/tools/parlayStore";
+import { toParlayDir } from "@/features/tools/parlayDirection";
 import { errorText } from "@/lib/errors";
 import { api } from "@/lib/api";
 import { currentTradeDateCn, formatDateTime, pct } from "@/lib/format";
@@ -90,8 +91,8 @@ export default function VerdictDetailScreen() {
 
   const addToParlay = () => {
     if (!detail) return;
-    const dir = detail.pick?.dir;
-    if (dir !== "home" && dir !== "draw" && dir !== "away") {
+    const dir = toParlayDir(detail.pick?.dir);
+    if (!dir) {
       toast.show("这场还没有预测方向，暂时不能加入串关", "warning");
       return;
     }
@@ -108,7 +109,7 @@ export default function VerdictDetailScreen() {
       home: detail.home,
       away: detail.away,
       kickoff: detail.kickoff,
-      dir: dir as ParlayDir,
+      dir,
       odds,
       rake: detail.rake,
       marketOnly: detail.status !== "promoted"
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: layout.pagePadding,
     paddingTop: spacing.sm,
-    paddingBottom: 120,
+    paddingBottom: 168,
   },
   loading: { padding: layout.pagePadding },
   counter: { marginTop: spacing.base, gap: spacing.xs },

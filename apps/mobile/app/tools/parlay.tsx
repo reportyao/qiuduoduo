@@ -72,7 +72,7 @@ export default function ParlayToolScreen() {
   const matches = useMemo(
     () => (stream?.verdicts ?? []).filter(
       (v) => v.rake != null && v.sp.h > 1 && v.sp.d > 1 && v.sp.a > 1,
-    ).slice(0, 12),
+    ).slice(0, 24),
     [stream],
   );
   // 从详情页“加入串关”带 seed 进来时，把共享腿池合并进本页选择。
@@ -108,13 +108,23 @@ export default function ParlayToolScreen() {
         .filter((leg): leg is { match: VerdictSummary; dir: Dir; odds: number; rake: number } => leg !== null),
     [matches, selection],
   );
+  const publishedIds = useMemo(
+    () => new Set((recommendationsQuery.data?.snapshots ?? [])
+      .map((item) => item.verdict?.id)
+      .filter((id): id is string => Boolean(id))),
+    [recommendationsQuery.data],
+  );
   const modelCovered = legs.filter((leg) => {
     const shrunk = leg.match.model?.shrunk;
-    return Array.isArray(shrunk) && shrunk.length === 3;
+    return publishedIds.has(leg.match.id)
+      && leg.match.status === "promoted"
+      && Array.isArray(shrunk) && shrunk.length === 3;
   }).length;
   const hasMarketOnly = legs.some((leg) => {
     const shrunk = leg.match.model?.shrunk;
-    return !Array.isArray(shrunk) || shrunk.length !== 3 || leg.match.status !== "promoted";
+    return !publishedIds.has(leg.match.id)
+      || leg.match.status !== "promoted"
+      || !Array.isArray(shrunk) || shrunk.length !== 3;
   });
 
   const resetReport = () => {
@@ -175,6 +185,9 @@ export default function ParlayToolScreen() {
 
   const toggle = (verdict: VerdictSummary, dir: Dir) => {
     resetReport();
+    // 改方向时同步移出共享腿池，避免刷新后又被旧方向覆盖。
+    const stored = storeLegs.find((leg) => leg.verdictId === verdict.id);
+    if (stored && stored.dir !== dir) removeStoreLeg(verdict.id);
     setSelection((prev) => {
       const next = { ...prev };
       if (next[verdict.id] === dir) {
