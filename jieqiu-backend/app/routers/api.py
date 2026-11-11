@@ -98,7 +98,7 @@ def stream(date: str | None = None, cursor: str | None = None, limit: int = 50,
     return build_stream_cached(db, d, cursor=cursor, limit=limit, user=user)
 
 
-@router.get("/analysis-log")
+@router.get("/analysis-log", deprecated=True)
 def analysis_log(date: str | None = None, match_id: str | None = None,
                  limit: int = 100, db: Session = Depends(get_db)):
     """引擎分析日志（UI「引擎状态」弹层）：当日各场各闸最新一次结果，按时间倒序。"""
