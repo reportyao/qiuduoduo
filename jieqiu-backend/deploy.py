@@ -325,6 +325,12 @@ WantedBy=multi-user.target
             # 数据保留：每周日 04:10 清理可再生日志；判决/账本/SP 快照永不自动删除
             f"10 4 * * 0 {cron_prefix}"
             f"venv/bin/python -m app.db_maint --apply --json >> {ROOT}/db_maint.log 2>&1\n")
+    if os.environ.get("JQ_SPORTMONKS_TOKEN") or remote_env.get("JQ_SPORTMONKS_TOKEN"):
+        # Sportmonks 预测/市场 + AI 情报：每 30 分钟刷新当日在售场次。
+        cron += (f"5,35 * * * * {cron_prefix}"
+                 rf"venv/bin/python -m app.sportmonks_cli sync --date $(date +\%F) >> {ROOT}/sportmonks.log 2>&1" + "\n")
+        cron += (f"10,40 * * * * {cron_prefix}"
+                 rf"venv/bin/python -m app.intel_cli sync --date $(date +\%F) >> {ROOT}/intel.log 2>&1" + "\n")
     if os.environ.get("JQ_API_FOOTBALL_KEY") or remote_env.get("JQ_API_FOOTBALL_KEY"):
         # 免费档每日一次 fixtures；未配 key 的部署不装这条，避免无意义失败日志。
         cron += (f"15 6 * * * {cron_prefix}"
