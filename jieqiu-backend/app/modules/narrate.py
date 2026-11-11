@@ -26,11 +26,11 @@ TEMPLATES = {
         "killed": ("兄弟，{home}这场咱撤：{why}。省下的都是赚的，输钱不输阵。"),
     },
     "meng": {
-        "promoted": ("主人～{home} vs {away}，人家检查完啦！{pick}，置信 {top}% 哦～"
-                     "抽水只有 {rake}%，三关都过了呢！详情人家都封好啦 ♡"),
-        "screening": ("主人～{home}对{away}人家还在复核中…{wait}。"
-                      "复核完人家第一时间飞奔来报 ♡"),
-        "killed": ("呜…{home}这场人家不能让主人上：{why}。不放行的时候，人家最认真！(っ•̀ω•́)っ"),
+        "promoted": ("你～{home} vs {away}，我检查完啦！{pick}，置信 {top}% 哦～"
+                     "抽水只有 {rake}%，三关都过了呢！详情我都封好啦～"),
+        "screening": ("你～{home}对{away}我还在复核中…{wait}。"
+                      "复核完我第一时间来报～"),
+        "killed": ("呜…{home}这场我不能让你上：{why}。不放行的时候，我最认真！"),
     },
 }
 

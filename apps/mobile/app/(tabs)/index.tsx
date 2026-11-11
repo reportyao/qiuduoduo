@@ -30,6 +30,7 @@ import { useBetsQuery } from "@/features/records/queries";
 import { trackInteraction } from "@/features/telemetry/interactions";
 import { ChatComposer } from "@/features/home/components/ChatComposer";
 import { MatchPickerSheet } from "@/features/home/components/MatchPickerSheet";
+import type { BriefMatchOption } from "@/features/home/components/BriefMatchPicker";
 import { FocusPanel } from "@/features/home/components/FocusPanel";
 import { DataStatusSheet, LegalFooter } from "@/features/home/components/HomeSections";
 import {
@@ -71,6 +72,7 @@ export default function HomeScreen() {
   const session = useAuthStore((s) => s.session);
   const [date, setDate] = useState(currentTradeDateCn());
   const [manualDate, setManualDate] = useState(false);
+  const [openedAll, setOpenedAll] = useState(false);
   const now = useNow(60_000);
   const today = currentTradeDateCn(now);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -149,6 +151,7 @@ export default function HomeScreen() {
   const chooseDate = (next: string) => {
     setDate(next);
     setManualDate(next !== currentTradeDateCn());
+    setOpenedAll(false);
     if (focus && focus.tradeDate !== next) clearFocus();
   };
 
@@ -194,7 +197,68 @@ export default function HomeScreen() {
      publishedUnavailable, streamVerdicts],
   );
 
-  const onsale = onsaleQuery.data ?? stream?.onsale ?? [];
+  const onsale = useMemo(
+    () => onsaleQuery.data ?? stream?.onsale ?? [],
+    [onsaleQuery.data, stream?.onsale],
+  );
+
+  // 开场选择条：今日在售与已发布预测按 matchId 合并，用户点哪场才展开哪场。
+  const briefOptions = useMemo<BriefMatchOption[]>(() => {
+    const byMatch = new Map<string, BriefMatchOption>();
+    const sourceOnsale = date === today ? onsale : stream?.onsale ?? [];
+    for (const verdict of verdicts) {
+      byMatch.set(verdict.matchId, {
+        matchId: verdict.matchId,
+        verdictId: verdict.id,
+        home: verdict.home,
+        away: verdict.away,
+        kickoff: verdict.kickoff,
+        status: verdict.status,
+      });
+    }
+    for (const match of sourceOnsale) {
+      if (!byMatch.has(match.matchId)) {
+        byMatch.set(match.matchId, {
+          matchId: match.matchId,
+          verdictId: match.verdictId ?? null,
+          home: match.home,
+          away: match.away,
+          kickoff: match.kickoff,
+          status: match.status,
+        });
+      }
+    }
+    return [...byMatch.values()].sort((a, b) => a.kickoff.localeCompare(b.kickoff));
+  }, [date, onsale, stream?.onsale, today, verdicts]);
+
+  const selectBriefOption = useCallback(
+    (option: BriefMatchOption) => {
+      setOpenedAll(false);
+      const verdict = verdicts.find((item) => item.matchId === option.matchId);
+      if (verdict) {
+        trackInteraction("focus_select", {
+          matchId: option.matchId,
+          verdictId: verdict.id,
+          metadata: { from: "brief" },
+        });
+        setFocus(focusFromVerdict(verdict, stream?.tradeDate ?? date));
+        return;
+      }
+      const sourceOnsale = date === today ? onsale : stream?.onsale ?? [];
+      const match = sourceOnsale.find((item) => item.matchId === option.matchId);
+      if (match) {
+        trackInteraction("focus_select", {
+          matchId: option.matchId,
+          metadata: { from: "brief" },
+        });
+        setFocus(focusFromOnSale(match, stream?.tradeDate ?? date));
+        return;
+      }
+      router.push({ pathname: "/match/[id]", params: { id: option.matchId, date } });
+    },
+    [date, onsale, router, setFocus, stream?.onsale, stream?.tradeDate, today, verdicts],
+  );
+
   const betIds = useMemo(
     () => new Set((betsQuery.data ?? []).map((bet) => bet.verdictId)),
     [betsQuery.data],
@@ -340,9 +404,20 @@ export default function HomeScreen() {
                 publishedMessage={recommendationsQuery.data?.message ?? null}
                 onsaleCount={viewingToday ? onsale.length : briefStream.onsale.length}
                 onsaleLabel={viewingToday ? "在售场次" : "当日场次"}
+                options={briefOptions}
+                optionsTotal={briefOptions.length}
+                expanded={openedAll}
+                onSelectOption={selectBriefOption}
+                onExpandAll={() => {
+                  clearFocus();
+                  setOpenedAll(true);
+                }}
                 onPicker={() => setPickerOpen(true)}
                 onOnSale={() => router.push("/tools/on-sale")}
-                onParlay={() => router.push("/tools/parlay")}
+                onParlay={() => router.push({
+                  pathname: "/tools/parlay",
+                  params: { seed: String(Date.now()) },
+                })}
                 onWhyNot={offerWhyNot}
                 onData={() => {
                   trackInteraction("pulse_open");
@@ -372,7 +447,10 @@ export default function HomeScreen() {
                     <Text variant="captionStrong" color={colors.green}>换一场</Text>
                   </Pressable>
                   <Pressable
-                    onPress={clearFocus}
+                    onPress={() => {
+                      clearFocus();
+                      setOpenedAll(true);
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel="回到今日全部"
                     hitSlop={8}
@@ -476,6 +554,8 @@ export default function HomeScreen() {
                   </AssistantMessage>
                 ) : null}
 
+                {(focus || openedAll) ? (
+                  <>
                 {heroVerdict ? (
                   <VerdictMessage
                     verdict={heroVerdict}
@@ -512,6 +592,8 @@ export default function HomeScreen() {
                 <AvoidMessage items={stream.avoid} onOpen={openWhyNot} />
                 <PostmortemMessage items={stream.postmortems} onOpen={openVerdict} />
                 <UnattendedMessage items={stream.unattended} onOpen={openVerdict} />
+                  </>
+                ) : null}
               </>
             )}
 

@@ -209,14 +209,15 @@ def test_postmortem_endpoint(db, client, monkeypatch):
 def test_killed_outcomes_honest_disclosure(db, monkeypatch):
     """what-if：砍对/砍错对称披露。"""
     _mini(monkeypatch)
+    today = today_cn()
     for i, settled in enumerate(("lose", "lose", "win", None)):
-        v = Verdict(id=f"kill{i}", trade_date="2026-11-03", match_id=f"k{i}",
+        v = Verdict(id=f"kill{i}", trade_date=today, match_id=f"k{i}",
                     match_no=f"周三00{i}", league="英超", home="A", away="B",
-                    kickoff="2026-11-03 21:00:00", pool="had", goal_line="",
+                    kickoff=f"{today} 21:00:00", pool="had", goal_line="",
                     sp_h=1.2, sp_d=4.5, sp_a=9.0, rake=0.143, p_home=0.71,
                     p_draw=0.19, p_away=0.10, status="killed",
                     gates={"price": {"result": "fail", "detail": {}}},
-                    payload={"id": f"kill{i}", "trade_date": "2026-11-03"},
+                    payload={"id": f"kill{i}", "trade_date": today},
                     payload_hash="c" * 64,
                     settled=settled, result_score="0-1" if settled else None)
         db.merge(v)

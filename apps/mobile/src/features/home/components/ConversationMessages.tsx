@@ -20,6 +20,7 @@ import {
   MiniStat,
   QuickReply,
 } from "./ConversationShell";
+import { BriefMatchPicker, type BriefMatchOption } from "./BriefMatchPicker";
 
 function verdictStatus(status: string): { label: string; color: string } {
   if (status === "promoted") return { label: "三关通过", color: colors.greenAccent };
@@ -46,6 +47,11 @@ export function AssistantBrief({
   publishedMessage,
   onsaleCount,
   onsaleLabel,
+  options,
+  optionsTotal,
+  expanded,
+  onSelectOption,
+  onExpandAll,
   onPicker,
   onOnSale,
   onParlay,
@@ -59,6 +65,11 @@ export function AssistantBrief({
   publishedMessage?: string | null;
   onsaleCount: number;
   onsaleLabel: string;
+  options: BriefMatchOption[];
+  optionsTotal: number;
+  expanded: boolean;
+  onSelectOption: (option: BriefMatchOption) => void;
+  onExpandAll: () => void;
   onPicker: () => void;
   onOnSale: () => void;
   onParlay: () => void;
@@ -114,6 +125,14 @@ export function AssistantBrief({
         </Text>
         <Text variant="caption" color={colors.green}>数据状态 ›</Text>
       </Pressable>
+
+      <BriefMatchPicker
+        options={options}
+        total={optionsTotal}
+        expanded={expanded}
+        onSelect={onSelectOption}
+        onExpandAll={onExpandAll}
+      />
 
       <View style={styles.quickRow}>
         <QuickReply label="今日在售" onPress={onOnSale} style={styles.quickItem} />
