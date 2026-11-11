@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import DailyAnchor, ModelEval, SPMatch, Verdict
+from ..models import DailyAnchor, SPMatch, Verdict
 from ..modules.narrate import generate_stream
 from ..modules.sealchain import verify_day
 from ..modules.settle import ledger_stats
@@ -199,10 +199,3 @@ def narration_stream(verdict_id: str, persona: str = "zhuanjia",
 
     return StreamingResponse(gen(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache"})
-
-
-@router.get("/model/evals", deprecated=True)
-def model_evals(db: Session = Depends(get_db)):
-    rows = db.scalars(select(ModelEval).order_by(ModelEval.run_at.desc()).limit(20)).all()
-    return [{"id": r.id, "label": r.label, "run_at": r.run_at.isoformat(),
-             "params": r.params, "metrics": r.metrics} for r in rows]

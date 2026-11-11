@@ -5,14 +5,14 @@
 | 版本 | v5.1（自包含；v5.0 全量 + §6.5 交互反馈审计补全） |
 | 日期 | 2026-11-01 |
 | 配套 | TechSpec v2.1 · Release-plan v1.1 · Roadmap v1.1 · OpsBlueprint v1.0 |
-| UI 基准 | `apps/mobile/`（生产前端）；旧 `jieqiu-app/index.html` 仅作设计参考 |
+| UI 基准 | `apps/mobile/`（生产前端）；旧 `archive/legacy/jieqiu-app/index.html` 仅作设计参考 |
 | 形态 | **安卓 + iOS 原生 App（Expo 一套代码）**；Web 仅公开账本 + 下载落地页 + 免费工具；不做小程序 |
 
 > 2026-11-05 产品口径修订：允许经 AI 复核的赛前预测/参考组合/串关参谋；审核发布、免费付费与文案规则见 [docs/recommendation-product.md](docs/recommendation-product.md)。
 >
 > 2026-11-06 口径：**取消“不预测”底线，产品明确做赛前预测**；禁止“精准预测/必中/稳赚”等承诺性话术，预测必须带概率、条件与失效条件。
 >
-> 实现说明（2026-11-04）：生产前端已从 `jieqiu-app/index.html` 迁到 `apps/mobile/`；旧 HTML 仅作设计参考，不再加功能。PRD 是产品事实源，技术实现/当前状态以 `TechSpec-v2.1.md`、`Feature-API-Mapping-v1.0.md`、`Release-plan-v1.1.md` 和 `docs/reviews/2026-11-04-full-stack.md` 为准。
+> 实现说明（2026-11-04）：生产前端已从 `archive/legacy/jieqiu-app/index.html` 迁到 `apps/mobile/`；旧 HTML 仅作设计参考，不再加功能。PRD 是产品事实源，技术实现/当前状态以 `TechSpec-v2.1.md`、`Feature-API-Mapping-v1.0.md`、`Release-plan-v1.1.md` 和 `docs/reviews/2026-11-04-full-stack.md` 为准。
 
 > 交互目标补充（2026-11-04）：首页从“12 张卡 + 常驻输入框”改为“数据脉搏 → 选一场 → 聚焦一场 → 客观情报/解读 → 动作按钮”；选比赛后回首页聚焦，不直接跳详情。前端“选中比赛→回首页聚焦”、真实数据脉搏指标、聚焦面板（覆盖率/事实/未知项/动作）、在售覆盖筛选与互动埋点已实现；后端 focus/pulse/interactions 已实现，`intel_items`/`match_coverage`/`pulse_daily` 情报表仍为设计稿。完整交互/API/后台见 [docs/focused-decision-flow.md](docs/focused-decision-flow.md)；多模型 fast/deep 路由与预算见 [docs/llm-gateway.md](docs/llm-gateway.md)（Phase 1 已实现：open_chat→fast；deep/解读待做）。
 >

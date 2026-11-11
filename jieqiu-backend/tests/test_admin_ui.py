@@ -435,3 +435,21 @@ def test_admin_sync_rejects_invalid_date(client, db):
     for path in ("/admin/api/sportmonks/sync", "/admin/api/ai-research/sync"):
         response = client.post(path, json={"date": "not-a-date"})
         assert response.status_code == 400, path
+
+
+def test_admin_model_config_and_tier_metrics(client, db):
+    login(client)
+    cfg = client.get("/admin/api/model-config")
+    assert cfg.status_code == 200
+    body = cfg.json()
+    assert "tier_enforce" in body and "leagues" in body
+    saved = client.put("/admin/api/model-config/英超", json={
+        "dc_status": "shadow", "sm_status": "disabled",
+        "dc_weight": 1, "sm_weight": 0, "note": "test",
+    })
+    assert saved.status_code == 200
+    assert saved.json()["league"] == "英超"
+    assert saved.json()["dc_status"] == "shadow"
+    metrics = client.get("/admin/api/tier-metrics?days=14")
+    assert metrics.status_code == 200
+    assert "totals" in metrics.json() and "daily" in metrics.json()

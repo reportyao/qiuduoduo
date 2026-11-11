@@ -13,7 +13,7 @@
 5. **前端状态**：Assistant/Release/Feature 中“inbox/关注待接”“前端仍本地”已改为已接；实况仍明确只有赛果+SP 快照，真实 live feed/进球提醒未接。
 6. **分享**：补充 `/s/{share_id}` 公开 HTML 落地页；README 的 `/me/export` 说明改为“通知/行为最多最近 1000 条，token 原值不导出”。
 7. **备份**：TechSpec 原写“deploy/备份/cron 全自动化”与数据库文档“备份尚未自动化”冲突；统一为“备份/PITR 待配置，是上线阻塞项”。
-8. **PRD UI 基准**：明确生产前端已迁到 `apps/mobile/`，旧 `jieqiu-app/index.html` 只是设计参考。
+8. **PRD UI 基准**：明确生产前端已迁到 `apps/mobile/`，旧 `archive/legacy/jieqiu-app/index.html` 只是设计参考。
 9. **ADR 状态**：ADR-0001/0002/0003 增加实现状态注记（目录未迁、Postgres CI/OpenAPI diff 未接）。
 10. **Auth 默认**：文档明确 `JQ_ENV=dev|test` 才允许 stub；staging/prod 未配置真实通道时 503 fail-closed。
 

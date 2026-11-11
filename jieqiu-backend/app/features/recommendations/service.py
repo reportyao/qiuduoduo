@@ -86,6 +86,10 @@ def _verdict_card(v: Verdict) -> dict:
         "probs": {"home": v.p_home, "draw": v.p_draw, "away": v.p_away},
         "pick": v.pick,
         "status": v.status,
+        "tier": v.tier,
+        "model_status": v.model_status,
+        "model_source": v.model_source,
+        "data_quality": v.data_quality or {},
         "gates": {k: (g or {}).get("result", "unknown")
                   for k, g in (v.gates or {}).items()},
         "hash": v.payload_hash,
@@ -670,6 +674,14 @@ def today(db: Session, date: str | None = None) -> dict:
                               .where(ReviewRun.subject_id.in_(ids))
                               .order_by(ReviewRun.id.desc())).all():
             review_by_subject.setdefault((run.subject_type, run.subject_id), run)
+    now_str = _now_cn().strftime("%Y-%m-%d %H:%M:%S")
+    reference_rows = list(db.scalars(
+        select(Verdict).where(
+            Verdict.trade_date == date,
+            Verdict.tier == "market_reference",
+            Verdict.kickoff >= now_str)
+        .order_by(Verdict.kickoff).limit(20)).all())
+    references = [_verdict_card(v) for v in reference_rows]
     message = None
     if not snaps and not plans:
         verdicts = list(db.scalars(select(Verdict).where(Verdict.trade_date == date)).all())
@@ -692,8 +704,13 @@ def today(db: Session, date: str | None = None) -> dict:
                                f"{nxt.home} vs {nxt.away}（{nxt.kickoff}）。")
                 else:
                     message = "这个竞彩销售日没有在售场次，暂无下一批赛程。"
+            elif references:
+                message = f"今日暂无已核验预测；有 {len(references)} 场市场参考。"
             else:
                 message = "今日暂无已发布预测；采集或预测数据还没到。"
+        elif references:
+            message = (f"今日暂无已核验预测；有 {len(references)} 场市场参考，"
+                       "市场参考不代表模型预测。")
         elif pending >= len(verdicts):
             message = "今日暂无已发布预测；国际盘数据未接入或覆盖不足，市闸无法通过，今天不硬推。"
         else:
@@ -706,5 +723,6 @@ def today(db: Session, date: str | None = None) -> dict:
         "plans": [_public_plan(
             db, p, review_by_subject.get((SUBJECT_PLAN, p.id))) for p in plans],
         "verdicts": [(s.payload or {}).get("verdict") or {} for s in snaps],
+        "references": references,
         "message": message,
     }

@@ -103,7 +103,7 @@ apps/mobile (Expo)
   lib/{api,auth,rc,jpush,i18n,money,odds,time}/
 packages/web (Next.js 静态)      # 公开账本 + 落地页 + 免费工具
 ```
-**跨端约定**：旧 HTML 演示（jieqiu-app/index.html）只作设计参考，不再作为验收基准；当前生产前端是 `apps/mobile/`，以 Expo Router 路由与 `src/theme/tokens.ts` 为准。底部 TabBar 用 Expo Router `(tabs)` + 平台 safe-area。**吉祥物资产 `mascot-gen.png`（2048×1152 三联生成图）三端共用**：CSS sprite `--sx` 0/50/100% 切人设，正式版替换为三张透明 PNG。
+**跨端约定**：旧 HTML 演示（archive/legacy/jieqiu-app/index.html）只作设计参考，不再作为验收基准；当前生产前端是 `apps/mobile/`，以 Expo Router 路由与 `src/theme/tokens.ts` 为准。底部 TabBar 用 Expo Router `(tabs)` + 平台 safe-area。**吉祥物资产 `mascot-gen.png`（2048×1152 三联生成图）三端共用**：CSS sprite `--sx` 0/50/100% 切人设，正式版替换为三张透明 PNG。
 
 ### 3.2 设计系统组件（19 个）
 

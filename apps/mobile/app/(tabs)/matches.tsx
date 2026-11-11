@@ -16,7 +16,7 @@ import { countdownText, currentTradeDateCn, formatTime, pct, saleCountdownText, 
 import { useNow } from "@/lib/useNow";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 
-type Filter = "all" | "single" | "promoted" | "screening";
+type Filter = "all" | "single" | "promoted" | "screening" | "reference";
 
 /** 比赛行：memo 化，父层筛选/弹层状态变化不重绘所有行。 */
 const MatchRow = memo(function MatchRow({
@@ -55,17 +55,19 @@ const MatchRow = memo(function MatchRow({
       <View style={styles.status}>
         <StatusDot
           color={
-            item.status === "promoted"
+            item.tier === "verified" || item.status === "promoted"
               ? colors.green
-              : item.status === "screening"
+              : item.tier === "market_reference" || item.status === "screening"
                 ? colors.amber
-                : item.status === "killed"
+                : item.tier === "avoid" || item.status === "killed"
                   ? colors.danger
                   : colors.subtle
           }
         />
-        <Text variant="caption" color={item.status === "killed" ? colors.danger : colors.muted}>
-          {onSaleStatusLabel(item.status)}
+        <Text variant="caption" color={
+          item.tier === "avoid" || item.status === "killed" ? colors.danger : colors.muted
+        }>
+          {onSaleStatusLabel(item.status, item.tier)}
         </Text>
       </View>
     </Pressable>
@@ -96,6 +98,7 @@ export default function MatchesScreen() {
       if (filter === "single") return item.single;
       if (filter === "promoted") return item.status === "promoted";
       if (filter === "screening") return item.status === "screening";
+      if (filter === "reference") return item.tier === "market_reference";
       return true;
     });
   }, [filter, query.data]);
@@ -127,8 +130,9 @@ export default function MatchesScreen() {
         {([
           ["all", "全部"],
           ["single", "单关"],
-          ["promoted", "三关通过"],
+          ["promoted", "核验"],
           ["screening", "复核中"],
+          ["reference", "市场参考"],
         ] as [Filter, string][]).map(([key, label]) => (
           <Chip key={key} label={label} selected={filter === key} onPress={() => setFilter(key)} />
         ))}

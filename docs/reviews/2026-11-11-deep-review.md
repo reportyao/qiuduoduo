@@ -128,6 +128,8 @@
 - `seed.py` 在 Sportmonks 已覆盖全部未开赛市场时跳过 The Odds API，避免每 30 分钟白烧配额；缺口时才走国际盘兜底。
 - 市场覆盖率统一只统计“未开赛”场次；已开赛场次保留历史快照，不再让后台误报“市场覆盖 0/6”。
 - 标记兼容接口 deprecated：`GET/POST/DELETE /memories`、`POST /devices`、`POST /admin/api/football/link`。
-- 重新生成 `packages/api-client/openapi.json` 与 `schema.d.ts`：从旧快照 **138 路径 / 154 方法** 对齐到当前 **147 / 163**。
-- 旧研究资产（`deepseek_review.py`、`crawl_jczq_leagues.py`、`scripts/sm/sm_probe*.py`、`w1-validation/`、根目录 JSON）不参与运行时，建议后续统一移入 `archive/research/`；本次不删，避免丢研究证据。
-- 公共旧接口 `/analysis-log`、`/model/evals`、`/water-rank`、`/sp/movements`、`/agents/sentinel/feed`、`/matches/{id}/live` 已标记 deprecated；App 当前不调用，保留兼容，确认 Web/旧客户端无依赖后再删除。
+- 重新生成 `packages/api-client/openapi.json` 与 `schema.d.ts`：从旧快照 **138 路径 / 154 方法** 对齐到当前 **140 / 155**。
+- 根目录研究脚本和 JSON 已移入 `archive/research/2026-11-sportmonks/`；`jieqiu-app/` 已移入 `archive/legacy/jieqiu-app/`，相关路径引用已更新。`w1-validation/xg_matches.csv` 仍是模型运行时数据，保留原位。
+- 公共旧接口 `/analysis-log`、`/model/evals`、`/water-rank`、`/sp/movements`、`/agents/sentinel/feed`、`/matches/{id}/live` 已物理删除，回归测试改为 404。
+
+- Postgres 一次性数据迁移脚本 `scripts/db/migrate_sqlite_to_postgres.py` 已提供并 dry-run 通过；`alembic upgrade head --sql` 离线生成到 22 成功。生产切库仍缺 PG 实例/连接串。

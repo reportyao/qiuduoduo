@@ -100,6 +100,11 @@ class Verdict(Base):
     model_a: Mapped[float | None] = mapped_column(Float, nullable=True)
     pick: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # {"dir","sp","ev","prob"}
     rake_threshold: Mapped[float] = mapped_column(Float, default=0.126)  # 当日动态阈值快照
+    # 内容分层：三闸仍保留在 gates；tier 决定对外是核验预测/市场参考/回避/待数据。
+    tier: Mapped[str] = mapped_column(String(24), default="avoid", index=True)
+    model_status: Mapped[str] = mapped_column(String(16), default="unavailable")
+    model_source: Mapped[str] = mapped_column(String(16), default="none")
+    data_quality: Mapped[dict] = mapped_column(JSON, default=dict)
     # W4 结算
     settled: Mapped[str | None] = mapped_column(String(8), nullable=True)  # win / lose / null
     settled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -175,6 +180,25 @@ class AIResearch(Base):
     captured_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     error: Mapped[str] = mapped_column(String(300), default="")
+
+
+class LeagueModelConfig(Base):
+    """按联赛控制模型是否参与 verified 层；默认不启用，先 shadow/回测。"""
+
+    __tablename__ = "league_model_config"
+
+    league: Mapped[str] = mapped_column(String(64), primary_key=True)
+    dc_status: Mapped[str] = mapped_column(String(12), default="shadow")  # disabled/shadow/enabled
+    sm_status: Mapped[str] = mapped_column(String(12), default="disabled")
+    dc_weight: Mapped[float] = mapped_column(Float, default=1.0)
+    sm_weight: Mapped[float] = mapped_column(Float, default=0.0)
+    samples: Mapped[int] = mapped_column(Integer, default=0)
+    brier_dc: Mapped[float | None] = mapped_column(Float, nullable=True)
+    brier_market: Mapped[float | None] = mapped_column(Float, nullable=True)
+    rps_dc: Mapped[float | None] = mapped_column(Float, nullable=True)
+    rps_market: Mapped[float | None] = mapped_column(Float, nullable=True)
+    note: Mapped[str] = mapped_column(String(200), default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
 class VerdictRevision(Base):

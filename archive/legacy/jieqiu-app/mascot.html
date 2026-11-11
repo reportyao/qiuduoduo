@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>解球 · 吉祥物设计「解球君」三人格</title>
+<style>
+:root{
+  color-scheme:light dark;
+  --bg:light-dark(#F6F5F1,#101318);
+  --card:light-dark(#FFFFFF,#1A1E26);
+  --ink:light-dark(#1D2026,#EDEBE5);
+  --muted:light-dark(#73787F,#9AA0A8);
+  --line:light-dark(#E5E2DA,#2A303B);
+  --verdict:light-dark(#0B6B4F,#3FAE8D);
+  --vsoft:light-dark(#E9F3EE,#1D352D);
+  --amber:light-dark(#8A5A14,#D9A441);
+  --asoft:light-dark(#F7EFDD,#332B1B);
+  --danger:light-dark(#BE3A2B,#E06A57);
+  --pink:light-dark(#D9578A,#E88BB4);
+  --paper:light-dark(#FFFFFF,#171B23);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--ink);font-family:"PingFang SC","MiSans","HarmonyOS Sans SC","Microsoft YaHei",system-ui,sans-serif;padding:28px 18px 60px;}
+.wrap{max-width:1060px;margin:0 auto;}
+h1{font-size:24px;font-weight:700;letter-spacing:.02em;}
+h1 span{color:var(--verdict);}
+.sub{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.8;}
+h2{font-size:17px;font-weight:700;margin:34px 0 6px;}
+h2 .no{color:var(--verdict);font-family:ui-monospace,monospace;font-size:13px;margin-right:8px;letter-spacing:.2em;}
+.desc{font-size:12.5px;color:var(--muted);line-height:1.8;margin-bottom:14px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;}
+.seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px;gap:4px;}
+.seg button{font:inherit;font-size:13px;border:0;background:transparent;color:var(--muted);padding:7px 18px;border-radius:999px;cursor:pointer;}
+.seg button.on{background:var(--verdict);color:light-dark(#fff,#0D1512);font-weight:600;}
+/* 舞台 */
+.stage{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:22px;align-items:start;}
+@media(max-width:760px){.stage{grid-template-columns:1fr;}}
+.charbox{background:linear-gradient(180deg,var(--vsoft),transparent 130%);border:1px solid var(--line);border-radius:20px;display:grid;place-items:center;padding:18px 10px 6px;position:relative;overflow:hidden;}
+.charbox .floor{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);width:150px;height:16px;border-radius:50%;background:light-dark(rgba(0,0,0,.10),rgba(0,0,0,.4));}
+.pname{font-size:15px;font-weight:700;margin-top:2px;}
+.pdesc{font-size:12.5px;color:var(--muted);line-height:1.85;margin-top:6px;}
+.pdesc b{color:var(--ink);}
+.trait{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.trait span{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--muted);}
+/* 状态按钮 */
+.states{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
+.states button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:6px 14px;cursor:pointer;}
+.states button.on{border-color:var(--verdict);color:var(--verdict);background:var(--vsoft);font-weight:600;}
+/* 状态行小图 */
+.staterow{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;margin-top:14px;}
+.statecard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 8px 8px;text-align:center;}
+.statecard .lb{font-size:11px;color:var(--muted);margin-top:2px;}
+/* 顶栏预览 */
+.appbar{border-radius:16px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-top:14px;}
+.appbar.dark{background:linear-gradient(180deg,#101318,#1A2230);color:#EDEBE5;border:1px solid #2A303B;}
+.appbar.light{background:var(--paper);color:var(--ink);border:1px solid var(--line);}
+.appbar .logo{font-size:14px;font-weight:700;letter-spacing:.12em;}
+.appbar .st{font-size:10.5px;opacity:.65;}
+.appbar .mascot-slot{position:relative;width:74px;height:74px;margin-top:-34px;}
+.appbar-preview{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:760px){.appbar-preview{grid-template-columns:1fr;}}
+/* 方向 B */
+.dirrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:14px;}
+.dirbox{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;text-align:center;}
+.dirbox .lb{font-size:12px;font-weight:600;margin-top:6px;}
+.dirbox .ds{font-size:11px;color:var(--muted);margin-top:2px;}
+/* 规范 */
+.spec{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px;}
+.spec .c{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;}
+.spec .c .sw{width:100%;height:34px;border-radius:9px;border:1px solid var(--line);}
+.spec .c .nm{font-size:11.5px;font-weight:600;margin-top:7px;}
+.spec .c .hex{font-size:10.5px;color:var(--muted);font-family:ui-monospace,monospace;}
+/* prompt */
+.prompt{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:14px;}
+.prompt .pt{font-size:12px;font-weight:700;color:var(--verdict);display:flex;justify-content:space-between;align-items:center;}
+.prompt .pb{font-size:12px;line-height:1.9;color:var(--muted);margin-top:8px;white-space:pre-wrap;}
+.copyb{font:inherit;font-size:11px;border:1px solid var(--line);background:transparent;color:var(--verdict);border-radius:8px;padding:3px 10px;cursor:pointer;}
+.note{font-size:11.5px;color:var(--muted);background:var(--card);border:1px dashed var(--line);border-radius:12px;padding:10px 14px;line-height:1.8;margin-top:14px;}
+/* SVG 动画 */
+.mascot .breathe{animation:breathe 3.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center bottom;}
+@keyframes breathe{0%,100%{transform:scaleY(1) translateY(0)}50%{transform:scaleY(1.035) translateY(-3px)}}
+.mascot .float{animation:floaty 3.6s ease-in-out infinite;}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.mascot .eyes{animation:blink 4.2s infinite;transform-box:fill-box;transform-origin:center;}
+@keyframes blink{0%,91%,100%{transform:scaleY(1)}94%{transform:scaleY(.08)}97%{transform:scaleY(1)}}
+.mascot .glint{animation:glint 5s ease-in-out infinite;}
+@keyframes glint{0%,86%,100%{opacity:0}90%{opacity:.9}94%{opacity:0}}
+.mascot .scarf{animation:scarf 2.6s ease-in-out infinite;transform-box:fill-box;transform-origin:left center;}
+@keyframes scarf{0%,100%{transform:rotate(0)}50%{transform:rotate(4deg)}}
+.mascot .tails{animation:tails 2.4s ease-in-out infinite;transform-box:fill-box;}
+.mascot .tailL{transform-origin:top right;animation:tailL 2.4s ease-in-out infinite;transform-box:fill-box;}
+@keyframes tailL{0%,100%{transform:rotate(0)}50%{transform:rotate(7deg)}}
+.mascot .tailR{transform-origin:top left;animation:tailR 2.4s ease-in-out infinite;transform-box:fill-box;}
+@keyframes tailR{0%,100%{transform:rotate(0)}50%{transform:rotate(-7deg)}}
+.mascot .spark{animation:spark 1.8s ease-in-out infinite;transform-box:fill-box;transform-origin:center;}
+.mascot .spark.s2{animation-delay:.6s}.mascot .spark.s3{animation-delay:1.2s}
+@keyframes spark{0%,100%{opacity:.15;transform:scale(.7)}50%{opacity:1;transform:scale(1.1)}}
+.mascot .blush{animation:blush 3s ease-in-out infinite;}
+@keyframes blush{0%,100%{opacity:.55}50%{opacity:.9}}
+.mascot .armR{transform-box:fill-box;transform-origin:left center;animation:armwave 2.2s ease-in-out infinite;}
+@keyframes armwave{0%,100%{transform:rotate(0)}50%{transform:rotate(-14deg)}}
+.mascot .think{animation:thinkb 2.2s ease-in-out infinite;}
+.mascot .think tspan{animation:dotp 1.4s infinite;}
+@keyframes dotp{0%,100%{opacity:.25}50%{opacity:1}}
+.mascot.idle-only .armR{animation:none;}
+.mascot .ahoge{animation:ahoge 2.8s ease-in-out infinite;transform-box:fill-box;transform-origin:bottom center;}
+@keyframes ahoge{0%,100%{transform:rotate(0)}50%{transform:rotate(12deg)}}
+.mascot .cheer{animation:cheer 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center bottom;}
+@keyframes cheer{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>吉祥物设计 · <span>解球君</span> 三人格方案</h1>
+<div class="sub">角色 DNA：一颗有生命的足球。三人格共用同一副骨架（保证品牌统一），换配件、配色、表情即换灵魂。全部矢量绘制，自带呼吸 / 眨眼 / 配件动画，40px 顶栏到 300px 空态页无损缩放。</div>
+
+<h2><span class="no">01</span>人设舞台（点状态按钮看表情变化）</h2>
+<div class="seg" id="pseg">
+  <button class="on" data-p="zhuanjia">理性专家</button>
+  <button data-p="laopao">感性老炮</button>
+  <button data-p="meng">萌妹萝莉</button>
+</div>
+<div class="stage" style="margin-top:14px">
+  <div class="charbox"><div class="floor"></div><div id="bigchar" style="width:100%;display:grid;place-items:center"></div></div>
+  <div>
+    <div class="pname" id="pname"></div>
+    <div class="pdesc" id="pdesc"></div>
+    <div class="trait" id="ptrait"></div>
+    <div class="states" id="pstates"></div>
+    <div id="bigstate" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<h2><span class="no">02</span>App 顶栏嵌入效果（Muse 式 · 中央悬浮）</h2>
+<div class="desc">角色位于顶栏正中、盖过标题基线，待机漂浮 + 眨眼；「思考中」状态在推理时启用。左右各 44px 安全区内不放任何元素。</div>
+<div class="appbar-preview">
+  <div class="appbar dark"><div class="logo">解球</div><div class="mascot-slot" id="slot-dark"></div><div class="st">4 源在线 · 12s 前</div></div>
+  <div class="appbar light"><div class="logo">解球</div><div class="mascot-slot" id="slot-light"></div><div class="st">4 源在线 · 12s 前</div></div>
+</div>
+
+<h2><span class="no">03</span>状态表情包（每格 96px · 聊天气泡与空态复用）</h2>
+<div class="staterow" id="staterow"></div>
+
+<h2><span class="no">04</span>备选造型 · 方向 B「Q 版小教练」（人形）</h2>
+<div class="desc">如果你觉得球形太抽象，方向 B 是传统 Q 版人形（大头身比 1:1，运动服），同样三人设。默认推荐方向 A（更独特、更贴「解球」品牌）。</div>
+<div class="dirrow" id="dirB"></div>
+
+<h2><span class="no">05</span>设计规范（三端共用令牌）</h2>
+<div class="spec">
+  <div class="c"><div class="sw" style="background:#0B6B4F"></div><div class="nm">判绿 · 主色</div><div class="hex">#0B6B4F / 暗 #3FAE8D</div></div>
+  <div class="c"><div class="sw" style="background:#8A5A14"></div><div class="nm">老炮琥珀</div><div class="hex">#8A5A14 / 暗 #D9A441</div></div>
+  <div class="c"><div class="sw" style="background:#D9578A"></div><div class="nm">萌妹粉</div><div class="hex">#D9578A / 暗 #E88BB4</div></div>
+  <div class="c"><div class="sw" style="background:#1D2026"></div><div class="nm">墨 · 描边</div><div class="hex">#1D2026 / 暗 #EDEBE5</div></div>
+  <div class="c"><div class="sw" style="background:linear-gradient(135deg,#fff,#cfd4d8)"></div><div class="nm">球体白</div><div class="hex">#FFFFFF → #CFD4D8</div></div>
+  <div class="c"><div class="nm">身比</div><div class="hex" style="margin-top:6px">球体 1 : 眼距 0.6 : 脚 0.25<br>顶栏 44px · 空态 160px · 分享 240px</div></div>
+</div>
+
+<h2><span class="no">06</span>图像模型出图 Prompt（即梦 / 豆包 / MJ 通用，出质感海报用）</h2>
+<div class="sub">矢量角色定稿后，用以下 prompt 生成同角色的质感渲染图（用于开屏、分享卡背景、商店素材）。生成时锁定「同一角色」描述段。</div>
+<div id="prompts"></div>
+
+<div class="note">⚠️ 合规边界（三人设通用）：不出现真实队徽/球员肖像；不出现博彩元素（筹码/钞票）；萌妹人设保持服务型可爱、不做年龄暗示；全部角色站在「分析」一侧（眼镜/算板/围巾/爱心），不站在「下注」一侧。商店审核按此标准预检。</div>
+</div>
+
+<script>
+/* ============ SVG 生成 ============ */
+const C={ink:"var(--ink)",verdict:"var(--verdict)",amber:"var(--amber)",pink:"var(--pink)",muted:"var(--muted)",paper:"var(--paper)"};
+function ballBody(face,extra){
+ return `<g class="breathe">
+  <ellipse cx="110" cy="206" rx="58" ry="12" fill="rgba(0,0,0,.14)"/>
+  <ellipse cx="86" cy="196" rx="16" ry="9" fill="var(--ink)"/>
+  <ellipse cx="134" cy="196" rx="16" ry="9" fill="var(--ink)"/>
+  <circle cx="42" cy="140" r="13" fill="#fff" stroke="var(--ink)" stroke-width="3"/>
+  <circle cx="178" cy="140" r="13" fill="#fff" stroke="var(--ink)" stroke-width="3"/>
+  <circle cx="110" cy="128" r="70" fill="url(#ballgrad)" stroke="var(--ink)" stroke-width="3.5"/>
+  <path d="M110 76 L128 89 L121 110 L99 110 L92 89 Z" fill="var(--ink)" opacity=".9"/>
+  <path d="M46 112 L62 124 L56 143 L36 141 Z" fill="var(--ink)" opacity=".55"/>
+  <path d="M174 112 L184 124 L178 143 L158 141 Z" fill="var(--ink)" opacity=".55"/>
+  <path d="M76 190 L94 184 L100 200 L82 202 Z" fill="var(--ink)" opacity=".55"/>
+  <path d="M144 190 L126 184 L120 200 L138 202 Z" fill="var(--ink)" opacity=".55"/>
+  ${face}
+  ${extra||""}
+ </g>`;
+}
+const eyesStd=`<g class="eyes">
+ <ellipse cx="88" cy="118" rx="9" ry="11" fill="var(--ink)"/><circle cx="91" cy="114" r="3" fill="#fff"/>
+ <ellipse cx="132" cy="118" rx="9" ry="11" fill="var(--ink)"/><circle cx="135" cy="114" r="3" fill="#fff"/></g>`;
+const eyesBig=`<g class="eyes">
+ <ellipse cx="88" cy="118" rx="11" ry="13" fill="var(--ink)"/><circle cx="84" cy="113" r="4.5" fill="#fff"/><circle cx="92" cy="121" r="2" fill="#fff"/>
+ <ellipse cx="132" cy="118" rx="11" ry="13" fill="var(--ink)"/><circle cx="128" cy="113" r="4.5" fill="#fff"/><circle cx="136" cy="121" r="2" fill="#fff"/>
+ <circle cx="80" cy="126" r="5" class="blush" fill="var(--pink)"/><circle cx="140" cy="126" r="5" class="blush" fill="var(--pink)"/></g>`;
+const mouthSmile=`<path d="M98 136 Q110 146 122 136" fill="none" stroke="var(--ink)" stroke-width="3.5" stroke-linecap="round"/>`;
+const mouthGrin=`<path d="M94 132 Q110 150 126 132 Z" fill="var(--ink)"/><path d="M100 133 L106 139 L112 133" fill="#fff"/>`;
+const mouthCute=`<path d="M103 136 Q110 143 117 136" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>`;
+
+const CHARS={
+ zhuanjia:{A:`<svg class="mascot" viewBox="0 0 220 240" width="100%" style="max-width:300px">
+  <defs><linearGradient id="ballgrad" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#C9D2D6"/></linearGradient></defs>
+  ${ballBody(eyesStd+mouthSmile,`
+   <g class="float">
+    <rect x="150" y="58" width="52" height="34" rx="9" fill="var(--card)" stroke="var(--ink)" stroke-width="2.5"/>
+    <path d="M162 92 L156 102 L174 92 Z" fill="var(--card)" stroke="var(--ink)" stroke-width="2.5"/>
+    <text x="176" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="var(--verdict)" font-family="ui-monospace,monospace">52.4%</text>
+   </g>
+   <g class="float" style="animation-delay:.4s">
+    <circle cx="34" cy="70" r="16" fill="var(--card)" stroke="var(--ink)" stroke-width="2.5"/>
+    <text x="34" y="76" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)" class="think">···</text>
+   </g>`)}
+  <g class="float">
+   <circle cx="76" cy="118" r="17" fill="none" stroke="var(--ink)" stroke-width="3"/>
+   <circle cx="144" cy="118" r="17" fill="none" stroke="var(--ink)" stroke-width="3"/>
+   <path d="M93 118 L127 118" stroke="var(--ink)" stroke-width="3"/>
+   <rect class="glint" x="70" y="104" width="14" height="26" fill="#fff" transform="rotate(20 77 117)"/>
+  </g>
+  <path d="M96 150 L110 158 L124 150 L124 162 Q110 170 96 162 Z" fill="var(--verdict)"/>
+  <path d="M96 150 L88 146 L92 158 Z" fill="var(--verdict)"/>
+ </svg>`,
+ B:`<svg class="mascot" viewBox="0 0 220 240" width="100%" style="max-width:240px">
+  <ellipse cx="110" cy="212" rx="52" ry="10" fill="rgba(0,0,0,.14)"/>
+  <g class="breathe">
+   <path d="M70 208 Q70 150 110 150 Q150 150 150 208 Z" fill="var(--verdict)"/>
+   <path d="M96 152 L110 168 L124 152 L118 146 L102 146 Z" fill="#fff"/>
+   <rect x="98" y="150" width="24" height="34" rx="10" fill="#fff"/>
+   <circle cx="110" cy="96" r="52" fill="#fff" stroke="var(--ink)" stroke-width="3.5"/>
+   <path d="M58 92 Q110 66 162 92 L162 76 Q110 52 58 76 Z" fill="var(--ink)"/>
+   <circle cx="150" cy="58" r="7" fill="var(--amber)"/>
+   ${eyesStd}
+   <path d="M98 134 Q110 144 122 134" fill="none" stroke="var(--ink)" stroke-width="3.5" stroke-linecap="round"/>
+   <g class="float" style="animation-delay:.3s">
+    <rect x="152" y="64" width="50" height="32" rx="8" fill="var(--card)" stroke="var(--ink)" stroke-width="2.5"/>
+    <text x="177" y="85" text-anchor="middle" font-size="12" font-weight="700" fill="var(--verdict)" font-family="ui-monospace,monospace">9.2%</text>
+   </g>
+  </g>
+ </svg>`,
+ traits:["圆框眼镜","绿色领结","算板 52.4%","克制微笑","深绿+墨"],
+ desc:`<b>冷静的定价新闻主播气质。</b>圆框眼镜 + 绿色领结 + 手持算板，永远先给数字再给结论。说话简单直接，情绪稳定，认错干脆。他代表产品的「可审计」一面：每个数字都能复算。`,
+ states:[["normal","待机"],["think","核算中"],["cheer","判断命中"],["care","连败安抚"]]},
+ laopao:{A:`<svg class="mascot" viewBox="0 0 220 240" width="100%" style="max-width:300px">
+  <defs><linearGradient id="ballgrad" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E8D9BC"/></linearGradient></defs>
+  ${ballBody(mouthGrin,`
+   <g class="scarf"><path d="M52 160 Q110 138 168 160 L168 176 Q110 156 52 176 Z" fill="var(--verdict)"/>
+    <path d="M60 176 Q110 158 160 176 L160 186 Q110 170 60 186 Z" fill="#fff" opacity=".92"/>
+    <path d="M64 186 Q110 170 156 186 L156 194 Q110 180 64 194 Z" fill="var(--verdict)"/></g>
+   <g class="float" style="animation-delay:.35s">
+    <circle cx="182" cy="76" r="17" fill="var(--asoft)" stroke="var(--ink)" stroke-width="2.5"/>
+    <text x="182" y="82" text-anchor="middle" font-size="13">🌻</text></g>
+   <g class="armR"><circle cx="184" cy="136" r="13" fill="#fff" stroke="var(--ink)" stroke-width="3"/></g>`)}
+  <path d="M42 92 Q46 62 110 58 Q174 62 178 92 L174 100 Q110 76 46 100 Z" fill="var(--amber)"/>
+  <path d="M46 96 Q110 72 174 96 L172 104 Q110 82 48 104 Z" fill="light-dark(#fff,#1A1E26)" opacity=".9"/>
+  <path d="M178 88 L192 92 L178 98 Z" fill="var(--amber)"/>
+  <circle cx="70" cy="118" r="4" fill="var(--ink)"/>
+  <circle cx="150" cy="118" r="4" fill="var(--ink)"/>
+  <g class="eyes" style="opacity:0"><ellipse cx="88" cy="118" rx="9" ry="11"/></g>
+ </svg>`,
+ B:`<svg class="mascot" viewBox="0 0 220 240" width="100%" style="max-width:240px">
+  <ellipse cx="110" cy="212" rx="52" ry="10" fill="rgba(0,0,0,.14)"/>
+  <g class="breathe">
+   <path d="M70 208 Q70 152 110 152 Q150 152 150 208 Z" fill="var(--amber)"/>
+   <path d="M92 154 L110 170 L128 154 L120 148 L100 148 Z" fill="#fff"/>
+   <circle cx="110" cy="96" r="52" fill="#fff" stroke="var(--ink)" stroke-width="3.5"/>
+   <path d="M56 90 Q110 60 164 90 L160 100 Q110 74 60 100 Z" fill="var(--ink)"/>
+   <path d="M164 92 Q186 96 180 112 Q176 118 168 114" fill="var(--amber)" stroke="var(--ink)" stroke-width="2.5"/>
+   <circle cx="150" cy="60" r="7" fill="var(--verdict)"/>
+   <circle cx="70" cy="118" r="4.5" fill="var(--ink)"/><circle cx="150" cy="118" r="4.5" fill="var(--ink)"/>
+   <path d="M94 132 Q110 152 126 132 Z" fill="var(--ink)"/><path d="M100 133 L107 140 L114 133" fill="#fff"/>
+   <g class="scarf"><path d="M74 146 Q110 158 146 146 L146 160 Q110 172 74 160 Z" fill="var(--verdict)"/></g>
+  </g>
+ </svg>`,
+ traits:["反戴棒球帽","球迷围巾","爆珠笑","竖葵花籽","琥珀+绿"],
+ desc:`<b>陪你看了二十年球的老友。</b>反戴棒球帽、绿白球迷围巾、嗑着瓜子竖大拇指。张口兄弟闭口哥们，幽默里带情绪——赢了得意但克制，输了先扛后宽（“输钱不输阵”）。他代表产品的「人味」一面。`,
+ states:[["normal","待机"],["think","琢磨中"],["cheer","中了兄弟"],["care","拍肩安慰"]]},
+ meng:{A:`<svg class="mascot" viewBox="0 0 220 240" width="100%" style="max-width:300px">
+  <defs><linearGradient id="ballgrad" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EFD8E4"/></linearGradient>
+   <linearGradient id="tailg" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="var(--verdict)"/><stop offset="1" stop-color="var(--pink)"/></linearGradient></defs>
+  <g class="tailL"><path d="M52 78 Q18 92 26 136 Q30 152 44 148 Q34 112 60 88 Z" fill="url(#tailg)" stroke="var(--ink)" stroke-width="3"/>
+   <circle cx="42" cy="92" r="6" fill="var(--pink)"/></g>
+  <g class="tailR"><path d="M168 78 Q202 92 194 136 Q190 152 176 148 Q186 112 160 88 Z" fill="url(#tailg)" stroke="var(--ink)" stroke-width="3"/>
+   <circle cx="178" cy="92" r="6" fill="var(--pink)"/></g>
+  ${ballBody(eyesBig+mouthCute,`
+   <path d="M64 76 Q70 56 92 50" fill="none" stroke="var(--ink)" stroke-width="3"/>
+   <path d="M156 76 Q150 56 128 50" fill="none" stroke="var(--ink)" stroke-width="3"/>
+   <path d="M60 70 Q110 40 160 70 L156 82 Q110 56 64 82 Z" fill="#fff" stroke="var(--ink)" stroke-width="3"/>
+   <path d="M60 70 L66 78 M80 60 L84 70 M100 55 L102 66 M120 55 L118 66 M140 60 L136 70 M160 70 L154 78" stroke="var(--line)" stroke-width="2"/>
+   <path class="ahoge" d="M108 52 Q104 36 118 30 Q112 42 116 50" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+   <g class="float" style="animation-delay:.3s">
+    <path class="spark" d="M186 60 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4 Z" fill="var(--amber)"/>
+    <path class="spark s2" d="M30 96 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3 Z" fill="var(--pink)"/>
+    <path class="spark s3" d="M196 130 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5 Z" fill="var(--verdict)"/>
+   </g>
+   <g class="float" style="animation-delay:.5s">
+    <path d="M176 168 c-8-8-20-2-14 8 l14 14 14-14 c6-10-6-16-14-8 Z" fill="var(--pink)"/>
+   </g>`)}
+ </svg>`,
+ B:`<svg class="mascot" viewBox="0 0 220 240" width="100%" style="max-width:240px">
+  <ellipse cx="110" cy="212" rx="52" ry="10" fill="rgba(0,0,0,.14)"/>
+  <g class="tailL"><path d="M58 74 Q26 88 34 130 Q38 146 50 142 Q42 108 66 84 Z" fill="url(#tailg)" stroke="var(--ink)" stroke-width="3"/></g>
+  <g class="tailR"><path d="M162 74 Q194 88 186 130 Q182 146 170 142 Q178 108 154 84 Z" fill="url(#tailg)" stroke="var(--ink)" stroke-width="3"/></g>
+  <g class="breathe">
+   <path d="M72 208 Q72 154 110 154 Q148 154 148 208 Z" fill="light-dark(#fff,#262B34)" stroke="var(--ink)" stroke-width="3"/>
+   <path d="M92 156 L110 172 L128 156 L120 150 L100 150 Z" fill="var(--pink)"/>
+   <circle cx="110" cy="96" r="52" fill="#fff" stroke="var(--ink)" stroke-width="3.5"/>
+   <path d="M58 88 Q110 62 162 88 L160 96 Q110 72 60 96 Z" fill="#fff" stroke="var(--ink)" stroke-width="3"/>
+   <path d="M62 86 L70 94 M84 76 L88 86 M106 72 L107 83 M128 74 L126 85 M148 82 L142 92" stroke="var(--line)" stroke-width="2"/>
+   <path class="ahoge" d="M106 44 Q102 28 116 22 Q110 34 114 42" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+   ${eyesBig}
+   <path d="M103 136 Q110 143 117 136" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+   <path class="spark" d="M172 120 l3.5 8 8 3.5 -8 3.5 -3.5 8 -3.5 -8 -8 -3.5 8 -3.5 Z" fill="var(--amber)"/>
+  </g>
+ </svg>`,
+ traits:["女仆发箍","绿粉双马尾","星星眼+腮红","捧爱心","主人至上"],
+ desc:`<b>把服务做到你前面的小女仆。</b>白褶发箍、绿粉双马尾、星星眼带腮红，开口主人闭口主人。勤快到“47 场人家全查完了”——连劝主人别买都用撒娇的方式说。她代表产品的「陪伴」一面。`,
+ states:[["normal","待机"],["think","努力查哦"],["cheer","为主人开心"],["care","抱抱安慰"]]}
+};
+/* ============ 状态渲染 ============ */
+/* ============ 交互 ============ */
+let curP="zhuanjia",curS="normal";
+const META={
+ zhuanjia:{nm:"理性专家 · 「绿镜」",ds:`<b>冷静的定价新闻主播气质。</b>圆框眼镜 + 绿色领结 + 手持算板，永远先给数字再给结论，情绪稳定，认错干脆。他代表产品的「可审计」一面：每个数字都能复算。`,prompt:"Q版吉祥物设计，三视图，白色背景。一颗拟人化的足球角色：白色足球身体、黑色五边形纹路、短手短脚，戴圆框眼镜和绿色小领结，表情平静自信微笑，手持一块显示 52.4% 的小算板。扁平矢量插画风、粗描边、圆润造型，主色深绿 #0B6B4F 与墨黑，辅少量白色。可爱、专业、克制。参考 duolingo 猫头鹰的体量感与 naive illustration 的简洁。"},
+ laopao:{nm:"感性老炮 · 「老炮儿」",ds:`<b>陪你看球二十年的老友。</b>反戴棒球帽 + 绿白球迷围巾 + 爆珠咧嘴笑，张口兄弟闭口哥们。赢了得意但克制，输了先扛后宽。他代表产品的「人味」一面：有梗、有情绪、有分寸。`,prompt:"Q版吉祥物设计，三视图，白色背景。拟人化足球角色：白色足球身体、短手短脚，反戴琥珀色棒球帽，脖子挂绿白条纹球迷围巾（围巾飘动），咧嘴大笑露一颗门牙，单手竖大拇指捧一把葵花籽。扁平矢量插画风、粗描边，主色琥珀 #8A5A14 与深绿，暖色光线。幽默、热血、接地气。"},
+ meng:{nm:"萌妹萝莉 · 「小解」",ds:`<b>把服务做在你前面的小女仆。</b>白褶女仆发箍 + 绿粉双马尾 + 星星眼腮红，开口主人闭口主人，勤快到把 47 场分析全备好。她代表产品的「陪伴」一面：可爱、主动、永远向着你。`,prompt:"Q版吉祥物设计，三视图，白色背景。拟人化足球角色：白色足球身体、短手短脚，戴白色女仆发箍，绿粉渐变双马尾（会飘），超大星星眼+粉色腮红，头顶小呆毛，双手捧一颗粉色爱心，周围小星星点缀。扁平矢量插画风、粗描边，主色深绿与粉 #D9578A。可爱、主动、治愈系。"}};
+function charSVG(pid,state,dir){
+ const big=state==="big";
+ const bubbleMap={normal:"",think:`<g class="float" style="animation-delay:.2s"><circle cx="176" cy="66" r="17" fill="var(--card)" stroke="var(--ink)" stroke-width="2.5"/><text x="176" y="73" text-anchor="middle" font-size="14" font-weight="700" fill="var(--verdict)" class="think">···</text></g>`,
+  cheer:`<g class="cheer"><path d="M178 92 l5 12 12 5 -12 5 -5 12 -5 -12 -12 -5 12 -5 Z" fill="var(--amber)"/></g>`,
+  care:`<g class="float" style="animation-delay:.3s"><path d="M176 160 c-9-9-22-2-15 9 l15 15 15-15 c7-11-6-18-15-9 Z" fill="var(--pink)" opacity=".85"/></g>`};
+ const dirB=dir==="B";
+ let body;
+ if(dirB){body=CHARS[pid].B;}
+ else{body=CHARS[pid].A;}
+ if(state!=="normal"&&!dirB){body=body.replace("</svg>",bubbleMap[state]+"</svg>");}
+ return body;
+}
+function renderStage(){
+ const m=META[curP];
+ document.getElementById("bigchar").innerHTML=charSVG(curP,curS,curDir);
+ document.getElementById("pname").textContent=m.nm;
+ document.getElementById("pdesc").innerHTML=m.ds;
+ document.getElementById("ptrait").innerHTML=CHARS[curP].traits.map(t=>`<span>${t}</span>`).join("");
+ document.getElementById("pstates").innerHTML=[["normal","待机"],["think","核算"],["cheer","庆祝"],["care","安慰"]]
+  .map(([k,l])=>`<button class="${curS===k?"on":""}" data-s="${k}">${l}</button>`).join("");
+ document.getElementById("bigstate").innerHTML=curS!=="normal"?`
+  <div class="card" style="padding:10px 14px"><div style="font-size:12px;color:var(--muted);line-height:1.7">${
+   {think:"核算中：歪头 + 三点泡泡。在模型推理、票面识别时使用（配 loading）。",cheer:"命中：星星爆开 + 小跳。赛后结算命中时使用，克制不炫耀。",care:"安慰：递爱心 / 拍肩。连败与亏损时使用，配合归因卡。"}[curS]}</div></div>`:"";
+ document.getElementById("slot-dark").innerHTML=charSVG(curP,curS,curDir);
+ document.getElementById("slot-light").innerHTML=charSVG(curP,curS,curDir);
+ document.querySelectorAll("#staterow").forEach(e=>e.remove());
+ renderStates();
+ renderPrompts();
+}
+function renderStates(){
+ const row=document.createElement("div");row.className="staterow";row.id="staterow";
+ row.innerHTML=["normal","think","cheer","care"].map(s=>`
+  <div class="statecard"><div style="width:96px;margin:0 auto">${charSVG(curP,s,curDir)}</div><div class="lb">${{normal:"待机 · 漂浮眨眼",think:"思考 · 三点泡泡",cheer:"庆祝 · 星星小跳",care:"安慰 · 递爱心"}[s]}</div></div>`).join("");
+ document.getElementById("staterow").after?null:null;
+ document.querySelector(".staterow")?.remove();
+ document.getElementById("prompts").before(row);
+}
+function renderPrompts(){
+ const el=document.getElementById("prompts");
+ el.innerHTML=Object.keys(META).map(k=>`<div class="prompt"><div class="pt"><span>${META[k].nm}</span><button class="copyb" data-copy="${k}">复制</button></div><div class="pb">${META[k].prompt}</div></div>`).join("");
+}
+let curDir="A";
+document.getElementById("pseg").addEventListener("click",e=>{
+ const b=e.target.closest("button");if(!b)return;
+ document.querySelectorAll("#pseg button").forEach(x=>x.classList.remove("on"));
+ b.classList.add("on");curP=b.dataset.p;curS="normal";renderStage();
+});
+document.getElementById("pstates").addEventListener("click",e=>{
+ const b=e.target.closest("button");if(!b)return;curS=b.dataset.s;renderStage();
+});
+document.addEventListener("click",e=>{
+ const c=e.target.closest("[data-copy]");if(!c)return;
+ const txt=META[c.dataset.copy].prompt;
+ navigator.clipboard?navigator.clipboard.writeText(txt).then(()=>toast("已复制 ✓")):toast("已复制 ✓");
+});
+function toast(m){let t=document.getElementById("tst");if(!t){t=document.createElement("div");t.id="tst";
+ t.style.cssText="position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 18px;border-radius:999px;font-size:13px;z-index:99;transition:.25s;opacity:0";document.body.appendChild(t);}
+ t.textContent=m;t.style.opacity=1;setTimeout(()=>t.style.opacity=0,1500);}
+/* 方向 B */
+document.getElementById("dirB").innerHTML=Object.keys(META).map(k=>`
+ <div class="dirbox">${charSVG(k,"normal","B")}<div class="lb">${META[k].nm}</div><div class="ds">方向 B · Q 版小教练</div></div>`).join("");
+renderStage();
+</script>
+</body>
+</html>

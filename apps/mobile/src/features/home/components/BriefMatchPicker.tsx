@@ -11,9 +11,14 @@ export interface BriefMatchOption {
   away: string;
   kickoff: string;
   status?: string | null;
+  tier?: string | null;
 }
 
 function statusLabel(option: BriefMatchOption): string {
+  if (option.tier === "verified") return "核验预测";
+  if (option.tier === "market_reference") return "市场参考";
+  if (option.tier === "avoid") return "不建议";
+  if (option.tier === "no_data") return "待数据";
   // promoted 只代表三关全过，不等于已经发布；避免在开场条上误标“已发布”。
   if (option.status === "promoted") return "三关通过";
   if (option.status === "screening") return "复核中";
@@ -45,7 +50,7 @@ export const BriefMatchPicker = memo(function BriefMatchPicker({
   return (
     <View style={styles.wrap}>
       <Text variant="caption" color={colors.muted} style={styles.lead}>
-        先看哪场？点一场，我把这场展开说。
+        先看哪场？点一场展开。核验预测和市场参考会明确分开。
       </Text>
 
       <View style={styles.list}>

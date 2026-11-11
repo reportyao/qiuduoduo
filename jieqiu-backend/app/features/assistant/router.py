@@ -446,13 +446,6 @@ def push_unregister(body: PushUnregister, user: User = Depends(current_user),
 
 # ---------- 兼容别名（Feature-API-Mapping / TechSpec 旧路径） ----------
 
-@router.post("/devices", response_model=PushRegisterResponse, deprecated=True)
-def devices_alias(body: PushRegister, user: User = Depends(current_user),
-                  db: Session = Depends(get_db)):
-    """兼容 POST /devices；实现与 /push/register 完全一致。"""
-    return push_register(body, user, db)
-
-
 @router.get("/push/preferences", response_model=NotifyResponse)
 def push_preferences_get(user: User = Depends(current_user),
                          db: Session = Depends(get_db)):

@@ -46,6 +46,7 @@ describe("buildBriefOptions", () => {
   it("同日合并去重，判决优先", () => {
     const options = buildBriefOptions(
       [verdict({ matchId: "m1", id: "v1" })],
+      [],
       [onsale({ matchId: "m1", verdictId: null }), onsale({ matchId: "m2", home: "第二场", kickoff: "2026-11-11 22:00:00" })],
       "2026-11-11",
     );
@@ -56,6 +57,7 @@ describe("buildBriefOptions", () => {
   it("过滤掉其他竞彩日的在售场次", () => {
     const options = buildBriefOptions(
       [],
+      [],
       [onsale({ matchId: "m1" }), onsale({ matchId: "m2", kickoff: "2026-11-12 20:00:00" })],
       "2026-11-11",
     );
@@ -65,9 +67,22 @@ describe("buildBriefOptions", () => {
   it("按开赛时间排序", () => {
     const options = buildBriefOptions(
       [],
+      [],
       [onsale({ matchId: "late", kickoff: "2026-11-11 23:00:00" }), onsale({ matchId: "early", kickoff: "2026-11-11 18:00:00" })],
       "2026-11-11",
     );
     expect(options.map((item) => item.matchId)).toEqual(["early", "late"]);
   });
 });
+
+  it("市场参考会进入选场条并带 tier", () => {
+    const options = buildBriefOptions(
+      [],
+      [verdict({ matchId: "ref1", id: "v-ref1", tier: "market_reference", status: "screening" })],
+      [],
+      "2026-11-11",
+    );
+    expect(options).toHaveLength(1);
+    expect(options[0].tier).toBe("market_reference");
+    expect(options[0].verdictId).toBe("v-ref1");
+  });

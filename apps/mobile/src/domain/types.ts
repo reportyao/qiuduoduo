@@ -50,6 +50,10 @@ export interface VerdictSummary {
   model: { shrunk?: number[] | null; pick?: unknown; engine?: string | null } | null;
   pick: VerdictPick | null;
   status: VerdictStatus;
+  tier?: string;
+  modelStatus?: string;
+  modelSource?: string;
+  dataQuality?: Record<string, unknown>;
   gates: Partial<Record<GateKey, GateResult>>;
   hash: string | null;
   sealed: boolean;
@@ -113,6 +117,8 @@ export interface OnSaleItem {
   rake: number | null;
   gates: Partial<Record<GateKey, GateResult>> | null;
   status: VerdictStatus | null;
+  tier?: string | null;
+  modelStatus?: string | null;
   verdictId: string | null;
   coverage: OnSaleCoverage | null;
 }
@@ -191,7 +197,9 @@ export interface ProbabilityCompareData {
   sp: ProbabilityTriple | null;
   model: ProbabilityTriple | null;
   market: { bookmaker: string; probs: ProbabilityTriple } | null;
+  thirdParty?: { source: string; probs: ProbabilityTriple; capturedAt?: string | null } | null;
   modelEnabled: boolean;
+  modelStatus?: string | null;
   reason?: string | null;
   dataCutoff?: string | null;
 }

@@ -2,7 +2,7 @@ import { Platform } from "react-native";
 
 /**
  * 设计令牌：所有页面只从这里取颜色/字号/圆角，禁止在组件里散落魔法值。
- * 视觉基准来自 jieqiu-app/index.html v3.1（暖白 + 深墨绿），但生产字号不低于 11px。
+ * 视觉基准来自 archive/legacy/jieqiu-app/index.html v3.1（暖白 + 深墨绿），但生产字号不低于 11px。
  */
 export const colors = {
   bg: "#F5F4EF",

@@ -1,7 +1,7 @@
 # 球多多 · 情报层设计 v1.0
 
 > 本文把「每场比赛的数据与分析从哪来、怎么算、怎么展示、怎么控成本」收敛成一份可落地的设计。
-> 关联：`TechSpec-v2.1.md` §8.7（情报层）、§8.8（AI 研判层）；`apps/mobile/`（生产前端；旧 `jieqiu-app/index.html` 仅设计参考）；`Feature-API-Mapping-v1.0.md`。
+> 关联：`TechSpec-v2.1.md` §8.7（情报层）、§8.8（AI 研判层）；`apps/mobile/`（生产前端；旧 `archive/legacy/jieqiu-app/index.html` 仅设计参考）；`Feature-API-Mapping-v1.0.md`。
 >
 > 状态（2026-11-05 更新）：**设计定稿，部分数据已接**。生产移动端已有情报/证据 UI；后端 `signals` / `ai_analyses` 仍未建，情报分/深读未接入判决；API-Football fixtures/lineups/injuries/standings 已接（默认关闭），focus 覆盖率已消费阵容/积分榜。
 

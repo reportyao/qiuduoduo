@@ -24,7 +24,7 @@ services/
 
 ```text
 jieqiu-backend/  旧后端目录（生产部署仍使用）
-jieqiu-app/      临时展示 UI（只作设计参考，禁止继续加功能）
+archive/legacy/jieqiu-app/      临时展示 UI（只作设计参考，禁止继续加功能）
 ```
 
 ## 2. 一键命令
@@ -122,7 +122,7 @@ app/features/<feature>/
 
 ## 8. 目录迁移说明
 
-- 新代码不要加到 `jieqiu-app/index.html`；
+- 新代码不要加到 `archive/legacy/jieqiu-app/index.html`；
 - 新后端代码优先进入 `app/features/<feature>`；
 - `jieqiu-backend/` 到 `services/api/` 的目录迁移将在 Alembic/Postgres 切换后执行，避免一次性大迁移。
 - W8 冻结基线不是永久常量：新增路由后必须用控制台登录调用 `POST /review/freeze/adopt` 重新采纳，否则 `/review/freeze` 会报新增违规。

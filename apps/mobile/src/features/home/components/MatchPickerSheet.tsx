@@ -16,6 +16,7 @@ interface Row {
   close: string;
   verdictId: string | null;
   status: string;
+  tier?: string | null;
   gates: VerdictSummary["gates"] | null;
   tradeDate: string;
   coverage: OnSaleItem["coverage"];
@@ -57,6 +58,7 @@ export function MatchPickerSheet({
         close: verdict.kickoff,
         verdictId: verdict.id,
         status: verdict.status,
+        tier: verdict.tier ?? null,
         gates: verdict.gates,
         tradeDate: streamDate,
         coverage: null,
@@ -73,6 +75,7 @@ export function MatchPickerSheet({
         close: match.saleClose,
         verdictId: match.verdictId,
         status: match.status ?? "onsale",
+        tier: match.tier ?? null,
         gates: match.gates,
         tradeDate: tradeDateCnFromKickoff(match.kickoff),
         coverage: match.coverage,
@@ -159,7 +162,7 @@ export function MatchPickerSheet({
                   {row.home} <Text variant="caption" color={colors.muted}>vs</Text> {row.away}
                 </Text>
                 <Text variant="caption" color={colors.muted}>
-                  {row.verdictId ? rowStatus(row.status) : `在售 · ${saleCountdownText(row.close)}`}
+                  {row.verdictId ? rowStatus(row.status, row.tier) : `在售 · ${saleCountdownText(row.close)}`}
                   {row.coverage ? ` · 覆盖 ${row.coverage.score}` : ""}
                 </Text>
               </View>
@@ -176,8 +179,12 @@ export function MatchPickerSheet({
   );
 }
 
-function rowStatus(status: string): string {
-  if (status === "promoted") return "三关通过 · 看完整预测";
+function rowStatus(status: string, tier?: string | null): string {
+  if (tier === "verified") return "核验预测 · 看完整依据";
+  if (tier === "market_reference") return "市场参考 · 非模型预测";
+  if (tier === "avoid") return "不建议 · 看原因";
+  if (tier === "no_data") return "待数据";
+  if (status === "promoted") return "已核验 · 看完整依据";
   if (status === "screening") return "预测复核中 · 数据未齐";
   if (status === "killed") return "未给预测 · 看原因";
   return "已分析";

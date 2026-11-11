@@ -7,9 +7,13 @@ import { GateDetailRow } from "./Gates";
 export function GateDetailsCard({ detail }: { detail: VerdictDetail }) {
   return (
     <Card style={styles.card}>
-      <Text variant="h3">三关明细</Text>
+      <Text variant="h3">
+        {detail.tier === "verified" ? "核验依据" : "数据与风险"}
+      </Text>
       <Text variant="caption" color={colors.muted} style={styles.sub}>
-        价 = 抽水是否够浅；市 = 多源口径是否收敛；模 = 收缩后置信是否过线。
+        {detail.tier === "market_reference"
+          ? "这场没有通过模型验证，只展示市场倾向；下面是数据完整度与风险项。"
+          : "价 = 抽水是否够浅；市 = 多源口径是否收敛；模 = 模型置信是否过线。"}
       </Text>
       {(["price", "market", "model"] as GateKey[]).map((gate, index) => (
         <GateDetailRow

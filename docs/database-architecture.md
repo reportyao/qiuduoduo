@@ -85,7 +85,7 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 
 ### 4.1 聚焦决策流 / LLM 表（部分实现）
 
-> 目标契约见 [focused-decision-flow.md](./focused-decision-flow.md) 与 [api-football.md](./api-football.md)。当前 Alembic head 为 `20261106_16`：`interaction_events`、API-Football 5 张表、LLM 4 张表 + AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表已创建；intel/analysis 表仍未创建。
+> 目标契约见 [focused-decision-flow.md](./focused-decision-flow.md) 与 [api-football.md](./api-football.md)。当前 Alembic head 为 `20261111_22`：`interaction_events`、API-Football 5 张表、LLM 4 张表 + AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表已创建；intel/analysis 表仍未创建。
 
 | 表 | 用途 | 关键约束/索引 |
 |---|---|---|
@@ -322,6 +322,12 @@ select pid, wait_event_type, wait_event, query from pg_stat_activity where wait_
 20261106_14   llm_profiles（后台 LLM 能力配置，Key 加密）
 20261106_15   ai_analyses（单场 AI 解读缓存，按事实包 hash 失效）
 20261106_16   collector_status（采集器心跳/重启指令）
+20261111_17   sportmonks_match_data（Sportmonks 预测/市场）
+20261111_18   ai_research（AI 情报）
+20261111_19   llm_profiles.reasoning（推理开关）
+20261111_20   ai_research.facts_hash（情报缓存）
+20261111_21   verdicts.tier/model_status/data_quality（内容分层）
+20261111_22   league_model_config（按联赛模型门控）
 ```
 
 验证命令：
@@ -332,3 +338,28 @@ python -m alembic upgrade head
 python -m alembic check
 python -m app.db_maint --json
 ```
+
+### 一次性数据迁移脚本（2026-11-11）
+
+已提供 `scripts/db/migrate_sqlite_to_postgres.py`：
+
+```bash
+cd jieqiu-backend
+python ../scripts/db/migrate_sqlite_to_postgres.py \
+  --source sqlite:////home/ubuntu/jieqiu-data/jieqiu.db \
+  --target 'postgresql+psycopg2://user:pass@host:5432/jieqiu' \
+  --dry-run
+```
+
+正式切换：
+
+1. 备份 SQLite；
+2. 目标空库执行 `alembic upgrade head`；
+3. 先 `--dry-run` 核对每表行数；
+4. 去掉 `--dry-run` 导入；
+5. 切 `JQ_DATABASE_URL`，跑 `/health`、`/stream`、worker `--once`；
+6. SQLite 保留一个 release 周期用于回滚。
+
+脚本会做 `users.phone/email` 重复检查、按 `Base.metadata.sorted_tables` 顺序复制、Postgres sequence 对齐和逐表行数对账。`--force` 只用于演练库，会 TRUNCATE 目标表，生产禁止使用。
+
+当前环境没有可用的 Postgres 实例/凭据，所以本次只完成了 **离线 Postgres SQL 生成验证**（`alembic upgrade head --sql` 成功）和迁移脚本 dry-run；实际切库仍需要云托管 PG 连接串和维护窗口。

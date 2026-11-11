@@ -20,8 +20,8 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..models import (ModelRun, SPMatch, SPSnapshot, SportmonksMatchData,
-                      Verdict, VerdictRevision, utcnow)
+from ..models import (LeagueModelConfig, ModelRun, SPMatch, SPSnapshot,
+                      SportmonksMatchData, Verdict, VerdictRevision, utcnow)
 from .align import Aligner
 from .dc_model import DCModel, add_alias, fit as dc_fit, load_xg, predict as dc_predict, predict_line
 from .gates import (breakeven_prob, dynamic_threshold, implied_probs,
@@ -284,7 +284,45 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
 
         all_pass = all(g["result"] == "pass" for g in gates.values())
         any_fail = any(g["result"] == "fail" for g in gates.values())
-        status = "promoted" if all_pass else ("killed" if any_fail else "screening")
+        cfg = db.get(LeagueModelConfig, m.league) if m.league else None
+        model_ready = bool(p_model is not None and pred is not None)
+        model_status = ("enabled" if (cfg is not None and cfg.dc_status == "enabled"
+                                      and model_ready)
+                        else "shadow" if model_ready else "unavailable")
+        model_source = "dc" if model_ready else "none"
+        if st.tier_enforce:
+            if pg.result == "fail" or mg.result == "fail":
+                tier = "avoid"
+            elif pg.result == "pending_data" or mg.result == "pending_data":
+                tier = "no_data"
+            elif all_pass and model_status == "enabled":
+                tier = "verified"
+            else:
+                tier = "market_reference"
+            status = ("promoted" if tier == "verified"
+                      else "killed" if tier == "avoid" else "screening")
+        else:
+            # 兼容模式：先只读展示 tier，不改变历史发布语义。
+            status = "promoted" if all_pass else ("killed" if any_fail else "screening")
+            if all_pass:
+                tier = "verified"
+            elif pg.result == "fail" or mg.result == "fail":
+                tier = "avoid"
+            elif pg.result == "pending_data" or mg.result == "pending_data":
+                tier = "no_data"
+            else:
+                tier = "market_reference"
+        data_quality = {
+            "price": pg.result, "market": mg.result, "model": dg.result,
+            "model_status": model_status,
+            "market_sources": sorted((mg.detail or {}).get("sources") or {}),
+            "third_party_prediction": bool(sm is not None and sm.probs),
+            "cutoff": snap.captured_at,
+            "league_config": {
+                "dc": cfg.dc_status if cfg else "disabled",
+                "sm": cfg.sm_status if cfg else "disabled",
+            },
+        }
 
         evidence = _evidence(m, snap, pool, intl_rows, model, pred, now_cn)
         if (sm is not None and isinstance(sm.odds, dict)
@@ -319,6 +357,10 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
                       "engine": f"Dixon-Coles v1.1 (rho={st.dc_rho}, halflife={st.dc_halflife_days}d)"},
             "evidence": evidence,
             "status": status,
+            "tier": tier,
+            "model_status": model_status,
+            "model_source": model_source,
+            "data_quality": data_quality,
             "data_cutoff": snap.captured_at,
             "generated_at": now_cn,
             "engine": "jieqiu-w3.0",
@@ -361,6 +403,10 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
         v.rake_threshold = round(threshold, 4)
         v.status = status
         v.gates = gates
+        v.tier = tier
+        v.model_status = model_status
+        v.model_source = model_source
+        v.data_quality = data_quality
         v.payload = payload
         v.payload_hash = digest
         # 已封存判决产生新修订后，当前 payload 的封存时间随最新修订前移；

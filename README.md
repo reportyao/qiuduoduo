@@ -138,7 +138,7 @@ packages/
 services/
   api/           FastAPI 迁移目标（当前旧目录 jieqiu-backend 仍可用）
 jieqiu-backend/  生产后端（过渡期）
-jieqiu-app/      临时展示 UI（只作设计参考，禁止加功能）
+archive/legacy/jieqiu-app/      临时展示 UI（只作设计参考，禁止加功能）
 sp-collector/    竞彩 SP 采集器（家宽出口）
 docs/            架构/产品/运维/审查文档
 ```

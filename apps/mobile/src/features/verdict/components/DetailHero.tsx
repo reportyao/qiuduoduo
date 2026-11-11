@@ -34,25 +34,36 @@ export function DetailHero({
   const pending = (["market", "model", "price"] as GateKey[]).find(
     (gate) => detail.gates[gate] === "pending_data",
   );
-  const pickLabel = detail.pick?.dir
-    ? pickDirectionLabel(detail.pool, detail.pick.dir)
-    : "暂不预测";
-  const summary = copy.verdictSummary({
-    status: detail.status,
-    pickLabel,
-    prob: detail.pick?.prob ?? null,
-    rake: detail.rake,
-    pendingGate: pending ? `${gateLabel(pending)}闸` : null,
-    gateNote: pending ? "数据没齐，暂不发布预测。" : "",
-  });
+  const reference = detail.tier === "market_reference";
+  const marketKey = (["home", "draw", "away"] as const).reduce(
+    (best, key) => detail.probs[key] > detail.probs[best] ? key : best, "home");
+  const marketDir = marketKey === "home" ? "主胜" : marketKey === "draw" ? "平局" : "客胜";
+  const pickLabel = reference
+    ? pickDirectionLabel(detail.pool, marketDir)
+    : detail.pick?.dir
+      ? pickDirectionLabel(detail.pool, detail.pick.dir)
+      : "暂不预测";
+  const displayProb = reference ? detail.probs[marketKey] : detail.pick?.prob ?? null;
+  const summary = reference
+    ? `${pickLabel} 是市场隐含倾向，不是本产品模型预测；没有通过模型验证，只作参考。`
+    : copy.verdictSummary({
+        status: detail.status,
+        pickLabel,
+        prob: detail.pick?.prob ?? null,
+        rake: detail.rake,
+        pendingGate: pending ? `${gateLabel(pending)}闸` : null,
+        gateNote: pending ? "数据没齐，暂不发布预测。" : "",
+      });
+  const tier = detail.tier ?? (detail.status === "promoted" ? "verified"
+    : detail.status === "killed" ? "avoid" : "market_reference");
   const statusLabel =
-    detail.status === "promoted" ? "三关通过" : detail.status === "killed" ? "本期不预测" : "预测复核中";
+    tier === "verified"
+      ? (detail.modelStatus === "shadow" ? "已核验 · 模型影子" : "核验预测")
+      : tier === "market_reference" ? "市场参考"
+        : tier === "avoid" ? "不建议" : "待数据";
   const statusColor =
-    detail.status === "promoted"
-      ? colors.greenAccent
-      : detail.status === "killed"
-        ? colors.danger
-        : colors.amber;
+    tier === "verified" ? colors.greenAccent
+      : tier === "avoid" ? colors.danger : colors.amber;
 
   const content = (
     <>
@@ -74,6 +85,9 @@ export function DetailHero({
           {detail.league || "联赛待同步"} · {detail.pool === "hhad" ? `让球 ${detail.goalLine ?? ""}` : "胜平负"}
         </Text>
         <Chip label="预测引擎 v3" tone={dark ? "dark" : "neutral"} />
+        {detail.modelStatus === "shadow" ? (
+          <Chip label="模型影子" tone={dark ? "dark" : "neutral"} />
+        ) : null}
         {detail.status === "promoted" && published != null ? (
           <Chip
             label={published ? "已发布预测" : "未发布 · 复核预览"}
@@ -84,7 +98,7 @@ export function DetailHero({
 
       <View style={styles.pickRow}>
         <View style={styles.flex}>
-          <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>预测</Text>
+          <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>{reference ? "市场倾向" : "预测"}</Text>
           <Text variant="h1" color={dark ? colors.inkInverse : colors.ink}>{pickLabel}</Text>
           <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>
             官方抽水 {pct(detail.rake)} · 阈值 {pct(detail.rakeThreshold)}
@@ -92,10 +106,10 @@ export function DetailHero({
         </View>
         <View style={styles.prob}>
           <Text variant="metric" color={dark ? colors.inkInverse : colors.ink}>
-            {detail.pick?.prob != null ? pct(detail.pick.prob) : "—"}
+            {displayProb != null ? pct(displayProb) : "—"}
           </Text>
           <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>
-            {detail.pick?.prob != null ? "预测概率" : "预测概率待定"}
+            {displayProb != null ? (reference ? "市场隐含概率" : "预测概率") : "预测概率待定"}
           </Text>
         </View>
       </View>
@@ -104,21 +118,23 @@ export function DetailHero({
         {summary}
       </Text>
       <ProbabilityBar probs={detail.probs} dark={dark} pool={detail.pool} />
-      <GateStrip
-        gates={detail.gates}
-        dark={dark}
-        values={{
-          price: pct(detail.rake),
-          market:
-            typeof detail.gatesDetail.market?.detail.divergence === "number"
-              ? pp(detail.gatesDetail.market.detail.divergence as number)
-              : detail.gates.market === "pass" ? "已收敛" : "待数据",
-          model:
-            typeof detail.gatesDetail.model?.detail.top === "number"
-              ? pct(detail.gatesDetail.model.detail.top as number)
-              : detail.pick?.prob != null ? pct(detail.pick.prob) : "待定",
-        }}
-      />
+      {reference ? null : (
+        <GateStrip
+          gates={detail.gates}
+          dark={dark}
+          values={{
+            price: pct(detail.rake),
+            market:
+              typeof detail.gatesDetail.market?.detail.divergence === "number"
+                ? pp(detail.gatesDetail.market.detail.divergence as number)
+                : detail.gates.market === "pass" ? "已收敛" : "待数据",
+            model:
+              typeof detail.gatesDetail.model?.detail.top === "number"
+                ? pct(detail.gatesDetail.model.detail.top as number)
+                : detail.pick?.prob != null ? pct(detail.pick.prob) : "待定",
+          }}
+        />
+      )}
       <SealLine hash={detail.payloadHash} sealed={Boolean(detail.sealedAt)} dark={dark} onPress={onSeal} />
       <Text variant="caption" color={dark ? colors.mutedInverse : colors.subtle} style={styles.cutoff}>
         数据截止 {detail.dataCutoff ? formatDateTime(detail.dataCutoff) : "待同步"} · 封存于{" "}

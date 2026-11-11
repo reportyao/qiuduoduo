@@ -234,6 +234,9 @@ def test_market_gate_uses_sportmonks_pinnacle_without_odds_api(db, monkeypatch):
     assert mg["result"] == "pass", mg
     assert "Sportmonks(Pinnacle)" in mg["detail"]["sources"]
     assert mg["detail"]["divergence"] < 0.05
+    assert v.model_status in ("shadow", "unavailable")
+    assert v.tier in ("verified", "market_reference")
+    assert v.data_quality["market"] == "pass"
 
 
 def test_intl_sync_only_requests_matched_events(db, monkeypatch):

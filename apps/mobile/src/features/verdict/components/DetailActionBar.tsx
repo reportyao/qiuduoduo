@@ -37,19 +37,22 @@ export function DetailActionBar({
   const { copy } = usePersonaContent();
   const promoted = detail.status === "promoted";
   const locked = promoted && published === false;
+  const reference = detail.tier === "market_reference";
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
       <Button
         label={
           locked
             ? "未发布，暂不可记"
-            : promoted
-              ? betExists
-                ? copy.bought
-                : copy.buy
-              : detail.status === "killed"
-                ? "看原因"
-                : copy.pendingCta
+            : reference
+              ? "市场参考 · 暂不可记"
+              : promoted
+                ? betExists
+                  ? copy.bought
+                  : copy.buy
+                : detail.status === "killed"
+                  ? "看原因"
+                  : copy.pendingCta
         }
         onPress={promoted && !locked ? onBet : onWhyNot}
         disabled={promoted && (betExists || locked)}

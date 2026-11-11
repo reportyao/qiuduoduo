@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>解球 · 情报层 UI 设计图</title>
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#14161B;--bg2:#0B0D11;--card:#1E2128;--ink:#EDEBE5;--muted:#9AA0A8;
+  --line:#2B303A;--v:#3FAE8D;--vsoft:#1D352D;--danger:#E06A57;--dsoft:#3A2420;
+  --amber:#D9A441;--asoft:#332B1B;--pink:#E88BB4;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0B0D11;color:var(--ink);font-family:"PingFang SC","MiSans",system-ui,sans-serif;padding:28px 20px 60px}
+h1{font-size:20px;font-weight:700;letter-spacing:.02em}
+.sub{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.7;max-width:720px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin:18px 0 26px;font-size:12px;color:var(--muted)}
+.legend b{color:var(--ink)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.grid{display:flex;flex-wrap:wrap;gap:26px;align-items:flex-start}
+.frame{width:390px;background:var(--bg);border:1px solid var(--line);border-radius:26px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.5);flex:0 0 auto}
+.frame-h{padding:12px 16px 8px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line)}
+.frame-h .t{font-size:11px;color:var(--muted);letter-spacing:.08em}
+.frame-h .n{font-size:10px;color:var(--muted)}
+.frame-b{padding:12px 14px 16px}
+.cap{font-size:12px;color:var(--muted);margin:10px 4px 0;line-height:1.6;width:390px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-top:10px}
+.eyebrow{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;margin-bottom:9px}
+.eyebrow.amber{color:var(--amber)}
+.match{font-size:19px;font-weight:600}
+.match em{font-style:normal;font-size:13px;color:var(--muted);margin:0 6px;font-weight:400}
+.meta{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6}
+.call{font-size:23px;font-weight:700;margin:9px 0 2px}
+.hc{font-size:11px;vertical-align:middle;border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin-left:8px;color:var(--muted);font-weight:400}
+.costline{display:flex;justify-content:space-between;align-items:baseline;margin-top:9px;padding:8px 11px;background:var(--vsoft);border-radius:10px;font-size:12.5px}
+.costline b{color:var(--v)}
+.judge{margin-top:9px;border:1px solid var(--line);border-left:3px solid var(--v);border-radius:4px 12px 12px 4px;padding:8px 11px;font-size:12.5px;line-height:1.6}
+.gates{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.gatechip{font-size:11.5px;border:1px solid var(--line);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.gatechip i{font-style:normal;color:var(--v);margin-right:3px}
+.gatechip.warn{border-color:rgba(217,164,65,.4);color:var(--amber)}
+.gatechip.warn i{color:var(--amber)}
+.btnrow{display:flex;gap:8px;margin-top:13px}
+.btn{flex:1;height:38px;border-radius:11px;border:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.btn.primary{background:var(--v);border-color:var(--v);color:#0D1512;font-weight:600}
+.btn.ghost{color:var(--muted)}
+.btn.small{height:32px;font-size:12.5px;flex:0 0 auto;padding:0 14px}
+.rate{font-size:10.5px;color:var(--muted);margin-top:10px;text-align:center}
+/* 情报行（判决卡内） */
+.sigline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:11px;padding:9px 11px;border-radius:11px;background:linear-gradient(90deg,rgba(63,174,141,.12),transparent);border:1px solid rgba(63,174,141,.25);font-size:12px}
+.sigline.hot{background:linear-gradient(90deg,rgba(217,164,65,.14),transparent);border-color:rgba(217,164,65,.38)}
+.sigline .l{display:flex;align-items:center;gap:7px;min-width:0;flex:1}
+.sigline .l b{white-space:nowrap}
+.sigline .subl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sigline .tag{flex:0 0 auto}
+.sigline .arrow{white-space:nowrap;flex:0 0 auto}
+.sigline .arrow{color:var(--muted);font-size:14px}
+.tag{font-size:10px;border-radius:999px;padding:1.5px 7px;white-space:nowrap}
+.tag.hot{background:rgba(217,164,65,.16);color:var(--amber)}
+.tag.ver{background:rgba(63,174,141,.15);color:var(--v)}
+.tag.gray{background:transparent;border:1px solid var(--line);color:var(--muted)}
+/* 情报明细 */
+.sig{border-top:1px dashed var(--line);padding:11px 2px 4px}
+.sig:first-of-type{border-top:0;padding-top:2px}
+.sig .h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sig .t{font-size:13px;font-weight:600}
+.sig .d{font-size:12px;color:var(--muted);line-height:1.65;margin-top:4px}
+.sig .f{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:11px;color:var(--muted)}
+.sig .pp{font-family:ui-monospace,monospace;font-weight:600;font-size:12.5px}
+.sig .pp.down{color:var(--danger)}
+.sig .pp.up{color:var(--v)}
+.sig .pp.flat{color:var(--muted)}
+.secnote{margin-top:10px;padding:9px 11px;background:var(--asoft);border-radius:10px;font-size:11px;color:var(--amber);line-height:1.65}
+/* 等首发 */
+.waitbox{margin-top:11px;padding:11px 12px;border:1px dashed rgba(217,164,65,.45);border-radius:12px;background:rgba(217,164,65,.06)}
+.waitbox .b{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px}
+.waitbox .b b{color:var(--amber);font-family:ui-monospace,monospace}
+.count{font-family:ui-monospace,monospace;font-size:12px;color:var(--muted)}
+/* 异动卡 */
+.flow{display:flex;align-items:center;gap:8px;margin-top:9px;font-size:12.5px}
+.flow .old{color:var(--muted);text-decoration:line-through;font-family:ui-monospace,monospace}
+.flow .new{color:var(--v);font-family:ui-monospace,monospace;font-weight:600}
+.flow .delta{font-size:11px;color:var(--amber);border:1px solid rgba(217,164,65,.4);border-radius:999px;padding:1px 7px}
+/* 情景条 */
+.prow{display:grid;grid-template-columns:64px 1fr auto;gap:9px;align-items:center;font-size:12px;padding:4.5px 0}
+.prow>span{color:var(--muted);font-family:ui-monospace,monospace;font-size:11px}
+.pbar{height:6px;border-radius:999px;background:var(--line);overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--v);border-radius:999px}
+.prow b{font-family:ui-monospace,monospace;font-weight:500;font-size:11px;color:var(--muted);text-align:right}
+/* 推送样例 */
+.notif{display:flex;gap:10px;background:rgba(40,44,52,.92);backdrop-filter:blur(8px);border:1px solid #3A404C;border-radius:18px;padding:11px 12px;margin-top:10px}
+.notif .ic{width:34px;height:34px;border-radius:9px;background:var(--vsoft);color:var(--v);display:grid;place-items:center;font-size:16px;flex:0 0 auto}
+.notif .tt{font-size:12px;font-weight:600}
+.notif .bd{font-size:11.5px;color:#C9CDD4;line-height:1.5;margin-top:2px}
+.notif .tm{font-size:10px;color:#8A8F98;margin-left:auto}
+/* 说明表 */
+table.rules{width:390px;border-collapse:collapse;font-size:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+table.rules th,table.rules td{padding:9px 11px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;line-height:1.55}
+table.rules th{background:var(--vsoft);color:var(--v);font-weight:600;font-size:11.5px}
+table.rules td b{color:var(--ink)}
+table.rules tr:last-child td{border-bottom:0}
+.tabbar{display:flex;border-top:1px solid var(--line);padding:7px 6px 9px;background:var(--card)}
+.tab{flex:1;text-align:center;font-size:10px;color:var(--muted)}
+.tab .i{display:block;font-size:17px;margin-bottom:2px}
+.tab.on{color:var(--v);font-weight:600}
+.topbar{display:grid;grid-template-columns:1fr 96px 1fr;align-items:center;padding:10px 14px 6px;font-size:10.5px;color:var(--muted)}
+.topbar .l{line-height:1.45}
+.topbar .l b{color:var(--v)}
+.topbar .r{text-align:right;line-height:1.45}
+.mascot{width:56px;height:56px;border-radius:18px;background:var(--vsoft);display:grid;place-items:center;font-size:24px;margin:0 auto}
+.sigline .l b{font-size:12.5px;font-weight:600}
+.sigline .subl{color:var(--muted);font-size:11.5px}
+.whywait{font-size:11.5px;color:var(--muted);margin-top:9px}
+
+/* v3 视觉对齐：测试前端已改为暖白 / 深绿 / 线性图标 */
+:root{color-scheme:light;--bg:#F5F4EF;--bg2:#EEECE6;--card:#FFFFFF;--ink:#15211B;--muted:#6B756F;--line:#E9E7E0;--v:#0E6B4F;--vsoft:#EAF3EE;--danger:#A8443A;--dsoft:#F7E9E6;--amber:#A66A18;--asoft:#F7EFE1;--pink:#A8443A}
+body{background:#EEECE6;color:var(--ink)}
+.frame{box-shadow:0 20px 50px rgba(16,32,24,.10)}
+h1,.match,.call{letter-spacing:-.02em}
+.v3note{margin-top:12px;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:12px;line-height:1.65;color:var(--muted);max-width:760px}
+.v3note b{color:var(--ink)}
+.v3note a{color:var(--v);text-decoration:none}
+</style>
+</head>
+<body>
+<h1>情报层 UI 设计图 v3 · 三关不动，第四块「情报」</h1>
+<div class="v3note"><b>v3 视觉已落地测试前端</b>：暖白底、深墨绿、线性图标、助理式首页。本图保留交互结构，颜色与排版以 <a href="http://43.128.24.244:8899/" target="_blank" rel="noopener">腾讯云测试前端</a> 为准。</div>
+<p class="sub">设计原则：① 判决卡只多一行摘要，不增加认知负担；② 情报明细放在详情页第 4 块；③ 所有情报标注「市场未反应 / 已反映 / 仅参考」；④ 信息不全 = 明确「等首发」，不硬推。</p>
+<p class="sub" style="margin-top:10px;color:var(--v)">v2/v3 交互优化（已落地测试前端）：① 情报行先讲事实、再讲市场状态；② 详情默认只展开第一条，其余按需展开；③ AI 卡默认折叠驱动/风险；④ 等首发卡补「为什么现在不能算」；⑤ 异动卡只在结论真的变化时出现。</p>
+<div class="legend">
+  <span><i class="dot" style="background:var(--v)"></i><b>硬情报</b> 可核验 · 调整概率（有边界）</span>
+  <span><i class="dot" style="background:var(--amber)"></i><b>软情报</b> 只扩区间 · 触发「等」</span>
+  <span><i class="dot" style="background:var(--muted)"></i><b>伪情报/战意</b> 只进叙事 · 不进概率</span>
+</div>
+
+<div class="grid">
+
+<!-- 1. 判决卡 · 情报齐全 -->
+<div>
+<div class="frame">
+  <div class="topbar"><div class="l"><b>● 引擎 v2.4</b><br>推理 2,113 次</div><div><div class="mascot">🦉</div></div><div class="r">47 场已复核<br><b>12,547</b> 人正在看球</div></div>
+  <div class="frame-b">
+    <div class="card">
+      <div class="eyebrow">⚖ 今晚 47 场 → 砍到 1 场</div>
+      <div class="match">曼城<em>vs</em>布莱顿</div>
+      <div class="meta">英超 · 周三012 · 单关 ✓ · 21:55 停售</div>
+      <div class="call">让球主胜<span class="hc">让 -1</span></div>
+      <div class="costline"><span>官方定价抽水</span><b>9.2% · 今日第 9 浅</b></div>
+      <div class="judge">首发公布后重算：让球主胜 54.2%（+1.8pp）。布莱顿两中卫缺阵已确认，市场还没跟上。</div>
+      <div class="gates">
+        <span class="gatechip"><i>✓</i>价 9.2%</span>
+        <span class="gatechip"><i>✓</i>市 2.1pp</span>
+        <span class="gatechip"><i>✓</i>模 54.2% · 首发</span>
+      </div>
+      <div class="sigline hot">
+        <span class="l">📋 <b>2 名中卫缺阵</b> <span class="subl">市场还没反应</span></span><span class="tag hot">1 条未定价</span>
+        <span class="arrow">详情 ›</span>
+      </div>
+      <div class="btnrow">
+        <button class="btn primary">记一注</button>
+        <button class="btn">看完整账</button>
+        <button class="btn" style="flex:0 0 42px">⋯</button>
+      </div>
+    </div>
+    <div class="rate">情报行 = 唯一新增元素，点击进详情「情报」区</div>
+  </div>
+  <div class="tabbar">
+    <div class="tab on"><span class="i">⚡</span>首页</div>
+    <div class="tab"><span class="i">🧰</span>工具</div>
+    <div class="tab"><span class="i">📒</span>记录</div>
+    <div class="tab"><span class="i">🙂</span>我的</div>
+  </div>
+</div>
+<p class="cap"><b>图 1 · 判决卡（情报齐全）</b><br>三关 chips 第三枚扩展为「模 54.2% · 首发确认」。情报摘要一行：一句事实 + 市场状态 + 是否有未定价项；点整行进详情情报区。</p>
+</div>
+
+<!-- 2. 判决卡 · 等首发 -->
+<div>
+<div class="frame">
+  <div class="frame-b" style="padding-top:16px">
+    <div class="card">
+      <div class="eyebrow amber">⚖ 今晚 47 场 → 复核中 1 场</div>
+      <div class="match">曼城<em>vs</em>布莱顿</div>
+      <div class="meta">英超 · 周三012 · 单关 ✓ · 21:55 停售</div>
+      <div class="call" style="color:var(--amber)">… 等首发</div>
+      <div class="costline" style="background:var(--asoft)"><span>价格已过：抽水 9.2%</span><b style="color:var(--amber)">T-58:12 公布</b></div>
+      <div class="judge" style="border-left-color:var(--amber)">首发未公布，轮换幅度未知。现在算出来的区间 ±9.4pp，超过 8pp 阈值——<b>信息不够，先不推</b>。19:30 公布后我重算，过了就进流。</div>
+      <div class="gates">
+        <span class="gatechip"><i>✓</i>价 9.2%</span>
+        <span class="gatechip"><i>✓</i>市 2.1pp</span>
+        <span class="gatechip warn"><i>…</i>模 等首发</span>
+      </div>
+      <div class="waitbox">
+        <div class="b"><span>🛡 阵容 · 2 名主力存疑</span><span class="count">19:30 官方首发</span></div>
+        <div class="b" style="margin-top:7px"><span>⏳ 疲劳 · 曼城 3 天 2 赛 · 轮换不明</span><span class="count">软情报</span></div>
+      </div>
+      <div class="whywait">为什么现在不能算？ ›</div>
+      <div class="btnrow">
+        <button class="btn primary">到点提醒我</button>
+        <button class="btn ghost">先不看这场</button>
+      </div>
+    </div>
+    <div class="rate">等首发 ≠ 不推，是「还没算完」</div>
+  </div>
+  <div class="tabbar">
+    <div class="tab on"><span class="i">⚡</span>首页</div>
+    <div class="tab"><span class="i">🧰</span>工具</div>
+    <div class="tab"><span class="i">📒</span>记录</div>
+    <div class="tab"><span class="i">🙂</span>我的</div>
+  </div>
+</div>
+<p class="cap"><b>图 2 · 判决卡（等首发）</b><br>复用现有「复核中」状态，加倒计时与两条等待原因。<b>不新增页面</b>。</p>
+</div>
+
+<!-- 3. 详情页 · 情报区 -->
+<div>
+<div class="frame">
+  <div class="frame-h"><span class="t">← 结论详情</span><span class="n">42%</span></div>
+  <div class="frame-b">
+    <div class="card">
+      <div class="eyebrow">⚖ 曼城 vs 布莱顿 · 让球主胜 -1</div>
+      <div class="meta">英超 · 周三012 · 21:55 开赛 · 状态 promoted</div>
+      <div class="costline"><span>官方 SP</span><b class="num">1.62 / 3.80 / 5.50</b></div>
+      <div class="costline"><span>抽水</span><b class="num">9.2%（阈值 13.0%）</b></div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">三关明细</div>
+      <div style="font-size:12.5px;line-height:2;color:var(--muted)">
+        价 · 抽水 9.2% ≤ 13.0% → <b style="color:var(--v)">过</b><br>
+        市 · 四家离散 2.1pp &lt; 5pp → <b style="color:var(--v)">过</b><br>
+        模 · 置信 54.2% ≥ 53% → <b style="color:var(--v)">过</b>
+      </div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">🔎 情报 · 4 条 <span class="tag ver">2 条影响概率</span> <span class="tag gray">2 条仅供参考</span></div>
+
+      <div class="sig">
+        <div class="h"><span class="t">🛡 阵容 · 布莱顿</span><span class="tag hot">市场未反应</span></div>
+        <div class="d">两中卫确认缺阵（官方首发 19:30）。xGA 预计 +12%。</div>
+        <div class="f"><span>来源 API-Football · 19:30</span><span class="pp up">+1.8pp</span></div>
+      </div>
+
+      <div class="sig">
+        <div class="h"><span class="t">⏳ 疲劳 · 曼城</span><span class="tag gray">已反映</span></div>
+        <div class="d">3 天 2 赛，欧冠夹心。轮换概率 43% 已计入。</div>
+        <div class="f"><span>来源 赛程库 · 自动</span><span class="pp down">−0.8pp</span></div>
+      </div>
+
+      <div class="sig">
+        <div class="h"><span class="t">📈 状态 · 布莱顿</span><span class="tag gray">仅参考</span></div>
+        <div class="d">近 6 场 xG +12%，但只持续 4 场，未过 5 场回测门槛 → 不进模型。</div>
+        <div class="f"><span>来源 Understat · 11月2日</span><span class="pp flat">0pp</span></div>
+      </div>
+
+      <div class="sig">
+        <div class="h"><span class="t">🎯 战意 · 双方</span><span class="tag gray">不进模型</span></div>
+        <div class="d">排名压力无差异，无德比/杯赛夹心。战意永不进概率，只写进反方庭。</div>
+        <div class="f"><span>来源 积分榜 · 自动</span><span class="pp flat">不参与</span></div>
+      </div>
+
+      <div class="secnote">市场未反应（未定价）= 情报公布后 30 分钟内盘口未同向移动，可能存在信息差；已反映（已定价）= 市场已反应，只提升准确率、不产生收益。情报永不替代盘口。</div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">封存</div>
+      <div class="meta" style="line-height:1.7">首发公布后重算 → 新修订已上链：cb53…312f<br>同一场判断为什么变过，可逐版回放。</div>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>图 3 · 详情页新增第 4 块「情报」</b><br>实现：第一条默认展开，其余按需展开；每条：类型 · 队名 · 状态标签 · 一句话事实 · 来源+时间 · 对概率的幅度。底部一段诚实条款。</p>
+</div>
+
+<!-- 4. 为什么不推 · 信息未定 -->
+<div>
+<div class="frame">
+  <div class="frame-h"><span class="t">← 为什么不推</span><span class="n">死因</span></div>
+  <div class="frame-b">
+    <div class="card" style="border-left:3px solid var(--v)">
+      <div class="eyebrow amber">🚫 死于「模」· 信息不完备</div>
+      <div class="match">曼城<em>vs</em>布莱顿</div>
+      <div class="meta">英超 · 周三012 · 21:55 停售</div>
+      <div style="font-size:14.5px;font-weight:600;line-height:1.65;margin-top:9px">首发未公布，轮换幅度未知。概率区间 ±9.4pp，超过 8pp 阈值。</div>
+      <div class="judge" style="border-left-color:var(--amber);margin-top:8px">不是这场不好，是现在还没算完。算不清的，就不碰。</div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">拆开看 · 三层</div>
+      <div style="padding:9px 2px"><b style="font-size:13px">1. 缺什么</b><div class="meta" style="line-height:1.7">官方首发（2 名主力存疑）+ 欧冠前轮换幅度。模型对这两种输入的敏感度最高。</div></div>
+      <div style="padding:9px 2px;border-top:1px dashed var(--line)"><b style="font-size:13px">2. 什么时候有</b><div class="meta" style="line-height:1.7">19:30 官方公布首发（T-58min），我自动重算，不用你盯。</div></div>
+      <div style="padding:9px 2px;border-top:1px dashed var(--line)"><b style="font-size:13px">3. 有了会怎样</b><div class="meta" style="line-height:1.7">过三关 → 插入今晚流并推送；仍不过 → 维持不推，并说明差在哪。</div></div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">封存与审计</div>
+      <div class="meta" style="line-height:1.7">本结论已封存：9f3ac721…0812<br>首发公布后的变化会生成新修订，逐版可验。</div>
+    </div>
+    <div class="btnrow"><button class="btn">返回</button><button class="btn primary">到点提醒我</button></div>
+  </div>
+</div>
+<p class="cap"><b>图 4 · 「信息未定」死因</b><br>沿用现有「为什么不推」页面结构，新增死因类型；重点是给出<b>什么时候会有答案</b>。</p>
+</div>
+
+<!-- 5. 流内情报异动 -->
+<div>
+<div class="frame">
+  <div class="frame-h"><span class="t">← 首页 · 流</span><span class="n">19:31</span></div>
+  <div class="frame-b">
+    <div class="time" style="font-size:11px;color:var(--muted);padding:2px 2px 0">今天 19:31</div>
+    <div class="card" style="border-left:3px solid var(--amber)">
+      <div class="eyebrow amber">⚡ 情报异动 · 首发公布</div>
+      <div style="font-size:13px;line-height:1.65">布莱顿两中卫确认缺阵。曼城这场我重算过了。</div>
+      <div class="flow">
+        <span class="old">52.4%</span><span>→</span><span class="new">54.2%</span>
+        <span class="delta">+1.8pp</span>
+      </div>
+      <div class="meta" style="margin-top:7px">结论：三关全过，已推。新哈希已封存。</div>
+      <div class="btnrow"><button class="btn">看判断</button><button class="btn ghost">知道了</button></div>
+    </div>
+    <div class="card" style="margin-top:10px;opacity:.85">
+      <div class="eyebrow">同一时段 · 另一场</div>
+      <div style="font-size:13px;line-height:1.65;color:var(--muted)">… 首发公布后仍不过闸（抽水 11.8% 偏深）。维持不推。</div>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>图 5 · 流内「情报异动」卡</b><br>只在<b>结论发生变化</b>时出现：推→不推、不推→推、概率移动 &gt;1pp、pick 变化或 AI 方向翻转。不是每条情报都刷屏。</p>
+</div>
+
+<!-- 6. 推送 + 规则表 -->
+<div>
+<div class="frame">
+  <div class="frame-h"><span class="t">推送样例（锁屏）</span><span class="n">不含投注字样</span></div>
+  <div class="frame-b">
+    <div class="notif">
+      <div class="ic">🦉</div>
+      <div style="flex:1"><div style="display:flex"><span class="tt">解球</span><span class="tm">现在</span></div>
+      <div class="bd">布莱顿两名中卫缺阵，曼城这场我重算过了。点开看结论。</div></div>
+    </div>
+    <div class="notif" style="margin-top:12px">
+      <div class="ic">🦉</div>
+      <div style="flex:1"><div style="display:flex"><span class="tt">解球</span><span class="tm">19:30</span></div>
+      <div class="bd">今晚 47 场复核完了，值得看的只有 1 场。19:55 前有效。</div></div>
+    </div>
+    <div class="notif" style="margin-top:12px;opacity:.8">
+      <div class="ic">🦉</div>
+      <div style="flex:1"><div style="display:flex"><span class="tt">解球</span><span class="tm">昨天</span></div>
+      <div class="bd">昨天 3 场归因好了：2 场随机波动，1 场信息不足。攒着看，不催你。</div></div>
+    </div>
+    <div class="secnote" style="margin-top:14px">推送文案零投注字样：不出现「买」「注」「赔率」「推荐」。系统层可在设置里关闭全部提醒。</div>
+  </div>
+</div>
+<p class="cap"><b>图 6 · 推送文案</b><br>情报异动只发「发生了什么 + 我重算了」，不发「快买」。</p>
+</div>
+
+<!-- 7. AI 深度研判 -->
+<div>
+<div class="frame">
+  <div class="frame-h"><span class="t">← 结论详情 · AI 研判</span><span class="n">v0.3</span></div>
+  <div class="frame-b">
+    <div class="card">
+      <div class="eyebrow">🤖 AI 深度研判 <span class="tag ver">已封存</span></div>
+      <div style="font-size:15px;font-weight:600;line-height:1.6">倾向 <span style="color:var(--v)">让球主胜</span>，但把握度中等</div>
+      <div class="meta">综合 4 条情报 · 情景加权 54.6% · 与统计模型分歧 +0.4pp · 仅解释，不改判决（调整上限 ±3pp）</div>
+      <div style="margin-top:12px">
+        <div class="prow"><span>基准 54%</span><div class="pbar"><i style="width:54%"></i></div><b>控球压制</b></div>
+        <div class="prow"><span>乐观 62%</span><div class="pbar"><i style="width:62%;opacity:.7"></i></div><b>哈兰德首发</b></div>
+        <div class="prow"><span>悲观 41%</span><div class="pbar"><i style="width:41%;opacity:.45"></i></div><b>轮换 4 人</b></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">三个关键驱动</div>
+      <div style="font-size:12.5px;line-height:1.9">
+        ① 布莱顿双中卫缺阵（xGA +12%，官方确认）<br>
+        ② 曼城主场 xG 2.1/场，压制型对阵<br>
+        ③ 布莱顿被迫压上 → 反击空间（转化率 18%）
+      </div>
+    </div>
+    <div class="card" style="border-left:3px solid var(--danger)">
+      <div class="eyebrow" style="color:var(--danger)">两条风险</div>
+      <div style="font-size:12.5px;line-height:1.9">
+        · 曼城 3 天后欧冠，轮换 43%（若 4 人轮换 → 悲观情景 38%）<br>
+        · 布莱顿定位球得分率联赛第 4（曼城防空第 11）
+      </div>
+    </div>
+    <div class="card" style="background:var(--asoft);border-color:rgba(217,164,65,.3)">
+      <div class="meta" style="color:var(--amber);line-height:1.7;font-size:11.5px">AI 只做情景与风险，最终概率来自统计模型（±3pp 内）。本段文字与输入快照已封存上链，可复现。</div>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>图 7 · 「AI 深度研判」卡</b><br>结论 + 情景树 + 驱动 + 风险 + 分歧。数字口径仍属统计模型，AI 的调整有硬上限且可关闭。</p>
+</div>
+
+<!-- 8. 情报全景 -->
+<div>
+<div class="frame">
+  <div class="frame-h"><span class="t">情报全景 · 12 类</span><span class="n">按可计算性排序</span></div>
+  <div class="frame-b">
+    <div class="chips" style="display:flex;flex-wrap:wrap;gap:7px;margin-top:2px">
+      <span class="gatechip"><i>✓</i>阵容 首发/伤停/停赛</span>
+      <span class="gatechip"><i>✓</i>体能 休息/密度/旅行</span>
+      <span class="gatechip"><i>✓</i>状态 xG 趋势/个体</span>
+      <span class="gatechip warn"><i>…</i>战意 排名/德比/杯赛</span>
+      <span class="gatechip warn"><i>…</i>战术 风格相克</span>
+      <span class="gatechip"><i>✓</i>定位球 攻防效率</span>
+      <span class="gatechip warn"><i>…</i>裁判 点球/红牌</span>
+      <span class="gatechip warn"><i>…</i>环境 风/雨/温度</span>
+      <span class="gatechip warn"><i>…</i>场地 草皮/尺寸</span>
+      <span class="gatechip"><i>✓</i>市场 移动/成交</span>
+      <span class="gatechip warn"><i>…</i>公告 发布会/官方</span>
+      <span class="gatechip warn"><i>…</i>情境 历史对照</span>
+    </div>
+    <div class="secnote" style="margin-top:12px">✓ = 可进概率（硬情报，有边界）；… = 只扩区间或只做叙事。**不做**：社媒情绪、球迷投票、球员身价、记者传闻。</div>
+    <div class="card" style="margin-top:10px">
+      <div class="eyebrow">为什么不做社媒情绪</div>
+      <div class="meta" style="line-height:1.75">① 噪声占比高（水军/反串）；② 不可证伪（赛后怎么解释都行）；③ 职业盘口已在消化它——你拿到的不是信息差，是滞后。情报要做“能核验的事实”，不是“感觉”。</div>
+    </div>
+  </div>
+</div>
+<p class="cap"><b>图 8 · 情报全景</b><br>12 类中只有 4 类可进概率（阵容/体能/状态/定位球/市场），其余只扩区间或写叙事。</p>
+</div>
+
+</div>
+
+<h1 style="margin-top:44px;font-size:16px">规则速查（给开发对照）</h1>
+<table class="rules" style="margin-top:14px">
+  <tr><th style="width:86px">类型</th><th>示例</th><th>对概率</th><th>对闸门</th></tr>
+  <tr><td><b style="color:var(--v)">硬情报</b></td><td>确认缺阵、3 天 2 赛、赛程密度</td><td>λ 乘数（合计 ≤ ±6pp）</td><td>不改闸门，只改概率</td></tr>
+  <tr><td><b style="color:var(--amber)">软情报</b></td><td>轮换不明、核心存疑</td><td>不改点估计，只扩区间</td><td>区间半宽 &gt;8pp → 等（pending）</td></tr>
+  <tr><td><b style="color:var(--muted)">战意/伪情报</b></td><td>士气、媒体看好、动机</td><td>0（不进模型）</td><td>只写反方庭 / 避雷理由</td></tr>
+</table>
+<p class="sub" style="margin-top:16px">交互补充：① 情报区默认展开第一条，其余点开看来源与判定；② 「市场未反应」标签点开解释「为什么未定价 ≠ 有收益」；③ 等首发状态到点自动重算，无需用户操作；④ 所有情报变化进修订链，公开可验。</p>
+</body>
+</html>

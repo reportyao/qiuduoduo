@@ -1,6 +1,6 @@
 # 球多多文档索引
 
-最后对账：2026-11-11。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **147 路径 / 163 方法**，后端 **327 tests**，前端 **45 tests**，Alembic head `20261111_20`；当前仍是 SQLite + WAL 过渡。
+最后对账：2026-11-11。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：`0.8.0-w8+assistant`，OpenAPI **140 路径 / 155 方法**，后端 **327 tests**，前端 **47 tests**，Alembic head `20261111_22`；当前仍是 SQLite + WAL 过渡。
 
 ## 当前状态（2026-11-06）
 
@@ -22,6 +22,7 @@
 | [architecture.md](./architecture.md) | 目标架构与迁移阶段 |
 | [persona-system.md](./persona-system.md) | **三种人设语气配置**：profiles/copy slots/模型池/AI 复核/后台编辑（部分实现） |
 | [recommendation-product.md](./recommendation-product.md) | **赛前判断 / 串关参谋 / AI 复核发布**：新红线、免费付费、帮我配、组合卡、AI 复核流水线（snapshot/review/publish 主链、CLV/经验区间、未采纳复盘已实现；组合页 published 优先、preview 回退；付费待做） |
+| [three-gate-refactor-decision.md](./three-gate-refactor-decision.md) | 三闸与预测呈现重构决策：保留三闸做诊断，前台改为核验预测/市场参考/回避三层，附联赛模型门控与落地阶段 |
 | [focused-decision-flow.md](./focused-decision-flow.md) | **聚焦决策流 / 数据脉搏 / 情报层**：前端聚焦、focus/pulse/interactions API、首页真实脉搏/聚焦面板/覆盖筛选/埋点、后台 `/admin` 的数据源/运维/模型用量/人设文案/推荐主链/组合预览页已实现；intel 表/LLM 深读仍待做 |
 | [llm-gateway.md](./llm-gateway.md) | **LLM Gateway / 多模型路由**：fast/deep、任务矩阵、预算/缓存、`llm_*` 表、后台 `/admin` 模型用量页、审核任务与 persona 传输统一（Phase 1 已实现，deep 解读待做） |
 | [api-football.md](./api-football.md) | **API-Football 接入**：API-Sports 直连 / RapidAPI、fixtures/lineups/injuries/standings、免费额度、7 秒节流、当天+次日、focus 集成、后台页面；apifootball.com 是另一家 provider，未接入 |
@@ -87,7 +88,7 @@
 
 - `archive/`：旧版 PRD/TechSpec/Review，仅用于追溯，不代表当前实现。
 - `w1-validation/`：W1 数据验证结果，历史数据口径。
-- `jieqiu-app/`：临时展示 UI，只作设计参考，禁止继续加功能（见 [jieqiu-app/README.md](../jieqiu-app/README.md)）。
+- `archive/legacy/jieqiu-app/`：临时展示 UI，只作设计参考，禁止继续加功能（见 [archive/legacy/jieqiu-app/README.md](../archive/legacy/jieqiu-app/README.md)）。
 
 ## 维护规则
 
