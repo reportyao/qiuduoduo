@@ -9,7 +9,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from ...config import get_settings
@@ -167,27 +167,34 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
     if match_ids:
         sm_count = int(db.scalar(select(func.count()).select_from(SportmonksMatchData).where(
             SportmonksMatchData.match_id.in_(match_ids))) or 0)
+        sm_ready = int(db.scalar(select(func.count()).select_from(SportmonksMatchData).where(
+            SportmonksMatchData.match_id.in_(match_ids),
+            SportmonksMatchData.probs.isnot(None),
+            SportmonksMatchData.odds.isnot(None))) or 0)
         intel_ready = int(db.scalar(select(func.count()).select_from(AIResearch).where(
-            AIResearch.match_id.in_(match_ids), AIResearch.status == "ready")) or 0)
+            AIResearch.match_id.in_(match_ids), AIResearch.status == "ready",
+            or_(AIResearch.expires_at.is_(None),
+                AIResearch.expires_at > _utcnow()))) or 0)
     else:
-        sm_count = intel_ready = 0
-    info_ok = no_matches or (sm_count == len(matches) and intel_ready == len(matches))
+        sm_count = sm_ready = intel_ready = 0
+    info_ok = no_matches or (sm_ready == len(matches) and intel_ready == len(matches))
     info_warn = (not no_matches) and (sm_count > 0 or intel_ready > 0)
     stages.append(_stage(
         "intel", "情报", "Sportmonks 预测/市场和 AI 情报是否齐全？",
         "Sportmonks 提供 1X2 预测与 Pinnacle 市场；AI 情报是公开事实的中文摘要，不是概率。",
         "idle" if no_matches else _state(info_ok, info_warn),
-        (f"Sportmonks 覆盖 {sm_count}/{len(matches)} 场，AI 情报就绪 {intel_ready}/{len(matches)} 场"
+        (f"Sportmonks 完整 {sm_ready}/{len(matches)} 场（映射 {sm_count}），AI 情报就绪 {intel_ready}/{len(matches)} 场"
          if not no_matches else "无在售场次，情报同步待下一销售日"),
         [
-            {"label": "Sportmonks 覆盖", "value": f"{sm_count}/{len(matches)}"},
+            {"label": "Sportmonks 完整", "value": f"{sm_ready}/{len(matches)}"},
+            {"label": "SM 映射", "value": f"{sm_count}/{len(matches)}"},
             {"label": "AI 情报就绪", "value": f"{intel_ready}/{len(matches)}"},
         ],
-        ([f"Sportmonks 覆盖 {sm_count}/{len(matches)} 场",
+        ([f"Sportmonks 完整（预测+市场）{sm_ready}/{len(matches)} 场",
           f"AI 情报就绪 {intel_ready}/{len(matches)} 场"]
          if not no_matches else ["无在售场次，情报同步待下一销售日"]),
-        "同步 Sportmonks" if sm_count < len(matches) else ("同步 AI 情报" if intel_ready < len(matches) else "正常"),
-        (["sync_sportmonks"] if sm_count < len(matches) else [])
+        "同步 Sportmonks" if sm_ready < len(matches) else ("同步 AI 情报" if intel_ready < len(matches) else "正常"),
+        (["sync_sportmonks"] if sm_ready < len(matches) else [])
         + (["sync_intel"] if intel_ready < len(matches) else []),
     ))
 

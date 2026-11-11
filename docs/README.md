@@ -74,6 +74,7 @@
 
 | 文档 | 内容 |
 |---|---|
+| [2026-11-11-deep-review.md](./reviews/2026-11-11-deep-review.md) | 当日深审：概率卡模型字段、SM 数据覆盖/过期、赛果回填 500、脉搏/聚焦数据源、同场串关等修复与剩余缺口 |
 | [2026-11-04-code-review-pass2.md](./reviews/2026-11-04-code-review-pass2.md) | 第二轮代码复审（历史快照）：并发/事务/采集器/前端清理；当时 182 tests |
 | [2026-11-04-full-stack.md](./reviews/2026-11-04-full-stack.md) | 第一轮全栈深审与修复（历史快照）；残余风险 |
 | [2026-11-04-docs-review.md](./reviews/2026-11-04-docs-review.md) | 文档审查（历史快照）：过期事实、状态标注、索引与链接校验 |

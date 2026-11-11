@@ -55,6 +55,8 @@ def test_pulse_counts_and_display_factor(client, db):
     assert data["display"]["data_points"] == 15
     assert data["display"]["factor"] == 3
     assert data["outcomes"]["promoted"] == 1
+    source_keys = {row["key"] for row in data["sources"]}
+    assert {"sportmonks", "intel"} <= source_keys
     assert data["definition"]
 
 

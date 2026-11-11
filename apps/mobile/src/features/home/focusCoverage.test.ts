@@ -24,7 +24,7 @@ function coverage(overrides: Partial<FocusCoverage> = {}): FocusCoverage {
 describe("coverageGaps", () => {
   it("splits stale data from genuinely missing data and localizes labels", () => {
     expect(coverageGaps(coverage())).toEqual({
-      stale: ["赔率", "国际盘"],
+      stale: ["赔率", "市场数据"],
       missing: ["模型", "阵容", "积分榜"],
     });
   });

@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -12,9 +12,21 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..models import AIResearch, SPMatch, SportmonksMatchData, utcnow
 from .sportmonks import _get
-from .timeutil import trade_window
+from .timeutil import CN, trade_window
 
 log = logging.getLogger(__name__)
+
+
+def effective_status(row: AIResearch, now=None) -> str:
+    """ready 但过期的情报不能再当最新情报展示。"""
+    current = now or utcnow()
+    if row.status == "ready" and row.expires_at is not None:
+        expires = row.expires_at
+        if expires.tzinfo is not None:
+            expires = expires.astimezone(timezone.utc).replace(tzinfo=None)
+        if expires <= current:
+            return "expired"
+    return row.status
 
 
 def _fetch(fixture_id: int) -> tuple[list[str], int]:
@@ -105,8 +117,10 @@ def sync_match(db: Session, match_id: str) -> bool:
 
 def sync_trade_date(db: Session, date: str) -> dict:
     start, end = trade_window(date)
+    now_cn = datetime.now(CN).strftime("%Y-%m-%d %H:%M:%S")
     ids = [m.match_id for m in db.scalars(select(SPMatch).where(
-        SPMatch.kickoff >= start, SPMatch.kickoff <= end)).all()]
+        SPMatch.kickoff >= max(start, now_cn),
+        SPMatch.kickoff <= end)).all()]
     synced = 0
     for match_id in ids:
         if sync_match(db, match_id):

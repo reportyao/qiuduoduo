@@ -12,7 +12,7 @@ import { onSaleStatusLabel } from "@/features/tools/onSaleStatus";
 import { useWatchMatchMutation } from "@/features/verdict/queries";
 import type { OnSaleItem } from "@/domain/types";
 import { errorText } from "@/lib/errors";
-import { countdownText, currentTradeDateCn, formatTime, pct, tradeDateCnFromKickoff } from "@/lib/format";
+import { countdownText, currentTradeDateCn, formatTime, pct, saleCountdownText, tradeDateCnFromKickoff } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 
@@ -45,7 +45,7 @@ const MatchRow = memo(function MatchRow({
         </Text>
         <View style={styles.metaRow}>
           <Text variant="caption" color={colors.muted}>
-            {countdownText(item.saleClose, now)}停售
+            {saleCountdownText(item.saleClose, now)}
             {item.rake != null ? ` · 抽水 ${pct(item.rake)}` : " · 待复核"}
             {item.league ? ` · ${item.league}` : ""}
           </Text>

@@ -25,6 +25,38 @@ from .timeutil import trade_window
 
 CN_TZ = timezone(timedelta(hours=8))
 log = logging.getLogger(__name__)
+SM_MARKET_MAX_AGE = timedelta(hours=2)
+
+
+def market_is_fresh(sm: SportmonksMatchData | None,
+                    now: datetime | None = None) -> bool:
+    """市场赔率超过 2 小时或概率不完整视为不可用：宁可 pending，不拿坏价过闸。"""
+    if sm is None or not isinstance(sm.odds, dict) or sm.captured_at is None:
+        return False
+    try:
+        values = [float(sm.odds[k]) for k in ("home", "draw", "away")]
+    except (KeyError, TypeError, ValueError):
+        return False
+    if min(values) <= 0 or abs(sum(values) - 1.0) > 0.05:
+        return False
+    captured = sm.captured_at
+    current = now or utcnow()
+    if captured.tzinfo is not None:
+        captured = captured.astimezone(timezone.utc).replace(tzinfo=None)
+    if current.tzinfo is not None:
+        current = current.astimezone(timezone.utc).replace(tzinfo=None)
+    return current - captured <= SM_MARKET_MAX_AGE
+
+
+def _fixture_date_range(start: str, end: str) -> tuple[str, str]:
+    """竞彩销售日窗口是 CN 时间；Sportmonks between 用 UTC 日期。
+
+    05:00–08:00 CN 的早场在 UTC 是前一天，直接拿 CN 日期会漏映射。
+    """
+    def to_utc(value: str) -> str:
+        cn = datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(tzinfo=CN_TZ)
+        return cn.astimezone(timezone.utc).strftime("%Y-%m-%d")
+    return to_utc(start), to_utc(end)
 
 
 def _norm(name: str) -> str:
@@ -154,6 +186,8 @@ def _fetch_predictions(base: str, token: str, fixture_id: int) -> dict | None:
             probs = {"home": float(raw.get("home", 0)) / 100.0,
                      "draw": float(raw.get("draw", 0)) / 100.0,
                      "away": float(raw.get("away", 0)) / 100.0}
+            if sum(probs.values()) <= 0:
+                probs = None
             break
     time.sleep(0.15)
     return probs
@@ -180,33 +214,46 @@ def _fetch_odds(base: str, token: str, fixture_id: int) -> tuple[dict | None, st
 
 
 def _snapshot(db: Session, match: SPMatch, fixture: dict, probs: dict | None,
-              odds: dict | None, bookmaker: str, source: str) -> SportmonksMatchData:
+              odds: dict | None, bookmaker: str, source: str,
+              replace: bool = False) -> SportmonksMatchData:
     row = db.get(SportmonksMatchData, match.match_id)
+    created = row is None
+    new_fixture_id = int(fixture.get("id") or 0)
+    remapped = row is not None and row.fixture_id != new_fixture_id
     if row is None:
         row = SportmonksMatchData(match_id=match.match_id)
         db.add(row)
-    row.fixture_id = int(fixture.get("id") or 0)
+    row.fixture_id = new_fixture_id
     row.league = (fixture.get("league") or {}).get("name", "") or match.league
     row.home_name = next((p.get("name", "") for p in fixture.get("participants") or []
                           if (p.get("meta") or {}).get("location") == "home"), "")
     row.away_name = next((p.get("name", "") for p in fixture.get("participants") or []
                           if (p.get("meta") or {}).get("location") == "away"), "")
     row.kickoff_utc = fixture.get("starting_at", "")
-    row.probs = probs
-    row.odds = odds
-    row.bookmaker = bookmaker
-    row.source = source
-    row.captured_at = utcnow()
-    row.data_cutoff = row.captured_at.isoformat()
+    # 自动同步时 API 偶发返回空：保留上一次有效数据，不把好数据覆盖成 null。
+    # 人工改映射或自动匹配换到新 fixture 时，旧的预测/赔率必须清掉，避免挂错。
+    if replace or remapped or probs is not None:
+        row.probs = probs
+    if replace or remapped or odds is not None:
+        row.odds = odds
+        row.bookmaker = bookmaker
+    # 人工映射的来源不能被下一次自动同步抹掉；但自动匹配真的换绑了 fixture 时例外。
+    if remapped or source == "manual" or row.source != "manual":
+        row.source = source
+    if created or replace or remapped or probs is not None or odds is not None:
+        row.captured_at = utcnow()
+        row.data_cutoff = row.captured_at.isoformat()
     return row
 
 
 def _sync_match(db: Session, base: str, token: str, match: SPMatch,
-                fixture: dict, source: str = "sportmonks") -> SportmonksMatchData:
+                fixture: dict, source: str = "sportmonks",
+                replace: bool = False) -> SportmonksMatchData:
     fixture_id = int(fixture.get("id") or 0)
     probs = _fetch_predictions(base, token, fixture_id)
     odds, bookmaker = _fetch_odds(base, token, fixture_id)
-    return _snapshot(db, match, fixture, probs, odds, bookmaker, source)
+    return _snapshot(db, match, fixture, probs, odds, bookmaker, source,
+                     replace=replace)
 
 
 def sync_trade_date(db: Session, date: str, max_matches: int = 40) -> dict:
@@ -216,28 +263,39 @@ def sync_trade_date(db: Session, date: str, max_matches: int = 40) -> dict:
         return {"ok": False, "reason": "JQ_SPORTMONKS_TOKEN 未配置", "synced": 0}
     base = settings.sportmonks_base_url.rstrip("/")
     start, end = trade_window(date)
-    matches = list(db.scalars(select(SPMatch).where(
-        SPMatch.kickoff >= start, SPMatch.kickoff <= end).limit(max_matches)).all())
+    now_cn = datetime.now(CN_TZ).strftime("%Y-%m-%d %H:%M:%S")
+    all_matches = list(db.scalars(select(SPMatch).where(
+        SPMatch.kickoff >= max(start, now_cn), SPMatch.kickoff <= end)
+        .order_by(SPMatch.kickoff)).all())
+    matches = all_matches[:max_matches]
     if not matches:
         return {"ok": True, "reason": "no matches", "synced": 0}
 
-    fixtures = _fetch_fixtures(base, token, start[:10], end[:10])
+    fixtures = _fetch_fixtures(base, token, *_fixture_date_range(start, end))
     synced = 0
     unmatched: list[str] = []
+    used_fixtures: set[int] = set()
     for match in matches:
         fixture = match_fixture(match, fixtures)
         if fixture is None:
             unmatched.append(match.match_no)
             continue
+        fixture_id = int(fixture.get("id") or 0)
+        if fixture_id in used_fixtures:
+            unmatched.append(match.match_no)
+            continue
+        used_fixtures.add(fixture_id)
         _sync_match(db, base, token, match, fixture)
         synced += 1
     db.commit()
     return {"ok": True, "reason": "done", "synced": synced,
-            "unmatched": unmatched[:10], "matches": len(matches)}
+            "unmatched": unmatched[:10], "matches": len(matches),
+            "total_matches": len(all_matches),
+            "truncated": max(0, len(all_matches) - len(matches))}
 
 
 def map_match(db: Session, match_id: str, fixture_id: int,
-              source: str = "manual") -> dict:
+              source: str = "manual", force: bool = False) -> dict:
     """人工把一场竞彩绑定到指定 Sportmonks fixture，并立即拉预测/赔率/情报。"""
     settings = get_settings()
     token = settings.sportmonks_token.strip()
@@ -257,7 +315,14 @@ def map_match(db: Session, match_id: str, fixture_id: int,
     fixture = (payload or {}).get("data")
     if not fixture:
         return {"ok": False, "reason": "Sportmonks fixture 不存在或不可见"}
-    row = _sync_match(db, base, token, match, fixture, source=source)
+    match_ko = _kickoff_utc(match)
+    fixture_ko = _fixture_kickoff(fixture)
+    if not force and match_ko is not None and fixture_ko is not None:
+        delta_hours = abs((fixture_ko - match_ko).total_seconds()) / 3600
+        if delta_hours > 12:
+            return {"ok": False,
+                    "reason": f"fixture 开球时间相差 {delta_hours:.1f} 小时，疑似绑错；如确认可传 force=true"}
+    row = _sync_match(db, base, token, match, fixture, source=source, replace=True)
     db.commit()
     intel_ok = False
     try:

@@ -7,6 +7,7 @@ import {
   money,
   parseCnDateTime,
   pickDirectionLabel,
+  saleCountdownText,
   shortHash,
   signedMoney,
   utcIso,
@@ -43,6 +44,11 @@ describe("countdownText", () => {
     expect(countdownText("2026-11-04 05:30:00", now)).toBe("1 小时 30 分");
     expect(countdownText("2026-11-04 04:30:00", now)).toBe("30 分钟");
     expect(countdownText("2026-11-04 03:00:00", now)).toBe("已停售");
+  });
+  it("adds the sale suffix without duplicating terminal states", () => {
+    expect(saleCountdownText("2026-11-04 04:30:00", now)).toBe("30 分钟停售");
+    expect(saleCountdownText("2026-11-04 03:00:00", now)).toBe("已停售");
+    expect(saleCountdownText(null, now)).toBe("停售时间待同步");
   });
 });
 

@@ -34,6 +34,13 @@ describe("parlayStore", () => {
     expect(useParlayStore.getState().legs).toHaveLength(1);
   });
 
+  it("同一场比赛的不同玩法也只能选一个方向", () => {
+    useParlayStore.getState().add(makeLeg(1));
+    const result = useParlayStore.getState().add({ ...makeLeg(2), matchId: "m1" });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toContain("同一场比赛");
+  });
+
   it("移除与清空", () => {
     useParlayStore.getState().add(makeLeg(1));
     useParlayStore.getState().add(makeLeg(2));

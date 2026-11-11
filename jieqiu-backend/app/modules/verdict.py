@@ -27,6 +27,7 @@ from .dc_model import DCModel, add_alias, fit as dc_fit, load_xg, predict as dc_
 from .gates import (breakeven_prob, dynamic_threshold, implied_probs,
                     market_gate, model_gate, price_gate, shrink_to_market)
 from .intl_odds import sources_for_match
+from .sportmonks import market_is_fresh
 from .results_sync import has_results_proxy
 from .sealchain import link_revision
 
@@ -211,6 +212,7 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
         # 误判成 20pp+ 的“市场分歧”，把所有非单关场次错误 kill。
         intl_rows = []
         intl_err = None
+        sm = None
         market_snap = s.get("had_snap") or (snap if pool == "had" else None)
         if market_snap is not None:
             try:
@@ -231,7 +233,7 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
             # Sportmonks Pinnacle 1X2 已是去水概率，可与竞彩官方直接做同口径对照；
             # 有它时不再依赖 The Odds API 才能过市闸。
             sm = db.get(SportmonksMatchData, m.match_id)
-            if sm is not None and isinstance(sm.odds, dict):
+            if sm is not None and isinstance(sm.odds, dict) and market_is_fresh(sm):
                 try:
                     triple = (float(sm.odds["home"]), float(sm.odds["draw"]),
                               float(sm.odds["away"]))
@@ -285,6 +287,16 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
         status = "promoted" if all_pass else ("killed" if any_fail else "screening")
 
         evidence = _evidence(m, snap, pool, intl_rows, model, pred, now_cn)
+        if (sm is not None and isinstance(sm.odds, dict)
+                and all(k in sm.odds for k in ("home", "draw", "away"))
+                and market_is_fresh(sm)):
+            evidence.append({
+                "tag": "已核验", "t": f"市场 · Sportmonks {sm.bookmaker}",
+                "d": f"{float(sm.odds.get('home', 0)):.3f} / "
+                     f"{float(sm.odds.get('draw', 0)):.3f} / "
+                     f"{float(sm.odds.get('away', 0)):.3f}（去水概率）",
+                "src": f"Sportmonks fixture {sm.fixture_id} · cutoff {sm.data_cutoff}",
+            })
 
         payload = {
             "id": f"v{trade_date}-{m.match_no}",

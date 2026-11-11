@@ -14,6 +14,8 @@ class PulseCounts(BaseModel):
     verdicts: int
     revisions: int
     intel_items: int
+    sportmonks: int = 0
+    ai_intel: int = 0
     sealed_links: int
     lineups: int
     injuries: int

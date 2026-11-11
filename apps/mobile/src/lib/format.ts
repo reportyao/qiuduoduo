@@ -141,6 +141,12 @@ export function countdownText(value: string | Date | null | undefined, now = Dat
   return rest > 0 ? `${hours} 小时 ${rest} 分` : `${hours} 小时`;
 }
 
+/** 列表用：倒计时 + “停售”，已停售/待同步不重复后缀。 */
+export function saleCountdownText(value: string | Date | null | undefined, now = Date.now()): string {
+  const text = countdownText(value, now);
+  return text === "已停售" || text === "停售时间待同步" ? text : `${text}停售`;
+}
+
 export function relativeTime(value: string | Date | null | undefined, now = Date.now()): string {
   const d = value instanceof Date ? value : parseCnDateTime(value);
   if (!d) return "刚刚更新";

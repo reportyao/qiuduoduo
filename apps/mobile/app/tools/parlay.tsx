@@ -199,6 +199,12 @@ export default function ParlayToolScreen() {
         toast.show(`串关最多选 ${PARLAY_MAX_LEGS} 腿，腿越多相关性和成本越高`, "warning");
         return prev;
       }
+      const sameMatch = Object.keys(next).some((id) =>
+        id !== verdict.id && matches.find((m) => m.id === id)?.matchId === verdict.matchId);
+      if (!next[verdict.id] && sameMatch) {
+        toast.show("同一场比赛只能选一个方向", "warning");
+        return prev;
+      }
       next[verdict.id] = dir;
       return next;
     });
