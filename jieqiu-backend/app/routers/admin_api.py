@@ -1449,7 +1449,7 @@ def admin_tier_metrics(days: int = 14, db: Session = Depends(get_db),
     since = (datetime.strptime(trade_date_now(), "%Y-%m-%d")
              - timedelta(days=days)).strftime("%Y-%m-%d")
     daily = db.execute(
-        select(Verdict.trade_date, Verdict.tier, func.count())
+        select(Verdict.trade_date, Verdict.tier, func.count(func.distinct(Verdict.match_id)))
         .where(Verdict.trade_date >= since)
         .group_by(Verdict.trade_date, Verdict.tier)
         .order_by(Verdict.trade_date)).all()

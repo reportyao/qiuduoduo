@@ -681,7 +681,13 @@ def today(db: Session, date: str | None = None) -> dict:
             Verdict.tier == "market_reference",
             Verdict.kickoff >= now_str)
         .order_by(Verdict.kickoff).limit(20)).all())
-    references = [_verdict_card(v) for v in reference_rows]
+    seen_refs: set[str] = set()
+    references = []
+    for v in reference_rows:
+        if v.match_id in seen_refs:
+            continue
+        seen_refs.add(v.match_id)
+        references.append(_verdict_card(v))
     message = None
     if not snaps and not plans:
         verdicts = list(db.scalars(select(Verdict).where(Verdict.trade_date == date)).all())
