@@ -35,3 +35,21 @@ def test_admin_slot_overrides_narration(db):
     db.commit()
     text, _ = build_narration(_verdict(), "laopao", db=db)
     assert text.startswith("自定义 曼城 vs 布莱顿")
+
+
+def test_bad_slot_template_falls_back_instead_of_raising(db):
+    db.merge(PersonaCopySlot(
+        persona_id="laopao", slot_key="narration_promoted",
+        template="{unknown_placeholder}", version=1, enabled=True))
+    db.commit()
+    text, _ = build_narration(_verdict(), "laopao", db=db)
+    assert "曼城" in text and "布莱顿" in text
+
+
+def test_slot_supports_address_placeholder(db):
+    db.merge(PersonaCopySlot(
+        persona_id="laopao", slot_key="narration_promoted",
+        template="{address}，{home} vs {away}，{pick}", version=1, enabled=True))
+    db.commit()
+    text, _ = build_narration(_verdict(), "laopao", db=db)
+    assert text.startswith("兄弟，曼城 vs 布莱顿")

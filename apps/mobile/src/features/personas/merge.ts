@@ -63,7 +63,7 @@ export function mergePersonaContent(
   for (const key of SLOT_COPY_KEYS) {
     const template = slots.get(key);
     if (!template) continue;
-    (copy as Record<SlotKey, string>)[key] = template.replaceAll("{address}", meta.address);
+    (copy as Record<SlotKey, string>)[key] = template.split("{address}").join(meta.address);
   }
   return { meta, copy };
 }
