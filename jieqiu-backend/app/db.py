@@ -111,6 +111,10 @@ _REQUIRED_COLUMNS = {
         "closing_sp_a": "FLOAT",
         "closing_at": "TIMESTAMP",
         "clv": "FLOAT",
+        "tier": "VARCHAR(24) DEFAULT 'avoid'",
+        "model_status": "VARCHAR(16) DEFAULT 'unavailable'",
+        "model_source": "VARCHAR(16) DEFAULT 'none'",
+        "data_quality": "JSON",
     },
     "verdict_revisions": {
         "chain_prev": "TEXT",
@@ -183,6 +187,7 @@ def _ensure_columns() -> None:
 
     dialect = engine.dialect.name
     bool_false, bool_type = ("0", "BOOLEAN") if dialect == "sqlite" else ("false", "BOOLEAN")
+    added: set[tuple[str, str]] = set()
     with engine.connect() as conn:
         for table, cols in _REQUIRED_COLUMNS.items():
             existing = _existing_columns(conn, table)
@@ -191,6 +196,18 @@ def _ensure_columns() -> None:
             for col, typ in cols.items():
                 if col not in existing:
                     conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {typ}"))
+                    added.add((table, col))
+        if ("verdicts", "tier") in added:
+            conn.execute(text("""
+                UPDATE verdicts SET
+                  tier = CASE
+                    WHEN status = 'promoted' THEN 'verified'
+                    WHEN status = 'screening' THEN 'market_reference'
+                    ELSE 'avoid' END,
+                  model_status = CASE WHEN model_h IS NOT NULL THEN 'shadow' ELSE 'unavailable' END,
+                  model_source = CASE WHEN model_h IS NOT NULL THEN 'dc' ELSE 'none' END,
+                  data_quality = '{}'
+            """))
         # W5 认证：布尔回填 + 手机/邮箱唯一索引（NULL 允许多行；PG/SQLite 均支持部分索引）
         try:
             conn.execute(text(f"UPDATE users SET phone_verified = {bool_false} WHERE phone_verified IS NULL"))

@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     market_div_threshold: float = 0.05
     # 模闸：收缩后最优方向置信门槛（可推线）
     model_conf_threshold: float = 0.53
+    # 分层发布：开启后只有联赛模型 enabled 且三闸通过才是 verified/promoted；
+    # 默认关闭，避免未回测联赛被一刀切空窗。
+    tier_enforce: bool = False
     # DC 模型（与 W1 回测同参：halflife 180d / 窗口 540d / rho=-0.06）
     xg_data_path: str = "../w1-validation/xg_matches.csv"
     # 增量 dump 目录（understat_sync 落档处；与主 csv 合并后拟合）

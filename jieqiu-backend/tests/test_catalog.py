@@ -78,50 +78,16 @@ def test_matches_today_cost_evidence_avoid_water(client, db):
     assert avoid.json()["count"] >= 1
     assert "抽水" in avoid.json()["items"][0]["why"]
 
-    water = client.get("/water-rank", params={"date": date, "limit": 2})
-    assert water.status_code == 200
-    assert water.json()["count"] == 2
-    assert water.json()["items"][0]["rake"] <= water.json()["items"][1]["rake"]
-
     cal = client.get("/calendar", params={"month": date[:7]})
     assert cal.status_code == 200
     assert len(cal.json()["days"]) >= 28
     assert cal.json()["total_matches"] >= 2
 
 
-def test_sp_movements_and_sentinel(client, db):
-    _seed_two_matches(db)
-    db.merge(SPSnapshot(match_id="2042501", pool="had", goal_line="",
-                        sp_h=1.48, sp_d=4.50, sp_a=5.80,
-                        captured_at=today_cn() + "T13:00:00+08:00"))
-    db.add(Event(type="close_soon", severity=2, match_id="2042501",
-                 dedupe_key="catalog-sentinel", payload={"minutes": 30},
-                 data_cutoff=today_cn() + " 18:00:00"))
-    db.commit()
-
-    moves = client.get("/sp/movements", params={"date": today_cn()})
-    assert moves.status_code == 200
-    item = next(x for x in moves.json()["items"] if x["match_id"] == "2042501")
-    assert item["prev_sp"]["h"] == 1.53
-    assert item["delta"]["h"] == -0.05
-
-    feed = client.get("/agents/sentinel/feed")
-    assert feed.status_code == 200
-    assert any(x["type"] == "close_soon" for x in feed.json()["items"])
-
-
-def test_match_live_finished_result(client, db):
-    _seed_two_matches(db)
-    db.add(MatchResult(source="test", league="英超", home="曼城", away="布莱顿",
-                       match_date=today_cn(), goals_home=2, goals_away=1,
-                       retrieved_at=today_cn() + "T23:00:00"))
-    db.commit()
-    r = client.get("/matches/2042501/live")
-    assert r.status_code == 200
-    body = r.json()
-    assert body["state"] == "finished" and body["score"] == "2-1"
-    assert body["live_feed"] is False  # 不伪造实时事件源
-    assert body["timeline"]
+def test_removed_legacy_catalog_routes(client):
+    for path in ("/water-rank", "/sp/movements", "/agents/sentinel/feed",
+                 "/matches/2042501/live"):
+        assert client.get(path).status_code == 404
 
 
 def test_comfort_export_and_compat_aliases(client, db):
@@ -139,14 +105,20 @@ def test_comfort_export_and_compat_aliases(client, db):
     assert client.delete("/matches/2042501/follow", headers=auth).status_code == 200
 
     assert client.patch("/me/persona", headers=auth, json={"persona": "laopao"}).status_code == 200
+    assert client.put("/me/memories/偏好", headers=auth,
+                      json={"value": "只看英超", "source": "user",
+                            "confirm": True}).status_code == 200
+    assert len(client.get("/me/memories", headers=auth).json()) == 1
+    assert client.delete("/me/memories/偏好", headers=auth).status_code == 200
     assert client.post("/memories", headers=auth,
-                       json={"key": "偏好", "value": "只看英超"}).status_code == 200
-    assert len(client.get("/memories", headers=auth).json()) == 1
-    assert client.delete("/memories/偏好", headers=auth).status_code == 200
+                       json={"key": "旧", "value": "旧"}).status_code == 404
 
-    assert client.post("/devices", headers=auth,
+    assert client.post("/push/register", headers=auth,
                        json={"platform": "android", "provider": "jpush",
                              "token": "catalog-token"}).status_code == 200
+    assert client.post("/devices", headers=auth,
+                       json={"platform": "android", "provider": "jpush",
+                             "token": "old-token"}).status_code == 404
     health = client.get("/push/health", headers=auth).json()
     assert health["total_tokens"] == 1 and health["provider"] == "jpush"
     prefs = client.get("/push/preferences", headers=auth)

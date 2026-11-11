@@ -115,3 +115,32 @@ def test_supply_market_scope_only_upcoming(db):
     assert supply["upcoming_matches"] == 0
     assert supply["market_covered_matches"] == 0
     assert "市场" not in (supply["blocked_reason"] or "")
+
+
+def test_verdict_detail_exposes_tier_and_third_party(client, db):
+    _verdict(db, mid="review-tier")
+    db.merge(SportmonksMatchData(
+        match_id="review-tier", fixture_id=990001, league="英超",
+        probs={"home": 0.48, "draw": 0.28, "away": 0.24},
+        odds={"home": 0.50, "draw": 0.27, "away": 0.23},
+        bookmaker="Pinnacle", captured_at=utcnow(),
+        data_cutoff="2026-11-11T12:00:00"))
+    db.commit()
+    body = client.get("/verdicts/v-review-tier").json()
+    assert body["tier"]
+    assert body["model_status"]
+    assert isinstance(body["data_quality"], dict)
+    third = body["probability_compare"]["third_party"]
+    assert third["source"] == "Sportmonks Prediction Model"
+    assert abs(sum(third["probs"].values()) - 1.0) < 1e-6
+
+
+def test_recommendations_today_exposes_market_reference(client, db):
+    _verdict(db, mid="ref-today", id="v-ref-today", tier="market_reference",
+             status="screening", model_status="unavailable", model_source="none")
+    body = client.get("/recommendations/today", params={"date": today_cn()}).json()
+    assert body["references"]
+    item = next(x for x in body["references"] if x["id"] == "v-ref-today")
+    assert item["tier"] == "market_reference"
+    assert item["status"] == "screening"
+    assert body["message"] and "市场参考" in body["message"]

@@ -172,12 +172,6 @@ def test_admin_ops_reports_aux_football_status(client, db):
     assert "football_fixtures" not in data
 
 
-def test_admin_football_link_requires_login(client):
-    r = client.post("/admin/api/football/link",
-                    json={"fixture_id": 999001, "match_id": "sp-1"})
-    assert r.status_code == 401
-
-
 def test_provider_base_url_and_headers():
     from types import SimpleNamespace
     from app.modules import api_football

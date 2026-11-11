@@ -21,8 +21,8 @@ __pycache__/
 node_modules/
 
 # 前端验证产物/本地备份（不入库）
-jieqiu-app/__shots/
-jieqiu-app/*.bak-*
+archive/legacy/jieqiu-app/__shots/
+archive/legacy/jieqiu-app/*.bak-*
 
 jieqiu-backend/assistant.log
 .expo/

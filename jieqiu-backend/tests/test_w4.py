@@ -200,12 +200,6 @@ def test_backtest_calibration_metrics(db, client):
     assert len(m["calibration"]) >= 3
     for c in m["calibration"]:
         assert 0 <= c["mean_predicted"] <= 1 and 0 <= c["observed_freq"] <= 1
-    # 入库 + 端点
-    from app.models import ModelEval
-    db.add(ModelEval(label="test", params=m["params"], metrics=m))
-    db.commit()
-    r = client.get("/model/evals").json()
-    assert any(e["label"] == "test" for e in r)
 
 
 # ---------- 公开账本 ----------

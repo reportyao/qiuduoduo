@@ -10,4 +10,9 @@ describe("onSaleStatusLabel", () => {
     expect(onSaleStatusLabel("")).toBe("在售");
     expect(onSaleStatusLabel(null)).toBe("在售");
   });
+  it("uses content tier when available", () => {
+    expect(onSaleStatusLabel("promoted", "verified")).toBe("核验");
+    expect(onSaleStatusLabel("screening", "market_reference")).toBe("市场参考");
+    expect(onSaleStatusLabel("killed", "avoid")).toBe("不建议");
+  });
 });

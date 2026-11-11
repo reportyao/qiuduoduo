@@ -50,4 +50,5 @@ class RecommendationToday(BaseModel):
     snapshots: list[SnapshotPublic]
     plans: list[PlanPublic]
     verdicts: list[dict]
+    references: list[dict] = []
     message: str | None = None

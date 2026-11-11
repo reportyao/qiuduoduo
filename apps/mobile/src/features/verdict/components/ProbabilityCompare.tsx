@@ -43,11 +43,22 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
       </View>
 
       {data.sp ? <Row label="竞彩隐含" probs={data.sp} tone={colors.green} /> : null}
-      {data.model ? <Row label="融合模型" probs={data.model} tone={colors.greenDark} /> : null}
+      {data.model ? (
+        <Row label={data.modelStatus === "enabled" ? "融合模型" : "自有模型（影子）"}
+          probs={data.model} tone={colors.greenDark} />
+      ) : null}
       {data.market ? (
         <Row label={`市场 · ${data.market.bookmaker}`} probs={data.market.probs} tone={colors.muted} />
       ) : null}
+      {data.thirdParty ? (
+        <Row label={`第三方参考 · ${data.thirdParty.source}`} probs={data.thirdParty.probs} tone={colors.amber} />
+      ) : null}
 
+      {data.thirdParty ? (
+        <Text variant="caption" color={colors.subtle} style={styles.note}>
+          第三方参考不是本产品模型，也不代表已通过模型闸。
+        </Text>
+      ) : null}
       {!data.modelEnabled && !data.model ? (
         <Text variant="caption" color={colors.subtle} style={styles.note}>
           {data.reason || "该联赛模型未启用；以上只展示竞彩与市场参考。"}

@@ -50,24 +50,8 @@ def test_stream_limit_clamped(client, db):
     assert client.get("/stream", params={"limit": 0}).status_code == 200
 
 
-def test_analysis_log(client, db):
-    _seed_n(db, 2)
-    build_verdicts(db, today_cn(), "2026-11-03 19:02:00")
-    r = client.get("/analysis-log")
-    assert r.status_code == 200
-    b = r.json()
-    assert b["date"] == today_cn()
-    # 2 场 × 3 闸（price/market/model）= 6 条最新日志
-    assert b["total"] == 6
-    gates = {(e["match_no"], e["gate"]): e["result"] for e in b["entries"]}
-    assert gates[("周三000", "price")] == "pass"
-    assert gates[("周三000", "market")] == "pending_data"
-    assert all(e["match"] for e in b["entries"])  # 场次名已联表
-
-
-def test_analysis_log_empty_day(client, db):
-    b = client.get("/analysis-log", params={"date": "2020-01-01"}).json()
-    assert b["total"] == 0 and b["entries"] == []
+def test_analysis_log_removed(client):
+    assert client.get("/analysis-log").status_code == 404
 
 
 def test_matches_on_sale(client, db):

@@ -116,13 +116,20 @@ function probabilityCompare(value: unknown): ProbabilityCompareData | null {
   const raw = record(value);
   const marketRaw = record(raw.market);
   const marketProbs = compareTriple(marketRaw.probs);
+  const thirdRaw = record(raw.third_party ?? raw.thirdParty);
+  const thirdProbs = compareTriple(thirdRaw.probs);
   return {
     sp: compareTriple(raw.sp),
     model: compareTriple(raw.model),
     market: marketProbs && typeof marketRaw.bookmaker === "string"
       ? { bookmaker: marketRaw.bookmaker, probs: marketProbs }
       : null,
+    thirdParty: thirdProbs && typeof thirdRaw.source === "string"
+      ? { source: thirdRaw.source, probs: thirdProbs,
+          capturedAt: nullableString(thirdRaw.captured_at ?? thirdRaw.capturedAt) }
+      : null,
     modelEnabled: Boolean(raw.model_enabled ?? raw.modelEnabled),
+    modelStatus: nullableString(raw.model_status ?? raw.modelStatus),
     reason: nullableString(raw.reason),
     dataCutoff: nullableString(raw.data_cutoff ?? raw.dataCutoff),
   };
@@ -180,6 +187,11 @@ export function adaptVerdictSummary(value: unknown): VerdictSummary | null {
         : null,
     pick: pick(raw.pick),
     status: string(raw.status, "screening"),
+    tier: nullableString(raw.tier) ?? undefined,
+    modelStatus: nullableString(raw.model_status ?? raw.modelStatus) ?? undefined,
+    modelSource: nullableString(raw.model_source ?? raw.modelSource) ?? undefined,
+    dataQuality: Object.keys(record(raw.data_quality ?? raw.dataQuality)).length > 0
+      ? record(raw.data_quality ?? raw.dataQuality) : undefined,
     gates: gateMap(raw.gates),
     hash: nullableString(raw.hash ?? raw.payload_hash),
     sealed: boolean(raw.sealed, Boolean(raw.payload_hash)),
@@ -264,6 +276,8 @@ export function adaptStream(value: unknown): StreamResponse {
         rake: nullableNumber(item.rake),
         gates: item.gates ? gateMap(item.gates) : null,
         status: nullableString(item.status),
+        tier: nullableString(item.tier),
+        modelStatus: nullableString(item.model_status ?? item.modelStatus),
         verdictId: nullableString(item.verdict_id),
         coverage: item.coverage ? adaptCoverage(item.coverage) : null,
       };
@@ -390,6 +404,8 @@ export function adaptOnSale(value: unknown): OnSaleItem[] {
       rake: nullableNumber(item.rake),
       gates: item.gates ? gateMap(item.gates) : null,
       status: nullableString(item.status),
+      tier: nullableString(item.tier),
+      modelStatus: nullableString(item.model_status ?? item.modelStatus),
       verdictId: nullableString(item.verdict_id),
       coverage: item.coverage ? adaptCoverage(item.coverage) : null,
     };

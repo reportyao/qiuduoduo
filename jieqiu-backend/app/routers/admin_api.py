@@ -26,8 +26,8 @@ from ..features.ops import workbench as ops_workbench
 from ..features.recommendations import service as recommendation_service
 from ..features.tools import service as parlay_service
 from ..features.tools.schemas import ParlayPlanRequest
-from ..models import (AIResearch, AdminAudit, AdminUser,
-                      DecisionSnapshot, InteractionEvent, LLMProfile, CollectorStatus,
+from ..models import (AIResearch, AdminAudit, AdminUser, CollectorStatus,
+                      DecisionSnapshot, InteractionEvent, LeagueModelConfig, LLMProfile,
                       Notification, PersonaLLMModel, PushToken,
                       RecommendationEvent, RecommendationPlan, ReviewRun,
                       SPMatch, SPSnapshot, SportmonksMatchData, Verdict)
@@ -1230,6 +1230,9 @@ def admin_sm_matrix(date: str | None = None,
             },
             "verdict": {
                 "id": verdict.id, "status": verdict.status,
+                "tier": verdict.tier,
+                "model_status": verdict.model_status,
+                "model_source": verdict.model_source,
                 "pick": verdict.pick, "settled": verdict.settled,
                 "result_score": verdict.result_score,
                 "has_model": verdict.model_h is not None,
@@ -1246,6 +1249,10 @@ def admin_sm_matrix(date: str | None = None,
             "with_odds": sum(1 for r in rows if r["odds"]),
             "intel_ready": sum(1 for r in rows if r["intel"]["status"] == "ready"),
             "promoted": sum(1 for r in rows if r["verdict"] and r["verdict"]["status"] == "promoted"),
+            "tiers": {
+                name: sum(1 for r in rows if r["verdict"] and r["verdict"].get("tier") == name)
+                for name in ("verified", "market_reference", "avoid", "no_data")
+            },
         },
         "rows": rows,
     }
@@ -1410,6 +1417,86 @@ def admin_model_eval(days: int = 90, db: Session = Depends(get_db),
             "leagues": leagues, "recent": recent}
 
 
+class ModelConfigBody(BaseModel):
+    dc_status: Literal["disabled", "shadow", "enabled"] = "shadow"
+    sm_status: Literal["disabled", "shadow", "enabled"] = "disabled"
+    dc_weight: float = Field(default=1.0, ge=0, le=1)
+    sm_weight: float = Field(default=0.0, ge=0, le=1)
+    note: str = Field(default="", max_length=200)
+
+
+def _model_config_dict(row: LeagueModelConfig | None, league: str) -> dict:
+    return {
+        "league": league,
+        "dc_status": row.dc_status if row else "disabled",
+        "sm_status": row.sm_status if row else "disabled",
+        "dc_weight": row.dc_weight if row else 1.0,
+        "sm_weight": row.sm_weight if row else 0.0,
+        "samples": row.samples if row else 0,
+        "brier_dc": row.brier_dc if row else None,
+        "brier_market": row.brier_market if row else None,
+        "rps_dc": row.rps_dc if row else None,
+        "rps_market": row.rps_market if row else None,
+        "note": row.note if row else "",
+        "updated_at": _iso(row.updated_at) if row else None,
+    }
+
+
+@router.get("/api/tier-metrics")
+def admin_tier_metrics(days: int = 14, db: Session = Depends(get_db),
+                       _: None = Depends(admin_auth.require_role("viewer"))):
+    days = max(1, min(int(days), 90))
+    since = (datetime.strptime(trade_date_now(), "%Y-%m-%d")
+             - timedelta(days=days)).strftime("%Y-%m-%d")
+    daily = db.execute(
+        select(Verdict.trade_date, Verdict.tier, func.count())
+        .where(Verdict.trade_date >= since)
+        .group_by(Verdict.trade_date, Verdict.tier)
+        .order_by(Verdict.trade_date)).all()
+    totals = {name: 0 for name in ("verified", "market_reference", "avoid", "no_data")}
+    by_date: dict[str, dict] = {}
+    for date, tier, count in daily:
+        bucket = by_date.setdefault(date, {name: 0 for name in totals})
+        if tier in bucket:
+            bucket[tier] = int(count)
+            totals[tier] += int(count)
+    return {"days": days, "since": since, "totals": totals,
+            "daily": [{"date": date, **counts} for date, counts in sorted(by_date.items())]}
+
+
+@router.get("/api/model-config")
+def admin_model_config(db: Session = Depends(get_db),
+                       _: None = Depends(admin_auth.require_role("viewer"))):
+    leagues = sorted({row for row in db.scalars(select(SPMatch.league).distinct()).all()
+                      if row})
+    rows = {row.league: row for row in db.scalars(select(LeagueModelConfig)).all()}
+    return {"tier_enforce": bool(get_settings().tier_enforce),
+            "leagues": [_model_config_dict(rows.get(league), league)
+                        for league in leagues]}
+
+
+@router.put("/api/model-config/{league}")
+def admin_model_config_put(league: str, body: ModelConfigBody, request: Request,
+                           db: Session = Depends(get_db),
+                           principal: admin_auth.AdminPrincipal = Depends(
+                               admin_auth.require_role("admin"))):
+    if abs(body.dc_weight + body.sm_weight - 1.0) > 0.01:
+        raise HTTPException(400, "dc_weight + sm_weight 必须为 1")
+    row = db.get(LeagueModelConfig, league)
+    if row is None:
+        row = LeagueModelConfig(league=league)
+        db.add(row)
+    row.dc_status = body.dc_status
+    row.sm_status = body.sm_status
+    row.dc_weight = body.dc_weight
+    row.sm_weight = body.sm_weight
+    row.note = body.note
+    db.commit()
+    _audit(db, principal, "model_config.update", "league", league,
+           after=_model_config_dict(row, league), request=request)
+    return _model_config_dict(row, league)
+
+
 class SyncBody(BaseModel):
     date: str | None = None
 
@@ -1476,24 +1563,6 @@ def admin_sm_results_backfill(body: BackfillBody, request: Request,
 def admin_logs(name: str = "sync", lines: int = 120,
                _: None = Depends(admin_auth.require_role("viewer"))):
     return {"name": name, "lines": _tail_log(name, lines)}
-
-
-class FootballLink(BaseModel):
-    fixture_id: int = Field(ge=1)
-    match_id: str = Field(min_length=1, max_length=32)
-
-
-@router.post("/api/football/link", deprecated=True)
-def admin_football_link(body: FootballLink, request: Request,
-                        db: Session = Depends(get_db),
-                        principal: admin_auth.AdminPrincipal = Depends(admin_auth.require_role("admin"))):
-    try:
-        api_football.link_fixture(db, body.fixture_id, body.match_id.strip())
-    except api_football.ApiFootballError as exc:
-        raise HTTPException(400, str(exc))
-    _audit(db, principal, "football.link", "fixture", body.fixture_id,
-           after={"match_id": body.match_id.strip()}, request=request)
-    return {"ok": True}
 
 
 class AdminUserCreate(BaseModel):

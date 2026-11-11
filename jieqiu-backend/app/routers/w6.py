@@ -90,10 +90,6 @@ class MemoryWriteResponse(BaseModel):
     status: str
 
 
-class MemoryDeleteResponse(BaseModel):
-    deleted: str
-
-
 class ComfortResponse(BaseModel):
     available: bool
     kind: str
@@ -274,20 +270,6 @@ def memories_list(user: User = Depends(current_user), db: Session = Depends(get_
     return _memory_items(db, user)
 
 
-@router.get("/memories", response_model=list[MemoryItem], deprecated=True)
-def memories_root(user: User = Depends(current_user), db: Session = Depends(get_db)):
-    """兼容 TechSpec 的 GET /memories（与 /me/memories 同数据）。"""
-    return _memory_items(db, user)
-
-
-@router.post("/memories", response_model=MemoryWriteResponse, deprecated=True)
-def memory_create(body: MemoryCreate, user: User = Depends(current_user),
-                  db: Session = Depends(get_db)):
-    """兼容 TechSpec 的 POST /memories：key 在 body 里。"""
-    return memory_put(body.key, MemoryBody(value=body.value, source=body.source,
-                                           confirm=body.confirm), user, db)
-
-
 @router.put("/me/memories/{key}", response_model=MemoryWriteResponse)
 def memory_put(key: str, body: MemoryBody, user: User = Depends(current_user),
                db: Session = Depends(get_db)):
@@ -310,13 +292,6 @@ def memory_delete(key: str, user: User = Depends(current_user), db: Session = De
     if not U.delete_memory(db, user.id, key):
         raise HTTPException(404, "memory not found")
     return {"deleted": key}
-
-
-@router.delete("/memories/{key}", response_model=MemoryDeleteResponse, deprecated=True)
-def memory_delete_root(key: str, user: User = Depends(current_user),
-                       db: Session = Depends(get_db)):
-    """兼容 TechSpec 的 DELETE /memories/{key}。"""
-    return memory_delete(key, user, db)
 
 
 # ---------- 注单（F11 行为面：保护期加注需确认） ----------

@@ -104,27 +104,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/water-rank": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Water Rank
-         * @deprecated
-         * @description 水位榜：当日抽水最浅的场次（默认 3 场）。
-         */
-        get: operations["water_rank_water_rank_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/calendar": {
         parameters: {
             query?: never;
@@ -137,69 +116,6 @@ export interface paths {
          * @description 日历：按竞彩日统计场次/判决数，供日期切换与非比赛日判断。
          */
         get: operations["calendar_calendar_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sp/movements": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Sp Movements
-         * @deprecated
-         * @description SP 异动：同日同场同玩法最近两次快照的赔率变化。
-         */
-        get: operations["sp_movements_sp_movements_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/agents/sentinel/feed": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Sentinel Feed
-         * @deprecated
-         * @description 盘口哨兵事件流（events 表；只读公开事件）。
-         */
-        get: operations["sentinel_feed_agents_sentinel_feed_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/matches/{match_id}/live": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Match Live
-         * @deprecated
-         * @description 实况卡：当前只展示已同步赛果+SP 快照，不伪造实时进球时间线。
-         */
-        get: operations["match_live_matches__match_id__live_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -440,27 +356,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/analysis-log": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Analysis Log
-         * @deprecated
-         * @description 引擎分析日志（UI「引擎状态」弹层）：当日各场各闸最新一次结果，按时间倒序。
-         */
-        get: operations["analysis_log_analysis_log_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/matches/on-sale": {
         parameters: {
             query?: never;
@@ -692,26 +587,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/model/evals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Model Evals
-         * @deprecated
-         */
-        get: operations["model_evals_model_evals_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/auth/device": {
         parameters: {
             query?: never;
@@ -863,32 +738,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/memories": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Memories Root
-         * @deprecated
-         * @description 兼容 TechSpec 的 GET /memories（与 /me/memories 同数据）。
-         */
-        get: operations["memories_root_memories_get"];
-        put?: never;
-        /**
-         * Memory Create
-         * @deprecated
-         * @description 兼容 TechSpec 的 POST /memories：key 在 body 里。
-         */
-        post: operations["memory_create_memories_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/me/memories/{key}": {
         parameters: {
             query?: never;
@@ -902,27 +751,6 @@ export interface paths {
         post?: never;
         /** Memory Delete */
         delete: operations["memory_delete_me_memories__key__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/memories/{key}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Memory Delete Root
-         * @deprecated
-         * @description 兼容 TechSpec 的 DELETE /memories/{key}。
-         */
-        delete: operations["memory_delete_root_memories__key__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1820,6 +1648,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/api/tier-metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Tier Metrics */
+        get: operations["admin_tier_metrics_admin_api_tier_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/api/model-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Model Config */
+        get: operations["admin_model_config_admin_api_model_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/api/model-config/{league}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Admin Model Config Put */
+        put: operations["admin_model_config_put_admin_api_model_config__league__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/api/sportmonks/sync": {
         parameters: {
             query?: never;
@@ -1899,26 +1778,6 @@ export interface paths {
         get: operations["admin_logs_admin_api_logs_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/api/football/link": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Admin Football Link
-         * @deprecated
-         */
-        post: operations["admin_football_link_admin_api_football_link_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2549,27 +2408,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/devices": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Devices Alias
-         * @deprecated
-         * @description 兼容 POST /devices；实现与 /push/register 完全一致。
-         */
-        post: operations["devices_alias_devices_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/push/preferences": {
         parameters: {
             query?: never;
@@ -3080,13 +2918,6 @@ export interface components {
             /** Events */
             events?: string[] | null;
         };
-        /** FootballLink */
-        FootballLink: {
-            /** Fixture Id */
-            fixture_id: number;
-            /** Match Id */
-            match_id: string;
-        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -3280,19 +3111,6 @@ export interface components {
              */
             reasoning: string;
         };
-        /** LiveTimelineItem */
-        LiveTimelineItem: {
-            /** Captured At */
-            captured_at: string;
-            /** Pool */
-            pool: string;
-            /** Goal Line */
-            goal_line: string;
-            /** Sp */
-            sp: {
-                [key: string]: number;
-            };
-        };
         /** LoginBody */
         LoginBody: {
             /** Username */
@@ -3442,41 +3260,6 @@ export interface components {
             /** Matches */
             matches: components["schemas"]["MatchItem"][];
         };
-        /** MatchLiveResponse */
-        MatchLiveResponse: {
-            /** Match Id */
-            match_id: string;
-            /** Match No */
-            match_no: string;
-            /** League */
-            league: string;
-            /** Home */
-            home: string;
-            /** Away */
-            away: string;
-            /** Kickoff */
-            kickoff: string;
-            /**
-             * State
-             * @description scheduled / awaiting_result / finished
-             */
-            state: string;
-            /**
-             * Live Feed
-             * @description 是否接入实时事件源；false 时不伪造进球时间线
-             */
-            live_feed: boolean;
-            /** Score */
-            score?: string | null;
-            /** Result Source */
-            result_source?: string | null;
-            /** Updated At */
-            updated_at?: string | null;
-            /** Timeline */
-            timeline: components["schemas"]["LiveTimelineItem"][];
-            /** Note */
-            note: string;
-        };
         /** MePatch */
         MePatch: {
             /** Display Name */
@@ -3502,28 +3285,6 @@ export interface components {
              * @default false
              */
             confirm: boolean;
-        };
-        /** MemoryCreate */
-        MemoryCreate: {
-            /** Value */
-            value: string;
-            /**
-             * Source
-             * @default 你说过
-             */
-            source: string;
-            /**
-             * Confirm
-             * @default false
-             */
-            confirm: boolean;
-            /** Key */
-            key: string;
-        };
-        /** MemoryDeleteResponse */
-        MemoryDeleteResponse: {
-            /** Deleted */
-            deleted: string;
         };
         /** MemoryItem */
         MemoryItem: {
@@ -3554,6 +3315,36 @@ export interface components {
             value: string;
             /** Status */
             status: string;
+        };
+        /** ModelConfigBody */
+        ModelConfigBody: {
+            /**
+             * Dc Status
+             * @default shadow
+             * @enum {string}
+             */
+            dc_status: "disabled" | "shadow" | "enabled";
+            /**
+             * Sm Status
+             * @default disabled
+             * @enum {string}
+             */
+            sm_status: "disabled" | "shadow" | "enabled";
+            /**
+             * Dc Weight
+             * @default 1
+             */
+            dc_weight: number;
+            /**
+             * Sm Weight
+             * @default 0
+             */
+            sm_weight: number;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
         };
         /** ModelPatch */
         ModelPatch: {
@@ -4165,6 +3956,13 @@ export interface components {
             verdicts: {
                 [key: string]: unknown;
             }[];
+            /**
+             * References
+             * @default []
+             */
+            references: {
+                [key: string]: unknown;
+            }[];
             /** Message */
             message?: string | null;
         };
@@ -4180,50 +3978,6 @@ export interface components {
              * @default 2
              */
             days: number;
-        };
-        /** SPMovementItem */
-        SPMovementItem: {
-            /** Match Id */
-            match_id: string;
-            /** Match No */
-            match_no: string;
-            /** Home */
-            home: string;
-            /** Away */
-            away: string;
-            /** Pool */
-            pool: string;
-            /** Goal Line */
-            goal_line: string;
-            /** Captured At */
-            captured_at: string;
-            /** Prev Captured At */
-            prev_captured_at?: string | null;
-            /** Sp */
-            sp: {
-                [key: string]: number;
-            };
-            /** Prev Sp */
-            prev_sp?: {
-                [key: string]: number;
-            } | null;
-            /** Delta */
-            delta?: {
-                [key: string]: number;
-            } | null;
-            /** Delta Pct */
-            delta_pct?: {
-                [key: string]: number;
-            } | null;
-        };
-        /** SPMovementResponse */
-        SPMovementResponse: {
-            /** Date */
-            date: string;
-            /** Count */
-            count: number;
-            /** Items */
-            items: components["schemas"]["SPMovementItem"][];
         };
         /** Seal */
         Seal: {
@@ -4245,40 +3999,6 @@ export interface components {
              * @default login
              */
             purpose: string;
-        };
-        /** SentinelItem */
-        SentinelItem: {
-            /** Id */
-            id: number;
-            /** Type */
-            type: string;
-            /** Severity */
-            severity: number;
-            /** Match Id */
-            match_id?: string | null;
-            /** Match No */
-            match_no?: string | null;
-            /** Home */
-            home?: string | null;
-            /** Away */
-            away?: string | null;
-            /** Payload */
-            payload: {
-                [key: string]: unknown;
-            };
-            /** Data Cutoff */
-            data_cutoff: string;
-            /** Created At */
-            created_at: string;
-            /** Fanned Out */
-            fanned_out: boolean;
-        };
-        /** SentinelResponse */
-        SentinelResponse: {
-            /** Count */
-            count: number;
-            /** Items */
-            items: components["schemas"]["SentinelItem"][];
         };
         /** ShareCardBody */
         ShareCardBody: {
@@ -4569,44 +4289,6 @@ export interface components {
             /** Items */
             items: components["schemas"]["WatchItem"][];
         };
-        /** WaterRankItem */
-        WaterRankItem: {
-            /** Rank */
-            rank: number;
-            /** Verdict Id */
-            verdict_id: string;
-            /** Match Id */
-            match_id: string;
-            /** Match No */
-            match_no: string;
-            /** Home */
-            home: string;
-            /** Away */
-            away: string;
-            /** League */
-            league: string;
-            /** Kickoff */
-            kickoff: string;
-            /** Rake */
-            rake: number;
-            /** Return Pct */
-            return_pct: number;
-            /** Status */
-            status: string;
-            /** Gates */
-            gates: {
-                [key: string]: string;
-            };
-        };
-        /** WaterRankResponse */
-        WaterRankResponse: {
-            /** Date */
-            date: string;
-            /** Count */
-            count: number;
-            /** Items */
-            items: components["schemas"]["WaterRankItem"][];
-        };
         /** WechatBindBody */
         WechatBindBody: {
             /** Bind Token */
@@ -4803,38 +4485,6 @@ export interface operations {
             };
         };
     };
-    water_rank_water_rank_get: {
-        parameters: {
-            query?: {
-                date?: string | null;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WaterRankResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     calendar_calendar_get: {
         parameters: {
             query?: {
@@ -4853,101 +4503,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CalendarResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    sp_movements_sp_movements_get: {
-        parameters: {
-            query?: {
-                date?: string | null;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SPMovementResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    sentinel_feed_agents_sentinel_feed_get: {
-        parameters: {
-            query?: {
-                match_id?: string | null;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SentinelResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    match_live_matches__match_id__live_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                match_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MatchLiveResponse"];
                 };
             };
             /** @description Validation Error */
@@ -5376,39 +4931,6 @@ export interface operations {
             };
         };
     };
-    analysis_log_analysis_log_get: {
-        parameters: {
-            query?: {
-                date?: string | null;
-                match_id?: string | null;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     matches_on_sale_matches_on_sale_get: {
         parameters: {
             query?: never;
@@ -5737,26 +5259,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    model_evals_model_evals_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
                 };
             };
         };
@@ -6120,72 +5622,6 @@ export interface operations {
             };
         };
     };
-    memories_root_memories_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MemoryItem"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    memory_create_memories_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MemoryCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MemoryWriteResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     memory_put_me_memories__key__put: {
         parameters: {
             query?: never;
@@ -6243,39 +5679,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    memory_delete_root_memories__key__delete: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                key: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MemoryDeleteResponse"];
                 };
             };
             /** @description Validation Error */
@@ -7897,6 +7300,92 @@ export interface operations {
             };
         };
     };
+    admin_tier_metrics_admin_api_tier_metrics_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_model_config_admin_api_model_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    admin_model_config_put_admin_api_model_config__league__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                league: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelConfigBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     admin_sportmonks_sync_admin_api_sportmonks_sync_post: {
         parameters: {
             query?: never;
@@ -8040,39 +7529,6 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    admin_football_link_admin_api_football_link_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["FootballLink"];
-            };
-        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -9310,41 +8766,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OkResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    devices_alias_devices_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PushRegister"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PushRegisterResponse"];
                 };
             };
             /** @description Validation Error */

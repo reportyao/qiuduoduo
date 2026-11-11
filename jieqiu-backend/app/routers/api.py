@@ -98,46 +98,6 @@ def stream(date: str | None = None, cursor: str | None = None, limit: int = 50,
     return build_stream_cached(db, d, cursor=cursor, limit=limit, user=user)
 
 
-@router.get("/analysis-log", deprecated=True)
-def analysis_log(date: str | None = None, match_id: str | None = None,
-                 limit: int = 100, db: Session = Depends(get_db)):
-    """引擎分析日志（UI「引擎状态」弹层）：当日各场各闸最新一次结果，按时间倒序。"""
-    d = date or trade_date_now(cn_now())
-    try:
-        parsed = datetime.strptime(d, "%Y-%m-%d")
-    except ValueError:
-        raise HTTPException(422, "date must be YYYY-MM-DD")
-    if parsed.year > 2100:
-        raise HTTPException(422, "date 超出支持范围")
-    limit = max(1, min(limit, 500))
-    from ..models import ModelRun
-    q = select(ModelRun).where(ModelRun.run_date == d)
-    if match_id:
-        q = q.where(ModelRun.match_id == match_id)
-    rows = db.scalars(q.order_by(ModelRun.created_at.desc(), ModelRun.id.desc())).all()
-    latest: dict[tuple[str, str], ModelRun] = {}
-    for r in rows:  # 倒序遍历，首见即最新（created_at 同秒时 id 大者胜）
-        latest.setdefault((r.match_id, r.gate), r)
-    mids = {mid for (mid, _g) in latest}
-    matches = {m.match_id: m for m in db.scalars(
-        select(SPMatch).where(SPMatch.match_id.in_(mids)))} if mids else {}
-    entries = []
-    for (match_id, gate), r in sorted(
-        latest.items(), key=lambda kv: (kv[1].created_at, kv[1].id), reverse=True
-    )[:limit]:
-        m = matches.get(match_id)
-        entries.append({
-            "match_id": match_id,
-            "match_no": m.match_no if m else "",
-            "match": f"{m.home} vs {m.away}" if m else "",
-            "gate": gate,
-            "result": r.result,
-            "detail": r.detail,
-            "time": r.created_at.isoformat(),
-        })
-    return {"date": d, "total": len(latest), "entries": entries}
-
-
 @router.get("/matches/on-sale")
 def matches_on_sale(db: Session = Depends(get_db)):
     """今日在售（竞彩规则：当日及次日 04:59 前开赛），带抽水与三关状态（F17）。"""
@@ -176,6 +136,8 @@ def matches_on_sale(db: Session = Depends(get_db)):
             "rake": v.rake if v else None,
             "gates": {k: g["result"] for k, g in v.gates.items()} if v else None,
             "status": v.status if v else None,
+            "tier": v.tier if v else None,
+            "model_status": v.model_status if v else None,
             "verdict_id": v.id if v else None,
             "coverage": intel_service.build_coverage_brief(
                 db, m, trade_date, v, now_dt),
@@ -325,11 +287,19 @@ def _probability_compare(db: Session, v: Verdict) -> dict:
             model = {"home": float(shrunk[0]), "draw": float(shrunk[1]),
                      "away": float(shrunk[2])}
     has_model = model is not None
+    third_party = None
     market = None
     # 优先 Sportmonks 市场 1X2；没有再用现有国际盘。
     from ..modules.sportmonks import latest_for_match, market_is_fresh
     sm = latest_for_match(db, v.match_id)
     data_cutoff = (v.payload or {}).get("data_cutoff")
+    if sm is not None and sm.probs:
+        third_party = {
+            "source": "Sportmonks Prediction Model",
+            "probs": sm.probs,
+            "captured_at": sm.captured_at.isoformat() if sm.captured_at else None,
+            "status": "reference",
+        }
     if sm is not None and sm.odds and market_is_fresh(sm):
         market = {
             "bookmaker": f"Sportmonks · {sm.bookmaker or '市场'}",
@@ -353,7 +323,9 @@ def _probability_compare(db: Session, v: Verdict) -> dict:
         "sp": sp,
         "model": model,
         "market": market,
+        "third_party": third_party,
         "model_enabled": has_model,
+        "model_status": v.model_status,
         "reason": None if has_model else "本场没有可用的模型概率；仅展示竞彩与市场参考。",
         "data_cutoff": data_cutoff,
     }
@@ -380,6 +352,10 @@ def verdict_detail(verdict_id: str, db: Session = Depends(get_db)):
         "ai_research": _ai_research(db, v.match_id),
         "rake": v.rake,
         "status": v.status,
+        "tier": v.tier,
+        "model_status": v.model_status,
+        "model_source": v.model_source,
+        "data_quality": v.data_quality or {},
         "gates": v.gates,
         "model": (v.payload or {}).get("model"),
         "pick": v.pick,

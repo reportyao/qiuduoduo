@@ -201,16 +201,22 @@ export default function HomeScreen() {
     [onsaleQuery.data, stream?.onsale],
   );
 
-  // 开场选择条：已发布判决 + 当前竞彩日在售，点哪场才展开哪场。
+  const references = useMemo(
+    () => recommendationsQuery.data?.references ?? [],
+    [recommendationsQuery.data],
+  );
+
+  // 开场选择条：已发布判决 + 市场参考 + 当前竞彩日在售，点哪场才展开哪场。
   const briefOptions = useMemo<BriefMatchOption[]>(
-    () => buildBriefOptions(verdicts, date === today ? onsale : stream?.onsale ?? [], date),
-    [date, onsale, stream?.onsale, today, verdicts],
+    () => buildBriefOptions(verdicts, references, date === today ? onsale : stream?.onsale ?? [], date),
+    [date, onsale, references, stream?.onsale, today, verdicts],
   );
 
   const selectBriefOption = useCallback(
     (option: BriefMatchOption) => {
       setOpenedAll(false);
-      const verdict = verdicts.find((item) => item.matchId === option.matchId);
+      const verdict = verdicts.find((item) => item.matchId === option.matchId)
+        ?? references.find((item) => item.matchId === option.matchId);
       if (verdict) {
         trackInteraction("focus_select", {
           matchId: option.matchId,
@@ -232,7 +238,7 @@ export default function HomeScreen() {
       }
       router.push({ pathname: "/match/[id]", params: { id: option.matchId, date } });
     },
-    [date, onsale, router, setFocus, stream?.onsale, stream?.tradeDate, today, verdicts],
+    [date, onsale, references, router, setFocus, stream?.onsale, stream?.tradeDate, today, verdicts],
   );
 
   const betIds = useMemo(
@@ -242,10 +248,11 @@ export default function HomeScreen() {
   const focusedVerdict = useMemo(
     () => (focus?.verdictId
       ? verdicts.find((verdict) => verdict.id === focus.verdictId)
+        ?? references.find((verdict) => verdict.id === focus.verdictId)
         ?? streamVerdicts.find((verdict) => verdict.id === focus.verdictId)
         ?? null
       : null),
-    [focus?.verdictId, verdicts, streamVerdicts],
+    [focus?.verdictId, references, verdicts, streamVerdicts],
   );
   const heroVerdict = useMemo(() => {
     if (focus) return null;
@@ -390,6 +397,7 @@ export default function HomeScreen() {
                 publishedCount={recommendationsQuery.data?.snapshots.length ?? 0}
                 publishedReady={recommendationsQuery.isSuccess}
                 publishedMessage={recommendationsQuery.data?.message ?? null}
+                referenceCount={references.length}
                 onsaleCount={viewingToday ? onsale.length : briefStream.onsale.length}
                 onsaleLabel={viewingToday ? "在售场次" : "当日场次"}
                 options={briefOptions}

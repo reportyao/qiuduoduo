@@ -326,67 +326,6 @@
         }
       }
     },
-    "/water-rank": {
-      "get": {
-        "tags": [
-          "catalog"
-        ],
-        "summary": "Water Rank",
-        "description": "水位榜：当日抽水最浅的场次（默认 3 场）。",
-        "operationId": "water_rank_water_rank_get",
-        "deprecated": true,
-        "parameters": [
-          {
-            "name": "date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Date"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 3,
-              "title": "Limit"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WaterRankResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/calendar": {
       "get": {
         "tags": [
@@ -420,172 +359,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CalendarResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/sp/movements": {
-      "get": {
-        "tags": [
-          "catalog"
-        ],
-        "summary": "Sp Movements",
-        "description": "SP 异动：同日同场同玩法最近两次快照的赔率变化。",
-        "operationId": "sp_movements_sp_movements_get",
-        "deprecated": true,
-        "parameters": [
-          {
-            "name": "date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Date"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 50,
-              "title": "Limit"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SPMovementResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/agents/sentinel/feed": {
-      "get": {
-        "tags": [
-          "catalog"
-        ],
-        "summary": "Sentinel Feed",
-        "description": "盘口哨兵事件流（events 表；只读公开事件）。",
-        "operationId": "sentinel_feed_agents_sentinel_feed_get",
-        "deprecated": true,
-        "parameters": [
-          {
-            "name": "match_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Match Id"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 50,
-              "title": "Limit"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SentinelResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/matches/{match_id}/live": {
-      "get": {
-        "tags": [
-          "catalog"
-        ],
-        "summary": "Match Live",
-        "description": "实况卡：当前只展示已同步赛果+SP 快照，不伪造实时进球时间线。",
-        "operationId": "match_live_matches__match_id__live_get",
-        "deprecated": true,
-        "parameters": [
-          {
-            "name": "match_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Match Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MatchLiveResponse"
                 }
               }
             }
@@ -1306,81 +1079,6 @@
         }
       }
     },
-    "/analysis-log": {
-      "get": {
-        "tags": [
-          "v0.5"
-        ],
-        "summary": "Analysis Log",
-        "description": "引擎分析日志（UI「引擎状态」弹层）：当日各场各闸最新一次结果，按时间倒序。",
-        "operationId": "analysis_log_analysis_log_get",
-        "deprecated": true,
-        "parameters": [
-          {
-            "name": "date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Date"
-            }
-          },
-          {
-            "name": "match_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Match Id"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "default": 100,
-              "title": "Limit"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/matches/on-sale": {
       "get": {
         "tags": [
@@ -1820,26 +1518,6 @@
             }
           }
         }
-      }
-    },
-    "/model/evals": {
-      "get": {
-        "tags": [
-          "v0.5-w4"
-        ],
-        "summary": "Model Evals",
-        "operationId": "model_evals_model_evals_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "deprecated": true
       }
     },
     "/auth/device": {
@@ -2399,120 +2077,6 @@
         }
       }
     },
-    "/memories": {
-      "get": {
-        "tags": [
-          "v0.5-w6"
-        ],
-        "summary": "Memories Root",
-        "description": "兼容 TechSpec 的 GET /memories（与 /me/memories 同数据）。",
-        "operationId": "memories_root_memories_get",
-        "deprecated": true,
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/MemoryItem"
-                  },
-                  "title": "Response Memories Root Memories Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "v0.5-w6"
-        ],
-        "summary": "Memory Create",
-        "description": "兼容 TechSpec 的 POST /memories：key 在 body 里。",
-        "operationId": "memory_create_memories_post",
-        "deprecated": true,
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MemoryCreate"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MemoryWriteResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/me/memories/{key}": {
       "put": {
         "tags": [
@@ -2619,66 +2183,6 @@
             "content": {
               "application/json": {
                 "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/memories/{key}": {
-      "delete": {
-        "tags": [
-          "v0.5-w6"
-        ],
-        "summary": "Memory Delete Root",
-        "description": "兼容 TechSpec 的 DELETE /memories/{key}。",
-        "operationId": "memory_delete_root_memories__key__delete",
-        "deprecated": true,
-        "parameters": [
-          {
-            "name": "key",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Key"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MemoryDeleteResponse"
-                }
               }
             }
           },
@@ -5019,6 +4523,119 @@
         }
       }
     },
+    "/admin/api/tier-metrics": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Tier Metrics",
+        "operationId": "admin_tier_metrics_admin_api_tier_metrics_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 14,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/model-config": {
+      "get": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Model Config",
+        "operationId": "admin_model_config_admin_api_model_config_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/api/model-config/{league}": {
+      "put": {
+        "tags": [
+          "admin-ui",
+          "admin-ui"
+        ],
+        "summary": "Admin Model Config Put",
+        "operationId": "admin_model_config_put_admin_api_model_config__league__put",
+        "parameters": [
+          {
+            "name": "league",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "League"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelConfigBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/api/sportmonks/sync": {
       "post": {
         "tags": [
@@ -5229,47 +4846,6 @@
             }
           }
         }
-      }
-    },
-    "/admin/api/football/link": {
-      "post": {
-        "tags": [
-          "admin-ui",
-          "admin-ui"
-        ],
-        "summary": "Admin Football Link",
-        "operationId": "admin_football_link_admin_api_football_link_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FootballLink"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "deprecated": true
       }
     },
     "/admin/api/users": {
@@ -7019,68 +6595,6 @@
         }
       }
     },
-    "/devices": {
-      "post": {
-        "tags": [
-          "assistant",
-          "assistant"
-        ],
-        "summary": "Devices Alias",
-        "description": "兼容 POST /devices；实现与 /push/register 完全一致。",
-        "operationId": "devices_alias_devices_post",
-        "deprecated": true,
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PushRegister"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PushRegisterResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/push/preferences": {
       "get": {
         "tags": [
@@ -8647,27 +8161,6 @@
         "type": "object",
         "title": "FollowBody"
       },
-      "FootballLink": {
-        "properties": {
-          "fixture_id": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Fixture Id"
-          },
-          "match_id": {
-            "type": "string",
-            "maxLength": 32,
-            "minLength": 1,
-            "title": "Match Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "fixture_id",
-          "match_id"
-        ],
-        "title": "FootballLink"
-      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -9108,37 +8601,6 @@
         ],
         "title": "LLMProfileUpdate"
       },
-      "LiveTimelineItem": {
-        "properties": {
-          "captured_at": {
-            "type": "string",
-            "title": "Captured At"
-          },
-          "pool": {
-            "type": "string",
-            "title": "Pool"
-          },
-          "goal_line": {
-            "type": "string",
-            "title": "Goal Line"
-          },
-          "sp": {
-            "additionalProperties": {
-              "type": "number"
-            },
-            "type": "object",
-            "title": "Sp"
-          }
-        },
-        "type": "object",
-        "required": [
-          "captured_at",
-          "pool",
-          "goal_line",
-          "sp"
-        ],
-        "title": "LiveTimelineItem"
-      },
       "LoginBody": {
         "properties": {
           "username": {
@@ -9503,102 +8965,6 @@
         ],
         "title": "MatchListResponse"
       },
-      "MatchLiveResponse": {
-        "properties": {
-          "match_id": {
-            "type": "string",
-            "title": "Match Id"
-          },
-          "match_no": {
-            "type": "string",
-            "title": "Match No"
-          },
-          "league": {
-            "type": "string",
-            "title": "League"
-          },
-          "home": {
-            "type": "string",
-            "title": "Home"
-          },
-          "away": {
-            "type": "string",
-            "title": "Away"
-          },
-          "kickoff": {
-            "type": "string",
-            "title": "Kickoff"
-          },
-          "state": {
-            "type": "string",
-            "title": "State",
-            "description": "scheduled / awaiting_result / finished"
-          },
-          "live_feed": {
-            "type": "boolean",
-            "title": "Live Feed",
-            "description": "是否接入实时事件源；false 时不伪造进球时间线"
-          },
-          "score": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Score"
-          },
-          "result_source": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Result Source"
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Updated At"
-          },
-          "timeline": {
-            "items": {
-              "$ref": "#/components/schemas/LiveTimelineItem"
-            },
-            "type": "array",
-            "title": "Timeline"
-          },
-          "note": {
-            "type": "string",
-            "title": "Note"
-          }
-        },
-        "type": "object",
-        "required": [
-          "match_id",
-          "match_no",
-          "league",
-          "home",
-          "away",
-          "kickoff",
-          "state",
-          "live_feed",
-          "timeline",
-          "note"
-        ],
-        "title": "MatchLiveResponse"
-      },
       "MePatch": {
         "properties": {
           "display_name": {
@@ -9678,51 +9044,6 @@
         ],
         "title": "MemoryBody"
       },
-      "MemoryCreate": {
-        "properties": {
-          "value": {
-            "type": "string",
-            "maxLength": 256,
-            "title": "Value"
-          },
-          "source": {
-            "type": "string",
-            "maxLength": 8,
-            "title": "Source",
-            "default": "你说过"
-          },
-          "confirm": {
-            "type": "boolean",
-            "title": "Confirm",
-            "default": false
-          },
-          "key": {
-            "type": "string",
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Key"
-          }
-        },
-        "type": "object",
-        "required": [
-          "value",
-          "key"
-        ],
-        "title": "MemoryCreate"
-      },
-      "MemoryDeleteResponse": {
-        "properties": {
-          "deleted": {
-            "type": "string",
-            "title": "Deleted"
-          }
-        },
-        "type": "object",
-        "required": [
-          "deleted"
-        ],
-        "title": "MemoryDeleteResponse"
-      },
       "MemoryItem": {
         "properties": {
           "key": {
@@ -9789,6 +9110,52 @@
           "status"
         ],
         "title": "MemoryWriteResponse"
+      },
+      "ModelConfigBody": {
+        "properties": {
+          "dc_status": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "shadow",
+              "enabled"
+            ],
+            "title": "Dc Status",
+            "default": "shadow"
+          },
+          "sm_status": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "shadow",
+              "enabled"
+            ],
+            "title": "Sm Status",
+            "default": "disabled"
+          },
+          "dc_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Dc Weight",
+            "default": 1.0
+          },
+          "sm_weight": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Sm Weight",
+            "default": 0.0
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "ModelConfigBody"
       },
       "ModelPatch": {
         "properties": {
@@ -11524,6 +10891,15 @@
             "type": "array",
             "title": "Verdicts"
           },
+          "references": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "References",
+            "default": []
+          },
           "message": {
             "anyOf": [
               {
@@ -11573,136 +10949,6 @@
         },
         "type": "object",
         "title": "ResultsSyncBody"
-      },
-      "SPMovementItem": {
-        "properties": {
-          "match_id": {
-            "type": "string",
-            "title": "Match Id"
-          },
-          "match_no": {
-            "type": "string",
-            "title": "Match No"
-          },
-          "home": {
-            "type": "string",
-            "title": "Home"
-          },
-          "away": {
-            "type": "string",
-            "title": "Away"
-          },
-          "pool": {
-            "type": "string",
-            "title": "Pool"
-          },
-          "goal_line": {
-            "type": "string",
-            "title": "Goal Line"
-          },
-          "captured_at": {
-            "type": "string",
-            "title": "Captured At"
-          },
-          "prev_captured_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Prev Captured At"
-          },
-          "sp": {
-            "additionalProperties": {
-              "type": "number"
-            },
-            "type": "object",
-            "title": "Sp"
-          },
-          "prev_sp": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "type": "number"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Prev Sp"
-          },
-          "delta": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "type": "number"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Delta"
-          },
-          "delta_pct": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "type": "number"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Delta Pct"
-          }
-        },
-        "type": "object",
-        "required": [
-          "match_id",
-          "match_no",
-          "home",
-          "away",
-          "pool",
-          "goal_line",
-          "captured_at",
-          "sp"
-        ],
-        "title": "SPMovementItem"
-      },
-      "SPMovementResponse": {
-        "properties": {
-          "date": {
-            "type": "string",
-            "title": "Date"
-          },
-          "count": {
-            "type": "integer",
-            "title": "Count"
-          },
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/SPMovementItem"
-            },
-            "type": "array",
-            "title": "Items"
-          }
-        },
-        "type": "object",
-        "required": [
-          "date",
-          "count",
-          "items"
-        ],
-        "title": "SPMovementResponse"
       },
       "Seal": {
         "properties": {
@@ -11774,115 +11020,6 @@
         },
         "type": "object",
         "title": "SendBody"
-      },
-      "SentinelItem": {
-        "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "type": {
-            "type": "string",
-            "title": "Type"
-          },
-          "severity": {
-            "type": "integer",
-            "title": "Severity"
-          },
-          "match_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Match Id"
-          },
-          "match_no": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Match No"
-          },
-          "home": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Home"
-          },
-          "away": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Away"
-          },
-          "payload": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Payload"
-          },
-          "data_cutoff": {
-            "type": "string",
-            "title": "Data Cutoff"
-          },
-          "created_at": {
-            "type": "string",
-            "title": "Created At"
-          },
-          "fanned_out": {
-            "type": "boolean",
-            "title": "Fanned Out"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "type",
-          "severity",
-          "payload",
-          "data_cutoff",
-          "created_at",
-          "fanned_out"
-        ],
-        "title": "SentinelItem"
-      },
-      "SentinelResponse": {
-        "properties": {
-          "count": {
-            "type": "integer",
-            "title": "Count"
-          },
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/SentinelItem"
-            },
-            "type": "array",
-            "title": "Items"
-          }
-        },
-        "type": "object",
-        "required": [
-          "count",
-          "items"
-        ],
-        "title": "SentinelResponse"
       },
       "ShareCardBody": {
         "properties": {
@@ -12689,103 +11826,6 @@
           "items"
         ],
         "title": "WatchListResponse"
-      },
-      "WaterRankItem": {
-        "properties": {
-          "rank": {
-            "type": "integer",
-            "title": "Rank"
-          },
-          "verdict_id": {
-            "type": "string",
-            "title": "Verdict Id"
-          },
-          "match_id": {
-            "type": "string",
-            "title": "Match Id"
-          },
-          "match_no": {
-            "type": "string",
-            "title": "Match No"
-          },
-          "home": {
-            "type": "string",
-            "title": "Home"
-          },
-          "away": {
-            "type": "string",
-            "title": "Away"
-          },
-          "league": {
-            "type": "string",
-            "title": "League"
-          },
-          "kickoff": {
-            "type": "string",
-            "title": "Kickoff"
-          },
-          "rake": {
-            "type": "number",
-            "title": "Rake"
-          },
-          "return_pct": {
-            "type": "number",
-            "title": "Return Pct"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "gates": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Gates"
-          }
-        },
-        "type": "object",
-        "required": [
-          "rank",
-          "verdict_id",
-          "match_id",
-          "match_no",
-          "home",
-          "away",
-          "league",
-          "kickoff",
-          "rake",
-          "return_pct",
-          "status",
-          "gates"
-        ],
-        "title": "WaterRankItem"
-      },
-      "WaterRankResponse": {
-        "properties": {
-          "date": {
-            "type": "string",
-            "title": "Date"
-          },
-          "count": {
-            "type": "integer",
-            "title": "Count"
-          },
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/WaterRankItem"
-            },
-            "type": "array",
-            "title": "Items"
-          }
-        },
-        "type": "object",
-        "required": [
-          "date",
-          "count",
-          "items"
-        ],
-        "title": "WaterRankResponse"
       },
       "WechatBindBody": {
         "properties": {

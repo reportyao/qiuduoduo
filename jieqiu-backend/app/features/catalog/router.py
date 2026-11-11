@@ -8,9 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from ...db import get_db
 from . import service
 from .schemas import (AvoidListResponse, CalendarResponse, MatchEvidenceResponse,
-                      MatchListResponse, MatchLiveResponse, SentinelResponse,
-                      SPMovementResponse, TrueCostResponse, VerdictTodayResponse,
-                      WaterRankResponse)
+                      MatchListResponse, TrueCostResponse, VerdictTodayResponse)
 
 router = APIRouter()
 
@@ -85,17 +83,6 @@ def avoid_list(date: str | None = None, limit: int = 50, db=Depends(get_db)):
         raise _bad_date(e)
 
 
-@router.get("/water-rank", response_model=WaterRankResponse, deprecated=True)
-def water_rank(date: str | None = None, limit: int = 3, db=Depends(get_db)):
-    """水位榜：当日抽水最浅的场次（默认 3 场）。"""
-    limit = max(1, min(limit, 50))
-    d = date or service.datetime.now(service.CN).strftime("%Y-%m-%d")
-    try:
-        return service.water_rank(db, d, limit=limit)
-    except ValueError as e:
-        raise _bad_date(e)
-
-
 @router.get("/calendar", response_model=CalendarResponse)
 def calendar(month: str | None = None, db=Depends(get_db)):
     """日历：按竞彩日统计场次/判决数，供日期切换与非比赛日判断。"""
@@ -103,29 +90,3 @@ def calendar(month: str | None = None, db=Depends(get_db)):
         return service.calendar_month(db, month)
     except ValueError as e:
         raise _bad_date(e)
-
-
-@router.get("/sp/movements", response_model=SPMovementResponse, deprecated=True)
-def sp_movements(date: str | None = None, limit: int = 50, db=Depends(get_db)):
-    """SP 异动：同日同场同玩法最近两次快照的赔率变化。"""
-    limit = max(1, min(limit, 200))
-    try:
-        return service.sp_movements(db, date=date, limit=limit)
-    except ValueError as e:
-        raise _bad_date(e)
-
-
-@router.get("/agents/sentinel/feed", response_model=SentinelResponse, deprecated=True)
-def sentinel_feed(match_id: str | None = None, limit: int = 50, db=Depends(get_db)):
-    """盘口哨兵事件流（events 表；只读公开事件）。"""
-    limit = max(1, min(limit, 100))
-    return service.sentinel_feed(db, match_id=match_id, limit=limit)
-
-
-@router.get("/matches/{match_id}/live", response_model=MatchLiveResponse, deprecated=True)
-def match_live(match_id: str, db=Depends(get_db)):
-    """实况卡：当前只展示已同步赛果+SP 快照，不伪造实时进球时间线。"""
-    out = service.match_live(db, match_id)
-    if out is None:
-        raise HTTPException(404, "match not found")
-    return out

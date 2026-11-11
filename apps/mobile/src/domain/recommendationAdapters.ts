@@ -46,6 +46,7 @@ export interface RecommendationToday {
   snapshots: RecommendationSnapshot[];
   plans: RecommendationPlan[];
   verdicts: VerdictSummary[];
+  references: VerdictSummary[];
   message: string | null;
 }
 
@@ -112,12 +113,15 @@ export function adaptRecommendationToday(value: unknown): RecommendationToday {
     ? fromSnapshots
     : array(raw.verdicts).map(adaptVerdictSummary)
       .filter((item): item is VerdictSummary => item !== null);
+  const references = array(raw.references).map(adaptVerdictSummary)
+    .filter((item): item is VerdictSummary => item !== null);
   return {
     tradeDate: string(raw.trade_date),
     generatedAt: string(raw.generated_at),
     snapshots,
     plans,
     verdicts,
+    references,
     message: nullableString(raw.message),
   };
 }

@@ -106,6 +106,8 @@ function statusPill(status) {
     published: ["green", "已发布"], approved: ["blue", "已过审"],
     promoted: ["green", "已过三关"], screening: ["amber", "复核中"],
     killed: ["red", "已砍"], ready: ["green", "就绪"],
+    verified: ["green", "核验预测"], market_reference: ["blue", "市场参考"],
+    avoid: ["red", "不建议"], no_data: ["muted", "待数据"],
     unavailable: ["amber", "不可用"],
     review_failed: ["red", "复核失败"], reviewing: ["amber", "复核中"],
     draft: ["amber", "草稿"], expired: ["muted", "已过期"],
@@ -1283,7 +1285,7 @@ async function loadData() {
         : '<span class="pill muted">未同步</span>';
     const v = row.verdict;
     const verdict = v
-      ? `${statusPill(v.status)}${v.pick && v.pick.dir ? `<div class="card-sub">${esc(v.pick.dir)}</div>` : ""}${v.result_score ? `<div class="card-sub mono">${esc(v.result_score)} · ${esc(v.settled || "待结算")}</div>` : ""}`
+      ? `${statusPill(v.tier || v.status)}${v.model_status ? `<div class="card-sub">模型 ${esc(v.model_status)}</div>` : ""}${v.pick && v.pick.dir ? `<div class="card-sub">${esc(v.pick.dir)}</div>` : ""}${v.result_score ? `<div class="card-sub mono">${esc(v.result_score)} · ${esc(v.settled || "待结算")}</div>` : ""}`
       : '<span class="pill muted">无判决</span>';
     return `<tr>
       <td><b>${esc(row.match_no)}</b>${row.single_flag ? '<div class="card-sub">单关</div>' : ""}</td>
@@ -1347,7 +1349,8 @@ async function loadData() {
         <th>场次</th><th>对阵</th><th>开赛</th><th>SM 映射</th>
         <th>SM 预测</th><th>SM 市场</th><th>AI 情报</th><th>判决</th><th>操作</th>
       </tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="empty">今日暂无竞彩场次</div>'}
-      <div class="card-sub" style="margin-top:10px">SP 最新快照 ${esc(fmtTime(data.sync?.latest, true))} · 延迟 ${data.sync?.lag_seconds == null ? "—" : `${data.sync.lag_seconds}s`} · 手动映射会立即拉取预测、Pinnacle 1X2 与中文情报。</div>
+      <div class="card-sub" style="margin-top:10px">分层：核验 ${summary.tiers?.verified ?? 0} · 市场参考 ${summary.tiers?.market_reference ?? 0} · 不建议 ${summary.tiers?.avoid ?? 0} · 待数据 ${summary.tiers?.no_data ?? 0}</div>
+      <div class="card-sub" style="margin-top:6px">SP 最新快照 ${esc(fmtTime(data.sync?.latest, true))} · 延迟 ${data.sync?.lag_seconds == null ? "—" : `${data.sync.lag_seconds}s`} · 手动映射会立即拉取预测、Pinnacle 1X2 与中文情报。</div>
     </div>
     <div class="card">
       <div class="toolbar"><div><h2 style="margin:0">辅助数据</h2><div class="card-sub" style="margin:0">只补阵容/伤停和国际盘缺口；不作为发布前置</div></div>
@@ -1455,8 +1458,13 @@ async function loadModelEval() {
   const root = el("#view-model-eval");
   root.innerHTML = '<div class="skeleton"></div>';
   const days = state.modelEvalDays || 90;
-  const data = await api(`/admin/api/model-eval?days=${days}`);
+  const [data, config, tierMetrics] = await Promise.all([
+    api(`/admin/api/model-eval?days=${days}`),
+    api("/admin/api/model-config"),
+    api(`/admin/api/tier-metrics?days=${days}`),
+  ]);
   const overall = data.overall || {};
+  const statsByLeague = new Map((data.leagues || []).map(row => [row.league, row]));
   const pct = value => value == null ? "—" : `${Math.round(Number(value) * 100)}%`;
   const brier = value => value == null ? "—" : Number(value).toFixed(3);
   const top = probs => {
@@ -1500,6 +1508,24 @@ async function loadModelEval() {
     <td>${top(row.sm_model)}</td>
     <td>${statusPill(row.status)}</td>
   </tr>`).join("");
+  const configRows = (config.leagues || []).map(row => {
+    const stats = statsByLeague.get(row.league) || {};
+    return `<tr>
+      <td><b>${esc(row.league)}</b></td>
+      <td class="num">${stats.samples ?? row.samples ?? 0}</td>
+      <td class="num">${brier(stats.model_brier ?? row.brier_dc)}</td>
+      <td class="num">${brier(stats.market_model_brier ?? row.brier_market)}</td>
+      <td><select data-model-dc="${esc(row.league)}">
+        ${["disabled", "shadow", "enabled"].map(x => `<option value="${x}" ${row.dc_status === x ? "selected" : ""}>${x}</option>`).join("")}
+      </select></td>
+      <td><select data-model-sm="${esc(row.league)}">
+        ${["disabled", "shadow", "enabled"].map(x => `<option value="${x}" ${row.sm_status === x ? "selected" : ""}>${x}</option>`).join("")}
+      </select></td>
+      <td class="num">${row.dc_weight}/${row.sm_weight}</td>
+      <td>${canAdmin() ? `<button class="btn secondary small" data-model-save="${esc(row.league)}">保存</button>` : '<span class="card-sub">仅 admin</span>'}</td>
+    </tr>`;
+  }).join("");
+  const tierTotals = tierMetrics.totals || {};
   root.innerHTML = `
     <div class="card">
       <div class="toolbar">
@@ -1517,6 +1543,22 @@ async function loadModelEval() {
       </div>
       <div class="card-sub">${delta == null ? "模型样本不足，暂不能判断模型是否优于竞彩基线。" : delta > 0 ? `模型 Brier 比同批样本的竞彩基线低 ${delta.toFixed(3)}，当前样本下模型有增量。` : `模型 Brier 比同批样本的竞彩基线高 ${Math.abs(delta).toFixed(3)}，当前样本下不具备优势。`} 分联赛样本 ≥10 才显示结论；上线前仍需按联赛做样本外验证。</div>
     </div>
+    <div class="card"><h2 class="card-title">内容分层（近 ${days} 天）</h2>
+      <div class="status-grid">
+        <div class="status-item"><span class="status-label">核验预测</span><b>${tierTotals.verified ?? 0}</b></div>
+        <div class="status-item"><span class="status-label">市场参考</span><b>${tierTotals.market_reference ?? 0}</b></div>
+        <div class="status-item"><span class="status-label">不建议</span><b>${tierTotals.avoid ?? 0}</b></div>
+        <div class="status-item"><span class="status-label">待数据</span><b>${tierTotals.no_data ?? 0}</b></div>
+      </div>
+      <div class="card-sub">分层发布：${config.tier_enforce ? "已强制（仅 enabled 联赛可核验）" : "兼容模式（先只读展示 tier，不改发布语义）"}。</div>
+    </div>
+    <div class="card"><h2 class="card-title">模型开关（按联赛）</h2>
+      <div class="card-sub">enabled 才允许该联赛产生 verified；shadow 只做展示；disabled 不参与。默认全部 disabled，先看样本和 Brier 再开。</div>
+      ${configRows ? `<div class="table-wrap"><table><thead><tr>
+        <th>联赛</th><th class="num">样本</th><th class="num">模型 Brier</th>
+        <th class="num">同批基线</th><th>DC</th><th>SM</th><th class="num">权重</th><th></th>
+      </tr></thead><tbody>${configRows}</tbody></table></div>` : '<div class="empty">暂无联赛配置；先跑几场判决。</div>'}
+    </div>
     <div class="card"><h2 class="card-title">分联赛</h2>
       ${leagueRows ? `<div class="table-wrap"><table><thead><tr>
         <th>联赛</th><th class="num">结算</th><th class="num">模型样本</th>
@@ -1532,12 +1574,46 @@ async function loadModelEval() {
       </tr></thead><tbody>${recentRows}</tbody></table></div>` : '<div class="empty">暂无结算记录。</div>'}
     </div>
   `;
+  els("[data-model-save]").forEach(btn => btn.onclick = async () => {
+    const league = btn.dataset.modelSave;
+    const row = btn.closest("tr");
+    const selects = row ? row.querySelectorAll("select") : [];
+    const dc = selects[0] ? selects[0].value : "shadow";
+    const sm = selects[1] ? selects[1].value : "disabled";
+    btn.disabled = true; btn.textContent = "保存中…";
+    try {
+      await put(`/admin/api/model-config/${encodeURIComponent(league)}`, {
+        dc_status: dc, sm_status: sm, dc_weight: 1.0, sm_weight: 0.0,
+      });
+      toast(`${league} 模型状态已更新`);
+      await loadModelEval();
+    } catch (error) { toast(error.message, "error"); }
+    btn.disabled = false; btn.textContent = "保存";
+  });
   const select = el("#eval-days");
   if (select) select.onchange = () => { state.modelEvalDays = Number(select.value); loadModelEval(); };
 }
 
 async function loadLogs() {
   const root = el("#view-logs");
+  const configRows = (config.leagues || []).map(row => {
+    const stats = statsByLeague.get(row.league) || {};
+    return `<tr>
+      <td><b>${esc(row.league)}</b></td>
+      <td class="num">${stats.samples ?? row.samples ?? 0}</td>
+      <td class="num">${brier(stats.model_brier ?? row.brier_dc)}</td>
+      <td class="num">${brier(stats.market_model_brier ?? row.brier_market)}</td>
+      <td><select data-model-dc="${esc(row.league)}">
+        ${["disabled", "shadow", "enabled"].map(x => `<option value="${x}" ${row.dc_status === x ? "selected" : ""}>${x}</option>`).join("")}
+      </select></td>
+      <td><select data-model-sm="${esc(row.league)}">
+        ${["disabled", "shadow", "enabled"].map(x => `<option value="${x}" ${row.sm_status === x ? "selected" : ""}>${x}</option>`).join("")}
+      </select></td>
+      <td class="num">${row.dc_weight}/${row.sm_weight}</td>
+      <td>${canAdmin() ? `<button class="btn secondary small" data-model-save="${esc(row.league)}">保存</button>` : '<span class="card-sub">仅 admin</span>'}</td>
+    </tr>`;
+  }).join("");
+  const tierTotals = tierMetrics.totals || {};
   root.innerHTML = `
     <div class="card">
       <div class="toolbar"><div><h2 style="margin:0">运行日志</h2><div class="card-sub" style="margin:0">只读最近日志，不做文件遍历</div></div>
