@@ -143,4 +143,5 @@ def test_recommendations_today_exposes_market_reference(client, db):
     item = next(x for x in body["references"] if x["id"] == "v-ref-today")
     assert item["tier"] == "market_reference"
     assert item["status"] == "screening"
+    assert item["pick"] is None
     assert body["message"] and "市场参考" in body["message"]

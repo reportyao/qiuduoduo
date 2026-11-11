@@ -36,9 +36,11 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
         <Text variant="h3">概率对比</Text>
         <Text
           variant="caption"
-          color={data.modelEnabled ? colors.green : colors.amber}
+          color={data.modelStatus === "enabled" ? colors.green : colors.amber}
         >
-          {data.modelEnabled ? "模型已启用" : "模型未启用"}
+          {data.modelStatus === "enabled"
+            ? "模型已启用"
+            : data.modelEnabled ? "模型影子（未验证）" : "模型未启用"}
         </Text>
       </View>
 

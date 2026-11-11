@@ -84,7 +84,7 @@ def _verdict_card(v: Verdict) -> dict:
         "rake": v.rake,
         "rake_threshold": v.rake_threshold,
         "probs": {"home": v.p_home, "draw": v.p_draw, "away": v.p_away},
-        "pick": v.pick,
+        "pick": v.pick if v.tier != "market_reference" else None,
         "status": v.status,
         "tier": v.tier,
         "model_status": v.model_status,

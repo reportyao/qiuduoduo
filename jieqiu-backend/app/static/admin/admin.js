@@ -1553,7 +1553,7 @@ async function loadModelEval() {
       <div class="card-sub">分层发布：${config.tier_enforce ? "已强制（仅 enabled 联赛可核验）" : "兼容模式（先只读展示 tier，不改发布语义）"}。</div>
     </div>
     <div class="card"><h2 class="card-title">模型开关（按联赛）</h2>
-      <div class="card-sub">enabled 才允许该联赛产生 verified；shadow 只做展示；disabled 不参与。默认全部 disabled，先看样本和 Brier 再开。</div>
+      <div class="card-sub">DC enabled 才允许该联赛产生 verified；SM 目前只做参考，不参与 verified。shadow 只做展示；未配置默认 shadow/disabled，先看样本和 Brier 再开。</div>
       ${configRows ? `<div class="table-wrap"><table><thead><tr>
         <th>联赛</th><th class="num">样本</th><th class="num">模型 Brier</th>
         <th class="num">同批基线</th><th>DC</th><th>SM</th><th class="num">权重</th><th></th>
