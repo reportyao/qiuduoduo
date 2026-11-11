@@ -72,7 +72,7 @@ export default function ParlayToolScreen() {
   const matches = useMemo(
     () => (stream?.verdicts ?? []).filter(
       (v) => v.rake != null && v.sp.h > 1 && v.sp.d > 1 && v.sp.a > 1,
-    ).slice(0, 24),
+    ),
     [stream],
   );
   // 从详情页“加入串关”带 seed 进来时，把共享腿池合并进本页选择。
