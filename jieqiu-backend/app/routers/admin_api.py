@@ -26,7 +26,7 @@ from ..features.ops import workbench as ops_workbench
 from ..features.recommendations import service as recommendation_service
 from ..features.tools import service as parlay_service
 from ..features.tools.schemas import ParlayPlanRequest
-from ..models import (AIResearch, AdminAudit, AdminUser, ApiFootballFixture,
+from ..models import (AIResearch, AdminAudit, AdminUser,
                       DecisionSnapshot, InteractionEvent, LLMProfile, CollectorStatus,
                       Notification, PersonaLLMModel, PushToken,
                       RecommendationEvent, RecommendationPlan, ReviewRun,
@@ -1483,7 +1483,7 @@ class FootballLink(BaseModel):
     match_id: str = Field(min_length=1, max_length=32)
 
 
-@router.post("/api/football/link")
+@router.post("/api/football/link", deprecated=True)
 def admin_football_link(body: FootballLink, request: Request,
                         db: Session = Depends(get_db),
                         principal: admin_auth.AdminPrincipal = Depends(admin_auth.require_role("admin"))):
@@ -1631,7 +1631,7 @@ def admin_audit(limit: int = 50, offset: int = 0,
 @router.get("/api/ops")
 def admin_ops(db: Session = Depends(get_db),
               _: admin_auth.AdminPrincipal = Depends(admin_auth.require_role("viewer"))):
-    """运维聚合：告警、API-Football、封存链、通知、Push、互动与推荐覆盖。"""
+    """运维聚合：告警、主/辅助数据源、封存链、通知、Push、互动与推荐覆盖。"""
     date = trade_date_now()
     sync_latest, sync_lag = _sync_lag(db)
     chain = latest_chain_status(db)
@@ -1664,42 +1664,33 @@ def admin_ops(db: Session = Depends(get_db),
         alerts.append({"level": "low", "title": "API-Football 未配置",
                        "detail": "阵容/伤停/积分榜将保持 missing"})
     elif football.get("warnings"):
-        alerts.append({"level": "medium", "title": "API-Football 覆盖不完整",
-                       "detail": "；".join(football["warnings"])})
+        alerts.append({"level": "low", "title": "辅助 API-Football 覆盖不完整",
+                       "detail": "只影响阵容/伤停深读；" + "；".join(football["warnings"])})
     intl = supply_data["intl_odds"]
     sm_market = supply_data.get("sportmonks_market", {})
     market_covered = supply_data.get("market_covered_matches", 0)
-    if supply_data["matches"] > 0 and market_covered == 0:
-        alerts.append({"level": "high", "title": "市场源未覆盖任何场次",
-                       "detail": "Sportmonks Pinnacle 与 The Odds API 都没有今日市场数据；市闸会全部停在 pending_data"})
-    elif (not intl["configured"] and supply_data["matches"] > 0
-          and sm_market.get("covered_matches", 0) < supply_data["matches"]):
-        alerts.append({"level": "medium", "title": "国际盘兜底未配置",
-                       "detail": f"Sportmonks 已覆盖 {sm_market.get('covered_matches', 0)}/{supply_data['matches']} 场；未覆盖场次没有第二对照源"})
-    elif intl["total"] == 0 and sm_market.get("covered_matches", 0) == 0 and supply_data["matches"] > 0:
-        alerts.append({"level": "high", "title": "市场数据 0 条",
-                       "detail": f"今日 {supply_data['matches']} 场，Sportmonks 与国际盘均为空；检查同步日志"})
-    if (supply_data["verdicts"]["total"] > 0
+    upcoming = supply_data.get("upcoming_matches", supply_data["matches"])
+    if upcoming > 0 and market_covered == 0:
+        alerts.append({"level": "high", "title": "未开赛场次无市场数据",
+                       "detail": "Sportmonks Pinnacle 与 The Odds API 都没有未开赛场次的市场数据；市闸会停在 pending_data"})
+    elif (not intl["configured"] and upcoming > 0
+          and sm_market.get("covered_matches", 0) < upcoming):
+        alerts.append({"level": "low", "title": "国际盘兜底未配置",
+                       "detail": f"Sportmonks 已覆盖 {sm_market.get('covered_matches', 0)}/{upcoming} 场未开赛场次；缺口没有第二对照源"})
+    elif intl["total"] == 0 and sm_market.get("covered_matches", 0) == 0 and upcoming > 0:
+        alerts.append({"level": "high", "title": "未开赛市场数据 0 条",
+                       "detail": f"今日还有 {upcoming} 场未开赛，Sportmonks 与国际盘均为空；检查同步日志"})
+    if (upcoming > 0 and supply_data["verdicts"]["total"] > 0
             and supply_data["market_gate"]["pending_data"] >= supply_data["verdicts"]["total"]):
         alerts.append({"level": "high", "title": "市闸全部 pending",
                        "detail": "市场覆盖不足，今日不会产生 promoted/published"})
     elif supply_data["published"] == 0 and supply_data["verdicts"]["total"] > 0:
         alerts.append({"level": "low", "title": "今日无已发布判断",
                        "detail": "主链仍在复核，或数据不足；首页应显示“今天不硬推”"})
-    fixtures = list(db.scalars(select(ApiFootballFixture)
-                               .order_by(ApiFootballFixture.kickoff_utc.desc())
-                               .limit(30)).all())
     return {
         "date": date,
         "env": get_settings().env,
         "sync": {"latest": sync_latest, "lag_seconds": sync_lag},
-        "football_fixtures": [{
-            "fixture_id": f.fixture_id, "kickoff_utc": f.kickoff_utc,
-            "home": f.home_name, "away": f.away_name,
-            "league": f.league_name, "status": f.status_short,
-            "match_id": f.match_id or "", "link_method": f.link_method,
-            "link_confidence": f.link_confidence,
-        } for f in fixtures],
         "chain": chain,
         "football": football,
         "notifications": notif,

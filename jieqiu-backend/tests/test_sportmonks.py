@@ -108,3 +108,24 @@ def test_get_does_not_retry_auth_error(monkeypatch):
     monkeypatch.setattr(sportmonks.urllib.request, "urlopen", fake_urlopen)
     assert sportmonks._get("https://example.invalid", "/fixtures", "api_token=x") is None
     assert calls["n"] == 1
+
+
+def test_market_coverage_counts_only_fresh_odds(db):
+    from datetime import timedelta
+    from app.models import SPMatch, SportmonksMatchData, utcnow
+    from app.modules.sportmonks import market_coverage
+    from tests.conftest import future_kickoff, today_cn
+
+    mid = "sm-cover-1"
+    db.merge(SPMatch(match_id=mid, match_no="周五998", league="英超",
+                     home_raw="曼城", away_raw="曼联", home="曼城", away="曼联",
+                     kickoff=future_kickoff(today_cn()), single_flag=True))
+    db.merge(SportmonksMatchData(
+        match_id=mid, fixture_id=880001, odds={"home": 0.5, "draw": 0.3, "away": 0.2},
+        captured_at=utcnow() - timedelta(hours=3)))
+    db.commit()
+    assert market_coverage(db, today_cn()) == (0, 1)
+    row = db.get(SportmonksMatchData, mid)
+    row.captured_at = utcnow()
+    db.commit()
+    assert market_coverage(db, today_cn()) == (1, 1)

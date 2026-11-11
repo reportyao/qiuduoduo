@@ -425,3 +425,18 @@ def candidate_fixtures(db: Session, match_id: str) -> dict:
 
 def latest_for_match(db: Session, match_id: str) -> SportmonksMatchData | None:
     return db.get(SportmonksMatchData, match_id)
+
+
+def market_coverage(db: Session, date: str) -> tuple[int, int]:
+    """当日 Sportmonks 市场覆盖（新鲜赔率场次数, 总场次数）。"""
+    start, end = trade_window(date)
+    matches = list(db.scalars(select(SPMatch).where(
+        SPMatch.kickoff >= start, SPMatch.kickoff <= end)).all())
+    if not matches:
+        return 0, 0
+    ids = [m.match_id for m in matches]
+    rows = {r.match_id: r for r in db.scalars(
+        select(SportmonksMatchData).where(
+            SportmonksMatchData.match_id.in_(ids))).all()}
+    covered = sum(1 for mid in ids if market_is_fresh(rows.get(mid)))
+    return covered, len(matches)

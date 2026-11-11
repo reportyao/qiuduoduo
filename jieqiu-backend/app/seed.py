@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from .db import SessionLocal, init_db
 from .modules.align import Aligner
 from .modules.intl_odds import sports_for_trade_date, sync_the_odds_api
+from .modules.sportmonks import market_coverage
 from .modules.ingest import import_collector_db
 from .modules.timeutil import trade_date_from_kickoff, trade_window
 from .modules.verdict import build_verdicts, promote_seal
@@ -59,10 +60,15 @@ def main() -> int:
             start = max(start, now_actual.strftime("%Y-%m-%d %H:%M:%S"))
         now_cn_str = now_actual.strftime("%Y-%m-%d %H:%M:%S")
 
-        # 国际盘同步：按当日联赛动态选 sport key，避免为无关联赛烧配额。
-        sports = sports_for_trade_date(db, trade_date)
-        n_intl, note = sync_the_odds_api(db, aligner, now_utc, sports=sports)
-        print(f"[intl] sports={sports or '[]'} {note}")
+        # 国际盘只做兜底：Sportmonks 已覆盖全部当日市场时不再消耗 Odds API 配额。
+        sm_covered, sm_total = market_coverage(db, trade_date)
+        if sm_total and sm_covered >= sm_total:
+            n_intl, note = 0, f"skip: Sportmonks 已覆盖 {sm_covered}/{sm_total} 场"
+            print(f"[intl] {note}")
+        else:
+            sports = sports_for_trade_date(db, trade_date)
+            n_intl, note = sync_the_odds_api(db, aligner, now_utc, sports=sports)
+            print(f"[intl] sports={sports or '[]'} {note}")
 
         # 本季 xG 增量同步（源不可达 → 跳过说明；恢复后模闸自动生效）
         from .modules.understat_sync import sync_understat

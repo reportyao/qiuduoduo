@@ -377,8 +377,11 @@ WantedBy=multi-user.target
         PWD,
     )
     _require(code == 0, f"systemctl 重启失败：{out[-1200:]}")
-    code, out = run(ssh, "sleep 2 && systemctl is-active jieqiu-backend && "
-                         "curl -fsS http://127.0.0.1:8100/health")
+    # 服务重启后 uvicorn 可能还在加载；最多等 20 秒，避免把正常启动误判成部署失败。
+    code, out = run(ssh, "systemctl is-active jieqiu-backend && "
+                         "for i in $(seq 1 20); do "
+                         "body=$(curl -fsS http://127.0.0.1:8100/health) && "
+                         "printf '%s' \"$body\" && exit 0; sleep 1; done; exit 1")
     print("[6/6] service:\n", out.strip())
     _require(code == 0 and '"status":"ok"' in out, f"服务/健康检查失败：{out[-1200:]}")
     sftp.close()

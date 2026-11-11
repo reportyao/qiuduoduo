@@ -99,3 +99,19 @@ def test_snapshot_preserves_last_good_data_and_clears_on_remap(db):
     assert moved.fixture_id == 2002
     assert moved.probs is None
     assert moved.odds is None
+
+
+def test_supply_market_scope_only_upcoming(db):
+    from datetime import timedelta
+    from app.modules.supply import content_supply
+    from app.modules.timeutil import CN
+
+    kickoff = (datetime.now(CN) - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+    db.merge(SPMatch(match_id="past-market-1", match_no="周五999", league="英超",
+                     home_raw="曼城", away_raw="曼联", home="曼城", away="曼联",
+                     kickoff=kickoff, single_flag=True))
+    db.commit()
+    supply = content_supply(db, today_cn())
+    assert supply["upcoming_matches"] == 0
+    assert supply["market_covered_matches"] == 0
+    assert "市场" not in (supply["blocked_reason"] or "")

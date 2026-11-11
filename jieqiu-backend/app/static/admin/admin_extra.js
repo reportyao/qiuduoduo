@@ -5,6 +5,8 @@ async function loadOps() {
   root.innerHTML = '<div class="skeleton"></div>';
   const data = await api("/admin/api/ops");
   const alerts = data.alerts || [];
+  const supply = data.supply || {};
+  const af = data.football || {};
   root.innerHTML = `
     <div class="card">
       <h2 class="card-title">告警</h2>
@@ -13,7 +15,7 @@ async function loadOps() {
           <div><div style="display:flex;gap:8px;align-items:center"><b>${esc(a.title)}</b>${statusPill(a.level === "high" ? "fail" : "skip")}</div><div class="status-label">${esc(a.detail)}</div></div>
         </div>`).join("") : '<div class="empty">无告警</div>'}
     </div>
-    ${(data.supply?.blocked_reason) ? `<div class="card notice"><b>内容供给受阻：${esc(data.supply.blocked_reason)}</b><div class="card-sub" style="margin-top:8px">场次 ${data.supply.matches ?? 0} · 判决 ${data.supply.verdicts?.total ?? 0} · 市闸 pending ${data.supply.market_gate?.pending_data ?? 0} · 国际盘 ${data.supply.intl_odds?.total ?? 0}</div></div>` : ""}
+    ${(supply.blocked_reason) ? `<div class="card notice"><b>内容供给受阻：${esc(supply.blocked_reason)}</b><div class="card-sub" style="margin-top:8px">场次 ${supply.matches ?? 0} · 判决 ${supply.verdicts?.total ?? 0} · 市闸 pending ${supply.market_gate?.pending_data ?? 0} · 市场覆盖 ${supply.market_covered_matches ?? 0}/${supply.matches ?? 0} 场（SM ${supply.sportmonks_market?.covered_matches ?? 0} · 国际盘 ${supply.intl_odds?.covered_matches ?? 0}）</div></div>` : ""}
     <div class="kpi-grid">
       <div class="kpi accent ${data.sync?.lag_seconds == null ? "" : data.sync.lag_seconds > 1800 ? "red" : "green"}"><div class="kpi-label">SP 延迟</div><div class="kpi-value">${data.sync?.lag_seconds == null ? "—" : data.sync.lag_seconds + "s"}</div><div class="kpi-foot">${esc(data.sync?.latest || "—")}</div></div>
       <div class="kpi"><div class="kpi-label">封存链</div><div class="kpi-value">${data.chain?.ok ? "OK" : "BAD"}</div><div class="kpi-foot">${esc(data.chain?.date || "—")} · ${esc(data.chain?.broken_at || "")}</div></div>
@@ -23,26 +25,27 @@ async function loadOps() {
     <div class="grid side">
       <div class="card"><h2 class="card-title">内容供给</h2>
         <div class="status-grid">
-          <div class="status-item"><span class="status-label">今日场次 / SP</span><b>${data.supply?.matches ?? 0} / ${data.supply?.sp_snapshots ?? 0}</b></div>
-          <div class="status-item"><span class="status-label">国际盘行数</span><b>${data.supply?.intl_odds?.total ?? 0}</b></div>
-          <div class="status-item"><span class="status-label">国际盘覆盖</span><b>${data.supply?.intl_odds?.covered_matches ?? 0}/${data.supply?.matches ?? 0} 场</b></div>
-          <div class="status-item"><span class="status-label">市闸 pass / pending</span><b>${data.supply?.market_gate?.pass ?? 0} / ${data.supply?.market_gate?.pending_data ?? 0}</b></div>
-          <div class="status-item"><span class="status-label">promoted / published</span><b>${data.supply?.verdicts?.promoted ?? 0} / ${data.supply?.published ?? 0}</b></div>
-          <div class="status-item"><span class="status-label">最近国际盘同步</span><b class="mono">${esc(data.supply?.intl_odds?.latest || "—")}</b></div>
+          <div class="status-item"><span class="status-label">今日场次 / SP</span><b>${supply.matches ?? 0} / ${supply.sp_snapshots ?? 0}</b></div>
+          <div class="status-item"><span class="status-label">Sportmonks 市场</span><b>${supply.sportmonks_market?.covered_matches ?? 0}/${supply.matches ?? 0} 场</b></div>
+          <div class="status-item"><span class="status-label">辅助国际盘</span><b>${supply.intl_odds?.covered_matches ?? 0}/${supply.matches ?? 0} 场</b></div>
+          <div class="status-item"><span class="status-label">市闸 pass / pending</span><b>${supply.market_gate?.pass ?? 0} / ${supply.market_gate?.pending_data ?? 0}</b></div>
+          <div class="status-item"><span class="status-label">promoted / published</span><b>${supply.verdicts?.promoted ?? 0} / ${supply.published ?? 0}</b></div>
+          <div class="status-item"><span class="status-label">最近 SP 快照</span><b class="mono">${esc(data.sync?.latest || "—")}</b></div>
         </div>
+        <div class="card-sub" style="margin-top:10px">主市场是 Sportmonks Pinnacle；国际盘只在缺口时兜底。</div>
+        <div class="integration-actions"><button class="btn secondary small" data-goto="data">进入数据源</button></div>
       </div>
-      ${footballCard(data.football || {})}
+      <div class="card"><h2 class="card-title">辅助数据</h2>
+        <div class="status-grid">
+          <div class="status-item"><span class="status-label">API-Football</span><b>${af.configured ? "已配置" : "未配置"}</b></div>
+          <div class="status-item"><span class="status-label">今日额度</span><b>${af.used_today ?? 0}/${af.daily_limit ?? 0} 次</b></div>
+          <div class="status-item"><span class="status-label">阵容 / 伤停</span><b>${af.target?.lineups ?? 0} 行 / ${af.target?.injuries ?? 0} 条</b></div>
+          <div class="status-item"><span class="status-label">积分榜</span><b>${af.standings ?? 0} 行</b></div>
+        </div>
+        <div class="card-sub" style="margin-top:10px">只用于单场深读补阵容/伤停，不参与发布前置。</div>
+      </div>
       <div class="card span-2"><h2 class="card-title">24h 互动</h2>${Object.entries(data.interactions_24h || {}).map(([key, value]) => `
         <div class="status-item"><span class="status-label">${esc(key)}</span><b>${value}</b></div>`).join("") || '<div class="empty">暂无互动</div>'}</div>
-    </div>
-    <div class="card"><h2 class="card-title">API-Football 赛程</h2>
-      <div class="table-wrap"><table><thead><tr><th>Fixture</th><th>时间</th><th>对阵</th><th>联赛</th><th>状态</th><th>链接</th></tr></thead><tbody>
-        ${(data.football_fixtures || []).map(f => `<tr>
-          <td class="mono">${f.fixture_id}</td><td class="mono">${esc(fmtTime(f.kickoff_utc, true))} UTC</td>
-          <td>${esc(f.home)} vs ${esc(f.away)}</td><td>${esc(f.league)}</td><td>${esc(f.status)}</td>
-          <td>${f.match_id ? `<span class="pill green">${esc(f.match_id)}</span>` : canAdmin() ? `<div class="actions"><input data-fixture-input="${f.fixture_id}" placeholder="竞彩 match_id" style="width:128px"><button class="btn secondary small" data-fixture-link="${f.fixture_id}">链接</button></div>` : '<span class="status-label">仅 admin 可链接</span>'}</td>
-        </tr>`).join("") || '<tr><td colspan="6">暂无 fixture</td></tr>'}
-      </tbody></table></div>
     </div>
     <div class="card"><h2 class="card-title">推荐覆盖</h2>
       <div class="status-grid">
@@ -52,14 +55,7 @@ async function loadOps() {
       </div>
     </div>
   `;
-  els("[data-fixture-link]").forEach(btn => btn.onclick = async () => {
-    const id = btn.dataset.fixtureLink;
-    const input = document.querySelector(`[data-fixture-input="${id}"]`);
-    try {
-      await post("/admin/api/football/link", { fixture_id: Number(id), match_id: input.value.trim() });
-      toast("fixture 已链接"); loadOps();
-    } catch (error) { toast(error.message, "error"); }
-  });
+  els("[data-goto]").forEach(btn => btn.onclick = () => showView(btn.dataset.goto));
 }
 
 async function loadUsers() {
