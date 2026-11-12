@@ -120,14 +120,6 @@ export function AssistantBrief({
         <Text variant="caption" color={colors.green}>数据状态 ›</Text>
       </Pressable>
 
-      <BriefMatchPicker
-        options={options}
-        total={optionsTotal}
-        expanded={expanded}
-        onSelect={onSelectOption}
-        onExpandAll={onExpandAll}
-      />
-
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -139,6 +131,15 @@ export function AssistantBrief({
         <QuickReply label="为什么不出预测" onPress={onWhyNot} />
         <QuickReply label="串关参谋" onPress={onParlay} />
       </ScrollView>
+
+      <BriefMatchPicker
+        options={options}
+        total={optionsTotal}
+        expanded={expanded}
+        onSelect={onSelectOption}
+        onExpandAll={onExpandAll}
+      />
+
     </AssistantMessage>
   );
 }
