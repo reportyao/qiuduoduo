@@ -37,8 +37,17 @@ function predictionValue(item: SportmonksPredictionHighlight): string {
   if (item.key === "BTTS_PROBABILITY") {
     return `是 ${pct(values.yes)} / 否 ${pct(values.no)}`;
   }
-  if (item.key === "OVER_UNDER_2_5_PROBABILITY") {
+  if (item.key.startsWith("OVER_UNDER_") && values.yes != null) {
     return `大 ${pct(values.yes)} / 小 ${pct(values.no)}`;
+  }
+  if (item.key.startsWith("HOME_OVER_UNDER_") && values.yes != null) {
+    return `主队大 ${pct(values.yes)} / 小 ${pct(values.no)}`;
+  }
+  if (item.key.startsWith("AWAY_OVER_UNDER_") && values.yes != null) {
+    return `客队大 ${pct(values.yes)} / 小 ${pct(values.no)}`;
+  }
+  if (item.key.startsWith("CORNERS_OVER_UNDER_") && values.yes != null) {
+    return `大 ${pct(values.yes)} / 小 ${pct(values.no)} / 走水 ${pct(values.equal)}`;
   }
   if (item.key === "DOUBLE_CHANCE_PROBABILITY") {
     return `主或平 ${pct(values.draw_home)} / 平或客 ${pct(values.draw_away)} / 主或客 ${pct(values.home_away)}`;
@@ -46,8 +55,22 @@ function predictionValue(item: SportmonksPredictionHighlight): string {
   if (item.key === "FIRST_HALF_WINNER_PROBABILITY") {
     return `主 ${pct(values.home)} / 平 ${pct(values.draw)} / 客 ${pct(values.away)}`;
   }
+  if (item.key === "FULLTIME_RESULT_PROBABILITY") {
+    return `主 ${pct(values.home)} / 平 ${pct(values.draw)} / 客 ${pct(values.away)}`;
+  }
   if (item.key === "TEAM_TO_SCORE_FIRST_PROBABILITY") {
     return `主先进 ${pct(values.home)} / 客先进 ${pct(values.away)} / 无进球 ${pct(values.draw)}`;
+  }
+  if (item.key === "HTFT_PROBABILITY") {
+    const labels: Record<string, string> = {
+      home_home: "主/主", home_draw: "主/平", home_away: "主/客",
+      draw_home: "平/主", draw_draw: "平/平", draw_away: "平/客",
+      away_home: "客/主", away_draw: "客/平", away_away: "客/客",
+    };
+    return Object.entries(values)
+      .filter(([, value]) => value != null)
+      .map(([key, value]) => `${labels[key] ?? key} ${pct(value)}`)
+      .join(" / ");
   }
   return Object.entries(values)
     .filter(([, value]) => value != null)

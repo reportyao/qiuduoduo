@@ -345,7 +345,7 @@ def _facts(fixture_id: int, base: str, token: str) -> list[dict]:
     return out
 
 
-def _predictions(fixture_id: int, base: str, token: str) -> tuple[list[dict], dict]:
+def _predictions(fixture_id: int, base: str, token: str) -> tuple[list[dict], list[dict]]:
     payload = _get(
         base,
         f"/predictions/probabilities/fixtures/{fixture_id}",
@@ -366,32 +366,45 @@ def _predictions(fixture_id: int, base: str, token: str) -> tuple[list[dict], di
         }
         items.append(item)
         by_code[code] = item
+    labels = {
+        "BTTS_PROBABILITY": "双方进球",
+        "OVER_UNDER_2_5_PROBABILITY": "大小球 2.5",
+        "DOUBLE_CHANCE_PROBABILITY": "双重机会",
+        "FIRST_HALF_WINNER_PROBABILITY": "半场胜平负",
+        "TEAM_TO_SCORE_FIRST_PROBABILITY": "先得分球队",
+        "FULLTIME_RESULT_PROBABILITY": "全场胜平负",
+        "HTFT_PROBABILITY": "半场/全场",
+        "CORRECT_SCORE_PROBABILITY": "正确比分",
+    }
     highlights = []
-    for code, label in (
-        ("BTTS_PROBABILITY", "双方进球"),
-        ("OVER_UNDER_2_5_PROBABILITY", "大小球 2.5"),
-        ("DOUBLE_CHANCE_PROBABILITY", "双重机会"),
-        ("FIRST_HALF_WINNER_PROBABILITY", "半场胜平负"),
-        ("TEAM_TO_SCORE_FIRST_PROBABILITY", "先得分球队"),
-    ):
-        item = by_code.get(code)
-        if item:
-            highlights.append({"key": code, "label": label,
-                               "values": item["probabilities"]})
-    score_item = by_code.get("CORRECT_SCORE_PROBABILITY")
-    scores = (score_item or {}).get("probabilities", {}).get("scores") or {}
-    if scores:
-        top = sorted(
-            ((key, _num(value)) for key, value in scores.items()
-             if _num(value) is not None and not str(key).startswith("Other")),
-            key=lambda pair: pair[1] or 0, reverse=True,
-        )[:3]
+    for item in items:
+        code = item["type_code"]
+        probs = item["probabilities"]
+        if code == "CORRECT_SCORE_PROBABILITY":
+            scores = (probs or {}).get("scores") or {}
+            top = sorted(
+                ((key, _num(value)) for key, value in scores.items()
+                 if _num(value) is not None and not str(key).startswith("Other")),
+                key=lambda pair: pair[1] or 0, reverse=True,
+            )[:3]
+            if top:
+                highlights.append({
+                    "key": code,
+                    "label": labels[code],
+                    "scores": [{"score": key, "probability": value}
+                               for key, value in top],
+                })
+            continue
+        if not isinstance(probs, dict):
+            continue
+        if not any(_num(value) is not None for value in probs.values()):
+            continue
         highlights.append({
-            "key": "CORRECT_SCORE_PROBABILITY",
-            "label": "正确比分",
-            "scores": [{"score": key, "probability": value} for key, value in top],
+            "key": code,
+            "label": labels.get(code) or item["type_name"] or code,
+            "values": probs,
         })
-    return items, {"items": highlights}
+    return items, highlights
 
 
 def _market_board(fixture_id: int, base: str, token: str) -> list[dict]:
