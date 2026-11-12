@@ -2,7 +2,7 @@
 
 本文件是 AI 与人类协作开发的**仓库级上下文入口**。任何 AI/开发者在改动代码前必须先读本文件；提交前必须按 Definition of Done 自检。
 
-当前事实（2026-11-12）：生产代码仍在 `jieqiu-backend/`，OpenAPI **158 路径 / 174 方法**，后端 **349 tests**，前端 **56 tests**，Alembic head `20261112_24`；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。v4.1 已部署腾讯云生产（2026-11-12 11:38 CST，管理后台静态资源 v=20261112e）；17:00 CST 追加 Sportmonks 情报层（首发/阵型/伤停/积分榜/H2H/天气/裁判/25 维预测/选定市场，Alembic `20261112_24`）。v4 APK 已由 GitHub Actions 构建并在模拟器安装验证；2026-11-12 最终对话版 APK 对应 commit `94c8c22`（workflow run `43231567085`），正式签名/上架未做。文档索引见 [docs/README.md](./docs/README.md)。
+当前事实（2026-11-12）：生产代码仍在 `jieqiu-backend/`，OpenAPI **158 路径 / 174 方法**，后端 **349 tests**，前端 **56 tests**，Alembic head `20261112_24`；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。v4.1 已部署腾讯云生产（2026-11-12 11:38 CST，管理后台静态资源 v=20261112e）；17:00 CST 追加 Sportmonks 情报层（首发/阵型/伤停/积分榜/H2H/天气/裁判/25 维预测/选定市场，Alembic `20261112_24`）。v4 APK 已由 GitHub Actions 构建并在模拟器安装验证；2026-11-12 最终对话版 APK 对应 commit `5a45d03`（workflow run `43240198271`），正式签名/上架未做。文档索引见 [docs/README.md](./docs/README.md)。
 
 ## 1. 架构地图
 
