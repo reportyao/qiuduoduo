@@ -46,8 +46,8 @@ export function HeaderMetrics({ engine, dataPoints }: {
         <Text variant="captionStrong" color={colors.green} numberOfLines={1}>AI助理在线</Text>
       </View>
       <Text variant="caption" color={colors.muted} numberOfLines={1}>
-        {points > 0 ? `已读 ${read}条数据` : "数据同步中"}
-        {predictionTypes > 0 ? ` · ${predictionTypes} 维预测` : ""}
+        {points > 0 ? `已读${read}条` : "数据同步中"}
+        {predictionTypes > 0 ? ` · ${predictionTypes}维预测` : ""}
       </Text>
     </View>
   );

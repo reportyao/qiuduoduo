@@ -726,6 +726,12 @@ export default function HomeScreen() {
             const messageId = nextChatId("match");
             autoScroll.current = true;
             conversation.append({
+              id: nextChatId("u"),
+              kind: "user",
+              text: `看这场：${verdict.home} vs ${verdict.away}`,
+              at: Date.now(),
+            });
+            conversation.append({
               id: messageId,
               kind: "match",
               option: {
@@ -750,6 +756,12 @@ export default function HomeScreen() {
             setFocus(focusFromOnSale(match, stream?.tradeDate ?? date));
             const messageId = nextChatId("match");
             autoScroll.current = true;
+            conversation.append({
+              id: nextChatId("u"),
+              kind: "user",
+              text: `看这场：${match.home} vs ${match.away}`,
+              at: Date.now(),
+            });
             conversation.append({
               id: messageId,
               kind: "match",
@@ -776,6 +788,12 @@ export default function HomeScreen() {
             setFocus(focusFromOnSale(match, tradeDate || date));
             const messageId = nextChatId("match");
             autoScroll.current = true;
+            conversation.append({
+              id: nextChatId("u"),
+              kind: "user",
+              text: `看这场：${match.home} vs ${match.away}`,
+              at: Date.now(),
+            });
             conversation.append({
               id: messageId,
               kind: "match",
