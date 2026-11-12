@@ -534,7 +534,8 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
             row = sm_standings.get(side) or {}
             parts.append(
                 f"{match.home if side == 'home' else match.away} 第{row.get('position')} · "
-                f"{row.get('points')}分 · {' '.join(row.get('form') or []) or '—'}"
+                f"{row.get('points')}分 · "
+                f"{' '.join({'W': '胜', 'D': '平', 'L': '负'}.get(x, x) for x in (row.get('form') or [])) or '—'}"
             )
         facts.append({
             "id": "standings", "kind": "standing", "label": "积分榜",
