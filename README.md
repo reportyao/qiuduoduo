@@ -20,7 +20,7 @@ AI 足球助理 / 赛前预测产品。当前产品口径以 [docs/qiuduoduo-v4-
 | 前端测试 | **53 passed** + typecheck / ESLint / Android Hermes bundle（2026-11-12 实测） |
 | Alembic head | `20261112_24`（v4 core，up/down 已实现） |
 | 开发数据库 | SQLite + WAL（过渡）；生产目标境内 PostgreSQL 16，**尚未切库** |
-| v4.1 部署状态 | **已部署腾讯云生产（2026-11-12 11:38 CST）；管理后台 v=20261112d；v4 APK 已由 GitHub Actions 构建并在模拟器安装验证** |
+| v4.1 部署状态 | **已部署腾讯云生产（2026-11-12 11:38 CST）；管理后台 v=20261112e；v4 APK 已由 GitHub Actions 构建并在模拟器安装验证** |
 
 ## v4.1 已实现
 
