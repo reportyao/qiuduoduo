@@ -370,9 +370,10 @@ def admin_overview(db: Session = Depends(get_db), _: None = Depends(admin_auth.r
                         "detail": f"最新快照 {sync_latest}，检查采集器/SFTP/cron",
                         "view": "data", "filter": "all"})
     if unconfigured_profiles:
+        names = " / ".join(p["name"] for p in unconfigured_profiles)
         actions.append({"kind": "keys", "severity": "low",
-                        "label": f"{len(unconfigured_profiles)} 个模型配置未配 Key",
-                        "detail": "未配置时该任务会自动降级到模板/固定引导",
+                        "label": f"{len(unconfigured_profiles)} 个 LLM 接入未配 Key",
+                        "detail": f"{names} 未配置；相关任务会降级到模板/固定引导",
                         "view": "gateway", "filter": "all"})
     return {
         "date": date,
@@ -1741,7 +1742,7 @@ def admin_ops(db: Session = Depends(get_db),
     upcoming = supply_data.get("upcoming_matches", supply_data["matches"])
     if upcoming > 0 and market_covered == 0:
         alerts.append({"level": "high", "title": "未开赛场次无市场数据",
-                       "detail": "Sportmonks Pinnacle 与 The Odds API 都没有未开赛场次的市场数据；市闸会停在 pending_data"})
+                       "detail": "Sportmonks Pinnacle 与 The Odds API 都没有未开赛场次的市场数据；新判决缺第二市场对照，可能停在 pending"})
     elif (not intl["configured"] and upcoming > 0
           and sm_market.get("covered_matches", 0) < upcoming):
         alerts.append({"level": "low", "title": "国际盘兜底未配置",

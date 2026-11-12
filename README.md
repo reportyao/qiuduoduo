@@ -1,93 +1,65 @@
 # 球多多 Monorepo
 
-有赛前预测、概率区间和参考组合的决策助手。**Decision Snapshot → AI Review → Publish 主链已接**，`/admin` 运营台已上线，合规（年龄门/未成年锁定/自排除）服务端闭环已落地，不承诺结果。
+AI 足球助理 / 赛前预测产品。当前产品口径以 [docs/qiuduoduo-v4-final-plan.md](docs/qiuduoduo-v4-final-plan.md)（v4.1）为唯一有效方案：4 Tab = **助理 · 比赛 · 计划 · 我的**，计划是“每期 4 场、每场 100、总预算 400”的模拟定投方案，只展示、不跟单。
 
-- 仓库：https://github.com/reportyao/qiuduoduo （公开）
-- 生产前端：`apps/mobile/`（Expo React Native，Android 先发，iOS 后补）
+- 仓库：https://github.com/reportyao/qiuduoduo
+- 当前开发分支：`feat/v4-plan-settlement`
 - 生产后端：`jieqiu-backend/`（FastAPI 模块化单体，过渡期目录，迁移目标 `services/api/`）
+- 生产前端：`apps/mobile/`（Expo React Native，Android 先发，iOS 后补）
 - 接口契约：`packages/api-client/`（OpenAPI 快照 + 生成 TS client，禁止手写接口类型）
 - 数据底座：`sp-collector/`（竞彩官方 SP 自采，家宽出口）
-- 当前线上：`43.128.24.244:8100`，2026-11-06 已部署后台接入中心/单场 AI 解读（SQLite 启动期建表）
-- 仓库最新：2026-11-06 单场 AI 解读 + 后台接入中心（后端已部署，真机包 `apk-20261106-23`）
-- Android 测试包：https://github.com/reportyao/qiuduoduo/releases/tag/apk-20261106-23
 
-| 事实 | 当前值（2026-11-06） |
+## 当前事实（2026-11-12）
+
+| 事实 | 当前值 |
 |---|---|
-| 版本 | `0.8.0-w8+assistant` |
-| OpenAPI | 138 路径 / 154 方法 |
-| 后端测试 | 271 passed |
-| 前端测试 | 30 passed + typecheck / ESLint / Android Hermes bundle；APK 18 已含 JPush 原生库 |
-| 生产数据库 | **当前 SQLite + WAL（过渡，单写者）**；目标境内 PostgreSQL 16（云托管优先 / 自建兜底，ADR-0004） |
-| Alembic head | `20261106_16`（LLM 配置 + AI 解读 + 采集器心跳；升级/降级已验证） |
-| W8 冻结基线 | 145 路由（新增路由后须重新采纳） |
-| 线上提交 | `dd4555b`（2026-11-05；仓库最新预测改版待部署） |
+| 后端版本 | `0.8.0-w8+assistant`（`app.main`） |
+| 移动端版本 | `0.3.4` / versionCode `9`（`app.config.ts`，v4.1 尚未出正式 APK） |
+| OpenAPI | **158 路径 / 174 方法**（以 `packages/api-client/openapi.json` 为准） |
+| 后端测试 | **341 passed**（`python -m pytest -q`，2026-11-12 实测） |
+| 前端测试 | **47 passed** + typecheck / ESLint / Android Hermes bundle（2026-11-12 实测） |
+| Alembic head | `20261112_23`（v4 core，up/down 已实现） |
+| 开发数据库 | SQLite + WAL（过渡）；生产目标境内 PostgreSQL 16，**尚未切库** |
+| v4.1 部署状态 | **代码与文档已在本分支，尚未部署生产；v4 APK 尚未构建发布** |
 
-工程入口见 [AGENTS.md](./AGENTS.md)，完整文档索引见 [docs/README.md](./docs/README.md)，运维手册见 [docs/operations-runbook.md](./docs/operations-runbook.md)。
+## v4.1 已实现
 
-## 当前运行状态（2026-11-06）
-
-- **API/后台**：`/health` 正常，封存链 OK；`/admin` 运营台可用。
-- **推荐内容**：主链 build → L1–L5 复核 → publish 已跑通；但 **当前生产 `/recommendations/today` 为空**——raw 复核有 1 场“复核过三关”，尚未产出 published snapshot/plan。前端已按 published 门控，不把未发布判决当推荐；发布链仍需在 `/admin` 查 `review_runs` 失败层。
-- **数据供给**：国际盘已配置，市闸/模型闸按各自阈值工作；模型闸仍有大量 `pending_data`，覆盖率提升依赖更好的当前赛季数据。
-- **API-Football 已配置**：生产使用 API-Sports `apisports` Free 档（100 次/日、10 次/分钟）。已支持当天+次日 fixtures、已链接场次的线阵容/伤停；后台按“今日/明日”分开展示链接数；当日目标场次已全部链接，次日赛程在每日 06:15 同步。当前赛季积分榜被 Free 档限制，需付费档；lineups 通常在停售前才发布，由每小时 `sync-enrich` 补充。
-- **休赛日/覆盖缺口**：2026-11-09 销售日无在售场次（凌晨 4 场属于 11-08 销售日）；下一批英锦标赛 The Odds API 无 sport key，市闸和 AI 解读会保持 pending，不是代码故障。
-- **采集器出口**：体彩 WAF 对机房 IP 返回 567，采集器不能直接跑腾讯云；需家宽常驻（systemd / 任务计划 + 心跳）或服务器 + 住宅代理。详见 [sp-collector/README.md](./sp-collector/README.md)。
-- **JPush**：Android 客户端已接入 core SDK（`JCommonService` 已补，registration id 上报、连接状态、通知权限、设备推送状态）。模拟器实测能拿到 registration id 且 `connected=true`，但 MuMu/Houdini 的 arm64 转译会在 RN 启动阶段被 JCore 原生库带崩；**需真机（arm64）复测可用性**。厂商通道与 Master Secret 待配置，服务端目前仍可能 dry-run。详见 [docs/jpush.md](./docs/jpush.md)。
-
-## 最近完成（2026-11-06）
-
-1. **概率经验区间**：`calibration.interval` 用已结算 promoted 判决的残差分布生成 `prob_low/prob_high`；样本 <20 返回 `accumulating`，绝不编造区间。
-2. **CLV 闭环**：结算时锁定停售前最后一条同池 SP，写 `closing_sp_*`/`closing_at`/`clv`；周报汇总平均 CLV 与正 CLV 占比。
-3. **未采纳复盘**：`/stream` 的 `unattended` 返回“看过但没记注”的已结算场次，移动端独立卡片展示，只复盘不追损。
-4. **赛前提醒**：worker 增加 T-3h / T-30m 扫描、去重、中性文案和扇出事件。
-5. **部署加固**：`deploy.py` 合并远端 `/etc/jieqiu-backend.env` 与 `cron.env` 的可选 key，覆盖 `cron.env` 前自动备份最近 5 份。
-6. **移动端深度测试**：修复悬浮头像遮挡、详情原始 ISO 时间、覆盖面板“偏旧/缺”混淆、已砍场次误显示为在售、账本发布状态、周报空态、自排除服务端补同步、深链 `jieqiu://today`、助理发布门等；详见 [docs/frontend-deep-test-2026-11-06.md](./docs/frontend-deep-test-2026-11-06.md)。
-7. **Android 内部测试包**：`apk-20261106-23`，版本 `0.3.4`（versionCode 9），包名 `com.qiuduoduo.app`，含 JPush 6.3.0 core 与 `JCommonService`，已移除定位/电话/外部存储权限；[Release](https://github.com/reportyao/qiuduoduo/releases/tag/apk-20261106-23) · SHA256 `fdd8f1025c6809c5774f2b6befa29db956bf48873c74f78edc0899fc96252781`。
-8. **预测优先前端改版**：取消“不预测”底线，首页 Tab 改为“预测”，重写首页/详情/助理/工具/账本/周报/设置文案与信息层级；详见 [docs/prediction-first-frontend-2026-11-06.md](./docs/prediction-first-frontend-2026-11-06.md)。
-9. **Unslop 逐页 UI 精修**：收敛页面节奏、卡片圆角与内边距、字重/对比度、图标颜色和无意义动效；工具页改为“主工具 + 分组列表”；复核轮又降低永久自排除按钮权重、删除隐私页重复返回、拆分登录法律文案、预览卡改中性。详见 [docs/ui-unslop-2026-11-06.md](./docs/ui-unslop-2026-11-06.md)。
-10. **JPush Android 接入**：JPush 6.3.0 + JCore 5.6.0 core、`JCommonService`、registration id 上报、通知权限与“设备推送”状态；模拟器已拿到 `registration_id` 与 `connected=true`，但 MuMu/Houdini 转译会在 RN 启动阶段崩溃，需真机复测。厂商通道可后补。详见 [docs/jpush.md](./docs/jpush.md)。
-11. **后台接入中心**：`/admin` 按“用途”重排 AI 能力（对话问答/发布前复核/人设文案/单场分析）、数据源与推送通道；fast/deep 支持后台直接上传 Base URL、Model、Key，加密存 `llm_profiles` 并优先于环境变量；新增迁移 `20261106_14` / `20261106_15` / `20261106_16`。详见 [docs/llm-gateway.md](./docs/llm-gateway.md)。
-12. **单场 AI 解读**：新增 `ai_analyses` 与 `GET/POST /matches/{id}/analysis`；只对 `deep_eligible` 场次生成，按事实包 hash + 6h 缓存；详情页新增解读卡，`/chat` 可带 `match_id` 用同一事实包；移动端复核徽章区分“AI 复核”与“规则复核”。
-13. **采集器后台**：采集器每轮心跳上报（主机/轮次/场次/错误/推送时间），`/admin` 新增「采集器」页查看在线/离线与数据文件年龄，并可一键下发重启；采集器退出后由本地 watchdog 自动拉起。
-14. **运营工作台**：`/admin` 默认进入「工作台」，按采集→入库→市场→模型→三闸→封存→复核→发布→LLM→推送展示全链路状态/证据/下一步；内置 AI 体检、allowlist 动作（重启采集器/同步国际盘/测试 LLM/运行主链）与名词解释。详见 [docs/workbench.md](./docs/workbench.md)。
-
-## 功能完成度
-
-### 已实现
-
-| 模块 | 现状 |
+| 模块 | 状态 |
 |---|---|
-| 推荐主链 | `decision_snapshots` + `recommendation_plans` + `review_runs` + `recommendation_events`；build → L1–L5 复核 → publish → expire/withdraw；`GET /recommendations/today` 只返回 published |
-| 公开推荐契约 | snapshot/plan 返回方向、把握度、成立条件、失效条件、AI 复核徽章（状态/复核人/时间/各层结果）；Today Hero 与组合卡已消费 |
-| 概率经验区间 | `calibration.interval` 用已结算 promoted 判决的残差经验分布给 `prob_low/prob_high`；样本 <20 标 `accumulating`，不编造区间；移动端已展示 |
-| 赛后归因 / CLV | 结算时锁定停售前最后一条同池 SP，写 `closing_sp_*`/`closing_at`/`clv`；周报展示平均 CLV 与正 CLV 占比；移动端展示“看完未跟”的未采纳复盘 |
-| 首页聚焦 | 选中比赛 → 回首页聚焦；`/matches/{id}/focus` 覆盖率/事实/未知项/可用动作真实接入 |
-| 数据脉搏 | `/stats/pulse` 真实计数 + 展示系数；首页指标与数据状态页已接，不再前端拼数 |
-| 在售与选择器 | `coverage` 覆盖分、"覆盖足"筛选、promoted → 覆盖 → 停售排序 |
-| 互动埋点 | `POST /interactions` 白名单幂等；前端 `focus_select` / `action_click` / `free_text_send` / `pulse_open` 已上报 |
-| 合规闭环 | `/gate/verify`、`/me/under18-lock`、`/compliance/state` · `/compliance/self-exclusion` · `/compliance/self-assessment`；`POST /bets` 与 focus capabilities 服务端硬拦截未成年/自排除/休息中；移动端启动回填服务端状态 |
-| 串关体检 | `POST /tools/parlay/check` 四维体检（成本/信息/模型/结构），缺模型不伪造组合概率 |
-| 管理后台 | `/admin`：工作台/总览/接入中心/调用用量/文案模型池/人设文案/推荐主链（逐条+批量+plan 操作+撤回理由）/组合/数据/运维/账号/审计/日志；RBAC + CSRF + 会话撤销 + 审计 |
-| 认证 | 设备令牌 + CN 手机号/微信、GL Email/Google/Apple；JWT 轮换 + refresh 复用检测；生产 fail-closed |
-| 封存与信任 | 判决哈希封存链、公开账本、分享编号可验（`/s/{id}`）、周报/复盘 |
-| 推送 | 事件监控（含赛前 T-3h/T-30m）→ 扇出 → 站内信/推送；通知设置/收件箱/关注已通；JPush Android core 已接（registration id/连接状态），Master Secret 未配置时 dry-run；厂商通道待补 |
-| 人设语气 | 三套 profile + 槽位 + 模型池（Key 加密/failover/缓存/预生成）；后台可改 |
-| LLM Gateway | Phase 1：登录用户 `open_chat → fast`，预算/缓存/PII 脱敏/用量账本；匿名 0 LLM |
-| API-Football | API-Sports Free：fixtures 当天/次日、lineups、injuries、自动/人工链接；7 秒节流 + 90/日预算。**当前赛季 standings 被 Free 档拒绝**；apifootball.com 是另一家 provider，未接入 |
+| 4 Tab | 助理 / 比赛 / 计划 / 我的；原“记录”移入“我的 → 我的记录” |
+| 首页 HeaderMetrics | 陪伴时长、引擎版本、今日数据点、盘口/模型复审；配置读 `engine_config`，无数据不显示 0 |
+| 每日 AI 战绩 | `/stats/record/summary`；只统计已发布且已结算，按竞彩日；无数据返回空态 |
+| AI 计划 | `plan_cycles / plan_bets / plan_bet_legs`；每期最多 4 场、每场 100、预算 400；稳健/平衡/进取三种结构；收益按 risk 分开 |
+| 计划选场 v1 | 只处理 1X2/让球；候选必须有模型概率、市场概率、正 edge、正 EV；同场去重、同联赛最多 2 场；不足 4 场不硬凑 |
+| 会员权益 | `user_memberships / membership_events / analysis_quota / market_access`；免费每日 1 场，Pro/Max 不限；Max 可看计划完整 legs |
+| 手动开通 | `/admin` 用户与会员页可开通/撤销 Pro/Max；写 membership event + admin audit |
+| 充值 UI | **假 UI**：展示价格与权益，按钮只提示“充值暂未开放”；不建订单、不接支付、不伪造支付成功 |
+| 赛果与结算 | `match_results` 90 分钟字段、`market_settlements`、`settle_pending`；1X2/让球/OU/BTTS/比分按 FT90；整数亚盘走 void/push |
+| 每日表现 | `performance_daily`；账本/周报/复盘排除 void |
+| 人设单一事实源 | `persona_copy_slots` + `assistant_copy.render`；`/chat` 接受 `persona`，三种语气共享同一事实包 |
+| OPC 管理后台 | 用户与会员、AI 计划、异常队列、引擎配置、推荐主链、数据源、模型效果、OPS |
+| 助理记忆 | `user_profile_features` 从注单/关注/显式记忆推导；`/me/profile` 暴露 |
+| 训练脚手架 | `feature_snapshots / model_registry / training_runs` 表已建；**离线训练/影子上线尚未实现** |
 
-### 待做（外部依赖或下一阶段）
+## 明确未完成 / 边界
 
-- **API-Football 当前赛季 standings**：Free 档不支持 2026 赛季积分榜；若需要完整 focus 覆盖，升级 API-Sports 付费档（或另接 standings provider）。
-- **JPush 真机验收**：在 arm64 真机确认启动不崩、registration id 上报、通知展示/点击深链；再配 Master Secret 与厂商凭证。模拟器（MuMu/Houdini）已确认会被 JCore 原生库带崩，不能作为验收环境。
-- **支付/订阅权益**：`subscriptions/entitlements`、RevenueCat/微信商户号、免费 1 条/其余锁定。
-- **备份/PITR**：云控制台自动备份或自建 `pg_backup.sh` + WAL 归档 + 恢复演练（上线阻塞项）。
-- **当前赛季 xG**：API-Football 不提供 xG；当前仍是静态历史 xG + 进球代理。选型见 [docs/xg-providers.md](./docs/xg-providers.md)，优先 Sportmonks，回测可用 StatsBomb/FBref。
-- **真实 live feed / 进球提醒**：`/matches/{id}/live` 目前基于已同步赛果与 SP 快照。
-- **推荐三套人设文案**：`recommendation_copies` 表、按 persona 生成、L3 逐套复核。
-- **持久化告警/任务中心**：ack/静默/外发 webhook、任务 last-run。
-- **Vision OCR**（v1.5）、**编辑台变体池**（v1.5）、**多 worker 会话**（Redis/DB）。
+- **支付**：没有支付渠道、订单、回调；会员只能由后台手动开通。
+- **多盘口数据**：HeaderMetrics 的“5 个盘口 / 7 大模型”是后台配置的展示口径；实际数据仍以竞彩 1X2/让球为主，大小球/BTTS/半全场尚未完整入库。Max 权益写“全市场逐项开放”，不能把未接市场说成已可用。
+- **计划自训练模型**：当前是规则 + 现有模型概率的 v1 选场，不是自训练模型；训练表和快照只是脚手架。
+- **计划通知**：计划更新提醒/收藏未接；推送只做中性提示，不做跟单。
+- **生产 Postgres**：迁移与离线 SQL 已验证，真实切库需要云托管实例和维护窗口。
+- **JPush 真机**：Android core 已接，MuMu/Houdini 转译会崩；需 arm64 真机验收，Master Secret 与厂商通道待配。
+- **v4 发布包**：本轮只做了 Metro/Hermes bundle 与模拟器验收，没有生成、签名、上传正式 APK。
+- **生产部署**：本轮只推送代码与文档，没有执行 `deploy.py`，线上仍是 2026-11-06 版本。
 
-详见 [docs/recommendation-product.md](./docs/recommendation-product.md)、[docs/focused-decision-flow.md](./docs/focused-decision-flow.md)、[docs/llm-gateway.md](./docs/llm-gateway.md)。
+## 工程入口
+
+- 协作规则 / Definition of Done：[AGENTS.md](AGENTS.md)
+- 文档索引：[docs/README.md](docs/README.md)
+- 移动端交接：[apps/mobile/ARCHITECTURE.md](apps/mobile/ARCHITECTURE.md)
+- 后端说明：[jieqiu-backend/README.md](jieqiu-backend/README.md)
+- 运维手册：[docs/operations-runbook.md](docs/operations-runbook.md)
+- 数据库架构：[docs/database-architecture.md](docs/database-architecture.md)
 
 ## 快速开始
 
@@ -99,7 +71,7 @@ just api-install          # pip install -r jieqiu-backend/requirements.txt
 just db-up                # 本地 Postgres（docker compose，端口 5433）
 just db-migrate           # alembic upgrade head
 just api-run              # uvicorn app.main:app --port 8100
-just api-test             # pytest（295 tests）
+just api-test             # pytest（当前 341 tests）
 
 # 前端（Node 22 自带 corepack；仓库 .npmrc 固定 node-linker=hoisted）
 just install              # corepack pnpm install
@@ -111,19 +83,15 @@ just mobile-android       # expo run:android
 just api-openapi
 ```
 
-部署到 VPS：
+移动端构建前必须跑：
 
 ```bash
-cd jieqiu-backend
-export JQ_DEPLOY_PASSWORD='...'          # 必填
-export JQ_ADMIN_PASSWORD='...'           # 仅首次建管理员需要；后续会保留远端值
-export JQ_API_FOOTBALL_PROVIDER='rapidapi'   # 用 RapidAPI key 时；API-Sports 直连用 apisports
-export JQ_API_FOOTBALL_KEY='...'
-export JQ_ODDS_API_KEY='...'
-python deploy.py
+cd apps/mobile
+corepack pnpm typecheck
+corepack pnpm lint
+corepack pnpm test
+corepack pnpm exec expo export --platform android --output-dir .export-check --clear
 ```
-
-`deploy.py` 会合并远端 `/etc/jieqiu-backend.env` 与 `cron.env` 中已有的可选 key，覆盖 `cron.env` 前自动备份，避免未导出的 key 被清空。细节见 [docs/operations-runbook.md](./docs/operations-runbook.md)。
 
 ## 目录结构
 
@@ -159,20 +127,3 @@ export JQ_COLLECTOR_PASSWORD='...'   # SFTP 备份密码；不再写进代码
 python collector.py        # 前台
 # 当前已以分离进程常驻运行（日志 collector.log）
 ```
-
-- 出口：**必须家宽**（体彩 WAF 拒机房 IP，服务器直连 567）
-- 备份：每 30 分钟 SFTP 推送到 43.128.24.244:/home/ubuntu/jieqiu-sp/
-- 容错：连续失败 20 次自动退出（人工重启）；单轮失败只计数不中断
-
-## 表结构
-
-- `matches`: match_no/match_id/league/home/away/kickoff/single_flag
-- `sp_snapshots`: match_id/pool/goal_line/sp_h/sp_d/sp_a/captured_at（只追加）
-
-## 已知限制与升级路径
-
-| 限制 | 对策（W2 内定） |
-|---|---|
-| 依赖本机开机+家宽 | ① 4G 迷你主机 ② 住宅代理+云机 ③ 与常开设备共存 |
-| 5min 固定轮询 | 后续：停售前 60min 加密至 60s（尚未实现） |
-| 无赛果回填 | 赛果由后端 `sync_results_football_data` 回填，不由采集器写 `settled` |

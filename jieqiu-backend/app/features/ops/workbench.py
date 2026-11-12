@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -131,10 +132,12 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
     c_ok = bool(collector["online"] and
                 (no_matches or (collector["data_age_seconds"] or 10**9) <= 2100))
     c_warn = c_ok and not no_matches and (snapshots_today == 0 or missing_league > 0)
+    data_age = _age(collector["data_age_seconds"])
+    data_age_text = "未知" if data_age == "未知" else f"{data_age}前更新"
     stages.append(_stage(
         "collect", "采集", "今天有没有拿到官方 SP？", _DEFINITIONS["SP"],
         _state(c_ok, c_warn),
-        f"采集器{'在线' if collector['online'] else '离线'}，SP 文件 {_age(collector['data_age_seconds'])}前更新",
+        f"采集器{'在线' if collector['online'] else '离线'}，SP 文件 {data_age_text}",
         [
             {"label": "采集器心跳", "value": "在线" if collector["online"] else "离线"},
             {"label": "心跳年龄", "value": _age(collector["stale_seconds"])},
@@ -319,16 +322,30 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
     ))
 
     # 11 推送
-    push_ok = tokens_enabled > 0
+    push_configured = bool(os.environ.get("JQ_JPUSH_APPKEY")
+                           and os.environ.get("JQ_JPUSH_MASTER_SECRET"))
+    if push_configured and tokens_enabled > 0:
+        push_state = "ok"
+    elif tokens_total > 0:
+        push_state = "warn"
+    else:
+        push_state = "blocked"
+    if not push_configured:
+        push_headline = (f"设备已绑定 {tokens_enabled}/{tokens_total}；"
+                         "JPush 服务端未配置，当前只 dry-run")
+        push_next = "配置 JPush AppKey / Master Secret"
+    else:
+        push_headline = f"已启用设备 {tokens_enabled}/{tokens_total}"
+        push_next = "检查设备注册" if tokens_enabled == 0 else "正常"
     stages.append(_stage(
         "push", "推送", "设备推送有没有绑定？",
         "JPush 负责通知；服务端未配 Master Secret 时只 dry-run，不影响主链。",
-        _state(push_ok, tokens_total > 0 and tokens_enabled == 0),
-        f"已启用设备 {tokens_enabled}/{tokens_total}",
+        push_state, push_headline,
         [{"label": "启用 token", "value": str(tokens_enabled)},
-         {"label": "总 token", "value": str(tokens_total)}],
+         {"label": "总 token", "value": str(tokens_total)},
+         {"label": "服务端", "value": "已配置" if push_configured else "dry-run"}],
         ["推送不是预测发布的前置条件"],
-        "检查 JPush/设备注册" if not push_ok else "正常",
+        push_next,
     ))
 
     blocked = [s for s in stages if s["state"] == "blocked"]

@@ -2,9 +2,9 @@
 
 Expo React Native + TypeScript 生产前端。MVP 只做 Android，iOS 后续开启。
 
-当前已实现：年龄门（服务端同步）/ 首页预测流 + Today Hero（预测方向/概率/成立条件/失效条件/AI 复核徽章）/ 首页聚焦面板（覆盖率/事实/未知项/可用动作）/ 真实数据脉搏指标与数据状态页 / 在售与选择器覆盖筛选 / 完整预测 / 情报与证据 / 封存验证 / 记一注与 5 秒撤销（服务端合规拦截）/ 助理对话 / 8 个工具 / 串关参谋 + 组合参谋（published 优先、preview 回退）/ 票单与周报 / 公开账本 / 站内信 / 关注 / 通知设置 / 合规中心（自排除/PGSI 服务端闭环）/ 人设与偏好 / 手机号登录与游客数据合并 / 分享落地页 `/s/{id}` / 最小互动埋点（`/interactions`）。
+v4.1 当前结构：**助理 / 比赛 / 计划 / 我的** 4 Tab，记录移入“我的 → 我的记录”。已实现：年龄门（服务端同步）/ 首页对话流 + HeaderMetrics + 每日 AI 战绩 + Today Hero / 聚焦面板 / 在售与覆盖筛选 / 完整预测与证据 / 记一注与撤销（服务端合规拦截）/ 4 场模拟定投计划（三种风险、Max 门控、历史收益）/ 会员权益页（充值假 UI）/ 串关参谋 / 票单与周报 / 公开账本 / 站内信与关注 / 通知设置 / 合规中心 / 人设与偏好（chat 带 persona）/ 手机号登录与游客数据合并 / 分享落地页。
 
-当前验证（2026-11-05）：22 个 Vitest、typecheck、ESLint、Android Hermes bundle 通过；真实 Android APK/iOS 原生构建仍需 EAS/本机构建环境。后端当前 261 tests / OpenAPI 128 路径 / 143 方法。
+当前验证（2026-11-12）：**47 个 Vitest**、typecheck、ESLint、Android Hermes bundle 通过；MuMu x86_64 模拟器已走通主要页面。后端 **341 tests / OpenAPI 158 路径 / 174 方法**。正式 APK 签名发布、iOS、真机 JPush 仍未做。
 
 **交接先读 [ARCHITECTURE.md](./ARCHITECTURE.md)**：目录、路由、数据适配、会话合并、已知后端缺口都在那里。
 

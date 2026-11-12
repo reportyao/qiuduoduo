@@ -124,7 +124,7 @@ def content_supply(db: Session, date: str | None = None) -> dict:
     elif not upcoming:
         blocked_reason = "今日已无未开赛场次"
     elif intl_total == 0 and sm_market_covered == 0:
-        blocked_reason = "Sportmonks Pinnacle 与国际盘均未接入，市闸无法通过"
+        blocked_reason = "Sportmonks Pinnacle 与国际盘均未接入，市场覆盖为 0"
     elif market["pending_data"] >= len(verdicts):
         blocked_reason = "市闸全部 pending（市场覆盖不足）"
     elif published_snaps + published_plans == 0:

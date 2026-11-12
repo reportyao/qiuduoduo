@@ -78,14 +78,18 @@ export function buildIntelReport(detail: VerdictDetail): IntelReport {
   const headline =
     string(payloadIntel.headline) ||
     (detail.status === "promoted"
-      ? "三关已过，情报已封存"
+      ? detail.evidence.length > 0
+        ? detail.sealedAt
+          ? "三关已过，证据已封存"
+          : "三关通过，证据待封存"
+        : "三关通过，情报待同步"
       : pendingGate
         ? `还在等${gateName}数据`
         : "情报已收齐，预测见下");
   const summary =
     string(payloadIntel.summary) ||
     (detail.status === "promoted"
-      ? `模型与市场方向一致。共 ${detail.evidence.length} 条依据，其中 ${priced} 条已计入预测。`
+      ? `三关已通过。共 ${detail.evidence.length} 条依据，其中 ${priced} 条已计入预测${detail.evidence.length === 0 ? "；没有可展示的情报依据时不编造。" : "。"}`
       : `当前没有足够数据把这场算清楚。已记录 ${detail.evidence.length} 条依据，${unPriced} 条尚未定价。`);
   return {
     headline,

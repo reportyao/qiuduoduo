@@ -1,5 +1,30 @@
 # 管理后台重构 · Sportmonks / AI 情报 / 模型评估（2026-11-11）
 
+## 2026-11-12 v4.1 增补
+
+`/admin` 新增/扩展以下视图，均已接测试（`tests/test_admin_v4.py`）：
+
+| 视图 | 能力 | 权限 |
+|---|---|---|
+| 用户与会员 | 搜索 App 用户、手机/邮箱脱敏、当前会员/额度、手动开通/撤销 Pro/Max（7/30/90 天/自定义）、备注 | admin 可写；viewer/operator 只读 |
+| AI 计划 | 按 risk 查看当前期/历史期、生成、查看注单与 legs、手动结算 | operator/admin 可操作 |
+| 异常队列 | `ops_jobs` 运行记录、`ops_exceptions` 未解决异常、ack/resolved | operator/admin |
+| 引擎配置 | 改 `version / markets_monitored / models_reviewing / data_points_factor`，直接影响首页 HeaderMetrics | admin |
+
+约束：
+
+- 手动开通/撤销写 `membership_events` + `admin_audit`；手机/邮箱不回显完整值。
+- AI 计划只展示，不提供跟单/自动记注；后台不能伪造支付成功。
+- `engine_config` 的“5 盘口/7 模型”是展示配置，不代表 5 个盘口数据已全部入库；运营改数字时必须知道真实覆盖。
+- `ops_exceptions` 按 `dedupe_key` 去重，重复异常只更新状态，不刷屏。
+
+2026-11-12 浏览器实测后补：
+
+- 用户页支持手机号/邮箱/昵称/用户 ID 搜索与免费/Pro/Max 筛选；当前等级按钮禁用；变更/撤销均弹确认。
+- 工作台“重启采集器”和所有同步/发布动作都有确认；SP 文件年龄未知时不再出现“未知前更新”。
+- AI 计划腿显示竞彩编号、主客队、联赛、赔率、模型/市场概率、edge、质量与理由；投注状态中文化。
+- 异常队列的引擎配置改为四列表单；任务/异常补开始时间与中文状态。
+
 ## 这次改了什么
 
 ### 1. 数据源页从“状态卡片”改成“逐场作业台”
