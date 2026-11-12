@@ -1,9 +1,29 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { ChatCard, VerdictSummary } from "@/domain/types";
+import type { ChatCard, SportmonksIntelData, VerdictSummary } from "@/domain/types";
 import type { BriefMatchOption } from "@/features/home/components/BriefMatchPicker";
 
 const STORAGE_PREFIX = "jieqiu.home.thread.v2";
 const MAX_MESSAGES = 60;
+
+export interface MatchIntelSummary {
+  homeFormation?: string;
+  awayFormation?: string;
+  injuries: string[];
+  homePosition?: number | null;
+  awayPosition?: number | null;
+  homePoints?: number | null;
+  awayPoints?: number | null;
+  homeForm: string[];
+  awayForm: string[];
+  weather?: string;
+  referee?: string;
+  prediction?: string;
+  market?: string;
+  h2h?: string;
+  news?: string;
+  sections?: Record<string, string | null>;
+  capturedAt?: string | null;
+}
 
 export type HomeConversationMessage =
   | {
@@ -26,6 +46,16 @@ export type HomeConversationMessage =
       kind: "match";
       option: BriefMatchOption;
       verdict: VerdictSummary | null;
+      intel?: MatchIntelSummary;
+      at: number;
+    }
+  | {
+      id: string;
+      kind: "prediction";
+      option: BriefMatchOption;
+      verdict: VerdictSummary;
+      lead: string;
+      intel?: MatchIntelSummary;
       at: number;
     };
 
@@ -51,6 +81,87 @@ function isVerdict(value: unknown): value is VerdictSummary {
     && typeof value.matchId === "string"
     && typeof value.home === "string"
     && typeof value.away === "string";
+}
+
+function pctText(value?: number | null): string {
+  return value == null ? "—" : `${Math.round(value)}%`;
+}
+
+function predictionText(item: SportmonksIntelData["predictionHighlights"] extends
+  (infer T)[] | undefined ? T : never): string {
+  const values = item.values ?? {};
+  if (item.key === "BTTS_PROBABILITY") return `是 ${pctText(values.yes)} / 否 ${pctText(values.no)}`;
+  if (item.key === "OVER_UNDER_2_5_PROBABILITY") {
+    return `大 ${pctText(values.yes)} / 小 ${pctText(values.no)}`;
+  }
+  if (item.key === "DOUBLE_CHANCE_PROBABILITY") {
+    return `主/平 ${pctText(values.draw_home)} / 平/客 ${pctText(values.draw_away)}`;
+  }
+  if (item.key === "FIRST_HALF_WINNER_PROBABILITY") {
+    return `主 ${pctText(values.home)} / 平 ${pctText(values.draw)} / 客 ${pctText(values.away)}`;
+  }
+  if (item.key === "TEAM_TO_SCORE_FIRST_PROBABILITY") {
+    return `主先进 ${pctText(values.home)} / 客先进 ${pctText(values.away)}`;
+  }
+  if (values.home != null || values.draw != null || values.away != null) {
+    return `主 ${pctText(values.home)} / 平 ${pctText(values.draw)} / 客 ${pctText(values.away)}`;
+  }
+  const first = Object.values(values).find((value) => value != null);
+  return first != null ? pctText(first) : item.label;
+}
+
+function topPrediction(data: SportmonksIntelData): string | undefined {
+  const highlights = data.predictionHighlights ?? [];
+  const preferred = ["MATCH_WINNER_PROBABILITY", "FULLTIME_RESULT_PROBABILITY",
+    "BTTS_PROBABILITY", "OVER_UNDER_2_5_PROBABILITY", "DOUBLE_CHANCE_PROBABILITY"];
+  for (const key of preferred) {
+    const item = highlights.find((entry) => entry.key === key);
+    if (item) return `${item.label} ${predictionText(item)}`;
+  }
+  const item = highlights.find((entry) => Object.keys(entry.values ?? {}).length > 0);
+  return item ? `${item.label} ${predictionText(item)}` : undefined;
+}
+
+export function summarizeIntel(
+  data: SportmonksIntelData | null | undefined,
+): MatchIntelSummary | undefined {
+  if (!data) return undefined;
+  const home = data.standings?.home;
+  const away = data.standings?.away;
+  const market = data.marketBoard?.[0];
+  const marketPick = market?.selections?.[0];
+  const lastH2h = data.h2h?.[0];
+  const sections: Record<string, string | null> = {};
+  for (const [key, meta] of Object.entries(data.sections ?? {})) {
+    sections[key] = meta.capturedAt ?? null;
+  }
+  return {
+    homeFormation: data.formations?.home || data.lineups?.home?.formation,
+    awayFormation: data.formations?.away || data.lineups?.away?.formation,
+    injuries: (data.sidelined ?? []).map((row) => row.playerName).filter(Boolean).slice(0, 4),
+    homePosition: home?.position,
+    awayPosition: away?.position,
+    homePoints: home?.points,
+    awayPoints: away?.points,
+    homeForm: home?.form ?? data.recent?.home ?? [],
+    awayForm: away?.form ?? data.recent?.away ?? [],
+    weather: data.weather?.description,
+    referee: data.referees?.main?.name,
+    prediction: topPrediction(data),
+    market: marketPick
+      ? `${marketPick.label} ${pctText(marketPick.probability)}`
+      : undefined,
+    h2h: lastH2h
+      ? `${data.h2h?.length ?? 0} 场 · 最近 ${lastH2h.scoreHome}-${lastH2h.scoreAway}`
+      : undefined,
+    news: data.prematchNews?.[0]?.title,
+    sections,
+    capturedAt: data.capturedAt ?? null,
+  };
+}
+
+function isSummary(value: unknown): value is MatchIntelSummary {
+  return isObject(value) && Array.isArray(value.injuries);
 }
 
 export function parseHomeMessages(raw: string | null): HomeConversationMessage[] {
@@ -88,6 +199,18 @@ export function parseHomeMessages(raw: string | null): HomeConversationMessage[]
         kind: "match",
         option: entry.option,
         verdict: isVerdict(entry.verdict) ? entry.verdict : null,
+        intel: isSummary(entry.intel) ? entry.intel : undefined,
+        at,
+      });
+    } else if (entry.kind === "prediction" && isOption(entry.option)
+        && isVerdict(entry.verdict)) {
+      messages.push({
+        id: entry.id,
+        kind: "prediction",
+        option: entry.option,
+        verdict: entry.verdict,
+        lead: typeof entry.lead === "string" ? entry.lead : "这场的完整预测在这里。",
+        intel: isSummary(entry.intel) ? entry.intel : undefined,
         at,
       });
     }
@@ -100,6 +223,22 @@ export function appendHomeMessage(
   message: HomeConversationMessage,
 ): HomeConversationMessage[] {
   return [...messages, message].slice(-MAX_MESSAGES);
+}
+
+export function updateHomeMatchIntel(
+  messages: HomeConversationMessage[],
+  matchId: string,
+  intel: MatchIntelSummary,
+): HomeConversationMessage[] {
+  let changed = false;
+  const next = messages.map((message) => {
+    if ((message.kind !== "match" && message.kind !== "prediction")
+        || message.option.matchId !== matchId) return message;
+    if (JSON.stringify(message.intel) === JSON.stringify(intel)) return message;
+    changed = true;
+    return { ...message, intel };
+  });
+  return changed ? next : messages;
 }
 
 export function markHomeMessageConfirmed(

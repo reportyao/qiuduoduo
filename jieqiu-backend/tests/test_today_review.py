@@ -135,7 +135,7 @@ def test_verdict_detail_exposes_tier_and_third_party(client, db):
     assert abs(sum(third["probs"].values()) - 1.0) < 1e-6
 
 
-def test_recommendations_today_exposes_market_reference(client, db):
+def test_recommendations_today_exposes_prediction_rows(client, db):
     _verdict(db, mid="ref-today", id="v-ref-today", tier="market_reference",
              status="screening", model_status="unavailable", model_source="none")
     body = client.get("/recommendations/today", params={"date": today_cn()}).json()
@@ -143,5 +143,5 @@ def test_recommendations_today_exposes_market_reference(client, db):
     item = next(x for x in body["references"] if x["id"] == "v-ref-today")
     assert item["tier"] == "market_reference"
     assert item["status"] == "screening"
-    assert item["pick"] is None
-    assert body["message"] and "市场参考" in body["message"]
+    assert "pick" in item
+    assert body["message"] and "预测" in body["message"]

@@ -96,10 +96,9 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     parlayCta: "去参谋",
     feedTitle: "今日预测",
     conversationOpen: (dayLabel, total, promoted, published, screening, _killed) => {
-      const waiting = screening > 0 ? `还有 ${screening} 场在等数据。` : "";
-      if (published > 0) return `${dayLabel} ${total} 场，我挑出 ${published} 场有把握的。${waiting}`;
-      if (promoted > 0) return `${dayLabel} ${total} 场，我看完了；今天还没有正式预测，没把握的我不发。${waiting}`;
-      return `${dayLabel} ${total} 场，没找到值得发布的。`;
+      const waiting = screening > 0 ? `还有 ${screening} 场数据更新中。` : "";
+      if (published > 0) return `${dayLabel} ${total} 场，我逐场看完了，已经给出 ${published} 场预测。${waiting}`;
+      return `${dayLabel} ${total} 场，我逐场看完了，预测都在下面。${waiting}`;
     },
     typing: "正在生成预测…",
     avoidLead: "这几场我不给预测，原因都写在这：",
@@ -147,10 +146,9 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     feedTitle: "今日预测",
     conversationOpen: (dayLabel, total, promoted, published, screening, _killed) => {
       const prefix = dayLabel === "今天" ? "今儿" : dayLabel;
-      const waiting = screening > 0 ? `还有 ${screening} 场在等数据。` : "";
-      if (published > 0) return `兄弟，${prefix} ${total} 场我扒完了，挑出 ${published} 场像样的。${waiting}`;
-      if (promoted > 0) return `兄弟，${prefix} ${total} 场我扒完了；今天还没正式给，没把握我不瞎给。${waiting}`;
-      return `兄弟，${prefix} ${total} 场我扒完了，没货。`;
+      const waiting = screening > 0 ? `还有 ${screening} 场数据更新中。` : "";
+      if (published > 0) return `兄弟，${prefix} ${total} 场我扒完了，给出 ${published} 场预测。${waiting}`;
+      return `兄弟，${prefix} ${total} 场我扒完了，预测都摆下面了。${waiting}`;
     },
     typing: "正在生成预测…",
     avoidLead: "这几场我不给预测，原因都在这：",
@@ -197,10 +195,9 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     parlayCta: "去参谋",
     feedTitle: "今日预测",
     conversationOpen: (dayLabel, total, promoted, published, screening, _killed) => {
-      const waiting = screening > 0 ? `还有 ${screening} 场在等数据。` : "";
-      if (published > 0) return `${dayLabel} ${total} 场，我挑出 ${published} 场有把握的。${waiting}`;
-      if (promoted > 0) return `${dayLabel} ${total} 场我都看完啦；今天还没正式给，没把握就不硬给。${waiting}`;
-      return `${dayLabel} ${total} 场，没找到值得发布的。`;
+      const waiting = screening > 0 ? `还有 ${screening} 场数据更新中。` : "";
+      if (published > 0) return `${dayLabel} ${total} 场，我都看完啦，给出 ${published} 场预测。${waiting}`;
+      return `${dayLabel} ${total} 场，我都看完啦，预测都在下面。${waiting}`;
     },
     typing: "我正在生成预测…",
     avoidLead: "这几场我不给预测，原因都写好啦：",

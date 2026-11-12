@@ -180,14 +180,14 @@ export function MatchPickerSheet({
 }
 
 function rowStatus(status: string, tier?: string | null): string {
-  if (tier === "verified") return "核验预测 · 看完整依据";
-  if (tier === "market_reference") return "市场参考 · 非模型预测";
-  if (tier === "avoid") return "不建议 · 看原因";
-  if (tier === "no_data") return "待数据";
-  if (status === "promoted") return "已核验 · 看完整依据";
-  if (status === "screening") return "预测复核中 · 数据未齐";
-  if (status === "killed") return "未给预测 · 看原因";
-  return "已分析";
+  if (tier === "verified") return "预测 · 看完整依据";
+  if (tier === "market_reference") return "预测 · 看完整依据";
+  if (tier === "avoid") return "回避 · 看原因";
+  if (tier === "no_data") return "预测";
+  if (status === "promoted") return "预测 · 看完整依据";
+  if (status === "screening") return "预测";
+  if (status === "killed") return "回避 · 看原因";
+  return "预测";
 }
 
 const styles = StyleSheet.create({

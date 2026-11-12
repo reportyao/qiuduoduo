@@ -17,15 +17,15 @@ export interface BriefMatchOption {
 }
 
 function statusLabel(option: BriefMatchOption): string {
-  if (option.tier === "verified") return "核验预测";
-  if (option.tier === "market_reference") return "市场参考";
-  if (option.tier === "avoid") return "不建议";
-  if (option.tier === "no_data") return "待数据";
+  if (option.tier === "verified") return "预测";
+  if (option.tier === "market_reference") return "预测";
+  if (option.tier === "avoid") return "回避";
+  if (option.tier === "no_data") return "预测";
   // promoted 只代表三关全过，不等于已经发布；避免在开场条上误标“已发布”。
-  if (option.status === "promoted") return "三关通过";
-  if (option.status === "screening") return "复核中";
-  if (option.status === "killed") return "未发布";
-  return option.verdictId ? "已复核" : "待解读";
+  if (option.status === "promoted") return "预测";
+  if (option.status === "screening") return "预测";
+  if (option.status === "killed") return "回避";
+  return option.verdictId ? "预测" : "赛前";
 }
 
 /**
@@ -52,7 +52,7 @@ export const BriefMatchPicker = memo(function BriefMatchPicker({
   return (
     <View style={styles.wrap}>
       <Text variant="caption" color={colors.muted} style={styles.lead}>
-        先看哪场？点一场展开。核验预测和市场参考会明确分开。
+        先看哪场？点一场，我把预测和情报发给你。
       </Text>
 
       <View style={styles.list}>

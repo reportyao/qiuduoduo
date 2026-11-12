@@ -35,9 +35,9 @@ describe("home conversation persistence", () => {
     const messages = appendHomeMessage(appendHomeMessage([], match), {
       id: "a-1",
       kind: "assistant",
-      text: "这场是市场参考。",
+      text: "这场是预测。",
       at: 2,
-      card: { type: "match_analysis", text: "这场是市场参考。" },
+      card: { type: "match_analysis", text: "这场是预测。" },
     });
     const parsed = parseHomeMessages(JSON.stringify(messages));
     expect(parsed).toHaveLength(2);

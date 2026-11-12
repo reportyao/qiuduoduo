@@ -21,6 +21,16 @@ CN = timezone(timedelta(hours=8))
 INTEL_TTL = timedelta(hours=6)
 _POSITION = {24: "门将", 25: "后卫", 26: "中场", 27: "前锋"}
 _REFEREE_ROLE = {6: "主裁", 7: "助理裁判", 8: "第四官员", 9: "VAR"}
+SECTION_TTL = {
+    "meta": 86400,
+    "lineups": 1800,
+    "standings": 21600,
+    "h2h": 86400,
+    "conditions": 3600,
+    "predictions": 900,
+    "markets": 900,
+    "news": 1800,
+}
 _WEATHER_CN = {
     "clear sky": "晴",
     "few clouds": "少云",
@@ -563,6 +573,10 @@ def sync_fixture_intel(db: Session, base: str, token: str,
         "market_board": markets,
         "expected_lineups": len(detailed.get("expectedlineups") or []),
         "prematch_news": _news(detailed, "prematchnews"),
+        "section_meta": {
+            key: {"captured_at": _iso(now), "ttl_seconds": ttl}
+            for key, ttl in SECTION_TTL.items()
+        },
         "data_cutoff": _iso(now),
     }
     row = db.get(SportmonksFixtureIntel, match.match_id)

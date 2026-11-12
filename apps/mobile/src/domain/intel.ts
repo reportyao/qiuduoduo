@@ -21,29 +21,23 @@ function directionFromText(text: string): IntelDimension["direction"] {
 }
 
 function dimensionValue(items: EvidenceItem[]): IntelDimension[] {
-  return DIMENSION_RULES.map((rule) => {
+  const out: IntelDimension[] = [];
+  for (const rule of DIMENSION_RULES) {
     const hit = items.find((item) =>
       rule.keywords.some((keyword) => `${item.title}${item.detail}`.includes(keyword)),
     );
-    if (!hit) {
-      return {
-        key: rule.key,
-        label: rule.label,
-        value: "未覆盖",
-        direction: "unknown",
-        note: "这个维度还没接入数据；不编预测。",
-      };
-    }
+    if (!hit) continue;
     const text = `${hit.title}：${hit.detail}`;
-    return {
+    out.push({
       key: rule.key,
       label: rule.label,
-      value: hit.tag === "已计入" || hit.tag === "已核验" ? "已计入" : "仅背景",
+      value: hit.tag || "情报",
       direction: directionFromText(text),
       note: text,
       source: hit.source,
-    };
-  });
+    });
+  }
+  return out;
 }
 
 function sportmonksDimensions(data?: SportmonksIntelData | null): IntelDimension[] {
@@ -57,8 +51,8 @@ function sportmonksDimensions(data?: SportmonksIntelData | null): IntelDimension
       label: "战意",
       value: `${home?.position ?? "—"} / ${away?.position ?? "—"}`,
       direction: "flat",
-      note: `积分榜：主队第 ${home?.position ?? "—"}（${home?.points ?? "—"} 分），客队第 ${away?.position ?? "—"}（${away?.points ?? "—"} 分）。只作背景。`,
-      source: "球多多自研AI引擎预测",
+      note: `积分榜：主队第 ${home?.position ?? "—"}（${home?.points ?? "—"} 分），客队第 ${away?.position ?? "—"}（${away?.points ?? "—"} 分）。`,
+      source: "积分榜",
     });
   }
   const homeLine = data.lineups?.home;
@@ -70,8 +64,8 @@ function sportmonksDimensions(data?: SportmonksIntelData | null): IntelDimension
       label: "阵容",
       value: "首发已公布",
       direction: injured.length > 0 ? "down" : "flat",
-      note: `${homeLine.formation || "—"} / ${awayLine.formation || "—"}；${injured.length ? `伤停 ${injured.map((row) => row.playerName).slice(0, 3).join("、")}` : "未返回公开伤停名单"}`,
-      source: "球多多自研AI引擎预测",
+      note: `${homeLine.formation || "—"} / ${awayLine.formation || "—"}；${injured.length ? `伤停 ${injured.map((row) => row.playerName).slice(0, 3).join("、")}` : "暂无伤停记录"}`,
+      source: "阵容",
     });
   }
   if (data.recent?.home?.length || data.recent?.away?.length) {
@@ -84,8 +78,8 @@ function sportmonksDimensions(data?: SportmonksIntelData | null): IntelDimension
       label: "状态",
       value: `${homeForm.slice(0, 4).join("") || "—"} / ${awayForm.slice(0, 4).join("") || "—"}`,
       direction: wins > losses ? "up" : losses > wins ? "down" : "flat",
-      note: "球多多自研AI引擎预测小组赛近况；样本小，只作参考。",
-      source: "球多多自研AI引擎预测",
+      note: "近 5 场走势。",
+      source: "近况",
     });
   }
   const venue = data.venue;
@@ -103,7 +97,7 @@ function sportmonksDimensions(data?: SportmonksIntelData | null): IntelDimension
         temp != null ? `日间 ${temp}°C` : "",
         referee?.name ? `主裁 ${referee.name}` : "",
       ].filter(Boolean).join("；") || "环境数据已同步。",
-      source: "球多多自研AI引擎预测",
+      source: "环境",
     });
   }
   return out;
@@ -119,20 +113,22 @@ function fromPayload(detail: VerdictDetail): IntelDimension[] | null {
   const intel = record(record(detail.payload).intel);
   const dimensions = array(intel.dimensions);
   if (dimensions.length === 0) return null;
-  return dimensions.map((entry, index) => {
-    const item = record(entry);
-    return {
-      key: string(item.key, `d${index}`),
-      label: string(item.label, "情报"),
-      value: string(item.value, "待定"),
-      direction:
-        item.direction === "up" || item.direction === "down" || item.direction === "flat"
-          ? item.direction
-          : "unknown",
-      note: string(item.note),
-      source: string(item.source) || undefined,
-    };
-  });
+  return dimensions
+    .map((entry, index): IntelDimension => {
+      const item = record(entry);
+      return {
+        key: string(item.key, `d${index}`),
+        label: string(item.label, "情报"),
+        value: string(item.value, "情报"),
+        direction:
+          item.direction === "up" || item.direction === "down" || item.direction === "flat"
+            ? item.direction
+            : "unknown",
+        note: string(item.note),
+        source: string(item.source) || undefined,
+      };
+    })
+    .filter((item) => item.value !== "未覆盖" && item.note !== "数据待同步。");
 }
 
 /**
@@ -149,26 +145,22 @@ export function buildIntelReport(detail: VerdictDetail): IntelReport {
   );
   const unPriced = detail.evidence.filter((item) => /未定价|not.?priced/i.test(item.tag)).length;
   const priced = detail.evidence.filter((item) => /已核验|已计入/.test(item.tag)).length;
-  const pendingGate = (["market", "model"] as const).find(
-    (gate) => detail.gates[gate] === "pending_data",
-  );
-  const gateName = pendingGate === "market" ? "国际盘" : pendingGate === "model" ? "模型" : "";
   const headline =
     string(payloadIntel.headline) ||
     (detail.status === "promoted"
-      ? detail.evidence.length > 0
-        ? detail.sealedAt
-          ? "三关已过，证据已封存"
-          : "三关通过，证据待封存"
-        : "三关通过，情报待同步"
-      : pendingGate
-        ? `还在等${gateName}数据`
-        : "情报已收齐，预测见下");
+      ? detail.sealedAt ? "预测已封存" : "预测已生成"
+      : detail.sportmonksIntel
+        ? "阵容、形势与环境已同步"
+        : "情报已同步，预测见下");
   const summary =
     string(payloadIntel.summary) ||
     (detail.status === "promoted"
-      ? `三关已通过。共 ${detail.evidence.length} 条依据，其中 ${priced} 条已计入预测${detail.evidence.length === 0 ? "；没有可展示的情报依据时不编造。" : "。"}`
-      : `当前没有足够数据把这场算清楚。已记录 ${detail.evidence.length} 条依据，${unPriced} 条尚未定价。`);
+      ? detail.evidence.length
+        ? `共 ${detail.evidence.length} 条依据，其中 ${priced} 条已计入预测。`
+        : "预测已生成，完整数据见下方。"
+      : detail.evidence.length
+        ? `已同步 ${detail.evidence.length} 条依据，完整数据见下方。`
+        : "本场数据已同步，完整预测见下方。");
   return {
     headline,
     summary,

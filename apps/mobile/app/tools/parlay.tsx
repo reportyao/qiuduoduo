@@ -120,13 +120,6 @@ export default function ParlayToolScreen() {
       && leg.match.status === "promoted"
       && Array.isArray(shrunk) && shrunk.length === 3;
   }).length;
-  const hasMarketOnly = legs.some((leg) => {
-    const shrunk = leg.match.model?.shrunk;
-    return !publishedIds.has(leg.match.id)
-      || leg.match.status !== "promoted"
-      || !Array.isArray(shrunk) || shrunk.length !== 3;
-  });
-
   const resetReport = () => {
     checkSeq.current += 1;
     setReportOpen(false);
@@ -299,14 +292,6 @@ export default function ParlayToolScreen() {
             plan.reset();
           }}
         />
-
-        {hasMarketOnly ? (
-          <View style={styles.marketWarning}>
-            <Text variant="caption" color={colors.amber}>
-              含市场参考腿：整组标「未复核·仅市场参考」，不构成模型预测。
-            </Text>
-          </View>
-        ) : null}
 
         <View style={styles.planBox}>
           <Text variant="captionStrong" color={colors.muted}>帮我配</Text>

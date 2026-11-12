@@ -221,6 +221,15 @@ export function adaptSportmonksIntel(value: unknown): SportmonksIntelData | null
         capturedAt: utcIso(string(item.captured_at ?? item.capturedAt)),
       };
     })(),
+    sections: Object.fromEntries(
+      Object.entries(record(raw.section_meta ?? raw.sectionMeta)).map(([key, value]) => {
+        const item = record(value);
+        return [key, {
+          capturedAt: utcIso(string(item.captured_at ?? item.capturedAt)),
+          ttlSeconds: nullableNumber(item.ttl_seconds ?? item.ttlSeconds),
+        }];
+      }),
+    ),
     capturedAt: utcIso(string(raw.data_cutoff ?? raw.captured_at ?? raw.capturedAt)),
   };
 }

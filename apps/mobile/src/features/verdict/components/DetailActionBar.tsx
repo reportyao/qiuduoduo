@@ -37,22 +37,19 @@ export function DetailActionBar({
   const { copy } = usePersonaContent();
   const promoted = detail.status === "promoted";
   const locked = promoted && published === false;
-  const reference = detail.tier === "market_reference";
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
       <Button
         label={
           locked
-            ? "未发布，暂不可记"
-            : reference
-              ? "市场参考 · 暂不可记"
-              : promoted
-                ? betExists
-                  ? copy.bought
-                  : copy.buy
-                : detail.status === "killed"
-                  ? "看原因"
-                  : copy.pendingCta
+            ? "查看预测"
+            : promoted
+              ? betExists
+                ? copy.bought
+                : copy.buy
+              : detail.status === "killed"
+                ? "看原因"
+                : "查看预测"
         }
         onPress={promoted && !locked ? onBet : onWhyNot}
         disabled={promoted && (betExists || locked)}
@@ -81,7 +78,7 @@ export function DetailActionBar({
           <IconButton
             name="share-social-outline"
             onPress={locked ? undefined : onShare}
-            accessibilityLabel={locked ? "未发布预测，暂不可分享" : "分享这场预测"}
+            accessibilityLabel="分享这场预测"
             color={locked ? colors.subtle : colors.ink}
           />
         </View>

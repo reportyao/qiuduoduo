@@ -1,126 +1,188 @@
 import { memo } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
-import type { MatchFocus } from "@/domain/focusAdapters";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import type { VerdictSummary } from "@/domain/types";
 import { Button, Text } from "@/components/ui";
-import { formatTime } from "@/lib/format";
-import { colors, spacing } from "@/theme/tokens";
+import { ageLabel } from "@/lib/freshness";
+import { formatTime, pct, pickDirectionLabel } from "@/lib/format";
+import { colors, radii, spacing } from "@/theme/tokens";
 import type { BriefMatchOption } from "./BriefMatchPicker";
+import type { MatchIntelSummary } from "../conversation";
 import { AssistantMessage } from "./ConversationShell";
-import { FocusPanel } from "./FocusPanel";
-import { VerdictMessage } from "./ConversationMessages";
+
+interface IntelCard {
+  key: string;
+  label: string;
+  value: string;
+  note: string;
+}
+
+function formText(form: string[] | undefined): string {
+  return form && form.length ? form.join(" ") : "—";
+}
+
+function IntelNameCard({ card }: { card: IntelCard }) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHead}>
+        <Text variant="captionStrong" color={colors.green}>{card.label}</Text>
+      </View>
+      <Text variant="captionStrong" numberOfLines={2}>{card.value}</Text>
+      <Text variant="caption" color={colors.muted} numberOfLines={2}>{card.note}</Text>
+    </View>
+  );
+}
+
+function buildCards(intel?: MatchIntelSummary): IntelCard[] {
+  if (!intel) return [];
+  const cards: IntelCard[] = [];
+  const age = (key: string) => ageLabel(intel.sections?.[key] ?? intel.capturedAt);
+  const lineup = intel.homeFormation || intel.awayFormation;
+  if (lineup) {
+    cards.push({
+      key: "lineups",
+      label: "阵容",
+      value: `${intel.homeFormation || "—"} / ${intel.awayFormation || "—"}`,
+      note: intel.injuries.length
+        ? `伤停 ${intel.injuries.slice(0, 2).join("、")}`
+        : age("lineups") || "首发已同步",
+    });
+  }
+  if (intel.homePosition != null || intel.awayPosition != null) {
+    cards.push({
+      key: "standings",
+      label: "形势",
+      value: `${intel.homePosition ?? "—"} / ${intel.awayPosition ?? "—"}`,
+      note: `${formText(intel.homeForm)} / ${formText(intel.awayForm)}`,
+    });
+  }
+  if (intel.weather || intel.referee) {
+    cards.push({
+      key: "conditions",
+      label: "环境",
+      value: intel.weather || "天气已同步",
+      note: intel.referee ? `主裁 ${intel.referee}` : age("conditions") || "场地与裁判",
+    });
+  }
+  if (intel.prediction) {
+    cards.push({
+      key: "predictions",
+      label: "预测",
+      value: intel.prediction,
+      note: age("predictions") || "多维概率",
+    });
+  }
+  if (intel.market) {
+    cards.push({
+      key: "markets",
+      label: "市场",
+      value: intel.market,
+      note: age("markets") || "盘口概率",
+    });
+  }
+  if (intel.h2h) {
+    cards.push({
+      key: "h2h",
+      label: "交锋",
+      value: intel.h2h,
+      note: age("h2h") || "历史对阵",
+    });
+  }
+  if (intel.news) {
+    cards.push({
+      key: "news",
+      label: "动态",
+      value: intel.news,
+      note: age("news") || "赛前情报",
+    });
+  }
+  return cards;
+}
 
 /**
- * 用户点选一场后，助理在对话流里发出的比赛页卡。
- * 有判决时直接复用预测卡；没有判决也把场次、时间和入口留在对话里。
+ * 首页对话里的比赛名片：按分片 TTL 展示情报名片。
+ * 完整阵容、积分榜、预测维度、市场与赛后内容都留给详情页。
  */
 export const MatchConversationCard = memo(function MatchConversationCard({
   option,
   verdict,
-  focusData,
-  focusLoading,
-  betExists,
-  onOpenVerdict,
+  intel,
+  onShowPrediction,
   onOpenMatch,
-  onBet,
-  onWhyNot,
-  onSeal,
 }: {
   option: BriefMatchOption;
   verdict: VerdictSummary | null;
-  focusData: MatchFocus | null | undefined;
-  focusLoading: boolean;
-  betExists: boolean;
-  onOpenVerdict: (id: string) => void;
-  onOpenMatch: (matchId: string) => void;
-  onBet: (verdict: VerdictSummary) => void;
-  onWhyNot: (matchId: string) => void;
-  onSeal: (id: string) => void;
+  intel?: MatchIntelSummary;
+  onShowPrediction: () => void;
+  onOpenMatch: () => void;
 }) {
-  const dark = Boolean(verdict
-    && verdict.status === "promoted"
-    && verdict.tier !== "market_reference");
-  const accent = dark ? colors.greenAccent : colors.green;
-  const sub = dark ? colors.mutedInverse : colors.muted;
-  const sm = focusData?.sportmonks;
-  const homeFormation = sm?.lineups?.home?.formation;
-  const awayFormation = sm?.lineups?.away?.formation;
-  const homePosition = sm?.standings?.home?.position;
-  const awayPosition = sm?.standings?.away?.position;
-  const head = (
-    <View style={styles.head}>
-      <View style={styles.headRow}>
-        <Text variant="overline" color={accent}>你点的这场</Text>
-        <Pressable
-          onPress={() => onOpenMatch(option.matchId)}
-          accessibilityRole="button"
-          accessibilityLabel={`${option.home} 对 ${option.away} 比赛详情`}
-          hitSlop={8}
-        >
-          <Text variant="captionStrong" color={accent}>比赛详情 ›</Text>
-        </Pressable>
-      </View>
-      {!dark && focusData ? <FocusPanel focus={focusData} loading={focusLoading} /> : null}
-      {!dark && focusLoading && !focusData ? (
-        <Text variant="caption" color={sub}>正在核对这场的覆盖数据…</Text>
-      ) : null}
-      {dark && sm ? (
-        <View style={styles.darkIntel}>
-          <Text variant="caption" color={accent}>
-            {homeFormation || awayFormation
-              ? `首发 ${homeFormation || "—"} / ${awayFormation || "—"}`
-              : "首发待同步"}
-            {sm.sidelined?.length ? ` · 伤停 ${sm.sidelined.length} 人` : ""}
-          </Text>
-          <Text variant="caption" color={sub} numberOfLines={1}>
-            {homePosition != null && awayPosition != null
-              ? `积分榜 ${homePosition} / ${awayPosition} · `
-              : ""}
-            {sm.weather?.description ? `${sm.weather.description} ` : ""}
-            {sm.referees?.main?.name ? `· 主裁 ${sm.referees.main.name}` : ""}
-          </Text>
-        </View>
-      ) : null}
-    </View>
-  );
-
-  if (verdict) {
-    return (
-      <VerdictMessage
-        verdict={verdict}
-        header={head}
-        betExists={betExists}
-        onOpen={onOpenVerdict}
-        onBet={onBet}
-        onWhyNot={onWhyNot}
-        onSeal={onSeal}
-      />
-    );
-  }
-
+  const pick = verdict?.pick;
+  const marketKey = verdict
+    ? (["home", "draw", "away"] as const).reduce(
+        (best, key) => verdict.probs[key] > verdict.probs[best] ? key : best, "home")
+    : "home";
+  const direction = pick?.dir
+    ? pickDirectionLabel(verdict?.pool ?? "had", pick.dir)
+    : verdict
+      ? pickDirectionLabel(verdict.pool, marketKey === "home" ? "主胜" : marketKey === "draw" ? "平局" : "客胜")
+      : null;
+  const probability = pick?.prob ?? (verdict ? verdict.probs[marketKey] : null);
+  const cards = buildCards(intel);
   return (
     <AssistantMessage>
-      {head}
+      <View style={styles.headRow}>
+        <Text variant="overline" color={colors.green}>这场</Text>
+        <Pressable onPress={onOpenMatch} accessibilityRole="button" accessibilityLabel="比赛详情" hitSlop={8}>
+          <Text variant="captionStrong" color={colors.green}>比赛详情 ›</Text>
+        </Pressable>
+      </View>
       <Text variant="h3" style={styles.match}>
         {option.home} <Text variant="small" color={colors.muted}>vs</Text> {option.away}
       </Text>
       <Text variant="caption" color={colors.muted}>
         {option.matchNo} · {option.league || "联赛待同步"} · {formatTime(option.kickoff)} 停售
       </Text>
-      <Text variant="body" style={styles.pendingText}>
-        这场还没有已发布预测。可以先进详情看数据覆盖和未出原因，不硬凑结论。
-      </Text>
+
+      {cards.length ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cardRow}
+          style={styles.cardScroll}
+        >
+          {cards.map((card) => <IntelNameCard key={card.key} card={card} />)}
+        </ScrollView>
+      ) : (
+        <View style={styles.cardRow}>
+          {["阵容", "形势", "环境"].map((label) => (
+            <View key={label} style={styles.card}>
+              <Text variant="captionStrong" color={colors.green}>{label}</Text>
+              <Text variant="captionStrong">同步中</Text>
+              <Text variant="caption" color={colors.muted}>正在拉取</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      <View style={styles.prediction}>
+        <View style={styles.flex}>
+          <Text variant="caption" color={colors.subtle}>预测</Text>
+          <Text variant="h3">{direction ?? "预测生成中"}</Text>
+        </View>
+        <Text variant="metric" color={colors.green}>{probability != null ? pct(probability) : "—"}</Text>
+      </View>
+
       <View style={styles.actions}>
         <Button
-          label="为什么不出预测"
-          variant="secondary"
-          onPress={() => onWhyNot(option.matchId)}
+          label="看完整预测"
+          variant="primary"
+          onPress={onShowPrediction}
+          disabled={!verdict}
           style={styles.action}
         />
         <Button
           label="比赛详情"
-          variant="primary"
-          onPress={() => onOpenMatch(option.matchId)}
+          variant="secondary"
+          onPress={onOpenMatch}
           style={styles.action}
         />
       </View>
@@ -129,11 +191,30 @@ export const MatchConversationCard = memo(function MatchConversationCard({
 });
 
 const styles = StyleSheet.create({
-  head: { gap: spacing.xs, marginBottom: spacing.sm },
   headRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  darkIntel: { gap: 2, marginTop: 2 },
-  match: { marginTop: spacing.base },
-  pendingText: { marginTop: spacing.sm, lineHeight: 21 },
+  match: { marginTop: spacing.sm },
+  cardScroll: { marginTop: spacing.base },
+  cardRow: { flexDirection: "row", gap: spacing.xs },
+  card: {
+    width: 132,
+    minHeight: 82,
+    backgroundColor: colors.bgElevated,
+    borderRadius: radii.md,
+    padding: spacing.sm,
+    gap: 2,
+  },
+  cardHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  prediction: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    marginTop: spacing.base,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+  },
+  flex: { flex: 1 },
   actions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.base },
   action: { flex: 1 },
 });

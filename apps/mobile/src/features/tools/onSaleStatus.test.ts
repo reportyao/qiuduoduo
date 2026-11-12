@@ -3,16 +3,16 @@ import { onSaleStatusLabel } from "./onSaleStatus";
 
 describe("onSaleStatusLabel", () => {
   it("distinguishes killed matches from live on-sale matches", () => {
-    expect(onSaleStatusLabel("promoted")).toBe("已过");
-    expect(onSaleStatusLabel("screening")).toBe("复核");
-    expect(onSaleStatusLabel("killed")).toBe("未给预测");
+    expect(onSaleStatusLabel("promoted")).toBe("预测");
+    expect(onSaleStatusLabel("screening")).toBe("预测");
+    expect(onSaleStatusLabel("killed")).toBe("回避");
     expect(onSaleStatusLabel("on_sale")).toBe("在售");
     expect(onSaleStatusLabel("")).toBe("在售");
     expect(onSaleStatusLabel(null)).toBe("在售");
   });
   it("uses content tier when available", () => {
-    expect(onSaleStatusLabel("promoted", "verified")).toBe("核验");
-    expect(onSaleStatusLabel("screening", "market_reference")).toBe("市场参考");
-    expect(onSaleStatusLabel("killed", "avoid")).toBe("不建议");
+    expect(onSaleStatusLabel("promoted", "verified")).toBe("预测");
+    expect(onSaleStatusLabel("screening", "market_reference")).toBe("预测");
+    expect(onSaleStatusLabel("killed", "avoid")).toBe("回避");
   });
 });

@@ -133,7 +133,7 @@ export default function OnSaleScreen() {
                   </Text>
                   <View style={styles.metaRow}>
                     <Text variant="caption" color={colors.muted}>
-                      {countdownText(item.saleClose, now)}停售 · {item.rake != null ? `抽水 ${pct(item.rake)}` : "尚未复核"}
+                      {countdownText(item.saleClose, now)}停售 · {item.rake != null ? `抽水 ${pct(item.rake)}` : "抽水待同步"}
                       {item.coverage ? ` · 覆盖 ${item.coverage.score}` : ""}
                     </Text>
                     {item.single ? <Chip label="单关" tone="green" /> : null}

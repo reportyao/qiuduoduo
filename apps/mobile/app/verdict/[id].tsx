@@ -23,13 +23,12 @@ import { useParlayStore } from "@/features/tools/parlayStore";
 import { toParlayDir } from "@/features/tools/parlayDirection";
 import { errorText } from "@/lib/errors";
 import { api } from "@/lib/api";
-import { currentTradeDateCn, formatDateTime, pct } from "@/lib/format";
+import { currentTradeDateCn, formatDateTime } from "@/lib/format";
 import { colors, layout, spacing } from "@/theme/tokens";
 import { DetailHero } from "@/features/verdict/components/DetailHero";
 import { ProbabilityCompareCard } from "@/features/verdict/components/ProbabilityCompare";
 import { AiIntelCard } from "@/features/verdict/components/AiIntelCard";
 import { SportmonksIntelSection } from "@/features/verdict/components/SportmonksIntelSection";
-import { GateDetailsCard } from "@/features/verdict/components/GateDetailsCard";
 import { MatchAnalysisCard } from "@/features/verdict/components/MatchAnalysisCard";
 import { IntelSection } from "@/features/verdict/components/IntelSection";
 import { EvidenceList } from "@/features/verdict/components/EvidenceList";
@@ -184,21 +183,8 @@ export default function VerdictDetailScreen() {
         <IntelSection report={buildIntelReport(detail)} />
         {detail.aiResearch ? <AiIntelCard data={detail.aiResearch} /> : null}
         <SportmonksIntelSection data={detail.sportmonksIntel} />
-        <GateDetailsCard detail={detail} />
         <MatchAnalysisCard matchId={detail.matchId} date={detail.tradeDate} />
         <EvidenceList items={detail.evidence} cutoff={detail.dataCutoff} />
-
-        <Card style={styles.counter}>
-          <Text variant="h3">反方怎么看</Text>
-          <Text variant="small" color={colors.muted} style={styles.counterText}>
-            {detail.status === "promoted"
-              ? `这场的预测概率是 ${pct(detail.pick?.prob)}，不是「稳」。单场完全可能落在少数侧；如果临场首发或资金方向反转，预测会重算并另做封存。`
-              : "不出预测，不代表它不会赢。是我们算不清它会不会赢——算不清就不预测。你可以看三关里到底缺哪一块。"}
-          </Text>
-          <Text variant="caption" color={colors.subtle} style={styles.counterText}>
-            AI 只做情景与风险解释；最终数字来自统计模型，所有输入都带截止时间。
-          </Text>
-        </Card>
 
         {pm && pm.kind === "promoted" ? (
           <Card style={styles.counter}>

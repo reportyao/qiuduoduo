@@ -130,9 +130,9 @@ export default function MatchesScreen() {
         {([
           ["all", "全部"],
           ["single", "单关"],
-          ["promoted", "核验"],
-          ["screening", "复核中"],
-          ["reference", "市场参考"],
+          ["promoted", "已发布"],
+          ["screening", "预测"],
+          ["reference", "预测"],
         ] as [Filter, string][]).map(([key, label]) => (
           <Chip key={key} label={label} selected={filter === key} onPress={() => setFilter(key)} />
         ))}

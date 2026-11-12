@@ -2,17 +2,16 @@ import { memo, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type {
   AvoidItem,
-  GateKey,
   PostmortemSummary,
   RestDay,
   StreamResponse,
   VerdictSummary,
 } from "@/domain/types";
 import { usePersonaContent } from "@/features/personas/usePersona";
-import { formatTime, gateLabel, pct, pickDirectionLabel } from "@/lib/format";
+import { formatTime, pct, pickDirectionLabel } from "@/lib/format";
 import { colors, radii, spacing } from "@/theme/tokens";
 import { Button, StatusDot, Text } from "@/components/ui";
-import { GateStrip, gateTone } from "@/features/verdict/components/Gates";
+import { gateTone } from "@/features/verdict/components/Gates";
 import { ProbabilityBar } from "@/features/verdict/components/Probability";
 import { SealLine } from "@/features/verdict/components/Seal";
 import {
@@ -23,19 +22,11 @@ import {
 import { BriefMatchPicker, type BriefMatchOption } from "./BriefMatchPicker";
 
 function verdictStatus(verdict: VerdictSummary): { label: string; color: string } {
-  if (verdict.tier === "verified") return { label: "核验预测", color: colors.greenAccent };
-  if (verdict.tier === "market_reference") return { label: "市场参考", color: colors.amber };
-  if (verdict.tier === "avoid") return { label: "不建议", color: colors.danger };
-  if (verdict.status === "promoted") return { label: "已核验", color: colors.greenAccent };
-  if (verdict.status === "killed") return { label: "本期不预测", color: colors.danger };
-  if (verdict.status === "screening") return { label: "预测复核中", color: colors.amber };
-  return { label: verdict.status, color: colors.muted };
-}
-
-function pendingGate(verdict: VerdictSummary): GateKey | null {
-  return (["market", "model", "price"] as GateKey[]).find(
-    (gate) => verdict.gates[gate] === "pending_data",
-  ) ?? null;
+  if (verdict.tier === "avoid" || verdict.status === "killed") {
+    return { label: "回避", color: colors.danger };
+  }
+  if (verdict.status === "promoted") return { label: "预测", color: colors.greenAccent };
+  return { label: "预测", color: colors.green };
 }
 
 /**
@@ -47,8 +38,6 @@ export function AssistantBrief({
   dayLabel,
   publishedCount,
   publishedReady,
-  publishedMessage,
-  referenceCount,
   recordText,
   onsaleCount,
   onsaleLabel,
@@ -67,8 +56,6 @@ export function AssistantBrief({
   dayLabel: string;
   publishedCount: number;
   publishedReady: boolean;
-  publishedMessage?: string | null;
-  referenceCount: number;
   recordText?: string | null;
   onsaleCount: number;
   onsaleLabel: string;
@@ -99,40 +86,15 @@ export function AssistantBrief({
       <View style={styles.statRow}>
         <MiniStat label={dayLabel === "今天" ? "今日扫描" : "当日扫描"} value={String(stats.total)} />
         <View style={styles.statLine} />
-        <MiniStat label="已核验" value={String(stats.promoted)} />
+        <MiniStat label="预测" value={String(stats.promoted)} />
         <View style={styles.statLine} />
-        <MiniStat label="已发布预测" value={publishedReady ? String(publishedCount) : "—"} accent />
+        <MiniStat label="已发布" value={publishedReady ? String(publishedCount) : "—"} accent />
         <View style={styles.statLine} />
         <MiniStat label={onsaleLabel} value={String(onsaleCount)} />
       </View>
 
-      {referenceCount > 0 && publishedCount > 0 ? (
-        <Text variant="caption" color={colors.amber} style={styles.publishNote}>
-          另有 {referenceCount} 场市场参考：只代表市场倾向，不是模型预测。
-        </Text>
-      ) : null}
-
       {publishedReady && publishedCount === 0 ? (
-        <View style={styles.publishEmpty}>
-          <Text variant="caption" color={colors.amber}>
-            {stats.promoted > 0
-              ? `有 ${stats.promoted} 场已核验，但今天还没有发布预测`
-              : referenceCount > 0
-                ? `今天还没有已发布预测，但有 ${referenceCount} 场市场参考可看`
-                : "今天还没有发布预测"}
-          </Text>
-          {publishedMessage ? (
-            <Text variant="caption" color={colors.subtle} style={styles.publishNote}>
-              {/* 旧后端 message 仍写“判断/判决”；后端部署后可移除这层兼容。 */}
-              {publishedMessage.replace(/判断/g, "预测").replace(/判决/g, "预测")}
-            </Text>
-          ) : null}
-          {referenceCount > 0 ? (
-            <Text variant="caption" color={colors.subtle} style={styles.publishNote}>
-              市场参考只代表市场倾向，不是模型预测；点下方场次查看依据。
-            </Text>
-          ) : null}
-        </View>
+        <Text variant="caption" color={colors.green}>点下方场次查看今日预测。</Text>
       ) : null}
 
       <Pressable
@@ -192,29 +154,16 @@ export const VerdictMessage = memo(function VerdictMessage({
   header?: ReactNode;
 }) {
   const { copy } = usePersonaContent();
-  const reference = verdict.tier === "market_reference";
-  const dark = verdict.status === "promoted" && !reference;
+  const dark = verdict.status === "promoted";
   const status = verdictStatus(verdict);
-  const pending = pendingGate(verdict);
   const marketKey = (["home", "draw", "away"] as const).reduce(
     (best, key) => verdict.probs[key] > verdict.probs[best] ? key : best, "home");
   const marketDir = marketKey === "home" ? "主胜" : marketKey === "draw" ? "平局" : "客胜";
-  const pickLabel = reference
-    ? pickDirectionLabel(verdict.pool, marketDir)
-    : verdict.pick?.dir
-      ? pickDirectionLabel(verdict.pool, verdict.pick.dir)
-      : "暂不预测";
-  const pickProb = reference ? verdict.probs[marketKey] : verdict.pick?.prob ?? null;
-  const summary = reference
-    ? `${pickLabel} 是市场隐含倾向，不是本产品模型预测；没有通过模型验证，只作参考。`
-    : copy.verdictSummary({
-        status: verdict.status,
-        pickLabel,
-        prob: pickProb,
-        rake: verdict.rake,
-        pendingGate: pending ? gateLabel(pending) + "闸" : null,
-        gateNote: pending ? "数据没齐，暂不发布预测。" : "",
-      });
+  const pickLabel = verdict.pick?.dir
+    ? pickDirectionLabel(verdict.pool, verdict.pick.dir)
+    : pickDirectionLabel(verdict.pool, marketDir);
+  const pickProb = verdict.pick?.prob ?? verdict.probs[marketKey];
+  const summary = `${pickLabel}，预测概率 ${pickProb != null ? pct(pickProb) : "—"}。抽水 ${pct(verdict.rake)}，阈值 ${pct(verdict.rakeThreshold)}。`;
 
   const fg = dark ? colors.inkInverse : colors.ink;
   const sub = dark ? colors.mutedInverse : colors.muted;
@@ -256,13 +205,13 @@ export const VerdictMessage = memo(function VerdictMessage({
 
       <View style={styles.pickRow}>
         <View style={styles.pickLeft}>
-          <Text variant="caption" color={sub}>{reference ? "市场倾向" : "预测"}</Text>
+          <Text variant="caption" color={sub}>预测</Text>
           <Text variant="h2" color={fg}>{pickLabel}</Text>
         </View>
         <View style={styles.pickRight}>
           <Text variant="metric" color={fg}>{pickProb != null ? pct(pickProb) : "—"}</Text>
           <Text variant="caption" color={sub}>
-            {reference ? "市场隐含概率" : pickProb != null ? "预测概率" : "预测概率待定"}
+            {pickProb != null ? "预测概率" : "概率待定"}
           </Text>
         </View>
       </View>
@@ -305,20 +254,6 @@ export const VerdictMessage = memo(function VerdictMessage({
         </View>
       ) : null}
 
-      {reference ? null : (
-        <View style={styles.gateWrap}>
-          <GateStrip
-            gates={verdict.gates}
-            dark={dark}
-            values={{
-              price: pct(verdict.rake),
-              market: verdict.gates.market === "pass" ? "已收敛" : "待数据",
-              model: pickProb != null ? pct(pickProb) : "待定",
-            }}
-          />
-        </View>
-      )}
-
       <View style={styles.rakeRow}>
         <Text variant="caption" color={sub}>
           抽水 {pct(verdict.rake)} · 阈值 {pct(verdict.rakeThreshold)}
@@ -345,7 +280,7 @@ export const VerdictMessage = memo(function VerdictMessage({
         ) : (
           <>
             <Button
-              label={reference ? "看参考依据" : copy.pendingCta}
+              label="看依据"
               variant="secondary"
               onPress={() => onWhyNot?.(verdict.matchId)}
               style={styles.action}

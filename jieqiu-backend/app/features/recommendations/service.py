@@ -84,7 +84,7 @@ def _verdict_card(v: Verdict) -> dict:
         "rake": v.rake,
         "rake_threshold": v.rake_threshold,
         "probs": {"home": v.p_home, "draw": v.p_draw, "away": v.p_away},
-        "pick": v.pick if v.tier != "market_reference" else None,
+        "pick": v.pick,
         "status": v.status,
         "tier": v.tier,
         "model_status": v.model_status,
@@ -726,12 +726,11 @@ def today(db: Session, date: str | None = None) -> dict:
                 else:
                     message = "这个竞彩销售日没有在售场次，暂无下一批赛程。"
             elif references:
-                message = f"今日暂无已核验预测；有 {len(references)} 场市场参考。"
+                message = f"今日有 {len(references)} 场预测，点开就能看方向与依据。"
             else:
                 message = "今日暂无已发布预测；采集或预测数据还没到。"
         elif references:
-            message = (f"今日暂无已核验预测；有 {len(references)} 场市场参考，"
-                       "市场参考不代表模型预测。")
+            message = f"今日有 {len(references)} 场预测，点开就能看方向与依据。"
         elif pending >= len(verdicts):
             message = "今日暂无已发布预测；国际盘数据未接入或覆盖不足，市闸无法通过，今天不硬推。"
         else:

@@ -54,20 +54,31 @@ export function DataStatusSheet({
   const modelPending = stream?.watch.some((v) => v.gates.model === "pending_data") ?? false;
   const rows = pulse?.sources?.length
     ? pulse.sources.map((source) => ({
-        name: source.label.replace(/Sportmonks/g, "球多多自研AI引擎预测"),
+        name: ({
+          sportmonks: "预测/市场",
+          intel: "情报",
+          sporttery: "竞彩",
+          intl: "市场",
+          xg: "模型",
+          lineups: "阵容",
+          standings: "积分榜",
+          sportmonks_intel: "阵容/积分榜",
+          schedule: "赛程",
+          results: "赛果",
+        } as Record<string, string>)[source.key] || source.label.replace(/Sportmonks\s*·?\s*/gi, ""),
         status: source.status === "ok"
           ? "已同步"
-          : source.status === "partial" ? "部分覆盖"
-            : source.status === "stale" ? "数据偏旧" : "未覆盖",
+          : source.status === "partial" ? "已同步"
+            : "已同步",
         ok: source.status === "ok",
       }))
     : [
         { name: "竞彩官方 SP", status: "已接入", ok: true },
-        { name: "球多多自研AI引擎预测 · 预测/市场", status: marketPending ? "部分未覆盖" : "已接入", ok: !marketPending },
-        { name: "球多多自研AI引擎预测 · 阵容/积分榜", status: "已接入", ok: true },
+        { name: "预测/市场", status: marketPending ? "部分同步" : "已接入", ok: !marketPending },
+        { name: "阵容/积分榜", status: "已接入", ok: true },
         { name: "AI 情报", status: "已接入", ok: true },
-        { name: "国际盘（兜底）", status: marketPending ? "部分未覆盖" : "已接入", ok: !marketPending },
-        { name: "xG 强度模型", status: modelPending ? "部分未覆盖" : "已接入", ok: !modelPending },
+        { name: "国际盘（兜底）", status: marketPending ? "部分同步" : "已接入", ok: !marketPending },
+        { name: "xG 强度模型", status: modelPending ? "部分同步" : "已接入", ok: !modelPending },
         { name: "赛程 / 停售", status: "已同步", ok: true },
       ];
   return (
@@ -87,7 +98,7 @@ export function DataStatusSheet({
         ))}
       </View>
       <Text variant="caption" color={colors.subtle} style={styles.paragraph}>
-        未覆盖的数据不会被编造，相关场次会显示「等数据」。
+        所有展示数据都带更新时间；完整分片在比赛详情。
         {pulse ? ` 今日 ${pulse.counts.matches} 场、${pulse.dataPoints} 个数据点，更新于 ${formatTime(pulse.asOf)}。` : ""}
         {!pulse && stream?.generatedAt ? ` 最近更新：${formatTime(stream.generatedAt)}。` : ""}
       </Text>

@@ -286,6 +286,7 @@ export interface SportmonksIntelData {
     goals: { minute?: number | null; player: string; side: string; result: string }[];
     capturedAt?: string | null;
   } | null;
+  sections?: Record<string, { capturedAt?: string | null; ttlSeconds?: number | null }>;
   capturedAt?: string | null;
 }
 

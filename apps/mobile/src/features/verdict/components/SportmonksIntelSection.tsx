@@ -5,11 +5,15 @@ import type {
   SportmonksStandingRow,
 } from "@/domain/types";
 import { Card, Chip, Text } from "@/components/ui";
-import { formatDateTime } from "@/lib/format";
+import { ageLabel } from "@/lib/freshness";
 import { colors, spacing } from "@/theme/tokens";
 
 function pct(value?: number | null): string {
   return value == null ? "—" : `${value.toFixed(1)}%`;
+}
+
+function sectionAge(data: SportmonksIntelData, key: string): string {
+  return ageLabel(data.sections?.[key]?.capturedAt || data.capturedAt) || "已更新";
 }
 
 function formText(form: string[] | undefined): string {
@@ -86,7 +90,7 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
         <Card style={styles.card}>
           <View style={styles.head}>
             <Text variant="h3">赛后复盘</Text>
-            <Text variant="caption" color={colors.subtle}>球多多自研AI引擎预测</Text>
+            <Text variant="caption" color={colors.subtle}>赛后</Text>
           </View>
           <Text variant="h2">
             {data.postmatch.scoreHome ?? "—"} - {data.postmatch.scoreAway ?? "—"}
@@ -111,9 +115,7 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
         <Card style={styles.card}>
           <View style={styles.head}>
             <Text variant="h3">首发与阵型</Text>
-            <Text variant="caption" color={colors.subtle}>
-              {data.capturedAt ? formatDateTime(data.capturedAt) : "球多多自研AI引擎预测"}
-            </Text>
+            <Text variant="caption" color={colors.subtle}>{sectionAge(data, "lineups")}</Text>
           </View>
           <View style={styles.lineupGrid}>
             <LineupSide side={homeLine} />
@@ -121,7 +123,7 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
           </View>
           {data.sidelined?.length ? (
             <View style={styles.chips}>
-              {data.sidelined.slice(0, 5).map((row) => (
+              {data.sidelined.map((row) => (
                 <Chip
                   key={`${row.playerName}-${row.side}`}
                   label={`${row.playerName} · ${row.typeLabel}`}
@@ -130,20 +132,23 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
               ))}
             </View>
           ) : (
-            <Text variant="caption" color={colors.subtle}>球多多自研AI引擎预测未返回公开伤停名单</Text>
+            <Text variant="caption" color={colors.subtle}>暂无公开伤停名单</Text>
           )}
         </Card>
       ) : null}
 
       {hasStandings ? (
         <Card style={styles.card}>
-          <Text variant="h3">积分榜与近况</Text>
+          <View style={styles.head}>
+            <Text variant="h3">积分榜与近况</Text>
+            <Text variant="caption" color={colors.subtle}>{sectionAge(data, "standings")}</Text>
+          </View>
           <Text variant="small" color={colors.muted}>{standingLine("主队", standings?.home)}</Text>
           <Text variant="small" color={colors.muted}>{standingLine("客队", standings?.away)}</Text>
           {data.h2h?.length ? (
             <View style={styles.h2h}>
               <Text variant="captionStrong">近期交锋</Text>
-              {data.h2h.slice(0, 3).map((item) => (
+              {data.h2h.map((item) => (
                 <Text key={`${item.date}-${item.home}-${item.away}`} variant="caption" color={colors.muted}>
                   {item.date} · {item.home} {item.scoreHome}-{item.scoreAway} {item.away}
                 </Text>
@@ -155,7 +160,10 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
 
       {hasConditions ? (
         <Card style={styles.card}>
-          <Text variant="h3">场地与环境</Text>
+          <View style={styles.head}>
+            <Text variant="h3">场地与环境</Text>
+            <Text variant="caption" color={colors.subtle}>{sectionAge(data, "conditions")}</Text>
+          </View>
           {data.venue ? (
             <Text variant="small" color={colors.muted}>
               {data.venue.name || "球场待同步"} · {data.venue.city || "城市待同步"}
@@ -184,27 +192,29 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
 
       {data.expectedLineups || data.prematchNews?.length ? (
         <Card style={styles.card}>
-          <Text variant="h3">赛前动态</Text>
+          <View style={styles.head}>
+            <Text variant="h3">赛前动态</Text>
+            <Text variant="caption" color={colors.subtle}>{sectionAge(data, "news")}</Text>
+          </View>
           {data.expectedLineups ? (
             <Text variant="small" color={colors.muted}>
               预计首发已同步 · {data.expectedLineups} 条
             </Text>
           ) : null}
-          {(data.prematchNews ?? []).slice(0, 3).map((item, index) => (
+          {(data.prematchNews ?? []).map((item, index) => (
             <View key={`${item.title}-${index}`} style={styles.newsRow}>
               {item.title ? <Text variant="captionStrong">{item.title}</Text> : null}
               {item.text ? <Text variant="caption" color={colors.muted}>{item.text}</Text> : null}
             </View>
           ))}
-          <Text variant="caption" color={colors.subtle}>赛前动态可能变化，以官方公布为准。</Text>
         </Card>
       ) : null}
 
       {highlights.length || markets.length ? (
         <Card style={styles.card}>
           <View style={styles.head}>
-            <Text variant="h3">球多多自研AI引擎预测</Text>
-            <Text variant="caption" color={colors.amber}>引擎预测参考</Text>
+            <Text variant="h3">预测</Text>
+            <Text variant="caption" color={colors.subtle}>{sectionAge(data, "predictions")}</Text>
           </View>
           {highlights.map((item) => (
             <View key={item.key} style={styles.predictionRow}>
@@ -224,9 +234,6 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
               </Text>
             </View>
           ))}
-          <Text variant="caption" color={colors.subtle} style={styles.note}>
-            以上为球多多自研AI引擎预测/市场参考，不参与价/市/模三闸；未复核前不进入付费计划。
-          </Text>
         </Card>
       ) : null}
     </>

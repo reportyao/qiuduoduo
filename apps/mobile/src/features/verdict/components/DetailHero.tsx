@@ -1,19 +1,15 @@
 import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import type { GateKey, VerdictDetail } from "@/domain/types";
-import { usePersonaContent } from "@/features/personas/usePersona";
 import {
   formatDate,
   formatDateTime,
   formatTime,
-  gateLabel,
   pct,
   pickDirectionLabel,
-  pp,
 } from "@/lib/format";
 import { colors, gradients, radii, shadows, spacing } from "@/theme/tokens";
 import { Chip, StatusDot, Text } from "@/components/ui";
-import { GateStrip } from "./Gates";
 import { ProbabilityBar } from "./Probability";
 import { SealLine } from "./Seal";
 
@@ -27,44 +23,25 @@ export function DetailHero({
   published?: boolean | null;
   onSeal: () => void;
 }) {
-  const { copy } = usePersonaContent();
   // 只有已发布（或发布状态尚未确认）的 promoted 才用深色主卡；
   // 复核预览用浅色卡，避免把未发布稿当成正式推荐。
   const dark = detail.status === "promoted" && published !== false;
   const pending = (["market", "model", "price"] as GateKey[]).find(
     (gate) => detail.gates[gate] === "pending_data",
   );
-  const reference = detail.tier === "market_reference";
   const marketKey = (["home", "draw", "away"] as const).reduce(
     (best, key) => detail.probs[key] > detail.probs[best] ? key : best, "home");
   const marketDir = marketKey === "home" ? "主胜" : marketKey === "draw" ? "平局" : "客胜";
-  const pickLabel = reference
-    ? pickDirectionLabel(detail.pool, marketDir)
-    : detail.pick?.dir
-      ? pickDirectionLabel(detail.pool, detail.pick.dir)
-      : "暂不预测";
-  const displayProb = reference ? detail.probs[marketKey] : detail.pick?.prob ?? null;
-  const summary = reference
-    ? `${pickLabel} 是市场隐含倾向，不是本产品模型预测；没有通过模型验证，只作参考。`
-    : copy.verdictSummary({
-        status: detail.status,
-        pickLabel,
-        prob: detail.pick?.prob ?? null,
-        rake: detail.rake,
-        pendingGate: pending ? `${gateLabel(pending)}闸` : null,
-        gateNote: pending ? "数据没齐，暂不发布预测。" : "",
-      });
+  const pickLabel = detail.pick?.dir
+    ? pickDirectionLabel(detail.pool, detail.pick.dir)
+    : pickDirectionLabel(detail.pool, marketDir);
+  const displayProb = detail.pick?.prob ?? detail.probs[marketKey];
+  const summary = `${pickLabel}，预测概率 ${pct(displayProb)}。抽水 ${pct(detail.rake)}。`;
   const tier = detail.tier ?? (detail.status === "promoted" ? "verified"
     : detail.status === "killed" ? "avoid" : "market_reference");
-  const modelLabel = detail.modelSource === "sportmonks" ? "球多多自研AI引擎预测模型" : "模型影子";
-  const statusLabel =
-    tier === "verified"
-      ? (detail.modelStatus === "shadow" ? `已核验 · ${modelLabel}` : "核验预测")
-      : tier === "market_reference" ? "市场参考"
-        : tier === "avoid" ? "不建议" : "待数据";
-  const statusColor =
-    tier === "verified" ? colors.greenAccent
-      : tier === "avoid" ? colors.danger : colors.amber;
+  const modelLabel = "模型";
+  const statusLabel = tier === "avoid" ? "回避" : "预测";
+  const statusColor = tier === "avoid" ? colors.danger : colors.greenAccent;
 
   const content = (
     <>
@@ -91,15 +68,15 @@ export function DetailHero({
         ) : null}
         {detail.status === "promoted" && published != null ? (
           <Chip
-            label={published ? "已发布预测" : "未发布 · 复核预览"}
-            tone={dark ? "dark" : published ? "green" : "amber"}
+            label={published ? "已发布" : "预测"}
+            tone={dark ? "dark" : "green"}
           />
         ) : null}
       </View>
 
       <View style={styles.pickRow}>
         <View style={styles.flex}>
-          <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>{reference ? "市场倾向" : "预测"}</Text>
+          <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>预测</Text>
           <Text variant="h1" color={dark ? colors.inkInverse : colors.ink}>{pickLabel}</Text>
           <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>
             官方抽水 {pct(detail.rake)} · 阈值 {pct(detail.rakeThreshold)}
@@ -110,7 +87,7 @@ export function DetailHero({
             {displayProb != null ? pct(displayProb) : "—"}
           </Text>
           <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>
-            {displayProb != null ? (reference ? "市场隐含概率" : "预测概率") : "预测概率待定"}
+            {displayProb != null ? "预测概率" : "预测概率待定"}
           </Text>
         </View>
       </View>
@@ -119,23 +96,6 @@ export function DetailHero({
         {summary}
       </Text>
       <ProbabilityBar probs={detail.probs} dark={dark} pool={detail.pool} />
-      {reference ? null : (
-        <GateStrip
-          gates={detail.gates}
-          dark={dark}
-          values={{
-            price: pct(detail.rake),
-            market:
-              typeof detail.gatesDetail.market?.detail.divergence === "number"
-                ? pp(detail.gatesDetail.market.detail.divergence as number)
-                : detail.gates.market === "pass" ? "已收敛" : "待数据",
-            model:
-              typeof detail.gatesDetail.model?.detail.top === "number"
-                ? pct(detail.gatesDetail.model.detail.top as number)
-                : detail.pick?.prob != null ? pct(detail.pick.prob) : "待定",
-          }}
-        />
-      )}
       <SealLine hash={detail.payloadHash} sealed={Boolean(detail.sealedAt)} dark={dark} onPress={onSeal} />
       <Text variant="caption" color={dark ? colors.mutedInverse : colors.subtle} style={styles.cutoff}>
         数据截止 {detail.dataCutoff ? formatDateTime(detail.dataCutoff) : "待同步"} · 封存于{" "}

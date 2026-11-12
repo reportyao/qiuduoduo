@@ -5,7 +5,9 @@ import {
   loadHomeMessages,
   markHomeMessageConfirmed,
   saveHomeMessages,
+  updateHomeMatchIntel,
   type HomeConversationMessage,
+  type MatchIntelSummary,
 } from "./conversation";
 
 interface ThreadState {
@@ -65,10 +67,18 @@ export function useHomeConversation(date: string, userId: string) {
     }));
   }, []);
 
+  const updateIntel = useCallback((matchId: string, intel: MatchIntelSummary) => {
+    setState((prev) => {
+      const messages = updateHomeMatchIntel(prev.messages, matchId, intel);
+      return messages === prev.messages ? prev : { ...prev, messages };
+    });
+  }, []);
+
   return {
     messages: state.messages,
     hydrated: state.hydrated,
     append,
     confirm,
+    updateIntel,
   };
 }

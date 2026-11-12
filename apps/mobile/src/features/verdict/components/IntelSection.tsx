@@ -48,17 +48,14 @@ export function IntelSection({ report }: { report: IntelReport }) {
 
       <View style={styles.footer}>
         <Text variant="caption" color={colors.subtle}>
-          依据 {report.total} 条 · 未定价 {report.unPriced} 条 · {report.sourceCount} 个来源
+          依据 {report.total} 条 · {report.sourceCount} 个来源
         </Text>
-        <Text variant="caption" color={colors.subtle}>
-          截止 {report.cutoff ? formatDateTime(report.cutoff) : "待同步"}
-        </Text>
+        {report.cutoff ? (
+          <Text variant="caption" color={colors.subtle}>
+            截止 {formatDateTime(report.cutoff)}
+          </Text>
+        ) : null}
       </View>
-      {report.isFallback ? (
-        <Text variant="caption" color={colors.muted} style={styles.fallback}>
-          当前数据库还没返回结构化四维情报；上面只展示已封存、可核验的依据，不补编伤停或战意。
-        </Text>
-      ) : null}
     </Card>
   );
 }

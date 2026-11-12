@@ -1,4 +1,4 @@
-/** 用户端统一品牌口径：底层数据源不在 UI 暴露，统一显示为球多多自研AI引擎预测。 */
+/** 用户端不展示底层数据源名称；仅保留真实数据名称。 */
 export function brandCopy(text: string): string {
-  return text.replace(/Sportmonks/gi, "球多多自研AI引擎预测");
+  return text.replace(/Sportmonks\s*·?\s*/gi, "").trim();
 }

@@ -33,6 +33,7 @@ import { MatchPickerSheet } from "@/features/home/components/MatchPickerSheet";
 import type { BriefMatchOption } from "@/features/home/components/BriefMatchPicker";
 import { buildBriefOptions } from "@/features/home/briefOptions";
 import { MatchConversationCard } from "@/features/home/components/MatchConversationCard";
+import { summarizeIntel } from "@/features/home/conversation";
 import { useHomeConversation } from "@/features/home/useHomeConversation";
 import { StreamFeed } from "@/features/home/components/StreamFeed";
 import { HeaderMetrics } from "@/features/home/components/HeaderMetrics";
@@ -50,6 +51,7 @@ import {
   PostmortemMessage,
   RestMessage,
   UnattendedMessage,
+  VerdictMessage,
 } from "@/features/home/components/ConversationMessages";
 import { BetSheet } from "@/features/verdict/components/BetSheet";
 import { SealSheet } from "@/features/verdict/components/SealSheet";
@@ -86,27 +88,17 @@ export default function HomeScreen() {
   const setFocus = useFocusStore((s) => s.setFocus);
   const clearFocus = useFocusStore((s) => s.clearFocus);
   const conversation = useHomeConversation(date, session?.userId ?? "local");
+  const updateConversationIntel = conversation.updateIntel;
   const lastDailyRecordDate = usePrefsStore((s) => s.lastDailyRecordDate);
   const setLastDailyRecordDate = usePrefsStore((s) => s.setLastDailyRecordDate);
   const prefsHydrated = usePrefsStore((s) => s.hydrated);
   const [recordVisible, setRecordVisible] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const autoScroll = useRef(false);
-  const conversationTop = useRef(0);
-  const chatThreadTop = useRef(0);
-  const pendingMatchScroll = useRef<string | null>(null);
-  const matchLayouts = useRef<Record<string, number>>({});
   const chatId = useRef(0);
   const nextChatId = (prefix: string) => {
     chatId.current += 1;
     return `${prefix}-${Date.now().toString(36)}-${chatId.current}`;
-  };
-  const scrollToMatch = (messageId: string) => {
-    const y = matchLayouts.current[messageId];
-    if (y == null) return false;
-    const target = conversationTop.current + chatThreadTop.current + y - spacing.base;
-    scrollRef.current?.scrollTo({ y: Math.max(0, target), animated: true });
-    return true;
   };
 
   const sendChat = (raw: string) => {
@@ -200,16 +192,7 @@ export default function HomeScreen() {
     if (!conversation.hydrated || hydratedThread.current === threadKey) return;
     if (streamQuery.isLoading || recommendationsQuery.isLoading || recordQuery.isLoading) return;
     hydratedThread.current = threadKey;
-    const last = conversation.messages[conversation.messages.length - 1];
-    if (last?.kind === "match") {
-      pendingMatchScroll.current = last.id;
-      // 若卡片已完成布局，直接滚；否则等 onLayout 回调。
-      const timer = setTimeout(() => {
-        if (pendingMatchScroll.current !== last.id) return;
-        if (scrollToMatch(last.id)) pendingMatchScroll.current = null;
-      }, 120);
-      return () => clearTimeout(timer);
-    }
+    // 始终停在最新一条，不回跳到旧消息顶部。
     if (conversation.messages.length > 0) autoScroll.current = true;
   }, [conversation.hydrated, conversation.messages, date, recommendationsQuery.isLoading,
       recordQuery.isLoading, session?.userId, streamQuery.isLoading]);
@@ -230,13 +213,19 @@ export default function HomeScreen() {
   const onsaleQuery = useOnSaleQuery();
   const betsQuery = useBetsQuery(Boolean(session));
 
+  useEffect(() => {
+    if (!focus?.matchId || !focusQuery.data?.sportmonks) return;
+    const intel = summarizeIntel(focusQuery.data.sportmonks);
+    if (intel) updateConversationIntel(focus.matchId, intel);
+  }, [focus?.matchId, focusQuery.data?.sportmonks, updateConversationIntel]);
+
   const { page: stream, verdicts: streamVerdicts } = useMemo(() => {
     const pages = streamQuery.data?.pages ?? [];
     if (pages.length === 0) return { page: null, verdicts: [] as VerdictSummary[] };
     return flattenStream(pages);
   }, [streamQuery.data]);
   // 发布门：接口成功时只显示 published snapshot；只有旧后端 404 才回退 stream。
-  // 加载中/网络错误/服务端错误都不能闪未复核的 raw verdict，避免把预览当成已发布内容。
+  // 加载中/网络错误/服务端错误都不能闪未发布的 raw verdict，避免把未发布内容当成已发布内容。
   const publishedUnavailable = recommendationsQuery.error instanceof ApiError
     && recommendationsQuery.error.status === 404;
   const verdicts = useMemo(
@@ -259,7 +248,7 @@ export default function HomeScreen() {
     [recommendationsQuery.data],
   );
 
-  // 开场选择条：已发布判决 + 市场参考 + 当前竞彩日在售，点哪场才展开哪场。
+  // 开场选择条：已发布预测 + 更多预测 + 当前竞彩日在售，点哪场才展开哪场。
   const briefOptions = useMemo<BriefMatchOption[]>(
     () => buildBriefOptions(verdicts, references, date === today ? onsale : stream?.onsale ?? [], date),
     [date, onsale, references, stream?.onsale, today, verdicts],
@@ -278,7 +267,7 @@ export default function HomeScreen() {
         });
         setFocus(focusFromVerdict(verdict, stream?.tradeDate ?? date));
         const messageId = nextChatId("match");
-        pendingMatchScroll.current = messageId;
+        autoScroll.current = true;
         conversation.append({
           id: messageId,
           kind: "match",
@@ -297,7 +286,7 @@ export default function HomeScreen() {
         });
         setFocus(focusFromOnSale(match, stream?.tradeDate ?? date));
         const messageId = nextChatId("match");
-        pendingMatchScroll.current = messageId;
+        autoScroll.current = true;
         conversation.append({
           id: messageId,
           kind: "match",
@@ -310,6 +299,35 @@ export default function HomeScreen() {
       router.push({ pathname: "/match/[id]", params: { id: option.matchId, date } });
     },
     [conversation, date, onsale, references, router, setFocus, stream?.onsale, stream?.tradeDate, today, verdicts],
+  );
+
+  const showPrediction = useCallback(
+    (option: BriefMatchOption, verdict: VerdictSummary, intel?: ReturnType<typeof summarizeIntel>) => {
+      const leads = [
+        "好，我把这场的完整预测展开给你。",
+        "这场我盯得比较久，完整判断在这里。",
+        "数据我核对过了，这是这场的完整页卡。",
+        "来看这场，我把方向和依据都摊开。",
+      ];
+      const lead = leads[Math.floor(Math.random() * leads.length)];
+      autoScroll.current = true;
+      conversation.append({
+        id: nextChatId("u"),
+        kind: "user",
+        text: "看完整预测",
+        at: Date.now(),
+      });
+      conversation.append({
+        id: nextChatId("prediction"),
+        kind: "prediction",
+        option,
+        verdict,
+        lead,
+        intel,
+        at: Date.now(),
+      });
+    },
+    [conversation],
   );
 
   const betIds = useMemo(
@@ -393,7 +411,7 @@ export default function HomeScreen() {
     }
   };
 
-  // 市场参考也是当天可看的内容；不能因为 0 条正式发布就整页当成空日。
+  // 有预测的场次也是当天可看的内容；不能因为 0 条正式发布就整页当成空日。
   const isEmptyDay = stream !== null && !stream.restDay
     && verdicts.length === 0 && references.length === 0;
   const viewingToday = date === today;
@@ -468,12 +486,7 @@ export default function HomeScreen() {
             right={<HeaderMetrics engine={engineQuery.data ?? null} />}
           />
 
-          <View
-            style={styles.conversation}
-            onLayout={(event) => {
-              conversationTop.current = event.nativeEvent.layout.y;
-            }}
-          >
+          <View style={styles.conversation}>
             <ConversationDate value={date} onChange={chooseDate} />
 
             {briefStream ? (
@@ -482,8 +495,6 @@ export default function HomeScreen() {
                 dayLabel={dayLabel}
                 publishedCount={recommendationsQuery.data?.snapshots.length ?? 0}
                 publishedReady={recommendationsQuery.isSuccess}
-                publishedMessage={recommendationsQuery.data?.message ?? null}
-                referenceCount={references.length}
                 recordText={recordVisible && recordQuery.data?.yesterday
                   ? copy.dailyRecord(
                       recordQuery.data.yesterday.picks,
@@ -596,12 +607,7 @@ export default function HomeScreen() {
             )}
 
             {conversation.messages.length > 0 || chat.isPending ? (
-              <View
-                style={styles.chatThread}
-                onLayout={(event) => {
-                  chatThreadTop.current = event.nativeEvent.layout.y;
-                }}
-              >
+              <View style={styles.chatThread}>
                 {conversation.messages.map((message) => {
                   if (message.kind === "user") {
                     return (
@@ -633,29 +639,35 @@ export default function HomeScreen() {
                   }
                   const focused = focus?.matchId === message.option.matchId;
                   const resolvedVerdict = findLiveVerdict(message.option) ?? message.verdict;
-                  return (
-                    <View
-                      key={message.id}
-                      onLayout={(event) => {
-                        matchLayouts.current[message.id] = event.nativeEvent.layout.y;
-                        if (pendingMatchScroll.current !== message.id) return;
-                        pendingMatchScroll.current = null;
-                        scrollToMatch(message.id);
-                      }}
-                    >
-                      <MatchConversationCard
-                        option={message.option}
-                        verdict={resolvedVerdict}
-                        focusData={focused ? focusQuery.data : null}
-                        focusLoading={focused && focusQuery.isLoading}
+                  const liveIntel = focused
+                    ? summarizeIntel(focusQuery.data?.sportmonks)
+                    : undefined;
+                  if (message.kind === "prediction") {
+                    return (
+                      <VerdictMessage
+                        key={message.id}
+                        verdict={resolvedVerdict ?? message.verdict}
+                        header={<Text variant="body">{message.lead}</Text>}
                         betExists={Boolean(resolvedVerdict && betIds.has(resolvedVerdict.id))}
-                        onOpenVerdict={openVerdict}
-                        onOpenMatch={openWhyNot}
+                        onOpen={openVerdict}
                         onBet={setBetTarget}
                         onWhyNot={openWhyNot}
                         onSeal={setSealTarget}
                       />
-                    </View>
+                    );
+                  }
+                  return (
+                    <MatchConversationCard
+                      key={message.id}
+                      option={message.option}
+                      verdict={resolvedVerdict}
+                      intel={liveIntel ?? message.intel}
+                      onShowPrediction={() => {
+                        if (!resolvedVerdict) return;
+                        showPrediction(message.option, resolvedVerdict, liveIntel ?? message.intel);
+                      }}
+                      onOpenMatch={() => openWhyNot(message.option.matchId)}
+                    />
                   );
                 })}
                 {chat.isPending ? <AssistantTyping text={`${meta.name}正在核对数据…`} /> : null}
@@ -687,7 +699,7 @@ export default function HomeScreen() {
             trackInteraction("focus_select", { matchId: verdict.matchId, verdictId: verdict.id });
             setFocus(focusFromVerdict(verdict, stream?.tradeDate ?? date));
             const messageId = nextChatId("match");
-            pendingMatchScroll.current = messageId;
+            autoScroll.current = true;
             conversation.append({
               id: messageId,
               kind: "match",
@@ -712,7 +724,7 @@ export default function HomeScreen() {
             trackInteraction("focus_select", { matchId: match.matchId, verdictId: id });
             setFocus(focusFromOnSale(match, stream?.tradeDate ?? date));
             const messageId = nextChatId("match");
-            pendingMatchScroll.current = messageId;
+            autoScroll.current = true;
             conversation.append({
               id: messageId,
               kind: "match",
@@ -738,7 +750,7 @@ export default function HomeScreen() {
             trackInteraction("focus_select", { matchId: match.matchId });
             setFocus(focusFromOnSale(match, tradeDate || date));
             const messageId = nextChatId("match");
-            pendingMatchScroll.current = messageId;
+            autoScroll.current = true;
             conversation.append({
               id: messageId,
               kind: "match",

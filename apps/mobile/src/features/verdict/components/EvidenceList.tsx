@@ -5,7 +5,7 @@ import { formatDateTime } from "@/lib/format";
 import { colors, radii, spacing } from "@/theme/tokens";
 import { Card, Chip, Icon, Text } from "@/components/ui";
 
-const clean = (text: string) => text.replace(/Sportmonks/g, "球多多自研AI引擎预测");
+const clean = (text: string) => text.replace(/Sportmonks\s*·?\s*/gi, "").trim();
 
 export function EvidenceList({
   items,
@@ -60,14 +60,6 @@ export function EvidenceList({
               <Text variant="small" color={colors.muted} numberOfLines={open ? undefined : 2} style={styles.detail}>
                 {clean(item.detail)}
               </Text>
-              {open ? (
-                <View style={styles.source}>
-                  <Icon name="link-outline" size={13} color={colors.subtle} />
-                  <Text variant="caption" color={colors.subtle} style={styles.sourceText}>
-                    {clean(item.source)}
-                  </Text>
-                </View>
-              ) : null}
             </Pressable>
           );
         })

@@ -5,7 +5,7 @@ import { coverageGaps } from "@/features/home/focusCoverage";
 import { colors, spacing } from "@/theme/tokens";
 import { Text } from "@/components/ui";
 
-const clean = (text: string) => text.replace(/Sportmonks/g, "球多多自研AI引擎预测");
+const clean = (text: string) => text.replace(/Sportmonks\s*·?\s*/gi, "").trim();
 
 const REASON: Record<string, string> = {
   login_required: "登录后可记注",
@@ -59,9 +59,8 @@ export function FocusPanel({
           数据覆盖 {focus.coverage.score}
         </Text>
         <View style={styles.headRight}>
-          {sm ? <Text variant="caption" color={colors.green}>球多多自研AI引擎预测</Text> : null}
-          <Text variant="caption" color={focus.coverage.deepEligible ? colors.green : colors.amber}>
-            {focus.coverage.deepEligible ? "可深读" : "仅轻读"}
+          <Text variant="caption" color={colors.green}>
+            {focus.coverage.deepEligible ? "数据完整" : "数据同步"}
           </Text>
         </View>
       </View>
@@ -77,7 +76,7 @@ export function FocusPanel({
       ) : null}
       {visible.map((fact) => (
         <View key={fact.id} style={styles.factRow}>
-          <Text variant="captionStrong" color={colors.ink}>{clean(fact.label)}</Text>
+          <Text variant="captionStrong" color={colors.ink}>{fact.id === "market" ? "市场" : clean(fact.label)}</Text>
           <View style={styles.factBody}>
             <Text variant="caption" color={colors.muted} numberOfLines={expanded ? 4 : 2}>
               {clean(fact.value)}

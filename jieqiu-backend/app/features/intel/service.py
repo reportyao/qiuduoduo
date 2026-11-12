@@ -105,7 +105,7 @@ def _card(v: Verdict) -> dict:
     return {
         "id": v.id, "status": v.status, "tier": v.tier,
         "model_status": v.model_status, "model_source": v.model_source,
-        "pick": v.pick if v.tier != "market_reference" else None,
+        "pick": v.pick,
         "rake": v.rake, "rake_threshold": v.rake_threshold,
         "probs": {"home": v.p_home, "draw": v.p_draw, "away": v.p_away},
         "model": (v.payload or {}).get("model"),

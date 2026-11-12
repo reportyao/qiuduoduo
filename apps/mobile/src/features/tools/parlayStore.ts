@@ -12,7 +12,7 @@ export interface ParlayLeg {
   dir: ParlayDir;
   odds: number;
   rake: number | null;
-  /** 非已发布/无模型覆盖：整组会标“未复核·仅市场参考”。 */
+  /** 非已发布/无模型覆盖：整组只作为参考组合展示。 */
   marketOnly: boolean;
 }
 

@@ -75,7 +75,7 @@ describe("buildBriefOptions", () => {
   });
 });
 
-  it("市场参考会进入选场条并带 tier", () => {
+  it("预测会进入选场条并带 tier", () => {
     const options = buildBriefOptions(
       [],
       [verdict({ matchId: "ref1", id: "v-ref1", tier: "market_reference", status: "screening" })],
