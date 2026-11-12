@@ -666,7 +666,10 @@ export default function HomeScreen() {
                         if (!resolvedVerdict) return;
                         showPrediction(message.option, resolvedVerdict, liveIntel ?? message.intel);
                       }}
-                      onOpenMatch={() => openWhyNot(message.option.matchId)}
+                      onOpenMatch={() => {
+                        if (resolvedVerdict) openVerdict(resolvedVerdict.id);
+                        else openWhyNot(message.option.matchId);
+                      }}
                     />
                   );
                 })}
