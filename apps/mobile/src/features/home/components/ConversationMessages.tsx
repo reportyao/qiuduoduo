@@ -40,6 +40,7 @@ export function AssistantBrief({
   dayLabel,
   publishedCount,
   publishedReady,
+  predictionCount,
   recordText,
   onsaleCount,
   onsaleLabel,
@@ -58,6 +59,7 @@ export function AssistantBrief({
   dayLabel: string;
   publishedCount: number;
   publishedReady: boolean;
+  predictionCount: number;
   recordText?: string | null;
   onsaleCount: number;
   onsaleLabel: string;
@@ -82,13 +84,13 @@ export function AssistantBrief({
         <Text variant="body" style={styles.lead}>{recordText}</Text>
       ) : null}
       <Text variant="body" style={styles.lead}>
-        {copy.conversationOpen(dayLabel, stats.total, stats.promoted, publishedCount, stats.screening, killed)}
+        {copy.conversationOpen(dayLabel, stats.total, predictionCount, predictionCount, stats.screening, killed)}
       </Text>
 
       <View style={styles.statRow}>
         <MiniStat label={dayLabel === "今天" ? "今日扫描" : "当日扫描"} value={String(stats.total)} />
         <View style={styles.statLine} />
-        <MiniStat label="预测" value={String(stats.promoted)} />
+        <MiniStat label="预测" value={String(predictionCount)} />
         <View style={styles.statLine} />
         <MiniStat label="已发布" value={publishedReady ? String(publishedCount) : "—"} accent />
         <View style={styles.statLine} />

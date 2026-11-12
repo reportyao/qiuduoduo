@@ -77,10 +77,15 @@ function isOption(value: unknown): value is BriefMatchOption {
 
 function isVerdict(value: unknown): value is VerdictSummary {
   if (!isObject(value)) return false;
+  const probs = isObject(value.probs) ? value.probs : null;
   return typeof value.id === "string"
     && typeof value.matchId === "string"
     && typeof value.home === "string"
-    && typeof value.away === "string";
+    && typeof value.away === "string"
+    && probs !== null
+    && typeof probs.home === "number"
+    && typeof probs.draw === "number"
+    && typeof probs.away === "number";
 }
 
 function pctText(value?: number | null): string {

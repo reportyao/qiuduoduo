@@ -127,6 +127,16 @@ describe("home conversation persistence", () => {
     expect(updated[1]).toMatchObject({ intel: { injuries: [] } });
   });
 
+  it("drops a stored verdict without probabilities", () => {
+    const parsed = parseHomeMessages(JSON.stringify([{
+      id: "m-bad", kind: "match", at: 1,
+      option: match.option,
+      verdict: { id: "v", matchId: "match-1", home: "德国", away: "法国" },
+    }]));
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]).toMatchObject({ kind: "match", verdict: null });
+  });
+
   it("marks memory conflicts as confirmed", () => {
     const messages: HomeConversationMessage[] = [
       { id: "a-1", kind: "assistant", text: "冲突", at: 1, card: { type: "memory_write", text: "冲突" } },

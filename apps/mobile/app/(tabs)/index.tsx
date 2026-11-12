@@ -499,6 +499,7 @@ export default function HomeScreen() {
                 dayLabel={dayLabel}
                 publishedCount={recommendationsQuery.data?.snapshots.length ?? 0}
                 publishedReady={recommendationsQuery.isSuccess}
+                predictionCount={verdicts.length + references.length}
                 recordText={recordVisible && recordQuery.data?.yesterday
                   ? copy.dailyRecord(
                       recordQuery.data.yesterday.picks,
