@@ -72,6 +72,51 @@ def test_lineups_and_h2h_scores_keep_home_away_order():
     assert result["score_away"] == 3
 
 
+def test_lineups_prefer_localized_player_name():
+    fixture = _fixture()
+    fixture["lineups"][0]["player"] = {"id": 1, "name": "乌古尔詹·恰克尔"}
+    by_side, by_team = si._participants(fixture)
+    lineups = si._lineups(fixture, by_side, by_team)
+    assert lineups["home"]["starters"][0]["name"] == "乌古尔詹·恰克尔"
+
+
+def test_player_lookup_requests_chinese_locale(monkeypatch):
+    captured = {}
+
+    def fake_get(base, path, params):
+        captured["path"] = path
+        captured["params"] = params
+        return {"data": {"id": 99, "name": "中文球员"}}
+
+    monkeypatch.setattr(si, "_get", fake_get)
+    si._PLAYER_CACHE.clear()
+    assert si._player(99)["name"] == "中文球员"
+    assert "locale=zh" in captured["params"]
+
+
+def test_localize_staff_translates_coaches_and_referee(monkeypatch):
+    from types import SimpleNamespace
+    import app.modules.llm_gateway as llm
+
+    def fake_complete(*args, **kwargs):
+        return SimpleNamespace(
+            degraded=False,
+            text='{"translations":{"Mark van Bommel":"马克·范博梅尔",'
+                 '"Sandro Schärer":"桑德罗·舍雷尔"}}',
+        )
+
+    monkeypatch.setattr(llm, "complete", fake_complete)
+    payload = {
+        "coaches": {"home": {"name": "Mark van Bommel"},
+                    "away": {"name": "Mark van Bommel"}},
+        "referees": {"main": {"name": "Sandro Schärer"}},
+    }
+    out = si._localize_staff(None, payload)
+    assert out["coaches"]["home"]["name"] == "马克·范博梅尔"
+    assert out["coaches"]["home"]["name_original"] == "Mark van Bommel"
+    assert out["referees"]["main"]["name"] == "桑德罗·舍雷尔"
+
+
 def test_sync_fixture_intel_persists_all_sections(db, monkeypatch):
     match = SPMatch(match_id="sm-intel-1", match_no="周四901", league="欧国联",
                     home_raw="主队", away_raw="客队", home="主队", away="客队",
@@ -153,7 +198,7 @@ def test_postmatch_intel_adds_score_xg_and_goals(db, monkeypatch):
             ],
             "events": [
                 {"type_id": 14, "participant_id": 10, "player_name": "甲",
-                 "minute": 12, "result": "1-0"},
+                 "player": {"name": "甲（中文）"}, "minute": 12, "result": "1-0"},
             ],
             "xgfixture": [
                 {"type_id": 5304, "location": "home", "data": {"value": 1.8}},
@@ -169,7 +214,7 @@ def test_postmatch_intel_adds_score_xg_and_goals(db, monkeypatch):
     post = row.payload["postmatch"]
     assert post["score_home"] == 2 and post["score_away"] == 1
     assert post["xg_home"] == 1.8 and post["xg_away"] == 1.1
-    assert post["goals"][0]["player"] == "甲"
+    assert post["goals"][0]["player"] == "甲（中文）"
 
 
 def test_focus_uses_sportmonks_lineups_and_standings(client, db):

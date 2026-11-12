@@ -17,7 +17,9 @@ function sectionAge(data: SportmonksIntelData, key: string): string {
 }
 
 function formText(form: string[] | undefined): string {
-  return form && form.length ? form.join(" ") : "—";
+  if (!form?.length) return "—";
+  const labels: Record<string, string> = { W: "胜", D: "平", L: "负" };
+  return form.map((item) => labels[item] ?? item).join(" ");
 }
 
 function standingLine(label: string, row?: SportmonksStandingRow): string {

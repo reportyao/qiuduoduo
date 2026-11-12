@@ -402,7 +402,7 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
         if form["matches"]:
             facts.append({
                 "id": f"form_{side}", "kind": "form", "label": f"{team} 近 {form['matches']} 场",
-                "value": " ".join(form["results"]),
+                "value": " ".join({"W": "胜", "D": "平", "L": "负"}.get(x, x) for x in form["results"]),
                 "detail": "近期正式比赛战绩",
                 "source": form["source"] or "football-data",
                 "captured_at": form["captured_at"], "status": "confirmed", "confidence": 0.8,
@@ -562,7 +562,7 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
                 facts.append({
                     "id": f"form_{side}", "kind": "form",
                     "label": f"{match.home if side == 'home' else match.away} 近期",
-                    "value": " ".join(form),
+                    "value": " ".join({"W": "胜", "D": "平", "L": "负"}.get(x, x) for x in form),
                     "detail": "近 5 场走势",
                     "source": "Sportmonks", "captured_at": sm_cutoff,
                     "status": "confirmed", "confidence": 0.8,

@@ -6,7 +6,9 @@ match-facts、预测维度和选定市场落库。只做展示/情报，不把�
 """
 from __future__ import annotations
 
+import json
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import delete, select
@@ -20,7 +22,8 @@ log = logging.getLogger(__name__)
 CN = timezone(timedelta(hours=8))
 INTEL_TTL = timedelta(hours=6)
 _POSITION = {24: "门将", 25: "后卫", 26: "中场", 27: "前锋"}
-_REFEREE_ROLE = {6: "主裁", 7: "助理裁判", 8: "第四官员", 9: "VAR"}
+_REFEREE_ROLE = {6: "主裁", 7: "助理裁判", 8: "第四官员", 9: "视频助理裁判"}
+_SURFACE_CN = {"grass": "草皮", "artificial grass": "人工草皮", "hybrid grass": "混合草皮"}
 SECTION_TTL = {
     "meta": 86400,
     "lineups": 1800,
@@ -97,7 +100,7 @@ def _referee(referee_id: int) -> dict:
     payload = _get(
         settings.sportmonks_base_url.rstrip("/"),
         "/referees/{id}".format(id=referee_id),
-        "api_token={token}".format(token=settings.sportmonks_token.strip()),
+        "api_token={token}&locale=zh".format(token=settings.sportmonks_token.strip()),
     )
     data = (payload or {}).get("data") or {}
     out = {"id": referee_id, "name": _name(data) or f"裁判 {referee_id}"}
@@ -114,7 +117,7 @@ def _player(player_id: int) -> dict:
     payload = _get(
         settings.sportmonks_base_url.rstrip("/"),
         "/players/{id}".format(id=player_id),
-        "api_token={token}".format(token=settings.sportmonks_token.strip()),
+        "api_token={token}&locale=zh".format(token=settings.sportmonks_token.strip()),
     )
     data = (payload or {}).get("data") or {}
     out = {"id": player_id, "name": _name(data) or f"球员 {player_id}",
@@ -128,7 +131,7 @@ def _fetch_fixture(base: str, token: str, fixture_id: int) -> dict:
         base,
         "/fixtures/{id}".format(id=fixture_id),
         "api_token={token}&include=participants;league;season;round;coaches;"
-        "referees;sidelined;lineups;formations;venue;weatherReport;"
+        "referees;sidelined.player;lineups.player;formations;venue.city;weatherReport;"
         "expectedLineups;prematchNews&locale=zh".format(token=token),
     )
     return (payload or {}).get("data") or {}
@@ -154,9 +157,10 @@ def _lineups(fixture: dict, by_side: dict[str, dict],
         side = by_team.get(row.get("team_id") or 0)
         if side not in out:
             continue
+        player = row.get("player") or {}
         item = {
             "player_id": row.get("player_id"),
-            "name": row.get("player_name") or "",
+            "name": player.get("name") or row.get("player_name") or "",
             "number": row.get("jersey_number"),
             "position_id": row.get("position_id"),
             "position": _POSITION.get(row.get("position_id"), ""),
@@ -213,12 +217,13 @@ def _sidelined(fixture: dict, by_side: dict[str, dict]) -> list[dict]:
         player_id = row.get("player_id")
         if not player_id:
             continue
-        player = _player(int(player_id))
+        nested = row.get("player") or {}
+        player = _player(int(player_id)) if not nested.get("name") else nested
         team_id = row.get("participant_id")
         type_id = int(row.get("type_id") or 0)
         out.append({
             "player_id": player_id,
-            "player_name": player.get("name") or "",
+            "player_name": player.get("name") or row.get("player_name") or "",
             "side": team_side.get(team_id, ""),
             "team_id": team_id,
             "type_id": type_id,
@@ -477,11 +482,15 @@ def _venue(fixture: dict) -> dict | None:
     name = str(raw.get("name") or "")
     if " --> " in name:
         name = name.split(" --> ", 1)[1].strip()
+    city = raw.get("city") or {}
+    city_name = str(city.get("name") or raw.get("city_name") or "")
+    # 部分中文城市名会附拼音括注，界面只保留中文主名。
+    city_name = re.sub(r"\s*\([^)]*[A-Za-z][^)]*\)", "", city_name).strip()
     return {
         "name": name,
-        "city": raw.get("city_name") or "",
+        "city": city_name,
         "capacity": raw.get("capacity"),
-        "surface": raw.get("surface") or "",
+        "surface": _SURFACE_CN.get(str(raw.get("surface") or "").lower(), raw.get("surface") or ""),
         "image": raw.get("image_path") or "",
     }
 
@@ -528,6 +537,58 @@ def _upsert_markets(db: Session, match_id: str, items: list[dict],
             selections=item.get("selections") or [],
             captured_at=captured,
         ))
+
+
+def _localize_staff(db: Session, payload: dict) -> dict:
+    """Sportmonks 不翻译教练/裁判；用已配置的 LLM 做一次音译并写回缓存。"""
+    coaches = payload.get("coaches") or {}
+    referee = (payload.get("referees") or {}).get("main") or {}
+    names = [((coaches.get(side) or {}).get("name") or "")
+             for side in ("home", "away")]
+    names.append(referee.get("name") or "")
+    names = list(dict.fromkeys(name for name in names if name))
+    if not names or all(re.search(r"[一-鿿]", name) for name in names):
+        return payload
+    try:
+        from .llm_gateway import complete
+        res = complete(
+            db, "open_chat",
+            [{"role": "system", "content":
+              "把足球教练和裁判姓名音译为简体中文，优先使用媒体常用译名。"
+              '只输出 JSON：{"translations":{"原名":"中文名"}}，不要解释。'},
+             {"role": "user", "content": json.dumps({"names": names},
+                                                    ensure_ascii=False)}],
+            schema={"type": "object"}, max_tokens=600, temperature=0.1,
+        )
+        if res.degraded or not res.text:
+            return payload
+        text = res.text
+        start, end = text.find("{"), text.rfind("}")
+        if start < 0 or end <= start:
+            return payload
+        mapping = json.loads(text[start:end + 1]).get("translations") or {}
+        changed = False
+        for side in ("home", "away"):
+            row = coaches.get(side) or {}
+            original = row.get("name")
+            translated = mapping.get(original) if original else None
+            if isinstance(translated, str) and re.search(r"[一-鿿]", translated):
+                row["name_original"] = original
+                row["name"] = translated
+                changed = True
+        original = referee.get("name")
+        translated = mapping.get(original) if original else None
+        if isinstance(translated, str) and re.search(r"[一-鿿]", translated):
+            referee["name_original"] = original
+            referee["name"] = translated
+            changed = True
+        if changed:
+            payload["coaches"] = coaches
+            payload["referees"] = payload.get("referees") or {}
+            payload["referees"]["main"] = referee
+    except Exception:  # noqa: BLE001 - 名称翻译失败不能阻塞情报同步
+        log.exception("staff name localization failed")
+    return payload
 
 
 def sync_fixture_intel(db: Session, base: str, token: str,
@@ -592,6 +653,7 @@ def sync_fixture_intel(db: Session, base: str, token: str,
         },
         "data_cutoff": _iso(now),
     }
+    payload = _localize_staff(db, payload)
     row = db.get(SportmonksFixtureIntel, match.match_id)
     if row is None:
         row = SportmonksFixtureIntel(match_id=match.match_id)
@@ -629,7 +691,7 @@ def sync_postmatch_intel(db: Session, base: str, token: str,
     payload = _get(
         base,
         f"/fixtures/{fixture_id}",
-        "api_token={token}&include=participants;league;scores;events;"
+        "api_token={token}&include=participants;league;scores;events.player;"
         "xGFixture;state&locale=zh".format(token=token),
     )
     data = (payload or {}).get("data") or {}
@@ -655,9 +717,10 @@ def sync_postmatch_intel(db: Session, base: str, token: str,
             continue
         side = next((key for key, team in sides.items()
                      if team.get("id") == event.get("participant_id")), "")
+        event_player = event.get("player") or {}
         goals.append({
             "minute": event.get("minute"),
-            "player": event.get("player_name") or "",
+            "player": event_player.get("name") or event.get("player_name") or "",
             "side": side,
             "result": event.get("result") or "",
         })
