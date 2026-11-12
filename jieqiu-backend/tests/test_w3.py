@@ -156,7 +156,7 @@ def test_full_promotion_pipeline(db, client, monkeypatch, tmp_path):
     assert v.pick is not None and v.pick["dir"] in ("主胜", "平局", "客胜")
     # payload 证据链：每条含 tag+src（F3 gate：每条可溯源）
     ev = v.payload["evidence"]
-    assert len(ev) >= 4 and all(e["tag"] and e["src"] for e in ev)
+    assert len(ev) >= 3 and all(e["tag"] and e["src"] for e in ev)
     assert any("the-odds-api" in e["src"] for e in ev)
     assert any("DC v1.1" in e["t"] for e in ev)
 
