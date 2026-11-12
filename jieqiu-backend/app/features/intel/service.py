@@ -366,7 +366,7 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
         probs = sm.odds
         facts.append({
             "id": "market", "kind": "market",
-            "label": f"Sportmonks · {sm.bookmaker or '市场'}",
+            "label": sm.bookmaker or "市场",
             "value": (f"{float(probs.get('home', 0)) * 100:.0f}% / "
                       f"{float(probs.get('draw', 0)) * 100:.0f}% / "
                       f"{float(probs.get('away', 0)) * 100:.0f}%"),
@@ -392,7 +392,7 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
         facts.append({
             "id": "model", "kind": "model", "label": "模型判断",
             "value": f"{pick.get('dir') or '待定'} · {round(float(prob or 0) * 100, 1)}%",
-            "detail": "Dixon-Coles 收缩后概率；不是预测承诺",
+            "detail": "Dixon-Coles 收缩后概率",
             "source": model_payload.get("engine") or "DC v1.1",
             "captured_at": (v.payload or {}).get("data_cutoff"),
             "status": "inferred", "confidence": prob,
@@ -403,7 +403,7 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
             facts.append({
                 "id": f"form_{side}", "kind": "form", "label": f"{team} 近 {form['matches']} 场",
                 "value": " ".join(form["results"]),
-                "detail": "近期正式比赛战绩；样本小，只作参考",
+                "detail": "近期正式比赛战绩",
                 "source": form["source"] or "football-data",
                 "captured_at": form["captured_at"], "status": "confirmed", "confidence": 0.8,
             })
@@ -490,7 +490,7 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
         facts.append({
             "id": "standings", "kind": "standing", "label": "积分榜",
             "value": " / ".join(parts),
-            "detail": "联赛排名、积分与近况；只作背景", "source": "API-Football",
+            "detail": "联赛排名、积分与近况", "source": "API-Football",
             "captured_at": max((r.synced_at.isoformat() for r in standings
                                 if r.synced_at is not None), default=None),
             "status": "stale" if age is None or age > 24 * 3600 else "confirmed",
@@ -524,7 +524,7 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
         facts.append({
             "id": "injuries", "kind": "injury", "label": "伤停",
             "value": f"{len(rows)} 人" if rows else "无公开记录",
-            "detail": names or "Sportmonks 当前未返回伤停名单；不代表确认全员健康",
+            "detail": names or "暂无公开伤停记录",
             "source": "Sportmonks", "captured_at": sm_cutoff,
             "status": "confirmed", "confidence": 0.85,
         })
@@ -539,7 +539,7 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
         facts.append({
             "id": "standings", "kind": "standing", "label": "积分榜",
             "value": " / ".join(parts),
-            "detail": "Sportmonks 小组排名、积分与近况；只作背景",
+            "detail": "小组排名、积分与近况",
             "source": "Sportmonks", "captured_at": sm_cutoff,
             "status": "confirmed", "confidence": 0.85,
         })
@@ -563,7 +563,7 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
                     "id": f"form_{side}", "kind": "form",
                     "label": f"{match.home if side == 'home' else match.away} 近期",
                     "value": " ".join(form),
-                    "detail": "Sportmonks 小组赛近况；样本小，只作参考",
+                    "detail": "近 5 场走势",
                     "source": "Sportmonks", "captured_at": sm_cutoff,
                     "status": "confirmed", "confidence": 0.8,
                 })
@@ -605,10 +605,12 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
             "id": "coaches", "kind": "coach", "label": "主教练",
             "value": f"{(coaches.get('home') or {}).get('name') or '—'} / "
                      f"{(coaches.get('away') or {}).get('name') or '—'}",
-            "detail": "双方主教练；只作背景", "source": "Sportmonks",
+            "detail": "双方主教练", "source": "Sportmonks",
             "captured_at": sm_cutoff, "status": "confirmed", "confidence": 0.8,
         })
-    highlights = (sm_payload.get("prediction_highlights") or {}).get("items") or []
+    _raw_highlights = sm_payload.get("prediction_highlights") or []
+    highlights = _raw_highlights if isinstance(_raw_highlights, list) else (
+        _raw_highlights.get("items") or [])
     wanted = {"BTTS_PROBABILITY", "OVER_UNDER_2_5_PROBABILITY",
               "DOUBLE_CHANCE_PROBABILITY", "CORRECT_SCORE_PROBABILITY"}
     selected_highlights = [item for item in highlights if item.get("key") in wanted]
@@ -633,9 +635,9 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
         if value:
             facts.append({
                 "id": f"sm_{key.lower()}", "kind": "prediction",
-                "label": item.get("label") or "Sportmonks 预测",
+                "label": item.get("label") or "预测",
                 "value": value,
-                "detail": "第三方预测参考，不参与价/市/模三闸",
+                "detail": "25 维预测",
                 "source": "Sportmonks 预测", "captured_at": sm_cutoff,
                 "status": "confirmed", "confidence": 0.7,
             })

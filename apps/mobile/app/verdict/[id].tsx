@@ -199,7 +199,7 @@ export default function VerdictDetailScreen() {
           {copy.footer}
         </Text>
         <Text variant="caption" color={colors.subtle} center style={styles.footer}>
-          封存时间 {detail.sealedAt ? formatDateTime(detail.sealedAt) : "未封存"} · 引擎 {detail.engine || "预测引擎 v3"}
+          封存时间 {detail.sealedAt ? formatDateTime(detail.sealedAt) : "未封存"} · 模型 {detail.engine || "模型 v3"}
         </Text>
       </ScrollView>
 

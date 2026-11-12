@@ -302,7 +302,7 @@ def _probability_compare(db: Session, v: Verdict) -> dict:
         }
     if sm is not None and sm.odds and market_is_fresh(sm):
         market = {
-            "bookmaker": f"Sportmonks · {sm.bookmaker or '市场'}",
+            "bookmaker": sm.bookmaker or "市场",
             "probs": sm.odds,
             "source": "sportmonks",
         }

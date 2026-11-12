@@ -62,7 +62,7 @@ export function DetailHero({
         <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted}>
           {detail.league || "联赛待同步"} · {detail.pool === "hhad" ? `让球 ${detail.goalLine ?? ""}` : "胜平负"}
         </Text>
-        <Chip label="预测引擎 v3" tone={dark ? "dark" : "neutral"} />
+        <Chip label="模型 v3" tone={dark ? "dark" : "neutral"} />
         {detail.modelStatus === "shadow" ? (
           <Chip label={modelLabel} tone={dark ? "dark" : "neutral"} />
         ) : null}

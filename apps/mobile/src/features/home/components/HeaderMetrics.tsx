@@ -32,7 +32,7 @@ export function HeaderMetrics({ engine, dataPoints }: {
   if (!engine) {
     return (
       <View style={styles.metrics}>
-        <Text variant="caption" color={colors.muted}>正在连接预测引擎…</Text>
+        <Text variant="caption" color={colors.muted}>正在连接模型…</Text>
       </View>
     );
   }
@@ -40,12 +40,12 @@ export function HeaderMetrics({ engine, dataPoints }: {
   const predictionTypes = Math.max(0, Math.round(engine.sportmonks_prediction_types ?? 0));
   const lineups = Math.max(0, Math.round(engine.sportmonks_lineups ?? 0));
   return (
-    <View style={styles.metrics} accessibilityLabel="预测引擎状态">
+    <View style={styles.metrics} accessibilityLabel="预测模型状态">
       <Text variant="caption" color={colors.muted} numberOfLines={1}>
         已为你稳定运行 {engine.uptime_hours ?? "—"} 小时
       </Text>
       <Text variant="captionStrong" color={colors.green} numberOfLines={1}>
-        预测引擎 {engine.version}
+        预测模型 {engine.version}
       </Text>
       <Text variant="caption" color={colors.muted} numberOfLines={1}>
         {points > 0 ? `今日采集 ${points.toLocaleString()} 条数据点` : "今日数据同步中"}

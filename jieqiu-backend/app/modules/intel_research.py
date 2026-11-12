@@ -93,7 +93,9 @@ def _fetch(fixture_id: int, db: Session | None = None,
         main_ref = (structured.get("referees") or {}).get("main") or {}
         if main_ref:
             facts.append(f"主裁：{main_ref.get('name') or '—'}")
-        highlights = (structured.get("prediction_highlights") or {}).get("items") or []
+        _raw_highlights = structured.get("prediction_highlights") or []
+        highlights = _raw_highlights if isinstance(_raw_highlights, list) else (
+            _raw_highlights.get("items") or [])
         for item in highlights[:3]:
             values = item.get("values") or {}
             if item.get("key") == "CORRECT_SCORE_PROBABILITY":

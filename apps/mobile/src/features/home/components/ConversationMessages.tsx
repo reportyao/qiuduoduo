@@ -106,7 +106,7 @@ export function AssistantBrief({
       >
         <StatusDot color={colors.green} />
         <Text variant="caption" color={colors.muted} style={styles.flex} numberOfLines={1}>
-          预测引擎 v3 · 价 / 市 / 模
+          预测 · 阵容 · 市场
         </Text>
         <Text variant="caption" color={colors.green}>数据状态 ›</Text>
       </Pressable>
