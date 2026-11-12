@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { ChatCard, SportmonksIntelData, VerdictSummary } from "@/domain/types";
 import type { BriefMatchOption } from "@/features/home/components/BriefMatchPicker";
 
-const STORAGE_PREFIX = "jieqiu.home.thread.v2";
+const STORAGE_PREFIX = "jieqiu.home.thread.v3";
 const MAX_MESSAGES = 60;
 
 export interface MatchIntelSummary {
