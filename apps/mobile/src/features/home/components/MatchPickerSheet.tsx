@@ -182,11 +182,11 @@ export function MatchPickerSheet({
 function rowStatus(status: string, tier?: string | null): string {
   if (tier === "verified") return "预测 · 看完整依据";
   if (tier === "market_reference") return "预测 · 看完整依据";
-  if (tier === "avoid") return "赛前 · 看情报";
+  if (tier === "avoid") return "赛前 · 看原因";
   if (tier === "no_data") return "赛前";
   if (status === "promoted") return "预测 · 看完整依据";
   if (status === "screening") return "预测";
-  if (status === "killed") return "赛前 · 看情报";
+  if (status === "killed") return "赛前 · 看原因";
   return "预测";
 }
 
