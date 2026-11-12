@@ -2,7 +2,7 @@
 
 > 分支：`feat/v4-plan-settlement`  
 > 范围：4 Tab、HeaderMetrics、每日 AI 战绩、4 场定投计划、会员权益/手动开通、90 分钟结算、人设 chat、OPC 后台。  
-> 结论：**代码与文档通过本地测试与模拟器验收；生产未部署、v4 APK 未构建。**
+> 结论：**代码、文档、腾讯云生产部署与 v4 APK 安装验收均已通过；正式签名/上架未做。**
 
 ## 1. 自动验证
 
@@ -95,7 +95,7 @@
 - 计划自训练模型：只有 `feature_snapshots/model_registry/training_runs` 脚手架。
 - 计划更新提醒/收藏；不做跟单/自动记注/代购。
 - 生产 Postgres 切库、备份/PITR 恢复演练。
-- v4 正式 APK 构建/签名/发布、iOS、真机 JPush。
+- v4 APK 已由 GitHub Actions 构建（run `43151924887`）并在 MuMu 安装验证；正式签名/上架、iOS、真机 JPush 仍未做。
 - 生产部署已完成（2026-11-12 11:38 CST）：`deploy.py` 部署到 `43.128.24.244`，`/health` 200，OpenAPI 158/174，管理后台静态资源 v=20261112d；生产仍为 SQLite。部署前备份在 `/home/ubuntu/backups/`（代码 `jieqiu-backend-20261112-113522.tar.gz`、库 `jieqiu-20261112-113522.db`）。
 
 ## 6. 回滚
