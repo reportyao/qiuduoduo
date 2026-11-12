@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFloatingStore } from "@/features/assistant/floatingStore";
-import { colors, radii, spacing } from "@/theme/tokens";
+import { colors, layout, radii, spacing } from "@/theme/tokens";
 import { IconButton } from "./IconButton";
 import { Text } from "./Text";
 
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopLeftRadius: radii.sheet,
     borderTopRightRadius: radii.sheet,
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: layout.pagePadding,
     paddingTop: spacing.sm,
     maxHeight: "86%",
   },
