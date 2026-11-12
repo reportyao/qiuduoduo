@@ -2,7 +2,7 @@
 
 本文件是 AI 与人类协作开发的**仓库级上下文入口**。任何 AI/开发者在改动代码前必须先读本文件；提交前必须按 Definition of Done 自检。
 
-当前事实（2026-11-12）：生产代码仍在 `jieqiu-backend/`，OpenAPI **158 路径 / 174 方法**，后端 **338 tests**，前端 **47 tests**，Alembic head `20261112_23`；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。v4.1 代码在本分支，**尚未部署生产、尚未构建正式 APK**。文档索引见 [docs/README.md](./docs/README.md)。
+当前事实（2026-11-12）：生产代码仍在 `jieqiu-backend/`，OpenAPI **158 路径 / 174 方法**，后端 **341 tests**，前端 **47 tests**，Alembic head `20261112_23`；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。v4.1 代码在本分支，**尚未部署生产、尚未构建正式 APK**。文档索引见 [docs/README.md](./docs/README.md)。
 
 ## 1. 架构地图
 

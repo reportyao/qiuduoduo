@@ -9,6 +9,7 @@ from app.models import (MatchResult, PlanBet, PlanBetLeg, PlanCycle, User,
                         Verdict)
 from app.modules import membership, plan_service, settlement
 from app.modules.timeutil import CN, trade_date_now
+from tests.conftest import admin_login
 
 CN_TZ = timezone(timedelta(hours=8))
 
@@ -146,3 +147,23 @@ def test_plan_ignores_past_kickoff(db):
     db.add(_verdict(9, _kickoff(-1)))
     db.commit()
     assert plan_service.build_cycle(db, "stable", date=trade_date_now()) is None
+
+
+def test_verdict_detail_exposes_match_id(client, db):
+    v = _verdict(99, _kickoff(1, 20))
+    db.add(v)
+    db.commit()
+    response = client.get(f"/verdicts/{v.id}")
+    assert response.status_code == 200
+    assert response.json()["match_id"] == "m4-99"
+
+
+def test_workbench_push_reports_dry_run_without_server_keys(client, monkeypatch):
+    monkeypatch.delenv("JQ_JPUSH_APPKEY", raising=False)
+    monkeypatch.delenv("JQ_JPUSH_MASTER_SECRET", raising=False)
+    admin_login(client)
+    payload = client.get("/admin/api/workbench")
+    assert payload.status_code == 200
+    push = next(stage for stage in payload.json()["stages"] if stage["key"] == "push")
+    assert "dry-run" in push["headline"]
+    assert push["state"] in ("warn", "blocked")

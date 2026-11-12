@@ -411,6 +411,24 @@ export default function HomeScreen() {
           <View style={styles.conversation}>
             <ConversationDate value={date} onChange={chooseDate} />
 
+            {focus ? (
+              <FocusSection
+                focus={focus}
+                focusData={focusQuery.data}
+                focusLoading={focusQuery.isLoading}
+                focusedVerdict={focusedVerdict}
+                otherCount={verdicts.length - (focusedVerdict ? 1 : 0)}
+                betExists={Boolean(focusedVerdict && betIds.has(focusedVerdict.id))}
+                onOpenVerdict={openVerdict}
+                onBet={setBetTarget}
+                onWhyNot={openWhyNot}
+                onSeal={setSealTarget}
+                onSwitch={focusSwitch}
+                onClearAll={focusClearAll}
+                onOnSale={goMatches}
+              />
+            ) : null}
+
             {briefStream ? (
               <AssistantBrief
                 stream={briefStream}
@@ -444,24 +462,6 @@ export default function HomeScreen() {
                   trackInteraction("pulse_open");
                   setDataOpen(true);
                 }}
-              />
-            ) : null}
-
-            {focus ? (
-              <FocusSection
-                focus={focus}
-                focusData={focusQuery.data}
-                focusLoading={focusQuery.isLoading}
-                focusedVerdict={focusedVerdict}
-                otherCount={verdicts.length - (focusedVerdict ? 1 : 0)}
-                betExists={Boolean(focusedVerdict && betIds.has(focusedVerdict.id))}
-                onOpenVerdict={openVerdict}
-                onBet={setBetTarget}
-                onWhyNot={openWhyNot}
-                onSeal={setSealTarget}
-                onSwitch={focusSwitch}
-                onClearAll={focusClearAll}
-                onOnSale={goMatches}
               />
             ) : null}
 

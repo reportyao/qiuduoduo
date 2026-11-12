@@ -14,6 +14,17 @@ def test_admin_shell_has_v4_views(client):
     assert 'id="view-ops-v4"' in html
 
 
+def test_workbench_collector_unknown_age_copy(client):
+    admin_login(client)
+    payload = client.get("/admin/api/workbench")
+    assert payload.status_code == 200
+    text = payload.text
+    assert "未知前更新" not in text
+    collect = next(stage for stage in payload.json()["stages"]
+                   if stage["key"] == "collect")
+    assert "SP 文件" in collect["headline"]
+
+
 def test_admin_app_user_membership_and_masking(client, db):
     user = User(id="u-admin-v4", device_token="dev-admin-v4",
                 display_name="后台测试", phone="13800138000",

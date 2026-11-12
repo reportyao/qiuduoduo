@@ -115,6 +115,14 @@ function statusPill(status) {
     fail: ["red", "失败"], skip: ["amber", "跳过"],
     ok: ["green", "正常"], degraded: ["red", "降级"],
     cached: ["blue", "缓存"], blocked: ["amber", "拦截"],
+    pending: ["amber", "待结算"], won: ["green", "已中"],
+    lost: ["red", "未中"], void: ["muted", "走水"],
+    settled: ["green", "已结算"], active: ["green", "生效中"],
+    none: ["muted", "未开通"], revoked: ["muted", "已撤销"],
+    running: ["blue", "运行中"], error: ["red", "失败"],
+    open: ["amber", "待处理"], ack: ["blue", "已确认"],
+    resolved: ["green", "已处理"], unconfigured: ["amber", "未配置"],
+    disabled: ["muted", "已停用"], info: ["blue", "提示"],
   };
   const [cls, label] = map[status] || ["muted", status || "—"];
   return `<span class="pill ${cls}">${esc(label)}</span>`;
@@ -187,8 +195,8 @@ async function loadOverview() {
     <div class="kpi-grid">
       <div class="kpi green accent"><div class="kpi-label">今日过三关</div><div class="kpi-value">${c.verdicts_today.promoted}</div><div class="kpi-foot">复核中 ${c.verdicts_today.screening} · 已砍 ${c.verdicts_today.killed}</div></div>
       <div class="kpi"><div class="kpi-label">今日已发布</div><div class="kpi-value">${published}</div><div class="kpi-foot">snapshot ${c.snapshots.published || 0} · plan ${c.plans.published || 0}</div></div>
-      <div class="kpi ${c.models.degraded ? "amber" : "green"}"><div class="kpi-label">模型池健康</div><div class="kpi-value">${healthyModels}/${c.models.total}</div><div class="kpi-foot">降级 ${c.models.degraded} · 未配 Key ${c.models.total - c.models.configured}</div></div>
-      <div class="kpi"><div class="kpi-label">模型调用（今日）</div><div class="kpi-value">${totalCalls}</div><div class="kpi-foot">成本 ¥${num(totalCost, 4)}</div></div>
+      <div class="kpi ${c.models.degraded ? "amber" : "green"}"><div class="kpi-label">文案模型池</div><div class="kpi-value">${healthyModels}/${c.models.total}</div><div class="kpi-foot">降级 ${c.models.degraded} · 未配 Key ${c.models.total - c.models.configured}</div></div>
+      <div class="kpi"><div class="kpi-label">LLM 调用（今日）</div><div class="kpi-value">${totalCalls}</div><div class="kpi-foot">成本 ¥${num(totalCost, 4)}</div></div>
     </div>
 
     <div class="card">
@@ -369,9 +377,9 @@ function openModelModal(model = null) {
       ${model ? "" : '<div class="full"><label>API Key</label><input id="mf-key" type="password" placeholder="sk_t..."></div>'}
       <div><label>优先级</label><input id="mf-priority" type="number" min="1" value="${model?.priority || 100}"></div>
       <div><label>启用</label><select id="mf-enabled"><option value="true" ${!model || model.enabled ? "selected" : ""}>启用</option><option value="false" ${model && !model.enabled ? "selected" : ""}>停用</option></select></div>
-      <div><label>timeout</label><input id="mf-timeout" type="number" min="3" max="120" value="${model?.timeout_s || 20}"></div>
-      <div><label>max_tokens</label><input id="mf-tokens" type="number" min="64" max="4096" value="${model?.max_tokens || 800}"></div>
-      <div><label>temperature</label><input id="mf-temp" type="number" min="0" max="1.5" step="0.05" value="${model?.temperature || 0.4}"></div>
+      <div><label>超时（秒）</label><input id="mf-timeout" type="number" min="3" max="120" value="${model?.timeout_s || 20}"></div>
+      <div><label>最大 Token</label><input id="mf-tokens" type="number" min="64" max="4096" value="${model?.max_tokens || 800}"></div>
+      <div><label>温度</label><input id="mf-temp" type="number" min="0" max="1.5" step="0.05" value="${model?.temperature || 0.4}"></div>
       <div class="actions full"><button class="btn primary" type="submit">保存</button><button class="btn ghost" type="button" id="mf-cancel">取消</button></div>
     </form>
   `);
@@ -629,15 +637,19 @@ async function loadRecommendations(append = false) {
       card.style.display = !q || (card.dataset.search || "").includes(q) ? "" : "none";
     });
   };
-  if (el("#run-pipeline")) el("#run-pipeline").onclick = async () => {
-    const btn = el("#run-pipeline"); btn.disabled = true; btn.textContent = "运行中…";
-    try {
-      const result = await post("/admin/api/recommendations/run", { date: state.date, stake: 100 });
-      toast(`主链完成：snapshot ${result.snapshots}，published ${result.published}`, "success", 5000);
-      loadRecommendations();
-    } catch (error) { toast(error.message, "error"); }
-    btn.disabled = false; btn.textContent = "运行主链";
-  };
+  if (el("#run-pipeline")) el("#run-pipeline").onclick = () => confirmModal(
+    "运行主链",
+    "会执行 build → AI 复核 → 发布，可能改变用户端可见内容。确认执行？",
+    async () => {
+      const btn = el("#run-pipeline"); btn.disabled = true; btn.textContent = "运行中…";
+      try {
+        const result = await post("/admin/api/recommendations/run", { date: state.date, stake: 100 });
+        toast(`主链完成：snapshot ${result.snapshots}，published ${result.published}`, "success", 5000);
+        loadRecommendations();
+      } catch (error) { toast(error.message, "error"); }
+      btn.disabled = false; btn.textContent = "运行主链";
+    },
+  );
   if (el("#batch-review")) el("#batch-review").onclick = () => confirmModal("批量复核", "复核今日全部 draft/review_failed？LLM 调用可能耗时。", async () => {
     const result = await post("/admin/api/recommendations/batch", { action: "review", date: state.date });
     toast(`批量复核：完成 ${result.done}，跳过 ${result.skipped}，错误 ${result.errors.length}`, result.errors.length ? "warn" : "success", 5000);
@@ -702,22 +714,23 @@ function bindSubjectButtons(data) {
     await post(`/admin/api/recommendations/${btn.dataset.type}/${btn.dataset.publish}/publish`);
     toast("已发布"); loadRecommendations();
   }));
-  els("[data-withdraw]").forEach(btn => btn.onclick = () => modal("撤回内容", `
-    <form id="withdraw-form" class="form-grid"><div class="full"><label>撤回理由</label>
-      <textarea id="withdraw-reason" required placeholder="例如：临场盘口反转，判断失效"></textarea></div>
-      <div class="actions full"><button class="btn danger" type="submit">确认撤回</button>
-      <button class="btn ghost" type="button" id="withdraw-cancel">取消</button></div></form>`));
-  // bind once after modal opens: use event delegation on submit
-  if (el("#withdraw-form")) el("#withdraw-form").onsubmit = async event => {
-    event.preventDefault();
-    const reason = el("#withdraw-reason").value.trim();
-    if (!reason) return;
-    try {
-      await post(`/admin/api/recommendations/${btn.dataset.type}/${btn.dataset.withdraw}/withdraw`, { reason });
-      closeModal(); toast("已撤回"); loadRecommendations();
-    } catch (error) { toast(error.message, "error"); }
-  };
-  if (el("#withdraw-cancel")) el("#withdraw-cancel").onclick = closeModal;
+  els("[data-withdraw]").forEach(btn => btn.onclick = () => {
+    modal("撤回内容", `
+      <form id="withdraw-form" class="form-grid"><div class="full"><label>撤回理由</label>
+        <textarea id="withdraw-reason" required placeholder="例如：临场盘口反转，判断失效"></textarea></div>
+        <div class="actions full"><button class="btn danger" type="submit">确认撤回</button>
+        <button class="btn ghost" type="button" id="withdraw-cancel">取消</button></div></form>`);
+    el("#withdraw-cancel").onclick = closeModal;
+    el("#withdraw-form").onsubmit = async event => {
+      event.preventDefault();
+      const reason = el("#withdraw-reason").value.trim();
+      if (!reason) return;
+      try {
+        await post(`/admin/api/recommendations/${btn.dataset.type}/${btn.dataset.withdraw}/withdraw`, { reason });
+        closeModal(); toast("已撤回"); loadRecommendations();
+      } catch (error) { toast(error.message, "error"); }
+    };
+  });
 }
 
 /* ---------- workbench ---------- */
@@ -769,7 +782,7 @@ function wbActionLabel(id) {
 }
 
 async function wbRunAction(id) {
-  const unsafe = ["sync_odds", "sync_sportmonks", "sync_intel", "run_pipeline"].includes(id);
+  const unsafe = ["restart_collector", "sync_odds", "sync_sportmonks", "sync_intel", "run_pipeline"].includes(id);
   const run = async () => {
     const body = { action: id };
     if (state.date) body.date = state.date;
@@ -779,6 +792,7 @@ async function wbRunAction(id) {
   };
   if (!unsafe) return run();
   const prompts = {
+    restart_collector: "会向采集器下发重启指令；采集器当前若离线，需要本地 watchdog 或人工重新启动。确认执行？",
     run_pipeline: "会运行 build→复核→发布，可能改变前端内容。确认执行？",
     sync_sportmonks: "会请求 Sportmonks API 并消耗额度，只同步今日竞彩目标场次。确认执行？",
     sync_intel: "会请求 Sportmonks 事实并调用 LLM 生成中文摘要，可能消耗额度。确认执行？",
@@ -894,8 +908,8 @@ async function loadCollector() {
         ${badge}
       </div>
       <div class="status-grid" style="margin-top:16px">
-        <div class="status-item"><div><b>最后心跳</b><div class="status-label">超过 10 分钟视为离线</div></div><span class="mono">${esc(fmtTime(data.last_seen, true))} · ${ageText(data.stale_seconds)}前</span></div>
-        <div class="status-item"><div><b>SP 数据文件</b><div class="status-label">${esc(data.data_updated_at ? "服务器收到的 sp_data.db" : "未收到文件")}</div></div><span class="mono">${esc(fmtTime(data.data_updated_at, true))} · ${ageText(data.data_age_seconds)}前</span></div>
+        <div class="status-item"><div><b>最后心跳</b><div class="status-label">超过 10 分钟视为离线</div></div><span class="mono">${esc(fmtTime(data.last_seen, true))}${data.stale_seconds == null ? "" : ` · ${ageText(data.stale_seconds)}前`}</span></div>
+        <div class="status-item"><div><b>SP 数据文件</b><div class="status-label">${esc(data.data_updated_at ? "服务器收到的 sp_data.db" : "未收到文件")}</div></div><span class="mono">${esc(fmtTime(data.data_updated_at, true))}${data.data_age_seconds == null ? "" : ` · ${ageText(data.data_age_seconds)}前`}</span></div>
         <div class="status-item"><div><b>最近成功采集</b><div class="status-label">最近一次抓到官方 SP</div></div><span class="mono">${esc(fmtTime(data.last_success_at, true))}</span></div>
         <div class="status-item"><div><b>最近推送</b><div class="status-label">SFTP 到服务器</div></div><span class="mono">${esc(fmtTime(data.last_push_at, true))}</span></div>
       </div>
@@ -1078,11 +1092,15 @@ async function loadIntegrations() {
       <div class="card integration-card">
         <div class="card-head">
           <div><h2 class="card-title">竞彩 SP 采集器</h2><div class="card-sub">官方在售赔率 · 主链路</div></div>
-          ${sync.latest ? '<span class="pill green">有数据</span>' : '<span class="pill amber">无数据</span>'}
+          ${sync.latest
+            ? (sync.lag_seconds != null && sync.lag_seconds > 1800
+              ? '<span class="pill red">数据过期</span>'
+              : '<span class="pill green">已同步</span>')
+            : '<span class="pill amber">无数据</span>'}
         </div>
         <div class="integration-meta">
           <b>最新快照</b><span>${esc(fmtTime(sync.latest, true))}</span>
-          <b>同步延迟</b><span>${sync.lag_seconds == null ? "—" : `${sync.lag_seconds}s`}（超过 1800s 视为异常）</span>
+          <b>同步延迟</b><span>${sync.lag_seconds == null ? "—" : `${ageText(sync.lag_seconds)}前`}（超过 30 分钟视为异常）</span>
           <b>位置</b><span>家宽机器 collector.py → SFTP → seed</span>
         </div>
         <div class="integration-actions"><button class="btn secondary small" data-goto="collector">查看采集器</button></div>
@@ -1211,6 +1229,7 @@ const TASK_META = {
   decision_review: { label: "单场发布复核", connected: true },
   plan_review: { label: "组合发布复核", connected: true },
   match_analysis: { label: "单场实时分析", connected: true },
+  workbench_diagnose: { label: "工作台 AI 体检", connected: true },
 };
 const PROFILE_LABEL = { fast: "对话问答（fast）", deep: "发布前复核（deep）" };
 
@@ -1219,6 +1238,7 @@ async function loadGateway() {
   root.innerHTML = '<div class="skeleton"></div>';
   const data = await api("/admin/api/gateway");
   const rows = data.summary.rows || [];
+  const profileConfigured = Object.fromEntries((data.profiles || []).map(p => [p.name, Boolean(p.configured)]));
   root.innerHTML = `
     <div class="kpi-grid auto">
       ${data.profiles.map(profile => `
@@ -1227,7 +1247,8 @@ async function loadGateway() {
     <div class="card"><h2 class="card-title">任务路由</h2><div class="table-wrap"><table><thead><tr><th>用途</th><th>配置</th><th>状态</th></tr></thead><tbody>
       ${Object.entries(data.routes || {}).map(([task, profile]) => {
         const meta = TASK_META[task] || { label: task, connected: true };
-        return `<tr><td>${esc(meta.label)}</td><td>${esc(PROFILE_LABEL[profile] || profile)}</td><td>${meta.connected ? statusPill("ok") : '<span class="pill muted">未接入</span>'}</td></tr>`;
+        const configured = profileConfigured[profile] === true;
+        return `<tr><td>${esc(meta.label)}</td><td>${esc(PROFILE_LABEL[profile] || profile)}</td><td>${meta.connected ? statusPill(configured ? "ok" : "unconfigured") : '<span class="pill muted">未接入</span>'}</td></tr>`;
       }).join("")}
     </tbody></table></div></div>
     <div class="card"><h2 class="card-title">今日用量</h2><div class="table-wrap"><table><thead><tr><th>任务</th><th>配置</th><th class="num">调用</th><th class="num">缓存</th><th class="num">Tokens</th><th class="num">成本</th></tr></thead><tbody>
@@ -1252,24 +1273,45 @@ async function loadPlans() {
     ["balanced", "平衡定投", balanced.plans || []],
     ["aggressive", "进取定投", aggressive.plans || []],
   ];
+  const pct = value => value == null ? "—" : `${num(Number(value) * 100, 1)}%`;
+  const edgeText = value => value == null ? "—" : `${Number(value) > 0 ? "+" : ""}${num(Number(value) * 100, 1)}pp`;
+  const qualityText = value => value == null ? "—" : Number(value) >= 1 ? "高" : "中";
+  const signed = value => `${Number(value) > 0 ? "+" : ""}${num(value, 2)}`;
+  const legMarkup = leg => `
+    <div class="plan-leg">
+      <div class="plan-leg-match">
+        ${leg.match_no ? `<span class="pill muted">${esc(leg.match_no)}</span>` : ""}
+        <b>${esc(leg.home || "主队待同步")} vs ${esc(leg.away || "客队待同步")}</b>
+        ${leg.league ? `<span class="plan-leg-league">${esc(leg.league)}</span>` : ""}
+      </div>
+      <div class="plan-leg-meta">${esc(leg.direction || "—")} · 分配 ${num(leg.allocation)} · @${num(leg.odds, 2)} · 模型 ${pct(leg.model_prob)} / 市场 ${pct(leg.market_prob)} · edge ${edgeText(leg.edge)} · 质量 ${qualityText(leg.quality_score)}</div>
+      ${leg.selection_reason ? `<div class="card-sub">${esc(leg.selection_reason)}</div>` : ""}
+    </div>`;
   root.innerHTML = `
-    <div class="card"><div class="toolbar"><div><h2 style="margin:0">AI 定投计划</h2><div class="card-sub">每期 4 场 · 每场 100 · 单关 / 2 串 1 · 不跟单</div></div><button class="btn secondary" id="reload-plans">刷新</button></div>
+    <div class="card"><div class="toolbar"><div><h2 style="margin:0">AI 定投计划</h2><div class="card-sub">每期最多 4 场 · 每场 100 · 单关 / 2 串 1 · 只展示，不跟单</div></div><button class="btn secondary" id="reload-plans">刷新</button></div>
       ${blocks.map(([risk, label, plans]) => `
         <div style="margin-top:18px">
-          <div class="toolbar"><h3 style="margin:0">${label}</h3>${canOperate() ? `<button class="btn secondary" data-build-plan="${risk}">生成今日计划</button>` : ""}</div>
+          <div class="toolbar"><div><h3 style="margin:0">${label}</h3><div class="card-sub">${plans.length ? `共 ${plans.length} 期` : "今日尚未生成"}</div></div>${canOperate() ? `<button class="btn secondary" data-build-plan="${risk}" data-risk-label="${label}">生成今日计划</button>` : ""}</div>
           ${plans.map(plan => `
-            <div class="reco-card ${plan.status === "settled" ? "" : "draft"}" style="margin-top:10px">
-              <div class="reco-head"><div><div class="reco-title">第 ${plan.cycle_no} 期 · ${esc(plan.name)}</div><div class="reco-sub">${plan.match_count} 场 · ${plan.bet_count} 注 · 投入 ${num(plan.total_stake)} · 盈亏 ${num(plan.pnl)} · ROI ${plan.roi == null ? "—" : num(plan.roi * 100, 1) + "%"}</div></div>${statusPill(plan.status)}</div>
-              <div class="detail-list" style="margin-top:10px">${(plan.bets || []).map(bet => `<div><b>${esc(bet.label || bet.bet_type)}</b> · ${num(bet.stake)} @${bet.odds} · ${esc(bet.status)}${bet.pnl ? ` · ${num(bet.pnl)}` : ""}${(bet.legs || []).map(leg => `<div class="card-sub" style="margin-left:12px">${esc(leg.match_id)} · ${esc(leg.direction)} · 分配 ${num(leg.allocation)} · ${esc(leg.selection_reason || "")}</div>`).join("")}</div>`).join("")}</div>
+            <div class="reco-card ${esc(plan.status)}" style="margin-top:10px">
+              <div class="reco-head"><div><div class="reco-title">第 ${plan.cycle_no} 期 · ${esc(plan.name)}</div><div class="reco-sub">${plan.match_count} 场 · ${plan.bet_count} 注 · 投入 ${num(plan.total_stake)} · 盈亏 ${signed(plan.pnl)} · ROI ${plan.roi == null ? "—" : num(plan.roi * 100, 1) + "%"}</div></div>${statusPill(plan.status)}</div>
+              <div class="detail-list" style="margin-top:10px">${(plan.bets || []).map(bet => `
+                <div class="plan-bet">
+                  <div class="plan-bet-head"><b>${esc(bet.label || bet.bet_type)}</b><span>${num(bet.stake)} · @${num(bet.odds, 2)}</span>${statusPill(bet.status)}${bet.status !== "pending" ? `<span class="card-sub">盈亏 ${signed(bet.pnl)}</span>` : ""}</div>
+                  ${(bet.legs || []).map(legMarkup).join("")}
+                </div>`).join("")}</div>
               ${canOperate() && plan.status !== "settled" ? `<button class="btn secondary" data-settle-plan="${plan.id}" style="margin-top:8px">结算/重算</button>` : ""}
             </div>`).join("") || '<div class="empty">还没有计划。候选不足时不会硬凑 4 场。</div>'}
         </div>`).join("")}
     </div>
   `;
   el("#reload-plans").onclick = loadPlans;
-  els("[data-build-plan]").forEach(btn => btn.onclick = async () => {
-    try { await post("/admin/api/plans/build", { risk: btn.dataset.buildPlan, publish: true }); toast("计划已生成"); loadPlans(); }
-    catch (e) { toast(e.message, "error"); }
+  els("[data-build-plan]").forEach(btn => btn.onclick = () => {
+    confirmModal("生成今日计划", `将为「${btn.dataset.riskLabel}」新建一期并立即发布。已有期数不会被覆盖；候选不足时会少做或失败。`, async () => {
+      await post("/admin/api/plans/build", { risk: btn.dataset.buildPlan, publish: true });
+      toast("计划已生成");
+      await loadPlans();
+    });
   });
   els("[data-settle-plan]").forEach(btn => btn.onclick = async () => {
     try { await post(`/admin/api/plans/${btn.dataset.settlePlan}/settle`); toast("已结算/重算"); loadPlans(); }
@@ -1277,36 +1319,123 @@ async function loadPlans() {
   });
 }
 
+let appUsersCache = [];
+let appUsersQuery = "";
+let appUsersTier = "all";
+let appUsersSearchTimer = null;
+
+function appUserTierPill(tier) {
+  if (tier === "max") return '<span class="pill green">MAX</span>';
+  if (tier === "pro") return '<span class="pill blue">PRO</span>';
+  return '<span class="pill muted">免费</span>';
+}
+
+function filteredAppUsers() {
+  const query = appUsersQuery.trim().toLowerCase();
+  return appUsersCache.filter(user => {
+    const tier = user.membership?.tier || "free";
+    if (appUsersTier !== "all" && tier !== appUsersTier) return false;
+    if (!query) return true;
+    return [user.display_name, user.user_id, user.phone, user.email]
+      .some(value => String(value || "").toLowerCase().includes(query));
+  });
+}
+
+function appUsersRows() {
+  const rows = filteredAppUsers();
+  if (!rows.length) {
+    return `<tr><td colspan="5"><div class="empty">没有匹配的用户</div></td></tr>`;
+  }
+  return rows.map(user => {
+    const member = user.membership || {};
+    const tier = member.tier || "free";
+    const active = tier !== "free";
+    const name = esc(user.display_name || "未命名");
+    const label = user.display_name || user.phone || user.user_id.slice(0, 8);
+    const source = member.source === "admin_manual" ? "后台手动"
+      : member.source === "payment" ? "支付" : member.source === "trial" ? "试用" : "";
+    const tierButton = (target, text) => {
+      const current = tier === target;
+      return `<button class="btn ${current ? "ghost" : "secondary"}" data-grant-user="${esc(user.user_id)}" data-grant-tier="${target}" data-grant-name="${esc(label)}" ${current ? "disabled" : ""}>${current ? `当前 ${text}` : `${active ? "改为" : "开通"} ${text} 30 天`}</button>`;
+    };
+    return `<tr>
+      <td><b>${name}</b><div class="card-sub mono">${esc(user.user_id)}</div><div class="card-sub">${esc(user.phone || user.email || "设备账户")}</div></td>
+      <td class="mono">${fmtTime(user.created_at)}</td>
+      <td>${appUserTierPill(tier)}${source ? `<div class="card-sub">${source}</div>` : ""}</td>
+      <td class="mono">${active ? fmtTime(member.expires_at) : "—"}</td>
+      <td>${canAdmin() ? `<div class="member-actions">${tierButton("pro", "Pro")}${tierButton("max", "Max")}${active ? `<button class="btn ghost" data-revoke-user="${esc(user.user_id)}" data-revoke-name="${esc(label)}">撤销</button>` : ""}</div>` : '<span class="card-sub">只读</span>'}</td>
+    </tr>`;
+  }).join("");
+}
+
+function bindAppUserActions() {
+  els("[data-grant-user]").forEach(btn => btn.onclick = () => {
+    const target = btn.dataset.grantTier.toUpperCase();
+    confirmModal("变更会员", `将为「${btn.dataset.grantName}」${btn.dataset.grantTier === "pro" ? "改为" : "开通/改为"} ${target} 30 天。原会员立即失效，并按新等级重新计算到期时间。`, async () => {
+      await post(`/admin/api/app-users/${btn.dataset.grantUser}/membership`, {
+        tier: btn.dataset.grantTier, days: 30, note: "OPC 手动开通",
+      });
+      toast(`已开通 ${target} 30 天`);
+      await loadAppUsers();
+    });
+  });
+  els("[data-revoke-user]").forEach(btn => btn.onclick = () => {
+    confirmModal("撤销会员", `将立即撤销「${btn.dataset.revokeName}」的会员权益。该用户会回到免费额度；操作会写入审计。`, async () => {
+      await post(`/admin/api/app-users/${btn.dataset.revokeUser}/membership/revoke`, { note: "OPC 手动撤销" });
+      toast("会员已撤销");
+      await loadAppUsers();
+    });
+  });
+}
+
+function renderAppUsersTable() {
+  const table = el("#app-users-table");
+  if (!table) return;
+  const visible = filteredAppUsers().length;
+  table.innerHTML = `<div class="table-wrap"><table><thead><tr><th>用户</th><th>注册</th><th>会员</th><th>到期</th><th>操作</th></tr></thead><tbody>${appUsersRows()}</tbody></table></div>`;
+  const count = el("#app-users-count");
+  if (count) count.textContent = `${visible} / ${appUsersCache.length} 位用户`;
+  bindAppUserActions();
+}
+
+async function refreshAppUsers() {
+  const query = appUsersQuery.trim();
+  const suffix = query ? `&query=${encodeURIComponent(query)}` : "";
+  try {
+    const data = await api(`/admin/api/app-users?limit=100${suffix}`);
+    appUsersCache = data.users || [];
+    renderAppUsersTable();
+  } catch (error) {
+    toast(error.message, "error");
+  }
+}
+
 async function loadAppUsers() {
   const root = el("#view-app-users");
   root.innerHTML = '<div class="skeleton"></div>';
-  const data = await api("/admin/api/app-users?limit=100");
   root.innerHTML = `
-    <div class="card"><div class="toolbar"><div><h2 style="margin:0">用户与会员</h2><div class="card-sub">当前真实入口：后台手动开通 Pro / Max；充值支付暂未开放</div></div><button class="btn secondary" id="reload-app-users">刷新</button></div>
-      <div class="table-wrap"><table><thead><tr><th>用户</th><th>注册</th><th>会员</th><th>到期</th><th>操作</th></tr></thead><tbody>
-      ${(data.users || []).map(user => `<tr>
-        <td><b>${esc(user.display_name || "未命名")}</b><div class="card-sub mono">${esc(user.user_id)}</div><div class="card-sub">${esc(user.phone || user.email || "设备账户")}</div></td>
-        <td class="mono">${fmtTime(user.created_at)}</td>
-        <td>${statusPill(user.membership.tier === "free" ? "免费" : user.membership.tier.toUpperCase())}</td>
-        <td class="mono">${fmtTime(user.membership.expires_at)}</td>
-        <td>${canAdmin() ? `<button class="btn secondary" data-grant-user="${user.user_id}" data-grant-tier="pro">Pro 30 天</button> <button class="btn secondary" data-grant-user="${user.user_id}" data-grant-tier="max">Max 30 天</button> <button class="btn ghost" data-revoke-user="${user.user_id}">撤销</button>` : '<span class="card-sub">只读</span>'}</td>
-      </tr>`).join("") || '<tr><td colspan="5">暂无用户</td></tr>'}
-      </tbody></table></div>
+    <div class="card">
+      <div class="toolbar"><div><h2 style="margin:0">用户与会员</h2><div class="card-sub">当前真实入口：后台手动开通 Pro / Max；充值支付暂未开放</div></div><div class="actions"><input id="app-users-search" type="search" placeholder="手机号 / 邮箱 / 昵称 / 用户ID" value="${esc(appUsersQuery)}" aria-label="搜索用户"><button class="btn secondary" id="reload-app-users">刷新</button></div></div>
+      <div class="filters member-filters" role="group" aria-label="会员筛选">
+        ${[["all", "全部"], ["free", "免费"], ["pro", "Pro"], ["max", "Max"]].map(([key, label]) => `<button class="filter ${appUsersTier === key ? "active" : ""}" data-user-tier="${key}">${label}</button>`).join("")}
+        <span class="card-sub" id="app-users-count">加载中…</span>
+      </div>
+      <div id="app-users-table"></div>
     </div>
   `;
-  el("#reload-app-users").onclick = loadAppUsers;
-  els("[data-grant-user]").forEach(btn => btn.onclick = async () => {
-    try {
-      await post(`/admin/api/app-users/${btn.dataset.grantUser}/membership`, { tier: btn.dataset.grantTier, days: 30, note: "OPC 手动开通" });
-      toast("会员已开通"); loadAppUsers();
-    } catch (e) { toast(e.message, "error"); }
+  el("#reload-app-users").onclick = refreshAppUsers;
+  el("#app-users-search").oninput = event => {
+    appUsersQuery = event.target.value;
+    renderAppUsersTable();
+    clearTimeout(appUsersSearchTimer);
+    appUsersSearchTimer = setTimeout(refreshAppUsers, 300);
+  };
+  els("[data-user-tier]").forEach(btn => btn.onclick = () => {
+    appUsersTier = btn.dataset.userTier;
+    els("[data-user-tier]").forEach(item => item.classList.toggle("active", item === btn));
+    renderAppUsersTable();
   });
-  els("[data-revoke-user]").forEach(btn => btn.onclick = async () => {
-    try {
-      await post(`/admin/api/app-users/${btn.dataset.revokeUser}/membership/revoke`, { note: "OPC 手动撤销" });
-      toast("会员已撤销"); loadAppUsers();
-    } catch (e) { toast(e.message, "error"); }
-  });
+  await refreshAppUsers();
 }
 
 async function loadOpsV4() {
@@ -1317,22 +1446,22 @@ async function loadOpsV4() {
     api("/admin/api/engine-config"),
   ]);
   root.innerHTML = `
-    <div class="card"><div class="toolbar"><div><h2 style="margin:0">引擎状态</h2><div class="card-sub">HeaderMetrics 展示口径</div></div><button class="btn secondary" id="reload-ops-v4">刷新</button></div>
-      <div class="detail-list">
-        <div><b>版本</b> <input id="engine-version" value="${esc(engine.version)}" ${canAdmin() ? "" : "disabled"}></div>
-        <div><b>盘口数</b> <input id="engine-markets" type="number" value="${engine.markets_monitored}" ${canAdmin() ? "" : "disabled"}></div>
-        <div><b>模型数</b> <input id="engine-models" type="number" value="${engine.models_reviewing}" ${canAdmin() ? "" : "disabled"}></div>
-        <div><b>数据点系数</b> <input id="engine-factor" type="number" step="0.1" value="${engine.data_points_factor}" ${canAdmin() ? "" : "disabled"}></div>
+    <div class="card"><div class="toolbar"><div><h2 style="margin:0">引擎状态</h2><div class="card-sub">HeaderMetrics 展示口径；只影响前端文案，不改变已入库数据</div></div><button class="btn secondary" id="reload-ops-v4">刷新</button></div>
+      <div class="engine-config-grid">
+        <div class="engine-field"><label for="engine-version">引擎版本</label><input id="engine-version" value="${esc(engine.version)}" ${canAdmin() ? "" : "disabled"}><small>首页显示为「预测引擎 V3.21」</small></div>
+        <div class="engine-field"><label for="engine-markets">监控盘口数</label><input id="engine-markets" type="number" min="1" max="50" value="${engine.markets_monitored}" ${canAdmin() ? "" : "disabled"}><small>展示「N 个盘口动态监控」</small></div>
+        <div class="engine-field"><label for="engine-models">复审模型数</label><input id="engine-models" type="number" min="1" max="50" value="${engine.models_reviewing}" ${canAdmin() ? "" : "disabled"}><small>展示「N 大模型实时复审」</small></div>
+        <div class="engine-field"><label for="engine-factor">数据点系数</label><input id="engine-factor" type="number" min="1" max="100" step="0.1" value="${engine.data_points_factor}" ${canAdmin() ? "" : "disabled"}><small>今日采集数据点的展示放大系数</small></div>
       </div>
-      ${canAdmin() ? '<button class="btn primary" id="save-engine" style="margin-top:10px">保存引擎配置</button>' : ""}
+      ${canAdmin() ? '<button class="btn primary" id="save-engine">保存引擎配置</button>' : '<div class="card-sub">当前角色只读。</div>'}
     </div>
-    <div class="card" style="margin-top:16px"><div class="toolbar"><div><h2 style="margin:0">异常队列 / 任务</h2><div class="card-sub">系统自动跑，人只看异常</div></div></div>
-      <div class="table-wrap"><table><thead><tr><th>严重度</th><th>类型</th><th>原因</th><th>状态</th><th>操作</th></tr></thead><tbody>
-      ${(data.exceptions || []).map(ex => `<tr><td>${ex.severity}</td><td>${esc(ex.type)}</td><td>${esc(ex.message)}</td><td>${statusPill(ex.status)}</td><td>${canOperate() ? `<button class="btn secondary" data-resolve-exception="${ex.id}">标记处理</button>` : ""}</td></tr>`).join("") || '<tr><td colspan="5">没有未处理异常</td></tr>'}
+    <div class="card" style="margin-top:16px"><div class="toolbar"><div><h2 style="margin:0">系统任务与异常</h2><div class="card-sub">系统自动跑，人只看异常；按严重度倒序</div></div></div>
+      <div class="table-wrap"><table><thead><tr><th>严重度</th><th>类型</th><th>原因</th><th>状态</th><th>时间</th><th>操作</th></tr></thead><tbody>
+      ${(data.exceptions || []).map(ex => `<tr><td><span class="severity ${Number(ex.severity) >= 3 ? "high" : Number(ex.severity) === 2 ? "mid" : ""}">${ex.severity}</span></td><td>${esc(ex.type)}</td><td>${esc(ex.message)}</td><td>${statusPill(ex.status)}</td><td class="mono">${fmtTime(ex.created_at)}</td><td>${canOperate() ? `<button class="btn secondary" data-resolve-exception="${ex.id}">标记处理</button>` : ""}</td></tr>`).join("") || '<tr><td colspan="6">没有未处理异常</td></tr>'}
       </tbody></table></div>
     </div>
-    <div class="card" style="margin-top:16px"><h2 class="card-title">最近任务</h2><div class="table-wrap"><table><thead><tr><th>任务</th><th>状态</th><th class="num">耗时</th><th>错误</th></tr></thead><tbody>
-      ${(data.jobs || []).map(job => `<tr><td>${esc(job.job_key)}</td><td>${statusPill(job.status)}</td><td class="num">${job.duration_ms == null ? "—" : job.duration_ms + "ms"}</td><td class="card-sub">${esc(job.error || "")}</td></tr>`).join("") || '<tr><td colspan="4">暂无任务</td></tr>'}
+    <div class="card" style="margin-top:16px"><div class="toolbar"><div><h2 style="margin:0">最近任务</h2><div class="card-sub">ops_jobs 最近 80 条</div></div></div><div class="table-wrap"><table><thead><tr><th>任务</th><th>状态</th><th>开始</th><th class="num">耗时</th><th>错误</th></tr></thead><tbody>
+      ${(data.jobs || []).map(job => `<tr><td><span class="mono">${esc(job.job_key)}</span></td><td>${statusPill(job.status)}</td><td class="mono">${fmtTime(job.started_at)}</td><td class="num">${job.duration_ms == null ? "—" : job.duration_ms + "ms"}</td><td class="card-sub">${esc(job.error || "")}</td></tr>`).join("") || '<tr><td colspan="5">暂无任务</td></tr>'}
     </tbody></table></div></div>
   `;
   el("#reload-ops-v4").onclick = loadOpsV4;
@@ -1411,9 +1540,9 @@ async function loadData() {
     ${supply.blocked_reason ? `<div class="card notice"><b>内容供给受阻：${esc(supply.blocked_reason)}</b><div class="card-sub" style="margin-top:8px">场次 ${supply.matches ?? 0} · 判决 ${supply.verdicts?.total ?? 0} · 市闸 pending ${gate.pending_data ?? 0} · 未开赛覆盖 ${supply.market_covered_matches ?? 0}/${supply.upcoming_matches ?? supply.matches ?? 0} 场（SM ${supply.sportmonks_market?.covered_matches ?? 0} · 辅助国际盘 ${intl.covered_matches ?? 0}）</div></div>` : ""}
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-label">今日场次</div><div class="kpi-value">${summary.matches ?? 0}</div><div class="kpi-foot">已发布 ${published}</div></div>
-      <div class="kpi green accent"><div class="kpi-label">SM 映射</div><div class="kpi-value">${summary.mapped ?? 0}/${summary.matches ?? 0}</div><div class="kpi-foot">手动 ${summary.manual ?? 0} · 缺失 ${summary.missing ?? 0}</div></div>
+      <div class="kpi ${(summary.missing ?? 0) > 0 ? "amber" : "green accent"}"><div class="kpi-label">SM 映射</div><div class="kpi-value">${summary.mapped ?? 0}/${summary.matches ?? 0}</div><div class="kpi-foot">手动 ${summary.manual ?? 0} · 缺失 ${summary.missing ?? 0}</div></div>
       <div class="kpi"><div class="kpi-label">SM 预测</div><div class="kpi-value">${summary.with_probs ?? 0}</div><div class="kpi-foot">市场赔率 ${summary.with_odds ?? 0}</div></div>
-      <div class="kpi"><div class="kpi-label">AI 情报</div><div class="kpi-value">${summary.intel_ready ?? 0}</div><div class="kpi-foot">就绪 / ${summary.matches ?? 0} 场</div></div>
+      <div class="kpi ${(summary.intel_ready ?? 0) >= (summary.matches ?? 0) && (summary.matches ?? 0) > 0 ? "green" : "amber"}"><div class="kpi-label">AI 情报</div><div class="kpi-value">${summary.intel_ready ?? 0}</div><div class="kpi-foot">就绪 / ${summary.matches ?? 0} 场</div></div>
     </div>
     <div class="card"><h2 class="card-title">内容供给</h2>
       <div class="flow">
@@ -1522,7 +1651,8 @@ async function loadData() {
 }
 
 async function openSportmonksMapping(matchId) {
-  modal("映射 Sportmonks fixture", '<div class="skeleton"></div>');
+  modal("映射 Sportmonks fixture", '<div class="skeleton"></div><div class="actions" style="margin-top:12px"><button class="btn ghost" id="map-cancel">取消</button></div>');
+  el("#map-cancel").onclick = closeModal;
   try {
     const data = await api(`/admin/api/sportmonks/candidates?match_id=${encodeURIComponent(matchId)}`);
     const match = data.match || {};
@@ -1553,7 +1683,11 @@ async function openSportmonksMapping(matchId) {
     const cancel = el("#map-cancel");
     if (cancel) cancel.onclick = closeModal;
   } catch (error) {
-    el("#modal-card").innerHTML = `<h3>映射 Sportmonks fixture</h3><div class="empty">${esc(error.message)}</div>`;
+    el("#modal-card").innerHTML = `<h3>映射 Sportmonks fixture</h3>
+      <div class="empty">${esc(error.message)}</div>
+      <div class="actions" style="margin-top:12px"><button class="btn ghost" id="map-cancel">关闭</button></div>`;
+    const cancel = el("#map-cancel");
+    if (cancel) cancel.onclick = closeModal;
   }
 }
 
@@ -1699,24 +1833,6 @@ async function loadModelEval() {
 
 async function loadLogs() {
   const root = el("#view-logs");
-  const configRows = (config.leagues || []).map(row => {
-    const stats = statsByLeague.get(row.league) || {};
-    return `<tr>
-      <td><b>${esc(row.league)}</b></td>
-      <td class="num">${stats.samples ?? row.samples ?? 0}</td>
-      <td class="num">${brier(stats.model_brier ?? row.brier_dc)}</td>
-      <td class="num">${brier(stats.market_model_brier ?? row.brier_market)}</td>
-      <td><select data-model-dc="${esc(row.league)}">
-        ${["disabled", "shadow", "enabled"].map(x => `<option value="${x}" ${row.dc_status === x ? "selected" : ""}>${x}</option>`).join("")}
-      </select></td>
-      <td><select data-model-sm="${esc(row.league)}">
-        ${["disabled", "shadow", "enabled"].map(x => `<option value="${x}" ${row.sm_status === x ? "selected" : ""}>${x}</option>`).join("")}
-      </select></td>
-      <td class="num">${row.dc_weight}/${row.sm_weight}</td>
-      <td>${canAdmin() ? `<button class="btn secondary small" data-model-save="${esc(row.league)}">保存</button>` : '<span class="card-sub">仅 admin</span>'}</td>
-    </tr>`;
-  }).join("");
-  const tierTotals = tierMetrics.totals || {};
   root.innerHTML = `
     <div class="card">
       <div class="toolbar"><div><h2 style="margin:0">运行日志</h2><div class="card-sub" style="margin:0">只读最近日志，不做文件遍历</div></div>

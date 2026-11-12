@@ -16,7 +16,7 @@ AI 足球助理 / 赛前预测产品。当前产品口径以 [docs/qiuduoduo-v4-
 | 后端版本 | `0.8.0-w8+assistant`（`app.main`） |
 | 移动端版本 | `0.3.4` / versionCode `9`（`app.config.ts`，v4.1 尚未出正式 APK） |
 | OpenAPI | **158 路径 / 174 方法**（以 `packages/api-client/openapi.json` 为准） |
-| 后端测试 | **338 passed**（`python -m pytest -q`，2026-11-12 实测） |
+| 后端测试 | **341 passed**（`python -m pytest -q`，2026-11-12 实测） |
 | 前端测试 | **47 passed** + typecheck / ESLint / Android Hermes bundle（2026-11-12 实测） |
 | Alembic head | `20261112_23`（v4 core，up/down 已实现） |
 | 开发数据库 | SQLite + WAL（过渡）；生产目标境内 PostgreSQL 16，**尚未切库** |
@@ -71,7 +71,7 @@ just api-install          # pip install -r jieqiu-backend/requirements.txt
 just db-up                # 本地 Postgres（docker compose，端口 5433）
 just db-migrate           # alembic upgrade head
 just api-run              # uvicorn app.main:app --port 8100
-just api-test             # pytest（当前 338 tests）
+just api-test             # pytest（当前 341 tests）
 
 # 前端（Node 22 自带 corepack；仓库 .npmrc 固定 node-linker=hoisted）
 just install              # corepack pnpm install

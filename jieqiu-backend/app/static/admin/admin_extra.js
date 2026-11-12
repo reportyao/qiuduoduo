@@ -12,7 +12,7 @@ async function loadOps() {
       <h2 class="card-title">告警</h2>
       ${alerts.length ? alerts.map(a => `
         <div class="status-item">
-          <div><div style="display:flex;gap:8px;align-items:center"><b>${esc(a.title)}</b>${statusPill(a.level === "high" ? "fail" : "skip")}</div><div class="status-label">${esc(a.detail)}</div></div>
+          <div><div style="display:flex;gap:8px;align-items:center"><b>${esc(a.title)}</b>${statusPill(a.level === "high" ? "fail" : a.level === "low" ? "info" : "skip")}</div><div class="status-label">${esc(a.detail)}</div></div>
         </div>`).join("") : '<div class="empty">无告警</div>'}
     </div>
     ${(supply.blocked_reason) ? `<div class="card notice"><b>内容供给受阻：${esc(supply.blocked_reason)}</b><div class="card-sub" style="margin-top:8px">场次 ${supply.matches ?? 0} · 判决 ${supply.verdicts?.total ?? 0} · 市闸 pending ${supply.market_gate?.pending_data ?? 0} · 市场覆盖 ${supply.market_covered_matches ?? 0}/${supply.matches ?? 0} 场（SM ${supply.sportmonks_market?.covered_matches ?? 0} · 国际盘 ${supply.intl_odds?.covered_matches ?? 0}）</div></div>` : ""}
@@ -68,7 +68,7 @@ async function loadUsers() {
       ${data.users.map(u => `<tr>
         <td><b>${esc(u.username)}</b><div class="status-label">#${u.id}</div></td>
         <td><select data-user-role="${u.id}" ${u.username === "admin" ? "disabled" : ""}>${["viewer", "operator", "admin"].map(r => `<option value="${r}" ${u.role === r ? "selected" : ""}>${r}</option>`).join("")}</select></td>
-        <td>${u.enabled ? statusPill("ok") : statusPill("muted")}</td>
+        <td>${u.enabled ? statusPill("ok") : statusPill("disabled")}</td>
         <td class="mono">${esc(fmtTime(u.last_login_at, true))}</td>
         <td class="actions">
           <button class="btn secondary small" data-user-pw="${u.id}">重置密码</button>

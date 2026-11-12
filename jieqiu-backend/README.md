@@ -10,7 +10,7 @@
 
 # v4.1 核心（2026-11-12）
 
-当前事实：OpenAPI **158 路径 / 174 方法**，**338 tests**，Alembic head `20261112_23`。生产仍未部署本分支。
+当前事实：OpenAPI **158 路径 / 174 方法**，**341 tests**，Alembic head `20261112_23`。生产仍未部署本分支。
 
 - **移动端 4 Tab 对应接口**：`/stats/engine`、`/stats/record/summary`、`/membership/me`、`/membership/markets`、`/me/profile`；计划 `/plans/summary|current|history|cycles/{id}`。
 - **计划**：`plan_cycles / plan_bets / plan_bet_legs`；每期最多 4 场、每场 100、预算 400；稳健=4 单关、平衡=1 个 2 串 1 + 2 单关、进取=2 个 2 串 1；v1 只处理竞彩 1X2/让球，要求正 edge/EV，不足 4 场不硬凑。

@@ -192,7 +192,7 @@ src/
 
 ## 11. 当前验证状态（2026-11-12）
 
-- 后端 **338 passed**；OpenAPI **158 路径 / 174 方法**；Alembic head `20261112_23`。
+- 后端 **341 passed**；OpenAPI **158 路径 / 174 方法**；Alembic head `20261112_23`。
 - 前端 **47 Vitest passed**；typecheck / ESLint 通过；Android Hermes bundle 通过（Metro export）。
 - MuMu x86_64 模拟器实测：onboarding/年龄门、首页对话与 HeaderMetrics、比赛、计划、计划详情、我的、我的记录、会员页、聊天。
 - 本轮修复：计划腿队名/方向缺失、0 盈亏显示 `+¥0`、会员副标题截断、当前会员按钮、HeaderMetrics 0 数据点、计划页底部遮挡、登录前查询闪烁。

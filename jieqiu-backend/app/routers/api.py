@@ -338,6 +338,7 @@ def verdict_detail(verdict_id: str, db: Session = Depends(get_db)):
         raise HTTPException(404, "verdict not found")
     return {
         "id": v.id,
+        "match_id": v.match_id,
         "trade_date": v.trade_date,
         "match_no": v.match_no,
         "league": v.league,
