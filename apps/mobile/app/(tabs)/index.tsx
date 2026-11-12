@@ -440,6 +440,10 @@ export default function HomeScreen() {
       const byId = currentVerdicts.find((item) => item.id === option.verdictId);
       if (byId) return byId;
     }
+    if (option.tier === "market_reference") {
+      const reference = references.find((item) => item.matchId === option.matchId);
+      if (reference) return reference;
+    }
     return currentVerdicts.find((item) => item.matchId === option.matchId) ?? null;
   };
 

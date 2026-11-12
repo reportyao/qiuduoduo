@@ -105,7 +105,7 @@ export default function WeeklyScreen() {
                 ))
               )}
               <Text variant="caption" color={colors.muted} style={styles.note}>
-                归因是确定性的：随机波动、信息不足、强预测落空、高置信落空、预测兑现，都能回放。
+                归因是确定性的：随机波动、单源复盘、强预测落空、高置信落空、预测兑现，都能回放。
               </Text>
             </Card>
 

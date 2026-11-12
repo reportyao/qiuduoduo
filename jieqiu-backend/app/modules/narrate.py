@@ -17,6 +17,8 @@ TEMPLATES = {
                       "{wait}—— 过了我会说，没过我不推。"),
         "killed": ("{home} vs {away}，不推。死因：{why}。"
                    "看不懂的不碰，这是纪律。"),
+        "reference": ("{home} vs {away}。{pick}，预测概率 {prob}%。"
+                      "抽水 {rake}%（阈值 {thr}%）。判断已封存，完整数据在详情。"),
     },
     "laopao": {
         "promoted": ("兄弟，{home}打{away}，这场能上：{pick}，人家模型有 {top}% 的底。"
@@ -24,6 +26,8 @@ TEMPLATES = {
         "screening": ("兄弟，{home}对{away}还在复核。价钱还行（{rake}%），{wait}。"
                       "别急，好饭不怕晚。"),
         "killed": ("兄弟，{home}这场咱撤：{why}。省下的都是赚的，输钱不输阵。"),
+        "reference": ("兄弟，{home}打{away}，这场看 {pick}，预测概率 {prob}%。"
+                      "抽水 {rake}%，账算得明明白白。"),
     },
     "meng": {
         "promoted": ("你～{home} vs {away}，我检查完啦！{pick}，置信 {top}% 哦～"
@@ -31,6 +35,8 @@ TEMPLATES = {
         "screening": ("你～{home}对{away}我还在复核中…{wait}。"
                       "复核完我第一时间来报～"),
         "killed": ("呜…{home}这场我不能让你上：{why}。不放行的时候，我最认真！"),
+        "reference": ("你～{home} vs {away}，我看好 {pick} 哦～预测概率 {prob}%，"
+                      "抽水 {rake}%。完整页卡都整理好啦～"),
     },
 }
 
@@ -55,7 +61,8 @@ def build_narration(v: Verdict, persona: str = "zhuanjia", db=None) -> tuple[str
         "rake": _fmt_pct(v.rake),
         "thr": _fmt_pct(v.rake_threshold),
         "top": _fmt_pct(max(shrunk)),
-        "pick": (v.pick or {}).get("dir", "无 pick（复核中）"),
+        "pick": (v.pick or {}).get("dir", "预测"),
+        "prob": _fmt_pct((v.pick or {}).get("prob")),
         "div": _fmt_pct((gates.get("market", {}).get("detail") or {}).get("divergence")),
         "address": "你",
     }
@@ -79,7 +86,9 @@ def build_narration(v: Verdict, persona: str = "zhuanjia", db=None) -> tuple[str
             break
     ctx["why"] = why
 
-    status = v.status if v.status in ("promoted", "screening", "killed") else "screening"
+    tier = getattr(v, "tier", None)
+    status = "reference" if tier == "market_reference" else (
+        v.status if v.status in ("promoted", "screening", "killed") else "screening")
     tpl = None
     # 后台槽位优先；DB 不可用时回退代码内模板。
     if db is not None:

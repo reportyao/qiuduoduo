@@ -28,7 +28,7 @@ function Row({ label, probs, tone }: { label: string; probs: ProbabilityTriple; 
  * 各条曲线分别标注数据名称，不把不同来源混成一条。
  */
 export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData }) {
-  const hasAny = Boolean(data.sp || data.model || data.market);
+  const hasAny = Boolean(data.sp || data.model || data.market || data.thirdParty);
   if (!hasAny) return null;
   return (
     <Card style={styles.card}>

@@ -19,6 +19,16 @@ def _verdict(status: str = "promoted") -> SimpleNamespace:
     )
 
 
+def test_market_reference_narration_is_a_prediction_not_a_rejection():
+    v = _verdict("killed")
+    v.tier = "market_reference"
+    v.pick = {"dir": "主胜", "prob": 0.532}
+    text, template_id = build_narration(v, "zhuanjia")
+    assert template_id == "zhuanjia.reference"
+    assert "不推" not in text
+    assert "预测概率 53.2%" in text
+
+
 def test_meng_template_has_no_old_address_or_heart():
     for status in ("promoted", "screening", "killed"):
         text, template_id = build_narration(_verdict(status), "meng")

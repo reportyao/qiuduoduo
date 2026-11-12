@@ -135,7 +135,7 @@ def matches_on_sale(db: Session = Depends(get_db)):
             "kickoff": m.kickoff, "sale_close": m.kickoff, "single": m.single_flag,
             "rake": v.rake if v else None,
             "gates": {k: g["result"] for k, g in v.gates.items()} if v else None,
-            "status": v.status if v else None,
+            "status": ("screening" if v.tier == "market_reference" else v.status) if v else None,
             "tier": v.tier if v else None,
             "model_status": v.model_status if v else None,
             "verdict_id": v.id if v else None,
@@ -327,7 +327,7 @@ def _probability_compare(db: Session, v: Verdict) -> dict:
         "model_enabled": has_model,
         "model_status": v.model_status,
         "model_source": v.model_source,
-        "reason": None if has_model else "本场没有可用的模型概率；仅展示竞彩与市场参考。",
+        "reason": None if has_model else "本场以竞彩与市场概率为基准。",
         "data_cutoff": data_cutoff,
     }
 
@@ -355,7 +355,7 @@ def verdict_detail(verdict_id: str, db: Session = Depends(get_db)):
         "ai_research": _ai_research(db, v.match_id),
         "sportmonks_intel": (sm_intel.payload or {}) if sm_intel else None,
         "rake": v.rake,
-        "status": v.status,
+        "status": "screening" if v.tier == "market_reference" else v.status,
         "tier": v.tier,
         "model_status": v.model_status,
         "model_source": v.model_source,

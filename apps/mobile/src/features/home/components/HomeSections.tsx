@@ -66,11 +66,8 @@ export function DataStatusSheet({
           schedule: "赛程",
           results: "赛果",
         } as Record<string, string>)[source.key] || source.label.replace(/Sportmonks\s*·?\s*/gi, ""),
-        status: source.status === "ok"
-          ? "已同步"
-          : source.status === "partial" ? "已同步"
-            : "已同步",
-        ok: source.status === "ok",
+        status: "已同步",
+        ok: source.status !== "missing",
       }))
     : [
         { name: "竞彩官方 SP", status: "已接入", ok: true },

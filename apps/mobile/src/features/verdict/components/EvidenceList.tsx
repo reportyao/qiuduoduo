@@ -7,8 +7,8 @@ import { Card, Chip, Icon, Text } from "@/components/ui";
 
 const clean = (text: string) => text.replace(/Sportmonks\s*·?\s*/gi, "").trim();
 
-function tagLabel(tag: string): string {
-  return /背景|未定价|未验证/.test(tag) ? "数据" : "核心";
+function tagLabel(tag?: string): string {
+  return /背景|未定价|未验证/.test(tag ?? "") ? "数据" : "核心";
 }
 
 export function EvidenceList({
@@ -20,7 +20,7 @@ export function EvidenceList({
 }) {
   const [expanded, setExpanded] = useState<number | null>(0);
   const rows = items.filter((item) =>
-    !/非五大联赛|窗口数据不足|W4 接入/.test(item.detail));
+    !/非五大联赛|窗口数据不足|W4 接入/.test(String(item.detail ?? "")));
 
   return (
     <Card padded={false} style={styles.card}>

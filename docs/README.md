@@ -1,6 +1,6 @@
 # 球多多文档索引
 
-最后对账：2026-11-12。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：后端 `0.8.0-w8+assistant` / 移动端 `0.3.4`，OpenAPI **158 路径 / 174 方法**，后端 **349 tests**，前端 **56 tests**，Alembic head `20261112_24`；开发库仍是 SQLite + WAL，生产目标境内 PostgreSQL 16 尚未切库。
+最后对账：2026-11-12。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：后端 `0.8.0-w8+assistant` / 移动端 `0.3.4`，OpenAPI **158 路径 / 174 方法**，后端 **350 tests**，前端 **56 tests**，Alembic head `20261112_24`；开发库仍是 SQLite + WAL，生产目标境内 PostgreSQL 16 尚未切库。
 
 > **产品/技术方案唯一有效版本：** [qiuduoduo-v4-final-plan.md](./qiuduoduo-v4-final-plan.md)。  
 > 其他 `ai-*` / `membership-*` / `grounded-*` 产品方案已标记作废，仅作历史参考；技术文档（architecture / database / API / workbench / OPC）不受影响。

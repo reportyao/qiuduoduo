@@ -2,7 +2,7 @@
 
 归因规则（确定性，可抽检验证 ≥90%）：
 - 未结算/未推 → 复述状态，不做归因
-- lose 且封存时市闸 pending → 「信息不足」
+- lose 且封存时市闸 pending → 「单源复盘」
 - lose 且 pick 概率 ≥ 60% → 「高置信落空（随机波动）」
 - lose 且收缩前模型与市场偏差 > 8pp → 「强预测落空（曾大幅偏离市场）」
 - 其余 lose → 「随机波动」
@@ -42,8 +42,8 @@ def attribute(v: Verdict) -> dict:
     pick_prob = (v.pick or {}).get("prob", 0.0)
     deviation = _pre_shrink_deviation(v)
     if market_pending:
-        return {"settled": True, "class": "信息不足",
-                "note": "封存时国际盘缺席（单源复核），市场一致性未验证。"}
+        return {"settled": True, "class": "单源复盘",
+                "note": "封存时国际盘缺席，按单源结果复盘。"}
     if deviation is not None and deviation > 0.08:
         return {"settled": True, "class": "强预测落空",
                 "note": f"模型曾偏离市场 {deviation*100:.1f}pp（收缩纪律已减半），本次偏离未兑现。"}

@@ -174,7 +174,7 @@ def _mk_verdict(settled, pick_prob, market_pending=False, raw_dev=None):
 def test_attribution_classes_deterministic():
     """F12 gate：归因抽检正确率 ≥90% —— 规则确定性，构造用例全对。"""
     cases = [
-        (_mk_verdict("lose", 0.66, market_pending=True), "信息不足"),
+        (_mk_verdict("lose", 0.66, market_pending=True), "单源复盘"),
         (_mk_verdict("lose", 0.66, raw_dev=0.12), "强预测落空"),
         (_mk_verdict("lose", 0.62), "高置信落空"),
         (_mk_verdict("lose", 0.54), "随机波动"),
