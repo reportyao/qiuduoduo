@@ -22,10 +22,12 @@ import {
 import { BriefMatchPicker, type BriefMatchOption } from "./BriefMatchPicker";
 
 function verdictStatus(verdict: VerdictSummary): { label: string; color: string } {
+  if (verdict.tier === "market_reference" || verdict.tier === "verified") {
+    return { label: "预测", color: verdict.status === "promoted" ? colors.greenAccent : colors.green };
+  }
   if (verdict.tier === "avoid" || verdict.status === "killed") {
     return { label: "回避", color: colors.danger };
   }
-  if (verdict.status === "promoted") return { label: "预测", color: colors.greenAccent };
   return { label: "预测", color: colors.green };
 }
 
