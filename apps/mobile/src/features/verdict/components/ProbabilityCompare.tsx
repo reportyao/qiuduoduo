@@ -31,7 +31,7 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
   const hasAny = Boolean(data.sp || data.model || data.market);
   if (!hasAny) return null;
   const sportmonks = data.modelSource === "sportmonks";
-  const modelLabel = sportmonks ? "球多多自研AI引擎预测" : "自有模型（影子）";
+  const modelLabel = sportmonks ? "球多多自研AI引擎预测（收缩后）" : "自有模型（影子）";
   return (
     <Card style={styles.card}>
       <View style={styles.head}>
@@ -41,9 +41,9 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
           color={data.modelStatus === "enabled" ? colors.green : colors.amber}
         >
           {data.modelStatus === "enabled"
-            ? sportmonks ? "球多多自研AI引擎预测已启用" : "模型已启用"
+            ? sportmonks ? "球多多自研AI引擎预测模型已启用" : "模型已启用"
             : data.modelEnabled
-              ? sportmonks ? "球多多自研AI引擎预测（未验证）" : "模型影子（未验证）"
+              ? sportmonks ? "球多多自研AI引擎预测模型（未验证）" : "模型影子（未验证）"
               : "模型未启用"}
         </Text>
       </View>
@@ -54,10 +54,10 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
           probs={data.model} tone={colors.greenDark} />
       ) : null}
       {data.market ? (
-        <Row label="球多多自研AI引擎预测 · 市场" probs={data.market.probs} tone={colors.muted} />
+        <Row label={`市场 · ${data.market.bookmaker}`} probs={data.market.probs} tone={colors.muted} />
       ) : null}
       {data.thirdParty ? (
-        <Row label="球多多自研AI引擎预测" probs={data.thirdParty.probs} tone={colors.amber} />
+        <Row label="球多多自研AI引擎预测参考" probs={data.thirdParty.probs} tone={colors.amber} />
       ) : null}
 
       {data.thirdParty ? (

@@ -130,7 +130,7 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
               ))}
             </View>
           ) : (
-            <Text variant="caption" color={colors.subtle}>球多多自研AI引擎预测暂无公开伤停名单</Text>
+            <Text variant="caption" color={colors.subtle}>球多多自研AI引擎预测未返回公开伤停名单</Text>
           )}
         </Card>
       ) : null}

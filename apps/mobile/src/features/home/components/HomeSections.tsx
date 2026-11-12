@@ -63,7 +63,7 @@ export function DataStatusSheet({
       }))
     : [
         { name: "竞彩官方 SP", status: "已接入", ok: true },
-        { name: "球多多自研AI引擎预测 · 市场", status: marketPending ? "部分未覆盖" : "已接入", ok: !marketPending },
+        { name: "球多多自研AI引擎预测 · 预测/市场", status: marketPending ? "部分未覆盖" : "已接入", ok: !marketPending },
         { name: "球多多自研AI引擎预测 · 阵容/积分榜", status: "已接入", ok: true },
         { name: "AI 情报", status: "已接入", ok: true },
         { name: "国际盘（兜底）", status: marketPending ? "部分未覆盖" : "已接入", ok: !marketPending },

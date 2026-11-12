@@ -56,7 +56,7 @@ export function DetailHero({
       });
   const tier = detail.tier ?? (detail.status === "promoted" ? "verified"
     : detail.status === "killed" ? "avoid" : "market_reference");
-  const modelLabel = detail.modelSource === "sportmonks" ? "球多多自研AI引擎预测" : "模型影子";
+  const modelLabel = detail.modelSource === "sportmonks" ? "球多多自研AI引擎预测模型" : "模型影子";
   const statusLabel =
     tier === "verified"
       ? (detail.modelStatus === "shadow" ? `已核验 · ${modelLabel}` : "核验预测")
