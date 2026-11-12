@@ -43,7 +43,7 @@ function buildCards(intel?: MatchIntelSummary): IntelCard[] {
       label: "阵容",
       value: `${intel.homeFormation || "—"} / ${intel.awayFormation || "—"}`,
       note: intel.injuries.length
-        ? `伤停 ${intel.injuries.slice(0, 2).join("、")}`
+        ? `伤停 ${intel.injuries.slice(0, 2).join("、")}${age("lineups") ? ` · ${age("lineups")}` : ""}`
         : age("lineups") || "首发已同步",
     });
   }
@@ -52,7 +52,7 @@ function buildCards(intel?: MatchIntelSummary): IntelCard[] {
       key: "standings",
       label: "形势",
       value: `${intel.homePosition ?? "—"} / ${intel.awayPosition ?? "—"}`,
-      note: `${formText(intel.homeForm)} / ${formText(intel.awayForm)}`,
+      note: `${formText(intel.homeForm)} / ${formText(intel.awayForm)}${age("standings") ? ` · ${age("standings")}` : ""}`,
     });
   }
   if (intel.weather || intel.referee) {
@@ -60,7 +60,9 @@ function buildCards(intel?: MatchIntelSummary): IntelCard[] {
       key: "conditions",
       label: "环境",
       value: intel.weather || "天气已同步",
-      note: intel.referee ? `主裁 ${intel.referee}` : age("conditions") || "场地与裁判",
+      note: intel.referee
+        ? `主裁 ${intel.referee}${age("conditions") ? ` · ${age("conditions")}` : ""}`
+        : age("conditions") || "场地与裁判",
     });
   }
   if (intel.prediction) {
