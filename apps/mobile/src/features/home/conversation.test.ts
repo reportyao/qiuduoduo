@@ -98,6 +98,15 @@ describe("home conversation persistence", () => {
     });
   });
 
+  it("drops pre-localization intel summaries", () => {
+    const parsed = parseHomeMessages(JSON.stringify([{
+      id: "m-old", kind: "match", at: 1, option: match.option,
+      verdict: null, intel: { injuries: [], homeForm: [], awayForm: [] },
+    }]));
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]).toMatchObject({ kind: "match", intel: undefined });
+  });
+
   it("summarizes TTL sections and top prediction", () => {
     const data: SportmonksIntelData = {
       league: "欧国联",

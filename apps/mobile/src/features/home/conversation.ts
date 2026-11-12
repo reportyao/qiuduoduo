@@ -6,6 +6,8 @@ const STORAGE_PREFIX = "jieqiu.home.thread.v2";
 const MAX_MESSAGES = 60;
 
 export interface MatchIntelSummary {
+  /** 缓存版本：名称本地化升级后，旧摘要不再展示。 */
+  v?: number;
   homeFormation?: string;
   awayFormation?: string;
   injuries: string[];
@@ -141,6 +143,7 @@ export function summarizeIntel(
     sections[key] = meta.capturedAt ?? null;
   }
   return {
+    v: 2,
     homeFormation: data.formations?.home || data.lineups?.home?.formation,
     awayFormation: data.formations?.away || data.lineups?.away?.formation,
     injuries: (data.sidelined ?? []).map((row) => row.playerName).filter(Boolean).slice(0, 4),
@@ -166,7 +169,7 @@ export function summarizeIntel(
 }
 
 function isSummary(value: unknown): value is MatchIntelSummary {
-  return isObject(value) && Array.isArray(value.injuries);
+  return isObject(value) && value.v === 2 && Array.isArray(value.injuries);
 }
 
 export function parseHomeMessages(raw: string | null): HomeConversationMessage[] {
