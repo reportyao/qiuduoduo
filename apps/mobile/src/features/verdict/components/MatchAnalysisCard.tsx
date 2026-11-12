@@ -6,6 +6,7 @@ import {
 } from "@/features/verdict/queries";
 import { formatDateTime } from "@/lib/format";
 import { colors, spacing } from "@/theme/tokens";
+import { brandCopy } from "@/lib/brand";
 
 interface Props {
   matchId: string;
@@ -66,15 +67,15 @@ export function MatchAnalysisCard({ matchId, date }: Props) {
           </Text>
         </View>
         <Text variant="small" color={colors.ink} style={styles.summary}>
-          {analysis.summary}
+          {brandCopy(analysis.summary)}
         </Text>
-        <Bullets label="关键依据" items={analysis.key_factors} />
-        <Bullets label="风险" items={analysis.risks} />
-        <Bullets label="失效条件" items={analysis.invalidators} />
-        <Bullets label="数据缺口" items={analysis.data_gaps} />
+        <Bullets label="关键依据" items={analysis.key_factors.map(brandCopy)} />
+        <Bullets label="风险" items={analysis.risks.map(brandCopy)} />
+        <Bullets label="失效条件" items={analysis.invalidators.map(brandCopy)} />
+        <Bullets label="数据缺口" items={analysis.data_gaps.map(brandCopy)} />
         {analysis.confidence_note ? (
           <Text variant="caption" color={colors.subtle} style={styles.note}>
-            {analysis.confidence_note}
+            {brandCopy(analysis.confidence_note)}
           </Text>
         ) : null}
         <Text variant="caption" color={colors.subtle} style={styles.note}>

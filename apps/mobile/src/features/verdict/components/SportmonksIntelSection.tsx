@@ -86,7 +86,7 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
         <Card style={styles.card}>
           <View style={styles.head}>
             <Text variant="h3">赛后复盘</Text>
-            <Text variant="caption" color={colors.subtle}>Sportmonks</Text>
+            <Text variant="caption" color={colors.subtle}>球多多自研AI引擎预测</Text>
           </View>
           <Text variant="h2">
             {data.postmatch.scoreHome ?? "—"} - {data.postmatch.scoreAway ?? "—"}
@@ -112,7 +112,7 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
           <View style={styles.head}>
             <Text variant="h3">首发与阵型</Text>
             <Text variant="caption" color={colors.subtle}>
-              {data.capturedAt ? formatDateTime(data.capturedAt) : "Sportmonks"}
+              {data.capturedAt ? formatDateTime(data.capturedAt) : "球多多自研AI引擎预测"}
             </Text>
           </View>
           <View style={styles.lineupGrid}>
@@ -130,7 +130,7 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
               ))}
             </View>
           ) : (
-            <Text variant="caption" color={colors.subtle}>Sportmonks 未返回公开伤停名单</Text>
+            <Text variant="caption" color={colors.subtle}>球多多自研AI引擎预测暂无公开伤停名单</Text>
           )}
         </Card>
       ) : null}
@@ -203,8 +203,8 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
       {highlights.length || markets.length ? (
         <Card style={styles.card}>
           <View style={styles.head}>
-            <Text variant="h3">Sportmonks 预测参考</Text>
-            <Text variant="caption" color={colors.amber}>非本产品模型</Text>
+            <Text variant="h3">球多多自研AI引擎预测</Text>
+            <Text variant="caption" color={colors.amber}>引擎预测参考</Text>
           </View>
           {highlights.map((item) => (
             <View key={item.key} style={styles.predictionRow}>
@@ -225,7 +225,7 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
             </View>
           ))}
           <Text variant="caption" color={colors.subtle} style={styles.note}>
-            以上是第三方预测/市场参考，不参与本产品价/市/模三闸；未复核前不进入付费计划。
+            以上为球多多自研AI引擎预测/市场参考，不参与价/市/模三闸；未复核前不进入付费计划。
           </Text>
         </Card>
       ) : null}

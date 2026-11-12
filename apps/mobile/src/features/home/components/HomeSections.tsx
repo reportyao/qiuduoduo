@@ -54,7 +54,7 @@ export function DataStatusSheet({
   const modelPending = stream?.watch.some((v) => v.gates.model === "pending_data") ?? false;
   const rows = pulse?.sources?.length
     ? pulse.sources.map((source) => ({
-        name: source.label,
+        name: source.label.replace(/Sportmonks/g, "球多多自研AI引擎预测"),
         status: source.status === "ok"
           ? "已同步"
           : source.status === "partial" ? "部分覆盖"
@@ -63,8 +63,8 @@ export function DataStatusSheet({
       }))
     : [
         { name: "竞彩官方 SP", status: "已接入", ok: true },
-        { name: "Sportmonks 预测/市场", status: marketPending ? "部分未覆盖" : "已接入", ok: !marketPending },
-        { name: "Sportmonks 阵容/积分榜/环境", status: "已接入", ok: true },
+        { name: "球多多自研AI引擎预测 · 市场", status: marketPending ? "部分未覆盖" : "已接入", ok: !marketPending },
+        { name: "球多多自研AI引擎预测 · 阵容/积分榜", status: "已接入", ok: true },
         { name: "AI 情报", status: "已接入", ok: true },
         { name: "国际盘（兜底）", status: marketPending ? "部分未覆盖" : "已接入", ok: !marketPending },
         { name: "xG 强度模型", status: modelPending ? "部分未覆盖" : "已接入", ok: !modelPending },

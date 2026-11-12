@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 import type { ChatCard } from "@/domain/types";
 import { Button, Card, Chip, Text } from "@/components/ui";
 import { colors, radii, spacing } from "@/theme/tokens";
+import { brandCopy } from "@/lib/brand";
 
 export interface ChatMessage {
   id: string;
@@ -51,7 +52,7 @@ export function ChatCardContent({
         color={message.error ? colors.danger : colors.ink}
         style={styles.bubbleText}
       >
-        {message.text}
+        {brandCopy(message.text)}
       </Text>
 
       {card?.memories && card.memories.length > 0 ? (

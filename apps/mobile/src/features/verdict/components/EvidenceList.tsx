@@ -5,6 +5,8 @@ import { formatDateTime } from "@/lib/format";
 import { colors, radii, spacing } from "@/theme/tokens";
 import { Card, Chip, Icon, Text } from "@/components/ui";
 
+const clean = (text: string) => text.replace(/Sportmonks/g, "球多多自研AI引擎预测");
+
 export function EvidenceList({
   items,
   cutoff,
@@ -43,7 +45,7 @@ export function EvidenceList({
               onPress={() => setExpanded(open ? null : index)}
               accessibilityRole="button"
               accessibilityState={{ expanded: open }}
-              accessibilityLabel={`${item.title}，${item.tag}`}
+              accessibilityLabel={`${clean(item.title)}，${item.tag}`}
               style={({ pressed }) => [
                 styles.row,
                 index < items.length - 1 && styles.rowLine,
@@ -54,15 +56,15 @@ export function EvidenceList({
                 <Chip label={item.tag} tone={tone} />
                 <Icon name={open ? "chevron-up" : "chevron-down"} size={15} color={colors.subtle} />
               </View>
-              <Text variant="bodyStrong">{item.title}</Text>
+              <Text variant="bodyStrong">{clean(item.title)}</Text>
               <Text variant="small" color={colors.muted} numberOfLines={open ? undefined : 2} style={styles.detail}>
-                {item.detail}
+                {clean(item.detail)}
               </Text>
               {open ? (
                 <View style={styles.source}>
                   <Icon name="link-outline" size={13} color={colors.subtle} />
                   <Text variant="caption" color={colors.subtle} style={styles.sourceText}>
-                    {item.source}
+                    {clean(item.source)}
                   </Text>
                 </View>
               ) : null}

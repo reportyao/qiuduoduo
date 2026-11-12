@@ -5,6 +5,8 @@ import { coverageGaps } from "@/features/home/focusCoverage";
 import { colors, spacing } from "@/theme/tokens";
 import { Text } from "@/components/ui";
 
+const clean = (text: string) => text.replace(/Sportmonks/g, "球多多自研AI引擎预测");
+
 const REASON: Record<string, string> = {
   login_required: "登录后可记注",
   settled: "这场已结算",
@@ -57,7 +59,7 @@ export function FocusPanel({
           数据覆盖 {focus.coverage.score}
         </Text>
         <View style={styles.headRight}>
-          {sm ? <Text variant="caption" color={colors.green}>Sportmonks</Text> : null}
+          {sm ? <Text variant="caption" color={colors.green}>球多多自研AI引擎预测</Text> : null}
           <Text variant="caption" color={focus.coverage.deepEligible ? colors.green : colors.amber}>
             {focus.coverage.deepEligible ? "可深读" : "仅轻读"}
           </Text>
@@ -75,14 +77,14 @@ export function FocusPanel({
       ) : null}
       {visible.map((fact) => (
         <View key={fact.id} style={styles.factRow}>
-          <Text variant="captionStrong" color={colors.ink}>{fact.label}</Text>
+          <Text variant="captionStrong" color={colors.ink}>{clean(fact.label)}</Text>
           <View style={styles.factBody}>
             <Text variant="caption" color={colors.muted} numberOfLines={expanded ? 4 : 2}>
-              {fact.value}
+              {clean(fact.value)}
             </Text>
             {expanded && fact.detail ? (
               <Text variant="caption" color={colors.subtle} numberOfLines={3}>
-                {fact.detail}
+                {clean(fact.detail)}
               </Text>
             ) : null}
           </View>
@@ -116,8 +118,8 @@ export function FocusPanel({
         </Pressable>
       ) : null}
       {unknownVisible.map((item) => (
-        <Text key={item} variant="caption" color={colors.subtle}>
-          · 未确认：{item}
+        <Text key={clean(item)} variant="caption" color={colors.subtle}>
+          · 未确认：{clean(item)}
         </Text>
       ))}
       {!expanded && focus.unknowns.length > unknownVisible.length ? (

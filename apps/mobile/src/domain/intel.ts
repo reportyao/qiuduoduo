@@ -58,7 +58,7 @@ function sportmonksDimensions(data?: SportmonksIntelData | null): IntelDimension
       value: `${home?.position ?? "—"} / ${away?.position ?? "—"}`,
       direction: "flat",
       note: `积分榜：主队第 ${home?.position ?? "—"}（${home?.points ?? "—"} 分），客队第 ${away?.position ?? "—"}（${away?.points ?? "—"} 分）。只作背景。`,
-      source: "Sportmonks",
+      source: "球多多自研AI引擎预测",
     });
   }
   const homeLine = data.lineups?.home;
@@ -71,7 +71,7 @@ function sportmonksDimensions(data?: SportmonksIntelData | null): IntelDimension
       value: "首发已公布",
       direction: injured.length > 0 ? "down" : "flat",
       note: `${homeLine.formation || "—"} / ${awayLine.formation || "—"}；${injured.length ? `伤停 ${injured.map((row) => row.playerName).slice(0, 3).join("、")}` : "未返回公开伤停名单"}`,
-      source: "Sportmonks",
+      source: "球多多自研AI引擎预测",
     });
   }
   if (data.recent?.home?.length || data.recent?.away?.length) {
@@ -84,8 +84,8 @@ function sportmonksDimensions(data?: SportmonksIntelData | null): IntelDimension
       label: "状态",
       value: `${homeForm.slice(0, 4).join("") || "—"} / ${awayForm.slice(0, 4).join("") || "—"}`,
       direction: wins > losses ? "up" : losses > wins ? "down" : "flat",
-      note: "Sportmonks 小组赛近况；样本小，只作参考。",
-      source: "Sportmonks",
+      note: "球多多自研AI引擎预测小组赛近况；样本小，只作参考。",
+      source: "球多多自研AI引擎预测",
     });
   }
   const venue = data.venue;
@@ -103,7 +103,7 @@ function sportmonksDimensions(data?: SportmonksIntelData | null): IntelDimension
         temp != null ? `日间 ${temp}°C` : "",
         referee?.name ? `主裁 ${referee.name}` : "",
       ].filter(Boolean).join("；") || "环境数据已同步。",
-      source: "Sportmonks",
+      source: "球多多自研AI引擎预测",
     });
   }
   return out;

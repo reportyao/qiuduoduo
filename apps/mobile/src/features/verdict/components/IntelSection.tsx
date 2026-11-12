@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 import type { IntelReport } from "@/domain/types";
 import { formatDateTime } from "@/lib/format";
 import { colors, radii, spacing } from "@/theme/tokens";
+import { brandCopy } from "@/lib/brand";
 import { Card, Icon, Text } from "@/components/ui";
 
 const DIRECTION: Record<string, { icon: "arrow-up" | "arrow-down" | "remove"; color: string }> = {
@@ -20,10 +21,10 @@ export function IntelSection({ report }: { report: IntelReport }) {
         </View>
         <View style={styles.headText}>
           <Text variant="overline" color={colors.green}>AI 情报研判</Text>
-          <Text variant="h3">{report.headline}</Text>
+          <Text variant="h3">{brandCopy(report.headline)}</Text>
         </View>
       </View>
-      <Text variant="small" color={colors.muted} style={styles.summary}>{report.summary}</Text>
+      <Text variant="small" color={colors.muted} style={styles.summary}>{brandCopy(report.summary)}</Text>
 
       <View style={styles.grid}>
         {report.dimensions.map((dim) => {
@@ -34,11 +35,11 @@ export function IntelSection({ report }: { report: IntelReport }) {
                 <Text variant="captionStrong">{dim.label}</Text>
                 <View style={styles.valueRow}>
                   <Icon name={tone.icon} size={12} color={tone.color} />
-                  <Text variant="captionStrong" color={tone.color}>{dim.value}</Text>
+                  <Text variant="captionStrong" color={tone.color}>{brandCopy(dim.value)}</Text>
                 </View>
               </View>
               <Text variant="caption" color={colors.muted} numberOfLines={2} style={styles.tileNote}>
-                {dim.note}
+                {brandCopy(dim.note)}
               </Text>
             </View>
           );
