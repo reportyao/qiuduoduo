@@ -1,5 +1,5 @@
 import { memo, type ReactNode } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import type {
   AvoidItem,
   PostmortemSummary,
@@ -120,17 +120,12 @@ export function AssistantBrief({
         <Text variant="caption" color={colors.green}>数据状态 ›</Text>
       </Pressable>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.quickScroll}
-        contentContainerStyle={styles.quickRow}
-      >
+      <View style={styles.quickRow}>
         <QuickReply label="今日在售" onPress={onOnSale} />
         <QuickReply label="选一场预测" onPress={onPicker} />
         <QuickReply label="为什么不出预测" onPress={onWhyNot} />
         <QuickReply label="串关参谋" onPress={onParlay} />
-      </ScrollView>
+      </View>
 
       <BriefMatchPicker
         options={options}
@@ -564,11 +559,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.base,
     paddingTop: spacing.sm,
   },
-  quickScroll: { marginTop: spacing.base },
   quickRow: {
     flexDirection: "row",
-    gap: spacing.xs,
-    paddingRight: spacing.sm,
+    flexWrap: "wrap",
+    gap: spacing.xxs,
+    marginTop: spacing.base,
   },
   msgHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   statusRow: { flexDirection: "row", alignItems: "center", gap: 6 },
