@@ -266,18 +266,18 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: spacing.base, gap: spacing.sm },
+  card: { marginTop: spacing.md, gap: spacing.md },
   head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
-  lineupGrid: { flexDirection: "row", gap: spacing.base },
-  lineupSide: { flex: 1, gap: 2 },
+  lineupGrid: { flexDirection: "row", gap: spacing.xl },
+  lineupSide: { flex: 1, gap: 3 },
   sideHead: { flexDirection: "row", alignItems: "center", gap: spacing.xs, marginBottom: 2 },
   flex: { flex: 1 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
   h2h: { gap: 2, marginTop: spacing.xs },
-  predictionRow: { flexDirection: "row", gap: spacing.sm, alignItems: "flex-start" },
+  predictionRow: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start" },
   newsRow: { gap: 1, marginTop: 2 },
   goals: { gap: 2, marginTop: spacing.xs },
-  marketRow: { flexDirection: "row", gap: spacing.sm, alignItems: "flex-start", marginTop: 2 },
+  marketRow: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start", marginTop: 4 },
   predictionLabel: { width: 70 },
   note: { lineHeight: 17, marginTop: spacing.xs },
 });

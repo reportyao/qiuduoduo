@@ -20,6 +20,10 @@ export function Text({
   ...rest
 }: AppTextProps) {
   const scale = typeScale[variant] as TextStyle;
+  const weight = Number(scale.fontWeight ?? 400);
+  const family = mono
+    ? fontFamily.mono
+    : weight >= 600 ? fontFamily.medium : fontFamily.regular;
   return (
     <RNText
       {...rest}
@@ -27,7 +31,7 @@ export function Text({
         scale,
         {
           color,
-          fontFamily: mono ? fontFamily.mono : fontFamily.regular,
+          fontFamily: family,
           ...(center ? { textAlign: "center" as const } : null),
         },
         style,

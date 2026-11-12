@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { usePersonaContent } from "@/features/personas/usePersona";
-import { colors, fontFamily, radii, shadows, spacing } from "@/theme/tokens";
+import { colors, fontFamily, layout, radii, shadows, spacing } from "@/theme/tokens";
 import { Icon, Text } from "@/components/ui";
 
 /**
@@ -101,7 +101,7 @@ export function ChatComposer({
 const styles = StyleSheet.create({
   collapsedWrap: {
     alignItems: "flex-end",
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: layout.pagePadding,
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
     backgroundColor: colors.bg,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     borderColor: colors.bg,
   },
   wrap: {
-    paddingHorizontal: spacing.xxl,
+    paddingHorizontal: layout.pagePadding,
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
     backgroundColor: colors.bg,

@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.md, paddingBottom: layout.tabBarHeight + spacing.x7 },
   title: { marginTop: 2 },
   lead: { marginTop: spacing.xs, lineHeight: 20 },
-  riskRow: { flexDirection: "row", gap: spacing.xs, marginTop: spacing.base, marginBottom: spacing.base, flexWrap: "wrap" },
+  riskRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.base, marginBottom: spacing.base, flexWrap: "wrap" },
   summaryCard: { gap: spacing.xs },
   planCard: { marginTop: spacing.base, gap: spacing.sm },
   summaryHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },

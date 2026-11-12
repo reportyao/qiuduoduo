@@ -3,7 +3,7 @@ import { FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-nat
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
-import { Button, Chip, ErrorState, Sheet, Skeleton, StatusDot, Text, useToast } from "@/components/ui";
+import { Button, Chip, ErrorState, Icon, Sheet, Skeleton, StatusDot, Text, useToast } from "@/components/ui";
 import { useOnSaleQuery } from "@/features/home/queries";
 import { useHideFloatingOnScroll } from "@/features/assistant/useHideFloatingOnScroll";
 import { useWatchQuery } from "@/features/inbox/queries";
@@ -12,11 +12,11 @@ import { onSaleStatusLabel } from "@/features/tools/onSaleStatus";
 import { useWatchMatchMutation } from "@/features/verdict/queries";
 import type { OnSaleItem } from "@/domain/types";
 import { errorText } from "@/lib/errors";
-import { countdownText, currentTradeDateCn, formatTime, pct, saleCountdownText, tradeDateCnFromKickoff } from "@/lib/format";
+import { countdownText, currentTradeDateCn, formatDate, formatTime, pct, saleCountdownText, tradeDateCnFromKickoff } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 
-type Filter = "all" | "single" | "promoted" | "screening" | "reference";
+type Filter = "all" | "single" | "promoted" | "prediction";
 
 /** 比赛行：memo 化，父层筛选/弹层状态变化不重绘所有行。 */
 const MatchRow = memo(function MatchRow({
@@ -93,8 +93,9 @@ export default function MatchesScreen() {
     return list.filter((item) => {
       if (filter === "single") return item.single;
       if (filter === "promoted") return item.status === "promoted";
-      if (filter === "screening") return item.status === "screening";
-      if (filter === "reference") return item.tier === "market_reference";
+      if (filter === "prediction") {
+        return item.status === "screening" || item.tier === "market_reference";
+      }
       return true;
     });
   }, [filter, query.data]);
@@ -127,8 +128,7 @@ export default function MatchesScreen() {
           ["all", "全部"],
           ["single", "单关"],
           ["promoted", "已发布"],
-          ["screening", "预测"],
-          ["reference", "预测"],
+          ["prediction", "预测"],
         ] as [Filter, string][]).map(([key, label]) => (
           <Chip key={key} label={label} selected={filter === key} onPress={() => setFilter(key)} />
         ))}
@@ -140,7 +140,7 @@ export default function MatchesScreen() {
     <AppScreen bottom={false}>
       <AppHeader
         title="比赛"
-        subtitle={`${today} · 在售 ${query.data?.length ?? 0} 场`}
+        subtitle={`${formatDate(today)} · 在售 ${query.data?.length ?? 0} 场`}
         right={
           <Button
             label={parlayCount > 0 ? `串关 ${parlayCount}` : "串关"}
@@ -168,9 +168,12 @@ export default function MatchesScreen() {
           ) : query.isError ? (
             <ErrorState message={errorText(query.error)} onRetry={() => query.refetch()} />
           ) : (
-            <Text variant="body" color={colors.muted} style={styles.empty}>
-              当前筛选下没有在售场次。可能是休息日，或数据还没同步。
-            </Text>
+            <View style={styles.emptyWrap}>
+              <Icon name="calendar-outline" size={28} color={colors.subtle} />
+              <Text variant="body" color={colors.muted} center style={styles.empty}>
+                当前筛选下没有在售场次。可能是休息日，或数据还没同步。
+              </Text>
+            </View>
           )
         }
         contentContainerStyle={styles.content}
@@ -294,16 +297,18 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.line,
-    padding: spacing.base,
-    minHeight: 68,
+    paddingVertical: spacing.base,
+    paddingHorizontal: spacing.lg,
+    minHeight: 72,
     marginTop: spacing.sm,
   },
   pressed: { opacity: 0.72 },
-  time: { width: 50, gap: 1 },
+  time: { width: 54, gap: 2 },
   flex: { flex: 1, gap: 2 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs, flexWrap: "wrap" },
   status: { alignItems: "center", gap: 2 },
-  empty: { marginTop: spacing.x4, lineHeight: 22 },
+  emptyWrap: { alignItems: "center", gap: spacing.md, marginTop: spacing.x6, paddingHorizontal: spacing.x4 },
+  empty: { lineHeight: 22 },
   skeletons: { gap: spacing.sm, marginTop: spacing.base },
   sheetFooter: { gap: spacing.sm },
   kv: {

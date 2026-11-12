@@ -295,15 +295,17 @@ function Quick({
   return (
     <Card onPress={onPress} accessibilityLabel={label} style={styles.quickCard}>
       <Icon name={icon} size={18} color={colors.muted} />
-      <Text variant="smallStrong">{label}</Text>
-      <Text variant="caption" color={colors.muted}>{value}</Text>
+      <View style={styles.quickText}>
+        <Text variant="smallStrong">{label}</Text>
+        <Text variant="caption" color={colors.muted} numberOfLines={1}>{value}</Text>
+      </View>
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.sm, paddingBottom: spacing.x7, gap: spacing.base },
-  profile: { flexDirection: "row", alignItems: "center", gap: spacing.base, padding: spacing.xl },
+  content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.sm, paddingBottom: spacing.x7, gap: spacing.xl },
+  profile: { flexDirection: "row", alignItems: "center", gap: spacing.base, padding: spacing.x3 },
   profileText: { flex: 1, gap: 3 },
   badges: { flexDirection: "row", gap: spacing.xs, flexWrap: "wrap", marginTop: 2 },
   unreadDot: {
@@ -320,12 +322,13 @@ const styles = StyleSheet.create({
   quick: { flexDirection: "row", gap: spacing.sm },
   quickCard: {
     flex: 1,
-    padding: spacing.xl,
-    minHeight: 96,
-    gap: 3,
+    padding: spacing.lg,
+    minHeight: 88,
+    gap: spacing.sm,
     alignItems: "flex-start",
-    justifyContent: "center",
+    justifyContent: "space-between",
   },
+  quickText: { gap: 2 },
   accountActions: { marginTop: spacing.sm, gap: spacing.base },
   footer: { lineHeight: 18, paddingHorizontal: spacing.base },
 });

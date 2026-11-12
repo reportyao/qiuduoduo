@@ -85,7 +85,7 @@ export const fontFamily = {
 
 /** 字号下限 11：设计稿里的 9.5px 标签在生产端统一抬到 11。 */
 export const type = {
-  display: { fontSize: 30, lineHeight: 36, fontWeight: "600" as const, letterSpacing: -0.5 },
+  display: { fontSize: 28, lineHeight: 34, fontWeight: "600" as const, letterSpacing: -0.4 },
   h1: { fontSize: 24, lineHeight: 31, fontWeight: "600" as const, letterSpacing: -0.3, fontVariant: ["tabular-nums"] as const },
   h2: { fontSize: 20, lineHeight: 27, fontWeight: "600" as const, letterSpacing: -0.3, fontVariant: ["tabular-nums"] as const },
   h3: { fontSize: 16, lineHeight: 23, fontWeight: "600" as const, fontVariant: ["tabular-nums"] as const },
@@ -109,11 +109,11 @@ export const shadows = {
   card: Platform.select({
     ios: {
       shadowColor: "#102018",
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.06,
-      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.03,
+      shadowRadius: 6,
     },
-    android: { elevation: 2 },
+    android: { elevation: 0 },
     default: {},
   }),
   float: Platform.select({
@@ -140,7 +140,7 @@ export const shadows = {
 
 export const layout = {
   maxWidth: 430,
-  pagePadding: 20,
+  pagePadding: 24,
   headerHeight: 64,
   tabBarHeight: 56,
   composerHeight: 56,

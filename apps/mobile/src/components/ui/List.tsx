@@ -119,8 +119,8 @@ export function KeyValueRow({
 }
 
 const styles = StyleSheet.create({
-  groupWrap: { gap: spacing.sm },
-  groupTitle: { marginLeft: spacing.xxs },
+  groupWrap: { gap: spacing.sm, marginTop: spacing.xs },
+  groupTitle: { marginLeft: spacing.xxs, letterSpacing: 0.2 },
   group: {
     backgroundColor: colors.surface,
     borderRadius: radii.card,
