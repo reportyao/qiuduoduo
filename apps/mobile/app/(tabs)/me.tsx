@@ -132,9 +132,9 @@ export default function MeScreen() {
         </Card>
 
         <View style={styles.quick}>
-          <Quick label="收件箱" value={unread > 0 ? `${unread} 条` : "暂无"} icon="mail-outline" onPress={() => router.push("/inbox")} />
-          <Quick label="关注" value="列表" icon="heart-outline" onPress={() => router.push("/watch")} />
-          <Quick label="今日预测" value="主看" icon="analytics-outline" onPress={() => router.navigate("/(tabs)")} />
+          <Quick label="收件箱" value={unread > 0 ? `${unread} 条未读` : "暂无未读"} icon="mail-outline" onPress={() => router.push("/inbox")} />
+          <Quick label="关注" value="查看列表" icon="heart-outline" onPress={() => router.push("/watch")} />
+          <Quick label="今日预测" value="查看今日" icon="analytics-outline" onPress={() => router.navigate("/(tabs)")} />
         </View>
 
         <SettingsGroup title="账户">

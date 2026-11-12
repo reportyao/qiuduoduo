@@ -97,7 +97,8 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     feedTitle: "今日预测",
     conversationOpen: (dayLabel, total, promoted, published, screening, _killed) => {
       const waiting = screening > 0 ? `还有 ${screening} 场数据更新中。` : "";
-      if (published > 0) return `${dayLabel} ${total} 场，我逐场看完了，已经给出 ${published} 场预测。${waiting}`;
+      if (published > 0) return `${dayLabel} ${total} 场，我逐场看完了，
+已经给出 ${published} 场预测。${waiting}`;
       return `${dayLabel} ${total} 场，我逐场看完了，预测都在下面。${waiting}`;
     },
     typing: "正在生成预测…",
@@ -147,7 +148,8 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     conversationOpen: (dayLabel, total, promoted, published, screening, _killed) => {
       const prefix = dayLabel === "今天" ? "今儿" : dayLabel;
       const waiting = screening > 0 ? `还有 ${screening} 场数据更新中。` : "";
-      if (published > 0) return `兄弟，${prefix} ${total} 场我扒完了，给出 ${published} 场预测。${waiting}`;
+      if (published > 0) return `兄弟，${prefix} ${total} 场我扒完了，
+给出 ${published} 场预测。${waiting}`;
       return `兄弟，${prefix} ${total} 场我扒完了，预测都摆下面了。${waiting}`;
     },
     typing: "正在生成预测…",
@@ -196,7 +198,8 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     feedTitle: "今日预测",
     conversationOpen: (dayLabel, total, promoted, published, screening, _killed) => {
       const waiting = screening > 0 ? `还有 ${screening} 场数据更新中。` : "";
-      if (published > 0) return `${dayLabel} ${total} 场，我都看完啦，给出 ${published} 场预测。${waiting}`;
+      if (published > 0) return `${dayLabel} ${total} 场，我都看完啦，
+给出 ${published} 场预测。${waiting}`;
       return `${dayLabel} ${total} 场，我都看完啦，预测都在下面。${waiting}`;
     },
     typing: "我正在生成预测…",

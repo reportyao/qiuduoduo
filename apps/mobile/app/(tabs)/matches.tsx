@@ -171,7 +171,7 @@ export default function MatchesScreen() {
             <View style={styles.emptyWrap}>
               <Icon name="calendar-outline" size={28} color={colors.subtle} />
               <Text variant="body" color={colors.muted} center style={styles.empty}>
-                当前筛选下没有在售场次。可能是休息日，或数据还没同步。
+                当前筛选下没有在售场次。
               </Text>
             </View>
           )
