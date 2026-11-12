@@ -185,31 +185,34 @@ export default function HomeScreen() {
     setOpenedAll(false);
   }, [date, focus]);
 
-  // 重新进入今日对话时落到最新一条；最后一条是比赛卡则对齐卡片顶部，
-  // 避免长页卡只露出底部按钮、看不到是哪一场。
-  const hydratedThread = useRef("");
-  useEffect(() => {
-    const threadKey = `${session?.userId ?? "local"}:${date}`;
-    if (!conversation.hydrated || hydratedThread.current === threadKey) return;
-    hydratedThread.current = threadKey;
-    const last = conversation.messages[conversation.messages.length - 1];
-    if (last?.kind === "match") {
-      pendingMatchScroll.current = last.id;
-      // 若卡片在 effect 前已完成布局，直接滚；否则等 onLayout 回调。
-      const timer = setTimeout(() => {
-        if (pendingMatchScroll.current !== last.id) return;
-        if (scrollToMatch(last.id)) pendingMatchScroll.current = null;
-      }, 80);
-      return () => clearTimeout(timer);
-    }
-    if (conversation.messages.length > 0) autoScroll.current = true;
-  }, [conversation.hydrated, conversation.messages, date, session?.userId]);
-
   const streamQuery = useStreamQuery(date);
   const recommendationsQuery = useRecommendationsTodayQuery(date);
   const pulseQuery = usePulseQuery(date);
   const engineQuery = useEngineStatusQuery();
   const recordQuery = useRecordSummaryQuery();
+
+  // 重新进入今日对话时落到最新一条；等开场简报的数据也加载完再滚，
+  // 否则上方内容变高会把已对齐的页卡重新推下去。最后一条是比赛卡时
+  // 对齐卡片顶部，避免长页卡只露出底部按钮、看不到是哪一场。
+  const hydratedThread = useRef("");
+  useEffect(() => {
+    const threadKey = `${session?.userId ?? "local"}:${date}`;
+    if (!conversation.hydrated || hydratedThread.current === threadKey) return;
+    if (streamQuery.isLoading || recommendationsQuery.isLoading) return;
+    hydratedThread.current = threadKey;
+    const last = conversation.messages[conversation.messages.length - 1];
+    if (last?.kind === "match") {
+      pendingMatchScroll.current = last.id;
+      // 若卡片已完成布局，直接滚；否则等 onLayout 回调。
+      const timer = setTimeout(() => {
+        if (pendingMatchScroll.current !== last.id) return;
+        if (scrollToMatch(last.id)) pendingMatchScroll.current = null;
+      }, 120);
+      return () => clearTimeout(timer);
+    }
+    if (conversation.messages.length > 0) autoScroll.current = true;
+  }, [conversation.hydrated, conversation.messages, date, recommendationsQuery.isLoading,
+      session?.userId, streamQuery.isLoading]);
 
   useEffect(() => {
     setRecordVisible(false);
