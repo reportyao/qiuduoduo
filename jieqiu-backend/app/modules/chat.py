@@ -12,6 +12,7 @@ from sqlalchemy import select
 
 from ..features.recommendations.service import today as recommendations_today
 from ..models import SPMatch, User, Verdict
+from . import assistant_copy
 from .postmortem import postmortem
 from .timeutil import trade_date_now
 from .users import list_memories, user_streak
@@ -23,6 +24,7 @@ _INTENT_RULES: list[tuple[str, tuple[str, ...]]] = [
     ("memory_write", ("记住", "记一下", "我的主队", "我是", "偏好")),
     ("memory_query", ("记得我", "记得什么", "我的记忆", "你记得")),
     ("postmortem", ("复盘", "归因", "为什么输", "昨天怎么样", "总结")),
+    ("record", ("战绩", "最近准", "命中率", "最近怎么样", "准吗", "中了多少")),
     ("why_not", ("为什么不", "别碰", "死因", "为啥不推", "为什么不推")),
     ("rest", ("今天不看了", "不想看了", "休息", "今天到此为止")),
     ("protection", ("连败", "保护", "降温")),
@@ -90,7 +92,8 @@ def _with_protection(db: Session, user: User | None, card: dict) -> dict:
 
 
 def respond(db: Session, user: User | None, text: str,
-            session_id: str = "", match_id: str = "") -> dict:
+            session_id: str = "", match_id: str = "",
+            persona: str = "zhuanjia") -> dict:
     """意图 → 卡片 + 文案。所有卡片都是真实数据驱动。"""
     intent = route_intent(text)
     card: dict = {"type": intent}
@@ -127,6 +130,8 @@ def respond(db: Session, user: User | None, text: str,
             pick = verdict.get("pick") or {}
             card["verdict_id"] = verdict.get("id")
             card["pick"] = pick
+            card["home"] = verdict.get("home")
+            card["away"] = verdict.get("away")
             card["hash"] = top.get("payload_hash")
             card["text"] = (f"{verdict.get('home')} vs {verdict.get('away')}：三关全过，已发布。"
                             f"详情与封存哈希见卡片。")
@@ -141,6 +146,8 @@ def respond(db: Session, user: User | None, text: str,
         ).first()
         if killed:
             card["verdict_id"] = killed.id
+            card["home"] = killed.home
+            card["away"] = killed.away
             card["dead_gate"] = next((g for g in ("price", "market", "model")
                                       if killed.gates.get(g, {}).get("result") == "fail"), None)
             card["text"] = f"最近没给预测的是 {killed.home} vs {killed.away}，原因见卡片。"
@@ -175,7 +182,27 @@ def respond(db: Session, user: User | None, text: str,
     elif intent == "memory_query":
         ms = list_memories(db, user.id) if user else []
         card["memories"] = [{"key": m.key, "value": m.value, "source": m.source} for m in ms]
+        if user is not None:
+            try:
+                from .memory_profile import context
+                card["profile"] = context(db, user.id)
+            except Exception:
+                card["profile"] = []
         card["text"] = (f"我记得 {len(ms)} 条。" if ms else "我还没记住关于你的事。")
+
+    elif intent == "record":
+        from .performance import record_summary
+        rec = record_summary(db, days=30)
+        card["record"] = rec
+        if rec:
+            y = rec.get("yesterday") or {}
+            last = rec.get("last_30_days") or {}
+            card["text"] = assistant_copy.render(
+                persona, "daily_record", db=db,
+                picks=y.get("picks", 0), hits=y.get("hits", 0),
+                hit_days=last.get("hit_days", 0))
+        else:
+            card["text"] = assistant_copy.render(persona, "no_record")
 
     elif intent == "postmortem":
         v = db.scalars(
@@ -247,4 +274,41 @@ def respond(db: Session, user: User | None, text: str,
                                    "cached": res.cached}
 
     # 保护中的用户：所有回复追加降温尾注（F11 行为面）
-    return _with_protection(db, user, card)
+    card = _with_protection(db, user, card)
+    return _with_persona(card, persona, db)
+
+
+def _with_persona(card: dict, persona: str, db=None) -> dict:
+    """只改语气，不改卡片里的事实字段。"""
+    if persona not in assistant_copy.PERSONAS:
+        persona = "zhuanjia"
+    kind = card.get("type")
+    try:
+        if kind == "buy_tonight" and card.get("home") and card.get("away"):
+            pick = (card.get("pick") or {}).get("dir") or "暂无"
+            card["text"] = assistant_copy.render(
+                persona, "buy", db=db, home=card["home"], away=card["away"], pick=pick)
+        elif kind == "why_not" and card.get("home") and card.get("away"):
+            card["text"] = assistant_copy.render(
+                persona, "why_not", db=db, home=card["home"], away=card["away"])
+        elif kind == "record":
+            pass
+        elif kind == "postmortem":
+            card["text"] = assistant_copy.render(persona, "postmortem", db=db)
+        elif kind == "memory_write" and card.get("memory"):
+            m = card["memory"]
+            card["text"] = assistant_copy.render(
+                persona, "memory", db=db, key=m.get("key", ""), value=m.get("value", ""))
+        elif kind == "rest":
+            card["text"] = assistant_copy.render(persona, "rest", db=db)
+        elif kind == "fallback":
+            card["text"] = assistant_copy.style_fallback(persona, card.get("text", ""))
+        elif kind == "match_analysis" and card.get("analysis_status") != "ready":
+            if card.get("analysis_reason") == "coverage":
+                card["text"] = assistant_copy.render(persona, "no_data", db=db)
+        else:
+            card["text"] = assistant_copy.style_fallback(persona, card.get("text", ""))
+    except Exception:
+        pass
+    card["persona"] = persona
+    return card

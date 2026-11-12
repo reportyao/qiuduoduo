@@ -85,7 +85,7 @@ Android / iOS (Expo)  ──HTTPS──►  FastAPI (systemd/uvicorn)
 
 ### 4.1 聚焦决策流 / LLM 表（部分实现）
 
-> 目标契约见 [focused-decision-flow.md](./focused-decision-flow.md) 与 [api-football.md](./api-football.md)。当前 Alembic head 为 `20261111_22`：`interaction_events`、API-Football 5 张表、LLM 4 张表 + AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表已创建；intel/analysis 表仍未创建。
+> 目标契约见 [focused-decision-flow.md](./focused-decision-flow.md) 与 [api-football.md](./api-football.md)。当前 Alembic head 为 `20261112_23`：`interaction_events`、API-Football 5 张表、LLM 4 张表 + AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表，以及 v4 的结算/计划/会员/OPC/记忆/训练 19 张表已创建；intel/analysis 表仍未创建。
 
 | 表 | 用途 | 关键约束/索引 |
 |---|---|---|
@@ -328,7 +328,21 @@ select pid, wait_event_type, wait_event, query from pg_stat_activity where wait_
 20261111_20   ai_research.facts_hash（情报缓存）
 20261111_21   verdicts.tier/model_status/data_quality（内容分层）
 20261111_22   league_model_config（按联赛模型门控）
+20261112_23   v4 core：match_results 90 分钟字段 + market_settlements /
+              performance_daily / plan_cycles / plan_bets / plan_bet_legs /
+              user_memberships / membership_events / analysis_quota /
+              analysis_usage / market_access / engine_config / ops_jobs /
+              ops_exceptions / user_profile_features / assistant_threads /
+              assistant_messages / feature_snapshots / model_registry /
+              training_runs（up/down 已验证）
 ```
+
+v4 迁移的边界：
+
+- `match_results` 增加 `fixture_id / status / ft_home / ft_away / ht_home / ht_away / events_json / raw_hash`；旧行用 server default 保持可升级。
+- `user_memberships` 用部分唯一索引保证同一用户只有一条 `active`；SQLite/Postgres 各自 where 条件都在迁移里声明。
+- 计划/会员/训练脚手架表均已建，但**多市场数据、真实支付、离线训练任务尚未实现**；表存在不等于数据已齐。
+- 开发库仍是 SQLite；生产 Postgres 切库与恢复演练仍未执行。
 
 验证命令：
 

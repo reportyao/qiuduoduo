@@ -24,7 +24,21 @@ def _fixture(state="FT", home=2, away=1, result_info=None):
 
 def test_parse_score_only_finished():
     assert parse_score(_fixture()) == (2, 1)
-    assert parse_score(_fixture(state="AET", home=3, away=2)) == (3, 2)
+    # AET/PEN 的 CURRENT 可能含加时点球，不能直接当 90 分钟。
+    assert parse_score(_fixture(state="AET", home=3, away=2)) is None
+    # 有明确 FT 行时，AET 场次仍可按 FT90 结算。
+    fixture = _fixture(state="AET", home=3, away=2)
+    fixture["scores"] = [
+        {"type_id": 1525, "description": "FT",
+         "score": {"participant": "home", "goals": 2}},
+        {"type_id": 1525, "description": "FT",
+         "score": {"participant": "away", "goals": 1}},
+        {"type_id": 1525, "description": "CURRENT",
+         "score": {"participant": "home", "goals": 3}},
+        {"type_id": 1525, "description": "CURRENT",
+         "score": {"participant": "away", "goals": 2}},
+    ]
+    assert parse_score(fixture) == (2, 1)
     assert parse_score(_fixture(state="NS")) is None
     assert parse_score(_fixture(state="1H")) is None
     assert parse_score({"state": {"short_name": "FT"}, "scores": [],

@@ -65,8 +65,10 @@ def _recent_postmortems(db: Session, limit: int = 3) -> list[dict]:
     """F12 复盘卡：最近已结算 promoted 判决 + 归因（跨日可见，非比赛日尤其需要）。"""
     from .postmortem import attribute as _attr
     settled_pm = db.scalars(
-        select(Verdict).where(Verdict.status == "promoted", Verdict.settled.isnot(None))
-        .order_by(Verdict.kickoff.desc()).limit(limit)
+        select(Verdict).where(
+            Verdict.status == "promoted",
+            Verdict.settled.in_(("win", "lose")),
+        ).order_by(Verdict.kickoff.desc()).limit(limit)
     ).all()
     return [{
         "verdict_id": v.id,

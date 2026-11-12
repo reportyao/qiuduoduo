@@ -68,6 +68,7 @@ export interface PersonaCopy {
   restBody: string;
   comfort: string;
   protection: (streak: number) => string;
+  dailyRecord: (picks: number, hits: number, hitDays: number) => string;
   chatPlaceholder: string;
   chatGreeting: string;
   whyNotLead: string;
@@ -94,8 +95,12 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     parlaySub: "从预测生成组合，也可以自己体检",
     parlayCta: "去参谋",
     feedTitle: "今日预测",
-    conversationOpen: (dayLabel, total, promoted, published, screening, killed) =>
-      `${dayLabel} ${total} 场：复核过三关 ${promoted} 场，已发布预测 ${published} 场，${screening} 场等数据${killed ? `，${killed} 场没有预测` : ""}。没把握的，我不预测。`,
+    conversationOpen: (dayLabel, total, promoted, published, screening, _killed) => {
+      const waiting = screening > 0 ? `还有 ${screening} 场在等数据。` : "";
+      if (published > 0) return `${dayLabel} ${total} 场，我挑出 ${published} 场有把握的。${waiting}`;
+      if (promoted > 0) return `${dayLabel} ${total} 场，我看完了；今天还没有正式预测，没把握的我不发。${waiting}`;
+      return `${dayLabel} ${total} 场，没找到值得发布的。`;
+    },
     typing: "正在生成预测…",
     avoidLead: "这几场我不给预测，原因都写在这：",
     postmortemLead: "最近几场预测复盘，输赢都写：",
@@ -111,6 +116,8 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     restBody: "歇一天不是放弃，是纪律的一部分。明天预测照常等你。",
     comfort: "记下了。中间不用再看了，有结果我会叫你。",
     protection: (streak) => `你已连败 ${streak} 场，保护已触发：今天先只看，不下。`,
+    dailyRecord: (picks, hits, hitDays) =>
+      `昨天 ${picks} 场，${hits} 中；最近 30 天，${hitDays} 天有命中。`,
     chatPlaceholder: "继续问球多多…",
     chatGreeting: "我在。问今日预测、问为什么不出、问复盘，或者让我记住你的偏好。",
     whyNotLead: "不出预测不是它不会赢，是我们算不清。算不清就不预测。",
@@ -138,8 +145,13 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     parlaySub: "把预测拆成组合，别让串关把账搅浑",
     parlayCta: "去参谋",
     feedTitle: "今日预测",
-    conversationOpen: (dayLabel, total, promoted, published, screening, killed) =>
-      `${dayLabel === "今天" ? "今儿" : dayLabel} ${total} 场，我扒了一遍：复核过三关 ${promoted} 场，已发布预测 ${published} 场，还有 ${screening} 场等数据${killed ? `，${killed} 场没给预测` : ""}。没把握的，老炮不瞎给预测。`,
+    conversationOpen: (dayLabel, total, promoted, published, screening, _killed) => {
+      const prefix = dayLabel === "今天" ? "今儿" : dayLabel;
+      const waiting = screening > 0 ? `还有 ${screening} 场在等数据。` : "";
+      if (published > 0) return `兄弟，${prefix} ${total} 场我扒完了，挑出 ${published} 场像样的。${waiting}`;
+      if (promoted > 0) return `兄弟，${prefix} ${total} 场我扒完了；今天还没正式给，没把握我不瞎给。${waiting}`;
+      return `兄弟，${prefix} ${total} 场我扒完了，没货。`;
+    },
     typing: "正在生成预测…",
     avoidLead: "这几场我不给预测，原因都在这：",
     postmortemLead: "最近几场预测，输赢都摆出来：",
@@ -155,6 +167,8 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     restBody: "输钱不输阵。歇一晚，明天再预测。",
     comfort: "记上了兄弟。中间别刷了，有结果我叫你。",
     protection: (streak) => `兄弟，连输 ${streak} 场了，先停一停。低谷加注最容易把坑挖深。`,
+    dailyRecord: (picks, hits, hitDays) =>
+      `兄弟，昨天 ${picks} 场中了 ${hits} 场；最近 30 天，${hitDays} 天有收获。`,
     chatPlaceholder: "跟老炮聊聊…",
     chatGreeting: "来了兄弟。今天看哪场预测、为啥不出、昨天咋样，直接问。",
     whyNotLead: "不出预测不代表它不会赢。是这账咱算不清，算不清就不瞎给。",
@@ -182,8 +196,12 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     parlaySub: "把预测拆成组合，我 30 秒算给你看",
     parlayCta: "去参谋",
     feedTitle: "今日预测",
-    conversationOpen: (dayLabel, total, promoted, published, screening, killed) =>
-      `${dayLabel} ${total} 场，我都看过啦：复核过三关 ${promoted} 场，已发布预测 ${published} 场，还有 ${screening} 场等数据${killed ? `，${killed} 场没给预测` : ""}。没把握的先不预测。`,
+    conversationOpen: (dayLabel, total, promoted, published, screening, _killed) => {
+      const waiting = screening > 0 ? `还有 ${screening} 场在等数据。` : "";
+      if (published > 0) return `${dayLabel} ${total} 场，我挑出 ${published} 场有把握的。${waiting}`;
+      if (promoted > 0) return `${dayLabel} ${total} 场我都看完啦；今天还没正式给，没把握就不硬给。${waiting}`;
+      return `${dayLabel} ${total} 场，没找到值得发布的。`;
+    },
     typing: "我正在生成预测…",
     avoidLead: "这几场我不给预测，原因都写好啦：",
     postmortemLead: "最近几场预测复盘，输赢我都记着：",
@@ -199,6 +217,8 @@ export const COPY: Record<PersonaId, PersonaCopy> = {
     restBody: "歇一天不是放弃，是纪律的一部分。明天我照常给你预测。",
     comfort: "记下啦～中间不用看，有结果我第一时间来报。",
     protection: (streak) => `已经连输 ${streak} 场了，先停一停好不好？我不想看你越陷越深。`,
+    dailyRecord: (picks, hits, hitDays) =>
+      `昨天 ${picks} 场中 ${hits} 场～最近 30 天有 ${hitDays} 天命中。`,
     chatPlaceholder: "想聊什么呀…",
     chatGreeting: "我在呢。今天看哪场预测、为什么不出、昨天怎么样，都可以问我。",
     whyNotLead: "不出预测不是它不会赢，是我算不清。算不清就不预测。",

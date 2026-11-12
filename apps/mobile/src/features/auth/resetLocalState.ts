@@ -10,6 +10,7 @@ export async function resetLocalAccountState(): Promise<void> {
   prefs.setPersona("zhuanjia");
   prefs.setOddsFormat("decimal");
   prefs.setAvatarUri(null);
+  prefs.setLastDailyRecordDate("");
   useComplianceStore.getState().clearPgsi();
   if (Platform.OS !== "web" && avatarUri && FileSystem.documentDirectory) {
     const dir = `${FileSystem.documentDirectory}avatars/`;

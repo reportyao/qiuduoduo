@@ -137,6 +137,22 @@ export default function MeScreen() {
           <Quick label="今日预测" value="主看" icon="analytics-outline" onPress={() => router.navigate("/(tabs)")} />
         </View>
 
+        <SettingsGroup title="账户">
+          <SettingsRow
+            title="会员与权益"
+            subtitle="Pro 竞彩 / Max 全市场 + AI 计划"
+            icon="card-outline"
+            onPress={() => router.push("/membership")}
+          />
+          <SettingsRow
+            title="我的记录"
+            subtitle="票单、周报、公开账本"
+            icon="receipt-outline"
+            onPress={() => router.push("/records")}
+            last
+          />
+        </SettingsGroup>
+
         <SettingsGroup title="助理">
           <SettingsRow
             title="助理风格"

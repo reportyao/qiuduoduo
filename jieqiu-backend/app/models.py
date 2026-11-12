@@ -253,6 +253,16 @@ class MatchResult(Base):
     home: Mapped[str] = mapped_column(String(128), index=True)
     away: Mapped[str] = mapped_column(String(128), index=True)
     match_date: Mapped[str] = mapped_column(String(10), index=True)  # 欧洲当地日期
+    # 90 分钟口径：FT90 是 1X2/让球/大小球/BTTS/正确比分的结算依据；
+    # AET/PEN 只用于晋级类市场。goals_home/away 保留兼容旧代码。
+    fixture_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(8), default="FT")
+    ft_home: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ft_away: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ht_home: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ht_away: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    events_json: Mapped[list] = mapped_column(JSON, default=list)
+    raw_hash: Mapped[str] = mapped_column(String(64), default="")
     goals_home: Mapped[int] = mapped_column(Integer)
     goals_away: Mapped[int] = mapped_column(Integer)
     retrieved_at: Mapped[str] = mapped_column(String(32), default="")
@@ -1059,3 +1069,340 @@ class RefreshToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+# ---------------------------------------------------------------------------
+# v4.1：结算 / 计划 / 会员 / 战绩 / OPC / 助理记忆
+# ---------------------------------------------------------------------------
+
+
+class MarketSettlement(Base):
+    """按市场结算事实：Verdict 或 PlanBet 的一条腿对应一行。"""
+
+    __tablename__ = "market_settlements"
+    __table_args__ = (
+        UniqueConstraint("subject_type", "subject_id", "leg_index", "market",
+                         "line", "direction", "rules_version",
+                         name="uq_market_settlement"),
+        Index("ix_market_settlements_subject", "subject_type", "subject_id"),
+        Index("ix_market_settlements_settled", "settled_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subject_type: Mapped[str] = mapped_column(String(16), index=True)  # verdict / plan_bet
+    subject_id: Mapped[str] = mapped_column(String(64), index=True)
+    leg_index: Mapped[int] = mapped_column(Integer, default=0)
+    market: Mapped[str] = mapped_column(String(16), default="had")
+    line: Mapped[str] = mapped_column(String(16), default="")
+    direction: Mapped[str] = mapped_column(String(16), default="")
+    rules_version: Mapped[str] = mapped_column(String(16), default="v1")
+    result: Mapped[str] = mapped_column(String(24), default="pending")
+    won: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    source: Mapped[str] = mapped_column(String(24), default="")
+    settled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class PerformanceDaily(Base):
+    """用户可见战绩读模型：单场推荐 / 计划周期。"""
+
+    __tablename__ = "performance_daily"
+    __table_args__ = (
+        UniqueConstraint("scope", "trade_date", "risk_level", "market",
+                         name="uq_performance_daily"),
+        Index("ix_performance_daily_scope_date", "scope", "trade_date"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    scope: Mapped[str] = mapped_column(String(16), index=True)  # ai_record / plan
+    trade_date: Mapped[str] = mapped_column(String(10), index=True)
+    risk_level: Mapped[str] = mapped_column(String(16), default="")
+    market: Mapped[str] = mapped_column(String(16), default="")
+    picks: Mapped[int] = mapped_column(Integer, default=0)
+    wins: Mapped[int] = mapped_column(Integer, default=0)
+    losses: Mapped[int] = mapped_column(Integer, default=0)
+    hit_days: Mapped[int] = mapped_column(Integer, default=0)
+    sample: Mapped[int] = mapped_column(Integer, default=0)
+    pnl: Mapped[float] = mapped_column(Float, default=0.0)
+    roi: Mapped[float | None] = mapped_column(Float, nullable=True)
+    clv: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_drawdown: Mapped[float | None] = mapped_column(Float, nullable=True)
+    computed_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class PlanCycle(Base):
+    """一期 4 场定投组合：固定预算，期末结算总收益。"""
+
+    __tablename__ = "plan_cycles"
+    __table_args__ = (
+        UniqueConstraint("risk_level", "cycle_no", name="uq_plan_cycle_no"),
+        Index("ix_plan_cycles_status_start", "status", "start_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    name: Mapped[str] = mapped_column(String(32), default="稳健定投")
+    risk_level: Mapped[str] = mapped_column(String(16), index=True)  # stable / balanced / aggressive
+    cycle_no: Mapped[int] = mapped_column(Integer, default=1)
+    start_at: Mapped[str] = mapped_column(String(32), default="")
+    end_at: Mapped[str] = mapped_column(String(32), default="")
+    budget: Mapped[float] = mapped_column(Float, default=400.0)
+    target_matches: Mapped[int] = mapped_column(Integer, default=4)
+    status: Mapped[str] = mapped_column(String(16), default="draft", index=True)  # draft/published/settled
+    total_stake: Mapped[float] = mapped_column(Float, default=0.0)
+    total_return: Mapped[float] = mapped_column(Float, default=0.0)
+    pnl: Mapped[float] = mapped_column(Float, default=0.0)
+    roi: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_drawdown: Mapped[float | None] = mapped_column(Float, nullable=True)
+    selection_version: Mapped[str] = mapped_column(String(24), default="v1")
+    model_version: Mapped[str] = mapped_column(String(24), default="")
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class PlanBet(Base):
+    """计划注单：单关或串关，stake=100/200。"""
+
+    __tablename__ = "plan_bets"
+    __table_args__ = (Index("ix_plan_bets_cycle", "cycle_id"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    cycle_id: Mapped[str] = mapped_column(String(32), index=True)
+    bet_type: Mapped[str] = mapped_column(String(12), default="single")  # single / parlay
+    label: Mapped[str] = mapped_column(String(64), default="")
+    stake: Mapped[float] = mapped_column(Float, default=100.0)
+    odds: Mapped[float] = mapped_column(Float, default=0.0)
+    status: Mapped[str] = mapped_column(String(12), default="pending", index=True)  # pending/won/lost/void
+    pnl: Mapped[float] = mapped_column(Float, default=0.0)
+    settled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class PlanBetLeg(Base):
+    """计划注单腿：每腿 allocation=100（串关两腿合成 200）。"""
+
+    __tablename__ = "plan_bet_legs"
+    __table_args__ = (
+        Index("ix_plan_bet_legs_bet", "bet_id"),
+        Index("ix_plan_bet_legs_verdict", "verdict_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    bet_id: Mapped[str] = mapped_column(String(32), index=True)
+    verdict_id: Mapped[str] = mapped_column(String(40), index=True)
+    match_id: Mapped[str] = mapped_column(String(32), default="")
+    market: Mapped[str] = mapped_column(String(16), default="had")
+    line: Mapped[str] = mapped_column(String(16), default="")
+    direction: Mapped[str] = mapped_column(String(16), default="")
+    odds: Mapped[float] = mapped_column(Float, default=0.0)
+    allocation: Mapped[float] = mapped_column(Float, default=100.0)
+    model_prob: Mapped[float | None] = mapped_column(Float, nullable=True)
+    market_prob: Mapped[float | None] = mapped_column(Float, nullable=True)
+    edge: Mapped[float | None] = mapped_column(Float, nullable=True)
+    quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    selection_reason: Mapped[str] = mapped_column(String(240), default="")
+    result: Mapped[str] = mapped_column(String(12), default="pending")
+    settled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class UserMembership(Base):
+    """会员权益事实：同一用户只能有一条 active。"""
+
+    __tablename__ = "user_memberships"
+    __table_args__ = (
+        Index("ix_user_memberships_user_status", "user_id", "status"),
+        Index("uq_user_memberships_active", "user_id", unique=True,
+              sqlite_where=text("status = 'active'"),
+              postgresql_where=text("status = 'active'")),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    tier: Mapped[str] = mapped_column(String(8), default="pro")  # pro / max
+    status: Mapped[str] = mapped_column(String(12), default="active")  # active/expired/revoked
+    starts_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    source: Mapped[str] = mapped_column(String(16), default="admin_manual")
+    granted_by: Mapped[str] = mapped_column(String(64), default="")
+    note: Mapped[str] = mapped_column(String(200), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class MembershipEvent(Base):
+    __tablename__ = "membership_events"
+    __table_args__ = (Index("ix_membership_events_user", "user_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    action: Mapped[str] = mapped_column(String(16), default="grant")
+    tier: Mapped[str] = mapped_column(String(8), default="")
+    before_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    after_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    actor: Mapped[str] = mapped_column(String(64), default="")
+    note: Mapped[str] = mapped_column(String(200), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class AnalysisQuota(Base):
+    __tablename__ = "analysis_quota"
+    __table_args__ = (UniqueConstraint("user_id", "trade_date", name="uq_analysis_quota"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    trade_date: Mapped[str] = mapped_column(String(10), index=True)
+    limit_count: Mapped[int] = mapped_column(Integer, default=1)
+    used: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class AnalysisUsage(Base):
+    __tablename__ = "analysis_usage"
+    __table_args__ = (
+        UniqueConstraint("user_id", "trade_date", "match_id", name="uq_analysis_usage"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    trade_date: Mapped[str] = mapped_column(String(10), index=True)
+    match_id: Mapped[str] = mapped_column(String(32), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class MarketAccess(Base):
+    __tablename__ = "market_access"
+    __table_args__ = (UniqueConstraint("tier", "market_key", name="uq_market_access"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tier: Mapped[str] = mapped_column(String(8), index=True)
+    market_key: Mapped[str] = mapped_column(String(24), index=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    note: Mapped[str] = mapped_column(String(120), default="")
+
+
+class EngineConfig(Base):
+    __tablename__ = "engine_config"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    version: Mapped[str] = mapped_column(String(16), default="V3.21")
+    markets_monitored: Mapped[int] = mapped_column(Integer, default=5)
+    models_reviewing: Mapped[int] = mapped_column(Integer, default=7)
+    data_points_factor: Mapped[float] = mapped_column(Float, default=5.0)
+    updated_by: Mapped[str] = mapped_column(String(64), default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class OpsJob(Base):
+    __tablename__ = "ops_jobs"
+    __table_args__ = (Index("ix_ops_jobs_key_started", "job_key", "started_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    job_key: Mapped[str] = mapped_column(String(64), index=True)
+    status: Mapped[str] = mapped_column(String(12), default="running")  # running/ok/error
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    error: Mapped[str] = mapped_column(String(300), default="")
+
+
+class OpsException(Base):
+    __tablename__ = "ops_exceptions"
+    __table_args__ = (
+        UniqueConstraint("dedupe_key", name="uq_ops_exception_dedupe"),
+        Index("ix_ops_exceptions_status_created", "status", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    type: Mapped[str] = mapped_column(String(32), index=True)
+    severity: Mapped[int] = mapped_column(Integer, default=1)
+    source: Mapped[str] = mapped_column(String(32), default="")
+    message: Mapped[str] = mapped_column(String(400), default="")
+    status: Mapped[str] = mapped_column(String(12), default="open")  # open/ack/resolved
+    actions: Mapped[list] = mapped_column(JSON, default=list)
+    dedupe_key: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class UserProfileFeature(Base):
+    __tablename__ = "user_profile_features"
+    __table_args__ = (UniqueConstraint("user_id", "feature", name="uq_user_profile_feature"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    feature: Mapped[str] = mapped_column(String(32), index=True)
+    value: Mapped[str] = mapped_column(String(256), default="")
+    confidence: Mapped[float] = mapped_column(Float, default=1.0)
+    source: Mapped[str] = mapped_column(String(16), default="behavior")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class AssistantThread(Base):
+    __tablename__ = "assistant_threads"
+    __table_args__ = (Index("ix_assistant_threads_user", "user_id", "updated_at"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    match_id: Mapped[str] = mapped_column(String(32), default="")
+    summary: Mapped[str] = mapped_column(String(1000), default="")
+    last_message_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class AssistantMessage(Base):
+    __tablename__ = "assistant_messages"
+    __table_args__ = (Index("ix_assistant_messages_thread", "thread_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    thread_id: Mapped[str] = mapped_column(String(32), index=True)
+    user_id: Mapped[str] = mapped_column(String(40), index=True)
+    role: Mapped[str] = mapped_column(String(12), default="assistant")
+    persona: Mapped[str] = mapped_column(String(16), default="zhuanjia")
+    text: Mapped[str] = mapped_column(Text, default="")
+    facts_hash: Mapped[str] = mapped_column(String(64), default="")
+    copy_version: Mapped[str] = mapped_column(String(32), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class FeatureSnapshot(Base):
+    __tablename__ = "feature_snapshots"
+    __table_args__ = (Index("ix_feature_snapshots_match_time", "match_id", "captured_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    match_id: Mapped[str] = mapped_column(String(32), index=True)
+    captured_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    features_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    market_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    lineup_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    feature_hash: Mapped[str] = mapped_column(String(64), default="")
+
+
+class ModelRegistry(Base):
+    __tablename__ = "model_registry"
+    __table_args__ = (UniqueConstraint("name", "version", name="uq_model_registry"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(64), index=True)
+    version: Mapped[str] = mapped_column(String(32), default="v1")
+    league: Mapped[str] = mapped_column(String(64), default="")
+    market: Mapped[str] = mapped_column(String(16), default="had")
+    status: Mapped[str] = mapped_column(String(16), default="shadow")  # shadow/enabled/disabled
+    metrics_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class TrainingRun(Base):
+    __tablename__ = "training_runs"
+    __table_args__ = (Index("ix_training_runs_started", "started_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    model_name: Mapped[str] = mapped_column(String(64), default="")
+    league: Mapped[str] = mapped_column(String(64), default="")
+    market: Mapped[str] = mapped_column(String(16), default="had")
+    status: Mapped[str] = mapped_column(String(16), default="running")
+    metrics_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    note: Mapped[str] = mapped_column(String(300), default="")

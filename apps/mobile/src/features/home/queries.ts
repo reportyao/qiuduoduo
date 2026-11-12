@@ -108,3 +108,65 @@ export function usePulseQuery(date: string, enabled = true) {
     refetchInterval: 120_000,
   });
 }
+
+export interface EngineStatus {
+  version: string;
+  running: boolean;
+  uptime_hours: number | null;
+  today_data_points: number;
+  markets_monitored: number;
+  models_reviewing: number;
+  as_of: string;
+}
+
+export interface RecordSummary {
+  yesterday: { picks: number; settled: number; hits: number } | null;
+  last_30_days: {
+    days: number;
+    picks: number;
+    settled: number;
+    hits: number;
+    hit_days: number;
+  };
+  recent: {
+    verdict_id: string;
+    match_id: string;
+    trade_date: string;
+    league: string;
+    home: string;
+    away: string;
+    pick: string | null;
+    odds: number | null;
+    settled: string | null;
+    score: string | null;
+    clv: number | null;
+  }[];
+}
+
+export function useEngineStatusQuery() {
+  const userId = useAuthStore((s) => s.session?.userId ?? "anon");
+  const ready = useAuthStore((s) => s.ready);
+  return useQuery({
+    queryKey: ["engine-status", userId],
+    enabled: ready,
+    queryFn: async () => {
+      const raw = await callApi(api.client.GET("/stats/engine"));
+      return raw as unknown as EngineStatus;
+    },
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
+  });
+}
+
+export function useRecordSummaryQuery() {
+  return useQuery({
+    queryKey: ["record-summary"],
+    queryFn: async () => {
+      const raw = await callApi(api.client.GET("/stats/record/summary", {
+        params: { query: { days: 30 } },
+      }));
+      return (raw as unknown as { record: RecordSummary | null }).record;
+    },
+    staleTime: 5 * 60_000,
+  });
+}

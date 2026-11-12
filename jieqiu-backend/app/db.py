@@ -121,6 +121,16 @@ _REQUIRED_COLUMNS = {
         "chain_hash": "TEXT",
         "trade_date": "TEXT",
     },
+    "match_results": {
+        "fixture_id": "INTEGER",
+        "status": "VARCHAR(8) DEFAULT 'FT'",
+        "ft_home": "INTEGER",
+        "ft_away": "INTEGER",
+        "ht_home": "INTEGER",
+        "ht_away": "INTEGER",
+        "events_json": "JSON",
+        "raw_hash": "VARCHAR(64) DEFAULT ''",
+    },
     "bets": {
         "sp": "FLOAT",
     },
@@ -177,9 +187,18 @@ def _ensure_indexes() -> None:
     create_all(checkfirst=True) 只建缺失的表，不会给已存在的表补索引；生产即便
     暂时还跑 SQLite，也要让热路径索引真正生效。Postgres 不走这里，由 Alembic 管。
     """
+    from sqlalchemy import inspect
+    from sqlalchemy.exc import OperationalError
+    existing = set(inspect(engine).get_table_names())
     for table in Base.metadata.tables.values():
+        if table.name not in existing:
+            continue
         for index in table.indexes:
-            index.create(bind=engine, checkfirst=True)
+            try:
+                index.create(bind=engine, checkfirst=True)
+            except OperationalError as exc:
+                # 旧测试库可能在 drop/create 之间留下不一致状态；索引失败不能阻塞启动。
+                logger.warning("index ensure skipped %s: %s", index.name, exc)
 
 
 def _ensure_columns() -> None:

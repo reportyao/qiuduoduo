@@ -17,7 +17,7 @@ export default function TabsLayout() {
       >
         <Tabs.Screen name="index" options={{ title: "助理" }} />
         <Tabs.Screen name="matches" options={{ title: "比赛" }} />
-        <Tabs.Screen name="records" options={{ title: "记录" }} />
+        <Tabs.Screen name="plans" options={{ title: "计划" }} />
         <Tabs.Screen name="me" options={{ title: "我的" }} />
       </Tabs>
       {/* 常驻在 4 个 Tab 之上，不随页面滚动；点击弹出今日比赛 */}

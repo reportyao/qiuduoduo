@@ -111,6 +111,7 @@ class ChatBody(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
     session_id: str = Field(default="", max_length=64)
     match_id: str = Field(default="", max_length=32)
+    persona: str | None = Field(default=None, max_length=16)
 
 
 # ---------- 认证 / 档案 ----------
@@ -422,5 +423,8 @@ def weekly(authorization: str | None = Header(default=None),
 @router.post("/chat")
 def chat(body: ChatBody, user: User | None = Depends(optional_user),
          db: Session = Depends(get_db)):
+    persona = body.persona or (user.persona if user is not None else "zhuanjia")
+    if persona not in ("zhuanjia", "laopao", "meng"):
+        persona = "zhuanjia"
     return respond(db, user, body.text, session_id=body.session_id,
-                   match_id=body.match_id)
+                   match_id=body.match_id, persona=persona)

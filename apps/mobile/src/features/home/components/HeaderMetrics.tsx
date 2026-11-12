@@ -1,40 +1,71 @@
-import { StyleSheet, View } from "react-native";
-import { StatusDot, Text } from "@/components/ui";
-import { relativeTime } from "@/lib/format";
+import { useEffect, useRef } from "react";
+import { Animated, StyleSheet, View } from "react-native";
+import { Text } from "@/components/ui";
+import { useReducedMotion } from "@/lib/useReducedMotion";
 import { colors, spacing } from "@/theme/tokens";
+import type { EngineStatus } from "@/features/home/queries";
 
-/** 首页顶栏右侧的在线与数据点状态。 */
-export function HeaderMetrics({
-  stream,
-  pulse,
-  now,
-}: {
-  stream: { generatedAt?: string | null } | null;
-  pulse: { display: { dataPoints: number }; asOf?: string | null } | null | undefined;
-  now: number;
+/**
+ * HeaderMetrics：不点击、不展开。
+ * 主文案保留“预测引擎 + 数据点”，并增加陪伴时长与盘口/模型监控。
+ */
+export function HeaderMetrics({ engine, dataPoints }: {
+  engine: EngineStatus | null;
+  dataPoints?: number;
 }) {
-  const points = pulse?.display.dataPoints ?? 0;
-  return (
-    <View style={styles.metrics}>
-      <View style={styles.metricTop}>
-        <StatusDot color={colors.greenAccent} />
-        <Text variant="caption" color={colors.muted}>在线</Text>
+  const reduced = useReducedMotion();
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (reduced) {
+      pulse.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 0.35, duration: 900, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse, reduced]);
+
+  if (!engine) {
+    return (
+      <View style={styles.metrics}>
+        <Text variant="caption" color={colors.muted}>正在连接预测引擎…</Text>
       </View>
-      <Text variant="captionStrong" color={colors.green}>
-        预测引擎 v3 · {points > 0 ? `${points} 个数据点` : "等待同步"}
+    );
+  }
+  const points = Math.max(0, Math.round(dataPoints ?? engine.today_data_points ?? 0));
+  return (
+    <View style={styles.metrics} accessibilityLabel="预测引擎状态">
+      <Text variant="caption" color={colors.muted} numberOfLines={1}>
+        已为你稳定运行 {engine.uptime_hours ?? "—"} 小时
       </Text>
-      <Text variant="caption" color={colors.subtle}>
-        {pulse?.asOf
-          ? relativeTime(pulse.asOf, now)
-          : stream?.generatedAt
-            ? relativeTime(stream.generatedAt, now)
-            : "实时"}
+      <Text variant="captionStrong" color={colors.green} numberOfLines={1}>
+        预测引擎 {engine.version}
       </Text>
+      <Text variant="caption" color={colors.muted} numberOfLines={1}>
+        {points > 0 ? `今日采集全网 ${points.toLocaleString()} 条数据点` : "今日数据同步中"}
+      </Text>
+      <View style={styles.line}>
+        <Animated.View style={[styles.dot, { opacity: pulse }]} />
+        <Text variant="caption" color={colors.muted} numberOfLines={1}>
+          {engine.markets_monitored} 盘口 · {engine.models_reviewing} 模型实时复审
+        </Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  metrics: { alignItems: "flex-end", gap: 1 },
-  metricTop: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  metrics: { alignItems: "flex-end", gap: 1, maxWidth: 160 },
+  line: { flexDirection: "row", alignItems: "center", gap: spacing.xs, maxWidth: 160 },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.green,
+    flexShrink: 0,
+  },
 });
