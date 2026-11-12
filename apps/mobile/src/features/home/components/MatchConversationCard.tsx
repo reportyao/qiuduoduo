@@ -17,7 +17,11 @@ interface IntelCard {
 }
 
 function formText(form: string[] | undefined): string {
-  return form && form.length ? form.join(" ") : "—";
+  if (!form?.length) return "—";
+  const wins = form.filter((item) => item === "W").length;
+  const draws = form.filter((item) => item === "D").length;
+  const losses = form.filter((item) => item === "L").length;
+  return `${wins}胜${draws}平${losses}负`;
 }
 
 function IntelNameCard({ card }: { card: IntelCard }) {
@@ -50,7 +54,7 @@ function buildCards(intel?: MatchIntelSummary): IntelCard[] {
       key: "standings",
       label: "积分榜",
       value: `第 ${intel.homePosition ?? "—"} / 第 ${intel.awayPosition ?? "—"}`,
-      note: `${formText(intel.homeForm)} / ${formText(intel.awayForm)}${age("standings") ? ` · ${age("standings")}` : ""}`,
+      note: `主 ${formText(intel.homeForm)} / 客 ${formText(intel.awayForm)}${age("standings") ? ` · ${age("standings")}` : ""}`,
     });
   }
   if (intel.weather || intel.referee) {
@@ -164,7 +168,9 @@ export const MatchConversationCard = memo(function MatchConversationCard({
           <Text variant="caption" color={colors.subtle}>预测</Text>
           <Text variant="h3">{direction ?? "暂无方向"}</Text>
         </View>
-        <Text variant="metric" color={colors.green}>{probability != null ? pct(probability) : "—"}</Text>
+        {probability != null ? (
+          <Text variant="metric" color={colors.green}>{pct(probability)}</Text>
+        ) : null}
       </View>
 
       {verdict ? (

@@ -92,7 +92,7 @@ export function AssistantBrief({
       <View style={styles.statRow}>
         <MiniStat label="场次" value={String(stats.total)} />
         <View style={styles.statLine} />
-        <MiniStat label="有预测" value={String(predictionCount)} accent />
+        <MiniStat label="有预测" value={String(predictionCount)} accent={predictionCount > 0} />
         <View style={styles.statLine} />
         <MiniStat label={onsaleLabel} value={String(onsaleCount)} />
       </View>
@@ -115,7 +115,7 @@ export function AssistantBrief({
       >
         <StatusDot color={colors.green} />
         <Text variant="caption" color={colors.muted} style={styles.flex} numberOfLines={1}>
-          预测 · 阵容 · 市场
+          数据已更新
         </Text>
         <Text variant="caption" color={colors.green}>数据状态 ›</Text>
       </Pressable>
@@ -291,10 +291,11 @@ export const VerdictMessage = memo(function VerdictMessage({
           </>
         ) : (
           <Button
-            label={copy.detail}
+            label="完整详情"
             variant="primary"
             onPress={() => onOpen(verdict.id)}
             fullWidth
+            style={styles.action}
           />
         )}
       </View>
