@@ -20,7 +20,7 @@ AI 足球助理 / 赛前预测产品。当前产品口径以 [docs/qiuduoduo-v4-
 | 前端测试 | **47 passed** + typecheck / ESLint / Android Hermes bundle（2026-11-12 实测） |
 | Alembic head | `20261112_23`（v4 core，up/down 已实现） |
 | 开发数据库 | SQLite + WAL（过渡）；生产目标境内 PostgreSQL 16，**尚未切库** |
-| v4.1 部署状态 | **代码与文档已在本分支，尚未部署生产；v4 APK 尚未构建发布** |
+| v4.1 部署状态 | **已部署腾讯云生产（2026-11-12 11:38 CST）；管理后台 v=20261112d；v4 APK 尚未构建发布** |
 
 ## v4.1 已实现
 
@@ -50,7 +50,7 @@ AI 足球助理 / 赛前预测产品。当前产品口径以 [docs/qiuduoduo-v4-
 - **生产 Postgres**：迁移与离线 SQL 已验证，真实切库需要云托管实例和维护窗口。
 - **JPush 真机**：Android core 已接，MuMu/Houdini 转译会崩；需 arm64 真机验收，Master Secret 与厂商通道待配。
 - **v4 发布包**：本轮只做了 Metro/Hermes bundle 与模拟器验收，没有生成、签名、上传正式 APK。
-- **生产部署**：本轮只推送代码与文档，没有执行 `deploy.py`，线上仍是 2026-11-06 版本。
+- **生产部署**：2026-11-12 11:38 CST 已用 `deploy.py` 部署到 `43.128.24.244`；部署前备份代码 `jieqiu-backend-20261112-113522.tar.gz` 与 SQLite 库 `jieqiu-20261112-113522.db`（`/home/ubuntu/backups/`）。
 
 ## 工程入口
 

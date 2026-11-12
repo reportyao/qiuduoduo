@@ -1,6 +1,8 @@
 # 运维 Runbook（当前实现）
 
-最后更新：2026-11-05。适用于当前过渡期 `jieqiu-backend/` + 单台腾讯云 VPS；目标数据库是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，见 ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。
+最后更新：2026-11-12。适用于当前过渡期 `jieqiu-backend/` + 单台腾讯云 VPS；目标数据库是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，见 ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。
+
+> **v4.1 部署状态**：2026-11-12 11:38 CST 已用 `deploy.py` 部署到 `43.128.24.244`，`systemctl is-active jieqiu-backend` = active，`/health` 200，OpenAPI 158/174，管理后台静态资源 `v=20261112d`；生产仍为 SQLite（`/home/ubuntu/jieqiu-data/jieqiu.db`，约 40M）。部署前备份：`/home/ubuntu/backups/jieqiu-backend-20261112-113522.tar.gz`（代码）与 `jieqiu-20261112-113522.db`（库）。回滚：停服务 → 解压代码备份到 `/home/ubuntu/jieqiu-backend` → 用 `sqlite3` 的 `.backup` 恢复库（或先保留现库为 `.bak`）→ `systemctl start jieqiu-backend`。v4 新增计划/会员/结算/OPC 表已在生产 SQLite 建表；后续观察 `settle_pending`、`settle_open_cycles`、会员到期 job 与 seed 是否正常写 `ops_jobs/ops_exceptions`。
 
 ## 1. 进程与目录
 
@@ -46,7 +48,7 @@ python deploy.py
 
 | 时间 | 任务 |
 |---|---|
-| `*/30 * * * *` | `app.seed` 导入采集器快照、重建判决；随后 `app.recommendations_cli run` 走 snapshot→review→publish |
+| `*/30 * * * *` | `app.seed` 导入采集器快照、重建判决、结算、会员到期、重建每日战绩、自动结算计划并确保当日三期计划；随后 `app.recommendations_cli run` 走 snapshot→review→publish |
 | `5 19 * * *` | `app.persona_cli warm`（预生成三套人设文案） |
 | `10 6 * * 1` | `app.backtest_cli weekly` |
 | `0 3 * * *` | `app.purge_cli`（注销冷静期满清理） |
@@ -128,6 +130,10 @@ venv/bin/python -m app.odds_cli status
 - **旧 `/console` 已全部下线**：`/console` 及 `/console/*` 一律 302 到 `/admin`，不再提供登录或页面；W8 `/review/*` 也改用 `admin_t` + RBAC。
 - **新版页面**：
   - 总览：KPI + 今日待办（待复核/复核失败/待发布/模型降级/SP 延迟/未配 Key）；
+  - **用户与会员（v4）**：搜索 App 用户、查看当前会员/额度、手动开通/撤销 Pro/Max（7/30/90 天或自定义）、备注；手机/邮箱脱敏；写 membership event + admin audit；
+  - **AI 计划（v4）**：按 risk 查看/生成当前期与历史期、查看投注结构与 legs、手动结算入口；计划只展示，不做跟单；
+  - **异常队列（v4）**：`ops_jobs` 运行记录 + `ops_exceptions` 未解决异常，可 ack/resolved；异常带 dedupe_key，避免重复刷屏；
+  - **引擎配置（v4）**：`version / markets_monitored / models_reviewing / data_points_factor`，直接控制首页 HeaderMetrics 展示；改动写审计；
   - **采集器**：查看家宽采集器在线/离线、最后心跳、SP 文件年龄、轮次/场次/错误，一键下发重启（采集器下一次心跳退出并由本地 watchdog 拉起）。
   - **接入中心**：按“用途”分组，不按厂商堆列表。AI 能力（对话问答 fast / 发布前复核 deep / 人设文案 / 单场 AI 解读）、数据源（API-Football / The Odds API / 竞彩 SP）、推送（JPush）；fast/deep 可在页面直接上传 Base URL、Model、Key，保存后优先于环境变量，Key 加密存储；
   - 调用用量：fast/deep profile、任务路由（标记已接入/未接入）、今日成本/缓存/最近调用；
@@ -244,7 +250,10 @@ JQ_DB_STATEMENT_TIMEOUT_MS=0 python -m app.db_maint --apply --json
 
 - TLS/反代、多进程会话；
 - 备份/PITR 自动化；
-- 真实 JPush、支付/权益、OCR、真实 live feed/进球提醒、持久化告警/任务中心；
-- 真实 Android APK / iOS 原生构建验收。
+- 真实 JPush、真实支付/订单/回调、OCR、真实 live feed/进球提醒、持久化告警外发/任务编排；
+- 生产 Postgres 切库与恢复演练；
+- 真实 Android APK / iOS 原生构建验收；
+- v4 的多盘口完整数据、计划自训练模型、计划更新提醒/收藏。
 
 > 合规服务端同步已于 2026-11-05 闭环（年龄门/未成年/自排除/PGSI + `/bets`、focus 硬拦截），不再列入未完成。
+> 会员权益、后台手动开通、计划分级已于 2026-11-12 实现；**只有支付仍是假 UI**，不要写成“支付已接”。

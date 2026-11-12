@@ -96,7 +96,7 @@
 - 计划更新提醒/收藏；不做跟单/自动记注/代购。
 - 生产 Postgres 切库、备份/PITR 恢复演练。
 - v4 正式 APK 构建/签名/发布、iOS、真机 JPush。
-- 生产部署：本轮只提交代码/文档，未执行 `deploy.py`。
+- 生产部署已完成（2026-11-12 11:38 CST）：`deploy.py` 部署到 `43.128.24.244`，`/health` 200，OpenAPI 158/174，管理后台静态资源 v=20261112d；生产仍为 SQLite。部署前备份在 `/home/ubuntu/backups/`（代码 `jieqiu-backend-20261112-113522.tar.gz`、库 `jieqiu-20261112-113522.db`）。
 
 ## 6. 回滚
 
