@@ -84,7 +84,9 @@ export function AssistantBrief({
         <Text variant="body" style={styles.lead}>{recordText}</Text>
       ) : null}
       <Text variant="body" style={styles.lead}>
-        {copy.conversationOpen(dayLabel, stats.total, predictionCount, predictionCount, stats.screening, killed)}
+        {predictionCount > 0
+          ? copy.conversationOpen(dayLabel, stats.total, predictionCount, predictionCount, stats.screening, killed)
+          : "点下方场次，先看阵容、形势与环境。"}
       </Text>
 
       <View style={styles.statRow}>
@@ -97,7 +99,7 @@ export function AssistantBrief({
         <MiniStat label={onsaleLabel} value={String(onsaleCount)} />
       </View>
 
-      {publishedReady && publishedCount === 0 ? (
+      {publishedReady && publishedCount === 0 && predictionCount > 0 ? (
         <Text variant="caption" color={colors.green}>点下方场次查看今日预测。</Text>
       ) : null}
 
