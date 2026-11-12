@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { Card, Text } from "@/components/ui";
 import type { ProbabilityCompareData, ProbabilityTriple } from "@/domain/types";
 import { colors, radii, spacing } from "@/theme/tokens";
+import { brandCopy } from "@/lib/brand";
 
 function pct(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
@@ -54,7 +55,7 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
           probs={data.model} tone={colors.greenDark} />
       ) : null}
       {data.market ? (
-        <Row label={`市场 · ${data.market.bookmaker}`} probs={data.market.probs} tone={colors.muted} />
+        <Row label={`市场 · ${brandCopy(data.market.bookmaker)}`} probs={data.market.probs} tone={colors.muted} />
       ) : null}
       {data.thirdParty ? (
         <Row label="球多多自研AI引擎预测参考" probs={data.thirdParty.probs} tone={colors.amber} />
