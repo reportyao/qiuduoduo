@@ -66,7 +66,7 @@ export default function MembershipScreen() {
               <Text variant="h3">{product.name}</Text>
               <Chip label={product.tier === "max" ? "推荐" : "竞彩"} tone={product.tone} />
             </View>
-            <Text variant="metric" style={styles.price}>{product.price}</Text>
+            <Text variant="h2">{product.price}</Text>
             <View style={styles.items}>
               {product.items.map((item) => (
                 <Text key={item} variant="small" color={colors.muted}>· {item}</Text>
@@ -95,7 +95,6 @@ const styles = StyleSheet.create({
   current: { gap: spacing.xs },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
   product: { gap: spacing.sm },
-  price: { fontSize: 24, lineHeight: 30 },
   items: { gap: 2 },
   footer: { marginTop: spacing.sm, lineHeight: 18 },
 });

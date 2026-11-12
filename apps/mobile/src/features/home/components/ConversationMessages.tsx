@@ -129,10 +129,10 @@ export function AssistantBrief({
       />
 
       <View style={styles.quickRow}>
-        <QuickReply label="今日在售" onPress={onOnSale} style={styles.quickItem} />
-        <QuickReply label="选一场预测" onPress={onPicker} style={styles.quickItem} />
-        <QuickReply label="为什么不出预测" onPress={onWhyNot} style={styles.quickItem} />
-        <QuickReply label="串关参谋" onPress={onParlay} style={styles.quickItem} />
+        <QuickReply label="今日在售" onPress={onOnSale} />
+        <QuickReply label="选一场预测" onPress={onPicker} />
+        <QuickReply label="为什么不出预测" onPress={onWhyNot} />
+        <QuickReply label="串关参谋" onPress={onParlay} />
       </View>
     </AssistantMessage>
   );
@@ -561,11 +561,9 @@ const styles = StyleSheet.create({
   quickRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: spacing.xs,
+    gap: spacing.xxs,
     marginTop: spacing.base,
   },
-  quickItem: { width: "48%" },
   msgHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   statusRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   match: { marginTop: spacing.sm },

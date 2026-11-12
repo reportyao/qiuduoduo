@@ -56,7 +56,7 @@ export default function WeeklyScreen() {
           <>
             <Card tone="green" style={styles.hero}>
               <Text variant="overline" color={colors.green}>近 {report.rangeDays} 天</Text>
-              <Text variant="display" style={styles.heroTitle}>
+              <Text variant="metric" style={styles.heroTitle}>
                 {report.settled > 0 ? `${report.wins} / ${report.settled}` : "等待赛果"}
               </Text>
               <Text variant="small" color={colors.muted}>
@@ -169,7 +169,7 @@ function Mini({
 const styles = StyleSheet.create({
   content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.md, paddingBottom: spacing.x7 },
   hero: { gap: spacing.xs },
-  heroTitle: { fontSize: 40, lineHeight: 46 },
+  heroTitle: { marginTop: 2 },
   heroMeta: { flexDirection: "row", gap: spacing.x4, marginTop: spacing.sm },
   mini: { gap: 2, minWidth: 70 },
   block: { marginTop: spacing.base, gap: spacing.xs },
