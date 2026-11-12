@@ -93,6 +93,7 @@
 
 | 文档 | 内容 |
 |---|---|
+| [2026-11-12-sportmonks-data-gap-review.md](./reviews/2026-11-12-sportmonks-data-gap-review.md) | Sportmonks 数据能力与前端缺口：首发/阵型/伤停/积分榜/H2H/天气/裁判/28 维预测/169 市场，P0–P2 实施建议 |
 | [2026-11-12-v4-verification.md](./reviews/2026-11-12-v4-verification.md) | v4.1 交付验证：345/51 测试、OpenAPI 158/174、模拟器路径、已修问题、明确未完成 |
 | [2026-11-11-deep-review.md](./reviews/2026-11-11-deep-review.md) | 当日深审：概率卡模型字段、SM 数据覆盖/过期、赛果回填 500、脉搏/聚焦数据源、同场串关等修复与剩余缺口 |
 | [2026-11-04-code-review-pass2.md](./reviews/2026-11-04-code-review-pass2.md) | 第二轮代码复审（历史快照）：并发/事务/采集器/前端清理；当时 182 tests |
