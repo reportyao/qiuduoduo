@@ -36,6 +36,7 @@ LEAGUE_SPORT_KEYS: dict[str, str] = {
     "欧罗巴": "soccer_uefa_europa_league",
     "欧协联": "soccer_uefa_europa_conference_league",
     "欧会杯": "soccer_uefa_europa_conference_league",
+    "欧国联": "soccer_uefa_nations_league",
     "苏超": "soccer_spl",
     "奥甲": "soccer_austria_bundesliga",
     "俄超": "soccer_russia_premier_league",

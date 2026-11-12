@@ -85,11 +85,15 @@ def test_sports_for_trade_date_maps_european_leagues(db):
     db.merge(SPMatch(match_id="sup-5", match_no="周四002", league="欧协联",
                      home_raw="A", away_raw="B", home="A", away="B",
                      kickoff=match.kickoff, single_flag=False))
+    db.merge(SPMatch(match_id="sup-6", match_no="周四003", league="欧国联",
+                     home_raw="C", away_raw="D", home="C", away="D",
+                     kickoff=match.kickoff, single_flag=False))
     db.commit()
 
     sports = sports_for_trade_date(db)
     assert "soccer_uefa_europa_league" in sports
     assert "soccer_uefa_europa_conference_league" in sports
+    assert "soccer_uefa_nations_league" in sports
 
 
 def test_seed_aliases_backfills_new_european_names(db):

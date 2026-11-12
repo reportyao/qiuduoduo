@@ -326,6 +326,7 @@ def _probability_compare(db: Session, v: Verdict) -> dict:
         "third_party": third_party,
         "model_enabled": has_model,
         "model_status": v.model_status,
+        "model_source": v.model_source,
         "reason": None if has_model else "本场没有可用的模型概率；仅展示竞彩与市场参考。",
         "data_cutoff": data_cutoff,
     }

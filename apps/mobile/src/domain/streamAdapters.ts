@@ -130,6 +130,7 @@ function probabilityCompare(value: unknown): ProbabilityCompareData | null {
       : null,
     modelEnabled: Boolean(raw.model_enabled ?? raw.modelEnabled),
     modelStatus: nullableString(raw.model_status ?? raw.modelStatus),
+    modelSource: nullableString(raw.model_source ?? raw.modelSource),
     reason: nullableString(raw.reason),
     dataCutoff: nullableString(raw.data_cutoff ?? raw.dataCutoff),
   };

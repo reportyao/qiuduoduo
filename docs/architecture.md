@@ -7,7 +7,7 @@
 
 - 生产后端仍在 `jieqiu-backend/`，尚未迁到 `services/api/`；`services/` 只有迁移说明。
 - 生产前端在 `apps/mobile/`；`apps/web/`、`apps/admin/` 仍是规划，当前管理后台是后端同进程的 `/admin`。
-- OpenAPI **158 路径 / 174 方法**；后端 **341 tests**；前端 **47 tests**；Alembic head `20261112_23`。
+- OpenAPI **158 路径 / 174 方法**；后端 **345 tests**；前端 **51 tests**；Alembic head `20261112_23`。
 - Postgres 是目标生产库；未设置 `JQ_PROD_DATABASE_URL` 时生产部署仍可能是旧 SQLite 兼容模式。
 - 新增的 catalog/actions 已按 feature slice 落地；verdict/assistant 仍是混合目录，迁移未完成。
 - **v4.1 产品结构已落地**：移动端 4 Tab = 助理/比赛/计划/我的；`app/features/plans/` + `app/features/v4_router.py` 提供计划、会员、引擎指标、每日战绩；`app/modules/plan_service.py`、`membership.py`、`settlement.py`、`performance.py`、`assistant_copy.py`、`ops.py` 为 v4 领域模块。
@@ -153,7 +153,7 @@ packages/api       生成的 client
 | 前端单测 | Vitest + RNTL | hooks / 组件 |
 | E2E | Maestro | 核心用户流程 |
 
-> 当前实际（2026-11-12）：后端 pytest 341 项仍主要跑 SQLite；未接真实 Postgres CI；前端 Vitest 47 项 + typecheck/lint + Expo Android bundle；Maestro/E2E 尚未接入。
+> 当前实际（2026-11-12）：后端 pytest 345 项仍主要跑 SQLite；未接真实 Postgres CI；前端 Vitest 51 项 + typecheck/lint + Expo Android bundle；Maestro/E2E 尚未接入。
 
 ## 8. 迁移路线
 

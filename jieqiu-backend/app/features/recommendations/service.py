@@ -200,6 +200,21 @@ def build_snapshots(db: Session, date: str | None = None,
         db.flush()
         _event(db, SUBJECT_DECISION, snap.id, "build", "", DRAFT, actor)
         out.append(snap)
+    # 判断被降级/结算后，旧 active 快照必须退出公开面；不能因为主循环只处理
+    # promoted，就把已失效的“已发布预测”留在 recommendations/today。
+    by_match = {v.match_id: v for v in rows}
+    stale = list(db.scalars(select(DecisionSnapshot).where(
+        DecisionSnapshot.trade_date == date,
+        DecisionSnapshot.status.in_(_ACTIVE))).all())
+    for snapshot in stale:
+        verdict = by_match.get(snapshot.match_id)
+        if verdict is not None and verdict.status == "promoted" and verdict.settled is None:
+            continue
+        old_status = snapshot.status
+        snapshot.status = EXPIRED
+        snapshot.updated_at = utcnow()
+        _event(db, SUBJECT_DECISION, snapshot.id, "expire", old_status, EXPIRED,
+               actor, "verdict no longer promoted")
     db.commit()
     return out
 

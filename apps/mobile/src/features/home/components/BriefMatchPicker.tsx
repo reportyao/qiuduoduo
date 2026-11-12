@@ -7,6 +7,8 @@ import { colors, radii, spacing } from "@/theme/tokens";
 export interface BriefMatchOption {
   matchId: string;
   verdictId: string | null;
+  matchNo: string;
+  league: string;
   home: string;
   away: string;
   kickoff: string;

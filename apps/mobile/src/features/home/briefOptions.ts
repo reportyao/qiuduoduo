@@ -14,6 +14,8 @@ export function buildBriefOptions(
     byMatch.set(verdict.matchId, {
       matchId: verdict.matchId,
       verdictId: verdict.id,
+      matchNo: verdict.matchNo,
+      league: verdict.league,
       home: verdict.home,
       away: verdict.away,
       kickoff: verdict.kickoff,
@@ -26,6 +28,8 @@ export function buildBriefOptions(
       byMatch.set(verdict.matchId, {
         matchId: verdict.matchId,
         verdictId: verdict.id,
+        matchNo: verdict.matchNo,
+        league: verdict.league,
         home: verdict.home,
         away: verdict.away,
         kickoff: verdict.kickoff,
@@ -41,6 +45,8 @@ export function buildBriefOptions(
       byMatch.set(match.matchId, {
         matchId: match.matchId,
         verdictId: match.verdictId ?? null,
+        matchNo: match.matchNo,
+        league: match.league,
         home: match.home,
         away: match.away,
         kickoff: match.kickoff,

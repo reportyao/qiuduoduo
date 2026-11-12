@@ -200,6 +200,7 @@ export interface ProbabilityCompareData {
   thirdParty?: { source: string; probs: ProbabilityTriple; capturedAt?: string | null } | null;
   modelEnabled: boolean;
   modelStatus?: string | null;
+  modelSource?: string | null;
   reason?: string | null;
   dataCutoff?: string | null;
 }

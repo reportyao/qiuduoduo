@@ -8,8 +8,8 @@
 
 | 项 | 命令 | 结果 |
 |---|---|---|
-| 后端 | `cd jieqiu-backend && python -m pytest -q` | **341 passed**（1309 warnings，主要为 NumPy/Pandas 弃用告警） |
-| 前端 | `cd apps/mobile && corepack pnpm test -- --run` | **47 passed / 13 files** |
+| 后端 | `cd jieqiu-backend && python -m pytest -q` | **345 passed**（1309 warnings，主要为 NumPy/Pandas 弃用告警） |
+| 前端 | `cd apps/mobile && corepack pnpm test -- --run` | **51 passed / 14 files** |
 | 类型 | `corepack pnpm typecheck` | 通过 |
 | Lint | `corepack pnpm lint` | 通过 |
 | Bundle | `corepack pnpm exec expo export --platform android --output-dir .export-check --clear` | 通过（Metro + Hermes） |
@@ -20,6 +20,8 @@
 
 - `tests/test_v4_core.py`：90 分钟 outcome、整数亚盘 void、稳健计划 4 场、Max 计划门控、计划结算、引擎 uptime、过期候选过滤、chat persona/record。
 - `tests/test_admin_v4.py`：后台 v4 视图、工作台未知年龄文案、App 用户手机/邮箱脱敏、手动开通/撤销、引擎配置、OPS、计划列表。
+- `tests/test_sportmonks_model.py`：Sportmonks 1X2 概率校验/过期、正确比分推导让球盘、DC 缺阵时后备模型判决。
+- `tests/test_recommendations.py`：判决降级后旧 published 快照必须过期，不能继续出现在 `/recommendations/today`。
 
 ## 2. 管理后台浏览器验收
 
@@ -87,6 +89,13 @@
 | 总览“模型池健康”与“模型配置未配 Key”混淆 | KPI 改为“文案模型池”，待办改为“LLM 接入未配 Key”并列出 fast/deep |
 | 推荐主链“运行主链”直接改线上内容 | 增加确认弹窗，说明会 build→复核→发布 |
 | 后台禁用账号状态显示原始 `muted` | 增加“已停用”状态；运维 low 告警显示“提示”而非“跳过” |
+| 首页显示 0 核验/0 发布，欧国联无数据 | Sportmonks 新订阅下 6 场 fixture 全部映射成功；补 `欧国联 → soccer_uefa_nations_league` 的 Odds API 映射，预测/赔率/情报全部入库 |
+| 让球盘误把 1X2 模型概率套到 hhad | 解析 Sportmonks 正确比分分布，按竞彩让球线推导 hhad 概率；无比分分布则诚实 pending |
+| 判决降级后旧 published 快照仍在首页 | `build_snapshots()` 主动过期不再是 promoted/settled 的 active 快照 |
+| 右上角“今日采集全网 X 条数据点” | 改为“今日采集 X 条数据点” |
+| 首页聚焦卡不在对话流里、返回/重开丢历史 | 选中比赛后由助理在对话末尾追加比赛页卡；按用户+竞彩日写入 AsyncStorage，返回/重开恢复今日对话；长页卡按顶部对齐滚动 |
+| 底部输入框过大常驻 | 默认收起为右下角圆形图标，点击展开输入条，可收起；发送后保持展开便于连续追问 |
+| 详情页把 Sportmonks 模型标成“模型影子” | 概率对比与详情徽章显示“Sportmonks 模型/预测”，并保留未验证状态 |
 
 ## 5. 明确未完成
 
@@ -97,6 +106,7 @@
 - 生产 Postgres 切库、备份/PITR 恢复演练。
 - v4 APK 已由 GitHub Actions 构建（run `43151924887`）并在 MuMu 安装验证；正式签名/上架、iOS、真机 JPush 仍未做。
 - 生产部署已完成（2026-11-12 11:38 CST）：`deploy.py` 部署到 `43.128.24.244`，`/health` 200，OpenAPI 158/174，管理后台静态资源 v=20261112d；生产仍为 SQLite。部署前备份在 `/home/ubuntu/backups/`（代码 `jieqiu-backend-20261112-113522.tar.gz`、库 `jieqiu-20261112-113522.db`）。
+- Sportmonks 订阅更新后（2026-11-12 13:44 CST）：生产重新同步 6/6 场欧国联，全部有 Pinnacle 去水赔率、1X2 预测和正确比分分布；AI 情报 6/6 同步。重建后 `周四001` 为 verified/promoted，`周四002/004/005` 为市场参考，`周四003/006` 不建议；`/recommendations/today` 返回 1 published snapshot + 3 references。重算前库备份：`/home/ubuntu/backups/jieqiu-20261112-134211-pre-rebuild.db`。
 
 ## 6. 回滚
 
