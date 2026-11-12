@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from "react-native";
-import { colors, radii, spacing, type } from "@/theme/tokens";
+import { colors, radii, spacing } from "@/theme/tokens";
 import { Text } from "./Text";
 
 export type ChipTone = "neutral" | "green" | "amber" | "danger" | "dark";
@@ -47,7 +47,8 @@ export function Chip({ label, tone = "neutral", selected = false, selectedStyle 
         />
       ) : null}
       <Text
-        style={[type.captionStrong, { color: selected ? selectedFg : palette.fg }]}
+        variant="captionStrong"
+        color={selected ? selectedFg : palette.fg}
         numberOfLines={1}
       >
         {label}
