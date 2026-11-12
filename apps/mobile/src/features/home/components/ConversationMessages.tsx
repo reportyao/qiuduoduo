@@ -86,21 +86,24 @@ export function AssistantBrief({
       <Text variant="body" style={styles.lead}>
         {predictionCount > 0
           ? copy.conversationOpen(dayLabel, stats.total, predictionCount, predictionCount, stats.screening, killed)
-          : "点下方场次，先看阵容、形势与环境。"}
+          : "点下方场次，先看阵容、积分榜与环境。"}
       </Text>
 
       <View style={styles.statRow}>
-        <MiniStat label={dayLabel === "今天" ? "今日扫描" : "当日扫描"} value={String(stats.total)} />
+        <MiniStat label="场次" value={String(stats.total)} />
         <View style={styles.statLine} />
-        <MiniStat label="预测" value={String(predictionCount)} />
-        <View style={styles.statLine} />
-        <MiniStat label="已发布" value={publishedReady ? String(publishedCount) : "—"} accent />
+        <MiniStat label="有预测" value={String(predictionCount)} accent />
         <View style={styles.statLine} />
         <MiniStat label={onsaleLabel} value={String(onsaleCount)} />
       </View>
 
+      {publishedReady && publishedCount > 0 ? (
+        <Text variant="caption" color={colors.subtle}>
+          其中 {publishedCount} 场已正式发布
+        </Text>
+      ) : null}
       {publishedReady && publishedCount === 0 && predictionCount > 0 ? (
-        <Text variant="caption" color={colors.green}>点下方场次查看今日预测。</Text>
+        <Text variant="caption" color={colors.green}>点下方场次查看完整预测。</Text>
       ) : null}
 
       <Pressable
@@ -143,15 +146,16 @@ export const VerdictMessage = memo(function VerdictMessage({
   hero = false,
   onOpen,
   onBet,
-  onWhyNot,
   onSeal,
   onParlay,
   header,
+  compact = false,
 }: {
   verdict: VerdictSummary;
   betExists?: boolean;
   delay?: number;
   hero?: boolean;
+  compact?: boolean;
   onOpen: (id: string) => void;
   onBet?: (verdict: VerdictSummary) => void;
   onWhyNot?: (matchId: string) => void;
@@ -226,7 +230,7 @@ export const VerdictMessage = memo(function VerdictMessage({
 
       <ProbabilityBar probs={verdict.probs} dark={dark} pool={verdict.pool} />
 
-      {verdict.snapshotId ? (
+      {verdict.snapshotId && !compact ? (
         <View style={styles.recommendation}>
           <View style={styles.recommendationHead}>
             <Text variant="overline" color={dark ? colors.greenAccent : colors.green}>
@@ -260,11 +264,13 @@ export const VerdictMessage = memo(function VerdictMessage({
         </View>
       ) : null}
 
-      <View style={styles.rakeRow}>
-        <Text variant="caption" color={sub}>
-          抽水 {pct(verdict.rake)} · 阈值 {pct(verdict.rakeThreshold)}
-        </Text>
-      </View>
+      {compact ? null : (
+        <View style={styles.rakeRow}>
+          <Text variant="caption" color={sub}>
+            抽水 {pct(verdict.rake)} · 阈值 {pct(verdict.rakeThreshold)}
+          </Text>
+        </View>
+      )}
 
       <View style={styles.actions}>
         {dark ? (
@@ -284,20 +290,12 @@ export const VerdictMessage = memo(function VerdictMessage({
             />
           </>
         ) : (
-          <>
-            <Button
-              label="看依据"
-              variant="secondary"
-              onPress={() => onWhyNot?.(verdict.matchId)}
-              style={styles.action}
-            />
-            <Button
-              label={copy.detail}
-              variant="primary"
-              onPress={() => onOpen(verdict.id)}
-              style={styles.action}
-            />
-          </>
+          <Button
+            label={copy.detail}
+            variant="primary"
+            onPress={() => onOpen(verdict.id)}
+            fullWidth
+          />
         )}
       </View>
 
@@ -309,7 +307,9 @@ export const VerdictMessage = memo(function VerdictMessage({
         </Pressable>
       ) : null}
 
-      <SealLine hash={verdict.hash} sealed={verdict.sealed} dark={dark} onPress={() => onSeal?.(verdict.id)} />
+      {compact ? null : (
+        <SealLine hash={verdict.hash} sealed={verdict.sealed} dark={dark} onPress={() => onSeal?.(verdict.id)} />
+      )}
     </AssistantMessage>
   );
 });

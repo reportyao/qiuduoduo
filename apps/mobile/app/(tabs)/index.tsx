@@ -269,6 +269,12 @@ export default function HomeScreen() {
         const messageId = nextChatId("match");
         autoScroll.current = true;
         conversation.append({
+          id: nextChatId("u"),
+          kind: "user",
+          text: `看这场：${option.home} vs ${option.away}`,
+          at: Date.now(),
+        });
+        conversation.append({
           id: messageId,
           kind: "match",
           option,
@@ -288,6 +294,12 @@ export default function HomeScreen() {
         const messageId = nextChatId("match");
         autoScroll.current = true;
         conversation.append({
+          id: nextChatId("u"),
+          kind: "user",
+          text: `看这场：${option.home} vs ${option.away}`,
+          at: Date.now(),
+        });
+        conversation.append({
           id: messageId,
           kind: "match",
           option,
@@ -303,6 +315,8 @@ export default function HomeScreen() {
 
   const showPrediction = useCallback(
     (option: BriefMatchOption, verdict: VerdictSummary, intel?: ReturnType<typeof summarizeIntel>) => {
+      if (conversation.messages.some((item) =>
+        item.kind === "prediction" && item.option.matchId === option.matchId)) return;
       const leads = [
         "好，我把这场的完整预测展开给你。",
         "这场我盯得比较久，完整判断在这里。",
@@ -415,7 +429,7 @@ export default function HomeScreen() {
   const isEmptyDay = stream !== null && !stream.restDay
     && verdicts.length === 0 && references.length === 0;
   const viewingToday = date === today;
-  const dayLabel = viewingToday ? "今天" : date === shiftDateCn(today, -1) ? "昨天" : formatDate(date);
+  const dayLabel = viewingToday ? "本竞彩日" : formatDate(date);
   const emptyTitle = stream?.stats.total === 0
     ? viewingToday
       ? copy.pendingTitle
@@ -653,6 +667,7 @@ export default function HomeScreen() {
                         key={message.id}
                         verdict={resolvedVerdict ?? message.verdict}
                         header={<Text variant="body">{message.lead}</Text>}
+                        compact
                         betExists={Boolean(resolvedVerdict && betIds.has(resolvedVerdict.id))}
                         onOpen={openVerdict}
                         onBet={setBetTarget}
@@ -667,6 +682,8 @@ export default function HomeScreen() {
                       option={message.option}
                       verdict={resolvedVerdict}
                       intel={liveIntel ?? message.intel}
+                      predictionShown={conversation.messages.some((item) =>
+                        item.kind === "prediction" && item.option.matchId === message.option.matchId)}
                       onShowPrediction={() => {
                         if (!resolvedVerdict) return;
                         showPrediction(message.option, resolvedVerdict, liveIntel ?? message.intel);

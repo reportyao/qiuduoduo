@@ -5,7 +5,7 @@ describe("onSaleStatusLabel", () => {
   it("distinguishes killed matches from live on-sale matches", () => {
     expect(onSaleStatusLabel("promoted")).toBe("预测");
     expect(onSaleStatusLabel("screening")).toBe("预测");
-    expect(onSaleStatusLabel("killed")).toBe("回避");
+    expect(onSaleStatusLabel("killed")).toBe("赛前");
     expect(onSaleStatusLabel("on_sale")).toBe("在售");
     expect(onSaleStatusLabel("")).toBe("在售");
     expect(onSaleStatusLabel(null)).toBe("在售");
@@ -13,6 +13,6 @@ describe("onSaleStatusLabel", () => {
   it("uses content tier when available", () => {
     expect(onSaleStatusLabel("promoted", "verified")).toBe("预测");
     expect(onSaleStatusLabel("screening", "market_reference")).toBe("预测");
-    expect(onSaleStatusLabel("killed", "avoid")).toBe("回避");
+    expect(onSaleStatusLabel("killed", "avoid")).toBe("赛前");
   });
 });

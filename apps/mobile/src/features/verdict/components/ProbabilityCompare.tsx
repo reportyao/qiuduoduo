@@ -39,13 +39,13 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
 
       {data.sp ? <Row label="竞彩隐含" probs={data.sp} tone={colors.green} /> : null}
       {data.model ? (
-        <Row label="模型" probs={data.model} tone={colors.greenDark} />
+        <Row label="模型概率" probs={data.model} tone={colors.greenDark} />
       ) : null}
       {data.market ? (
-        <Row label="市场" probs={data.market.probs} tone={colors.muted} />
+        <Row label="市场概率" probs={data.market.probs} tone={colors.muted} />
       ) : null}
       {data.thirdParty ? (
-        <Row label="预测" probs={data.thirdParty.probs} tone={colors.amber} />
+        <Row label="多维预测" probs={data.thirdParty.probs} tone={colors.amber} />
       ) : null}
       {data.dataCutoff ? (
         <Text variant="caption" color={colors.subtle} style={styles.note}>

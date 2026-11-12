@@ -36,10 +36,9 @@ export function DetailHero({
     ? pickDirectionLabel(detail.pool, detail.pick.dir)
     : pickDirectionLabel(detail.pool, marketDir);
   const displayProb = detail.pick?.prob ?? detail.probs[marketKey];
-  const summary = `${pickLabel}，预测概率 ${pct(displayProb)}。抽水 ${pct(detail.rake)}。`;
+  const summary = `${pickLabel}，预测概率 ${pct(displayProb)}。`;
   const tier = detail.tier ?? (detail.status === "promoted" ? "verified"
     : detail.status === "killed" ? "avoid" : "market_reference");
-  const modelLabel = "模型";
   const statusLabel = tier === "avoid" ? "回避" : "预测";
   const statusColor = tier === "avoid" ? colors.danger : colors.greenAccent;
 
@@ -63,9 +62,6 @@ export function DetailHero({
           {detail.league || "联赛待同步"} · {detail.pool === "hhad" ? `让球 ${detail.goalLine ?? ""}` : "胜平负"}
         </Text>
         <Chip label="模型 v3" tone={dark ? "dark" : "neutral"} />
-        {detail.modelStatus === "shadow" ? (
-          <Chip label={modelLabel} tone={dark ? "dark" : "neutral"} />
-        ) : null}
         {detail.status === "promoted" && published != null ? (
           <Chip
             label={published ? "已发布" : "预测"}

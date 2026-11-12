@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import type { VerdictSummary } from "@/domain/types";
 import { Button, Text } from "@/components/ui";
 import { ageLabel } from "@/lib/freshness";
@@ -23,9 +23,7 @@ function formText(form: string[] | undefined): string {
 function IntelNameCard({ card }: { card: IntelCard }) {
   return (
     <View style={styles.card}>
-      <View style={styles.cardHead}>
-        <Text variant="captionStrong" color={colors.green}>{card.label}</Text>
-      </View>
+      <Text variant="captionStrong" color={colors.green}>{card.label}</Text>
       <Text variant="captionStrong" numberOfLines={2}>{card.value}</Text>
       <Text variant="caption" color={colors.muted} numberOfLines={2}>{card.note}</Text>
     </View>
@@ -50,8 +48,8 @@ function buildCards(intel?: MatchIntelSummary): IntelCard[] {
   if (intel.homePosition != null || intel.awayPosition != null) {
     cards.push({
       key: "standings",
-      label: "形势",
-      value: `${intel.homePosition ?? "—"} / ${intel.awayPosition ?? "—"}`,
+      label: "积分榜",
+      value: `第 ${intel.homePosition ?? "—"} / 第 ${intel.awayPosition ?? "—"}`,
       note: `${formText(intel.homeForm)} / ${formText(intel.awayForm)}${age("standings") ? ` · ${age("standings")}` : ""}`,
     });
   }
@@ -101,19 +99,21 @@ function buildCards(intel?: MatchIntelSummary): IntelCard[] {
 }
 
 /**
- * 首页对话里的比赛名片：按分片 TTL 展示情报名片。
- * 完整阵容、积分榜、预测维度、市场与赛后内容都留给详情页。
+ * 首页对话里的比赛名片：只放摘要和情报名片。
+ * 完整阵容、积分榜、25 维预测、市场与赛后内容都留给详情页。
  */
 export const MatchConversationCard = memo(function MatchConversationCard({
   option,
   verdict,
   intel,
+  predictionShown = false,
   onShowPrediction,
   onOpenMatch,
 }: {
   option: BriefMatchOption;
   verdict: VerdictSummary | null;
   intel?: MatchIntelSummary;
+  predictionShown?: boolean;
   onShowPrediction: () => void;
   onOpenMatch: () => void;
 }) {
@@ -129,14 +129,10 @@ export const MatchConversationCard = memo(function MatchConversationCard({
       : null;
   const probability = pick?.prob ?? (verdict ? verdict.probs[marketKey] : null);
   const cards = buildCards(intel);
+  const visibleCards = verdict ? cards.slice(0, 4) : cards;
   return (
     <AssistantMessage>
-      <View style={styles.headRow}>
-        <Text variant="overline" color={colors.green}>这场</Text>
-        <Pressable onPress={onOpenMatch} accessibilityRole="button" accessibilityLabel="比赛详情" hitSlop={8}>
-          <Text variant="captionStrong" color={colors.green}>比赛详情 ›</Text>
-        </Pressable>
-      </View>
+      <Text variant="overline" color={colors.green}>这场</Text>
       <Text variant="h3" style={styles.match}>
         {option.home} <Text variant="small" color={colors.muted}>vs</Text> {option.away}
       </Text>
@@ -144,68 +140,67 @@ export const MatchConversationCard = memo(function MatchConversationCard({
         {option.matchNo} · {option.league || "联赛待同步"} · {formatTime(option.kickoff)} 停售
       </Text>
 
-      {cards.length ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.cardRow}
-          style={styles.cardScroll}
-        >
-          {cards.map((card) => <IntelNameCard key={card.key} card={card} />)}
-        </ScrollView>
-      ) : (
-        <View style={styles.cardRow}>
-          {["阵容", "形势", "环境"].map((label) => (
+      <View style={styles.cardGrid}>
+        {visibleCards.length ? visibleCards.map((card) => <IntelNameCard key={card.key} card={card} />) : (
+          ["阵容", "积分榜", "环境"].map((label) => (
             <View key={label} style={styles.card}>
               <Text variant="captionStrong" color={colors.green}>{label}</Text>
               <Text variant="captionStrong">同步中</Text>
               <Text variant="caption" color={colors.muted}>正在拉取</Text>
             </View>
-          ))}
-        </View>
-      )}
+          ))
+        )}
+      </View>
+      {verdict && cards.length > visibleCards.length ? (
+        <Pressable onPress={onOpenMatch} accessibilityRole="button" accessibilityLabel="查看完整情报" hitSlop={6}>
+          <Text variant="captionStrong" color={colors.green} style={styles.more}>
+            完整 {cards.length} 项情报在详情 ›
+          </Text>
+        </Pressable>
+      ) : null}
 
       <View style={styles.prediction}>
         <View style={styles.flex}>
           <Text variant="caption" color={colors.subtle}>预测</Text>
-          <Text variant="h3">{direction ?? "预测生成中"}</Text>
+          <Text variant="h3">{direction ?? "暂无方向"}</Text>
         </View>
         <Text variant="metric" color={colors.green}>{probability != null ? pct(probability) : "—"}</Text>
       </View>
 
-      <View style={styles.actions}>
-        <Button
-          label="看完整预测"
-          variant="primary"
-          onPress={onShowPrediction}
-          disabled={!verdict}
-          style={styles.action}
-        />
-        <Button
-          label="比赛详情"
-          variant="secondary"
-          onPress={onOpenMatch}
-          style={styles.action}
-        />
-      </View>
+      {verdict ? (
+        <View style={styles.actions}>
+          <Button
+            label={predictionShown ? "预测已展开" : "看完整预测"}
+            variant="primary"
+            onPress={onShowPrediction}
+            disabled={predictionShown}
+            style={styles.action}
+          />
+          <Button label="完整详情" variant="secondary" onPress={onOpenMatch} style={styles.action} />
+        </View>
+      ) : (
+        <Pressable onPress={onOpenMatch} accessibilityRole="button" accessibilityLabel="为什么没有预测方向" hitSlop={6}>
+          <Text variant="captionStrong" color={colors.muted} style={styles.why}>
+            为什么没方向 ›
+          </Text>
+        </Pressable>
+      )}
     </AssistantMessage>
   );
 });
 
 const styles = StyleSheet.create({
-  headRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   match: { marginTop: spacing.sm },
-  cardScroll: { marginTop: spacing.base },
-  cardRow: { flexDirection: "row", gap: spacing.xs },
+  cardGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: spacing.base },
   card: {
-    width: 132,
-    minHeight: 82,
+    width: "48.5%",
+    minHeight: 76,
     backgroundColor: colors.bgElevated,
     borderRadius: radii.md,
     padding: spacing.sm,
     gap: 2,
   },
-  cardHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  more: { marginTop: spacing.xs },
   prediction: {
     flexDirection: "row",
     alignItems: "flex-end",
@@ -219,4 +214,5 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   actions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.base },
   action: { flex: 1 },
+  why: { marginTop: spacing.base },
 });

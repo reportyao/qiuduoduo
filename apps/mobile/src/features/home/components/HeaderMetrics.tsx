@@ -7,7 +7,7 @@ import type { EngineStatus } from "@/features/home/queries";
 
 /**
  * HeaderMetrics：不点击、不展开。
- * 主文案保留“预测引擎 + 数据点”，并增加陪伴时长与盘口/模型监控。
+ * 只回答两件事：助理是否在线，今天读了多少数据。
  */
 export function HeaderMetrics({ engine, dataPoints }: {
   engine: EngineStatus | null;
@@ -38,27 +38,17 @@ export function HeaderMetrics({ engine, dataPoints }: {
   }
   const points = Math.max(0, Math.round(dataPoints ?? engine.today_data_points ?? 0));
   const predictionTypes = Math.max(0, Math.round(engine.sportmonks_prediction_types ?? 0));
-  const lineups = Math.max(0, Math.round(engine.sportmonks_lineups ?? 0));
+  const read = points >= 10000 ? `${(points / 10000).toFixed(1)}万` : String(points);
   return (
-    <View style={styles.metrics} accessibilityLabel="预测模型状态">
-      <Text variant="caption" color={colors.muted} numberOfLines={1}>
-        已为你稳定运行 {engine.uptime_hours ?? "—"} 小时
-      </Text>
-      <Text variant="captionStrong" color={colors.green} numberOfLines={1}>
-        预测模型 {engine.version}
-      </Text>
-      <Text variant="caption" color={colors.muted} numberOfLines={1}>
-        {points > 0 ? `今日采集 ${points.toLocaleString()} 条数据点` : "今日数据同步中"}
-      </Text>
+    <View style={styles.metrics} accessibilityLabel="AI 助理状态">
       <View style={styles.line}>
         <Animated.View style={[styles.dot, { opacity: pulse }]} />
-        <Text variant="caption" color={colors.muted} numberOfLines={1}>
-          {predictionTypes > 0
-            ? `${engine.markets_monitored} 盘口 · ${predictionTypes} 预测`
-            : `${engine.markets_monitored} 盘口配置 · ${engine.models_reviewing} 模型位`}
-          {lineups > 0 ? ` · ${lineups} 场首发` : ""}
-        </Text>
+        <Text variant="captionStrong" color={colors.green} numberOfLines={1}>AI助理在线</Text>
       </View>
+      <Text variant="caption" color={colors.muted} numberOfLines={1}>
+        {points > 0 ? `已读 ${read}条数据` : "数据同步中"}
+        {predictionTypes > 0 ? ` · ${predictionTypes} 维预测` : ""}
+      </Text>
     </View>
   );
 }

@@ -46,7 +46,7 @@ const MatchRow = memo(function MatchRow({
         <View style={styles.metaRow}>
           <Text variant="caption" color={colors.muted}>
             {saleCountdownText(item.saleClose, now)}
-            {item.rake != null ? ` · 抽水 ${pct(item.rake)}` : " · 待复核"}
+            {item.rake != null ? ` · 抽水 ${pct(item.rake)}` : " · 抽水待同步"}
             {item.league ? ` · ${item.league}` : ""}
           </Text>
           {item.single ? <Chip label="单关" tone="green" /> : null}
@@ -59,14 +59,10 @@ const MatchRow = memo(function MatchRow({
               ? colors.green
               : item.tier === "market_reference" || item.status === "screening"
                 ? colors.amber
-                : item.tier === "avoid" || item.status === "killed"
-                  ? colors.danger
-                  : colors.subtle
+                : colors.subtle
           }
         />
-        <Text variant="caption" color={
-          item.tier === "avoid" || item.status === "killed" ? colors.danger : colors.muted
-        }>
+        <Text variant="caption" color={colors.muted}>
           {onSaleStatusLabel(item.status, item.tier)}
         </Text>
       </View>

@@ -85,33 +85,26 @@ export function ConversationDate({
   onChange: (date: string) => void;
 }) {
   const today = currentTradeDateCn();
-  const yesterday = shiftDateCn(today, -1);
-  const before = shiftDateCn(today, -2);
-  const relative = value === today ? "今天" : value === yesterday ? "昨天" : value === before ? "前天" : null;
   return (
     <View style={styles.dateRow}>
       <Pressable
         onPress={() => onChange(shiftDateCn(value, -1))}
         accessibilityRole="button"
-        accessibilityLabel="前一天"
+        accessibilityLabel="上一个竞彩日"
         hitSlop={10}
         style={styles.dateArrow}
       >
         <Icon name="chevron-back" size={16} color={colors.subtle} />
       </Pressable>
       <View style={styles.datePill}>
-        <Text variant="captionStrong" color={colors.muted}>
-          {relative ?? formatDate(value)}
-        </Text>
-        {relative ? (
-          <Text variant="caption" color={colors.subtle}> · {formatDate(value)}</Text>
-        ) : null}
+        <Text variant="caption" color={colors.subtle}>竞彩日</Text>
+        <Text variant="captionStrong" color={colors.muted}> · {formatDate(value)}</Text>
       </View>
       <Pressable
         onPress={() => onChange(shiftDateCn(value, 1))}
         disabled={value >= today}
         accessibilityRole="button"
-        accessibilityLabel="后一天"
+        accessibilityLabel="下一个竞彩日"
         hitSlop={10}
         style={[styles.dateArrow, value >= today && styles.disabled]}
       >

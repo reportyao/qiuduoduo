@@ -19,12 +19,12 @@ export interface BriefMatchOption {
 function statusLabel(option: BriefMatchOption): string {
   if (option.tier === "verified") return "预测";
   if (option.tier === "market_reference") return "预测";
-  if (option.tier === "avoid") return "回避";
-  if (option.tier === "no_data") return "预测";
+  if (option.tier === "avoid") return "赛前";
+  if (option.tier === "no_data") return "赛前";
   // promoted 只代表三关全过，不等于已经发布；避免在开场条上误标“已发布”。
   if (option.status === "promoted") return "预测";
   if (option.status === "screening") return "预测";
-  if (option.status === "killed") return "回避";
+  if (option.status === "killed") return "赛前";
   return option.verdictId ? "预测" : "赛前";
 }
 
@@ -52,7 +52,7 @@ export const BriefMatchPicker = memo(function BriefMatchPicker({
   return (
     <View style={styles.wrap}>
       <Text variant="caption" color={colors.muted} style={styles.lead}>
-        先看哪场？点一场，我把预测和情报发给你。
+        想看哪场？点一下，我把这场的阵容、积分榜和预测发给你。
       </Text>
 
       <View style={styles.list}>
@@ -72,7 +72,7 @@ export const BriefMatchPicker = memo(function BriefMatchPicker({
                 {formatTime(option.kickoff)} · {statusLabel(option)}
               </Text>
             </View>
-            <Text variant="caption" color={colors.green}>展开 ›</Text>
+            <Text variant="caption" color={colors.green}>看这场 ›</Text>
           </Pressable>
         ))}
       </View>
@@ -86,7 +86,7 @@ export const BriefMatchPicker = memo(function BriefMatchPicker({
           style={styles.more}
         >
           <Text variant="captionStrong" color={colors.green}>
-            全部 {total} 场 · 展开 ›
+            查看全部 {total} 场 ›
           </Text>
         </Pressable>
       ) : null}
