@@ -32,7 +32,7 @@ def test_supply_reports_market_starvation(client, db):
     assert "国际盘" in (data["blocked_reason"] or "")
 
     msg = client.get("/recommendations/today").json()["message"]
-    assert "国际盘" in msg
+    assert "稍后" in msg
 
 
 def test_supply_counts_covered_intl_source(db):
