@@ -23,7 +23,7 @@ import {
   useFocusStore,
 } from "@/features/home/focusStore";
 import { useChatMutation } from "@/features/assistant/queries";
-import { ChatCardContent, type ChatMessage } from "@/features/assistant/components/ChatCardContent";
+import { ChatCardContent } from "@/features/assistant/components/ChatCardContent";
 import { useMemoryMutations } from "@/features/account/queries";
 import { flattenStream, useEngineStatusQuery, useFocusQuery, useOnSaleQuery, usePulseQuery, useRecommendationsTodayQuery, useRecordSummaryQuery, useStreamQuery } from "@/features/home/queries";
 import { useBetsQuery } from "@/features/records/queries";
@@ -32,7 +32,8 @@ import { ChatComposer } from "@/features/home/components/ChatComposer";
 import { MatchPickerSheet } from "@/features/home/components/MatchPickerSheet";
 import type { BriefMatchOption } from "@/features/home/components/BriefMatchPicker";
 import { buildBriefOptions } from "@/features/home/briefOptions";
-import { FocusSection } from "@/features/home/components/FocusSection";
+import { MatchConversationCard } from "@/features/home/components/MatchConversationCard";
+import { useHomeConversation } from "@/features/home/useHomeConversation";
 import { StreamFeed } from "@/features/home/components/StreamFeed";
 import { HeaderMetrics } from "@/features/home/components/HeaderMetrics";
 import { DataStatusSheet, LegalFooter } from "@/features/home/components/HomeSections";
@@ -84,18 +85,20 @@ export default function HomeScreen() {
   const focus = useFocusStore((s) => s.focus);
   const setFocus = useFocusStore((s) => s.setFocus);
   const clearFocus = useFocusStore((s) => s.clearFocus);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const conversation = useHomeConversation(date, session?.userId ?? "local");
   const lastDailyRecordDate = usePrefsStore((s) => s.lastDailyRecordDate);
   const setLastDailyRecordDate = usePrefsStore((s) => s.setLastDailyRecordDate);
   const prefsHydrated = usePrefsStore((s) => s.hydrated);
   const [recordVisible, setRecordVisible] = useState(false);
-  const [confirmedConflicts, setConfirmedConflicts] = useState<string[]>([]);
   const scrollRef = useRef<ScrollView>(null);
   const autoScroll = useRef(false);
+  const conversationTop = useRef(0);
+  const chatThreadTop = useRef(0);
+  const pendingMatchScroll = useRef<string | null>(null);
   const chatId = useRef(0);
   const nextChatId = (prefix: string) => {
     chatId.current += 1;
-    return `${prefix}-${chatId.current}`;
+    return `${prefix}-${Date.now().toString(36)}-${chatId.current}`;
   };
 
   const sendChat = (raw: string) => {
@@ -103,22 +106,28 @@ export default function HomeScreen() {
     if (!text || chat.isPending) return;
     trackInteraction("free_text_send", { metadata: { length: text.length } });
     autoScroll.current = true;
-    setChatMessages((prev) => [...prev, { id: nextChatId("u"), role: "user", text }]);
+    conversation.append({ id: nextChatId("u"), kind: "user", text, at: Date.now() });
     const wantsAnalysis = ["分析", "这场", "依据", "怎么看", "风险"].some((hint) => text.includes(hint));
     chat.mutate({ text, matchId: wantsAnalysis ? focus?.matchId : undefined }, {
       onSuccess: (card) => {
         autoScroll.current = true;
-        setChatMessages((prev) => [
-          ...prev,
-          { id: nextChatId("a"), role: "assistant", text: card.text, card },
-        ]);
+        conversation.append({
+          id: nextChatId("a"),
+          kind: "assistant",
+          text: card.text,
+          card,
+          at: Date.now(),
+        });
       },
       onError: (e) => {
         autoScroll.current = true;
-        setChatMessages((prev) => [
-          ...prev,
-          { id: nextChatId("e"), role: "assistant", text: errorText(e), error: true },
-        ]);
+        conversation.append({
+          id: nextChatId("e"),
+          kind: "assistant",
+          text: errorText(e),
+          error: true,
+          at: Date.now(),
+        });
       },
     });
   };
@@ -129,13 +138,15 @@ export default function HomeScreen() {
       { key, value, confirm: true },
       {
         onSuccess: () => {
-          setConfirmedConflicts((prev) => (prev.includes(messageId) ? prev : [...prev, messageId]));
+          conversation.confirm(messageId);
           toast.show("已覆盖记忆", "success");
           autoScroll.current = true;
-          setChatMessages((prev) => [
-            ...prev,
-            { id: nextChatId("m"), role: "assistant", text: `已更新：${key} = ${value}。` },
-          ]);
+          conversation.append({
+            id: nextChatId("m"),
+            kind: "assistant",
+            text: `已更新：${key} = ${value}。`,
+            at: Date.now(),
+          });
         },
         onError: (e) => toast.show(errorText(e), "error"),
       },
@@ -166,14 +177,20 @@ export default function HomeScreen() {
     setOpenedAll(false);
   }, [date, focus]);
 
-  // 选中/换场后回到聚焦区，不要停留在旧的滚动位置。
+  // 重新进入今日对话时落到最新一条；最后一条是比赛卡则对齐卡片顶部，
+  // 避免长页卡只露出底部按钮、看不到是哪一场。
+  const hydratedThread = useRef("");
   useEffect(() => {
-    if (!focus) return;
-    const timer = setTimeout(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: true });
-    }, 60);
-    return () => clearTimeout(timer);
-  }, [focus]);
+    const threadKey = `${session?.userId ?? "local"}:${date}`;
+    if (!conversation.hydrated || hydratedThread.current === threadKey) return;
+    hydratedThread.current = threadKey;
+    const last = conversation.messages[conversation.messages.length - 1];
+    if (last?.kind === "match") {
+      pendingMatchScroll.current = last.id;
+      return;
+    }
+    if (conversation.messages.length > 0) autoScroll.current = true;
+  }, [conversation.hydrated, conversation.messages, date, session?.userId]);
 
   const streamQuery = useStreamQuery(date);
   const recommendationsQuery = useRecommendationsTodayQuery(date);
@@ -244,6 +261,15 @@ export default function HomeScreen() {
           metadata: { from: "brief" },
         });
         setFocus(focusFromVerdict(verdict, stream?.tradeDate ?? date));
+        const messageId = nextChatId("match");
+        pendingMatchScroll.current = messageId;
+        conversation.append({
+          id: messageId,
+          kind: "match",
+          option,
+          verdict,
+          at: Date.now(),
+        });
         return;
       }
       const sourceOnsale = date === today ? onsale : stream?.onsale ?? [];
@@ -254,11 +280,20 @@ export default function HomeScreen() {
           metadata: { from: "brief" },
         });
         setFocus(focusFromOnSale(match, stream?.tradeDate ?? date));
+        const messageId = nextChatId("match");
+        pendingMatchScroll.current = messageId;
+        conversation.append({
+          id: messageId,
+          kind: "match",
+          option,
+          verdict: null,
+          at: Date.now(),
+        });
         return;
       }
       router.push({ pathname: "/match/[id]", params: { id: option.matchId, date } });
     },
-    [date, onsale, references, router, setFocus, stream?.onsale, stream?.tradeDate, today, verdicts],
+    [conversation, date, onsale, references, router, setFocus, stream?.onsale, stream?.tradeDate, today, verdicts],
   );
 
   const betIds = useMemo(
@@ -313,15 +348,10 @@ export default function HomeScreen() {
     [date, router],
   );
 
-  const focusSwitch = useCallback(() => setPickerOpen(true), []);
-  const focusClearAll = useCallback(() => {
-    clearFocus();
-    setOpenedAll(true);
-  }, [clearFocus]);
   const expandAll = useCallback(() => {
-    clearFocus();
     setOpenedAll(true);
-  }, [clearFocus]);
+    autoScroll.current = true;
+  }, []);
   const goMatches = useCallback(() => router.navigate("/(tabs)/matches"), [router]);
 
   const offerWhyNot = useCallback(() => {
@@ -347,7 +377,9 @@ export default function HomeScreen() {
     }
   };
 
-  const isEmptyDay = stream !== null && !stream.restDay && verdicts.length === 0;
+  // 市场参考也是当天可看的内容；不能因为 0 条正式发布就整页当成空日。
+  const isEmptyDay = stream !== null && !stream.restDay
+    && verdicts.length === 0 && references.length === 0;
   const viewingToday = date === today;
   const dayLabel = viewingToday ? "今天" : date === shiftDateCn(today, -1) ? "昨天" : formatDate(date);
   const emptyTitle = stream?.stats.total === 0
@@ -364,6 +396,18 @@ export default function HomeScreen() {
   const briefStream = stream && !stream.restDay && (verdicts.length > 0 || stream.stats.total > 0)
     ? stream
     : null;
+
+  const currentVerdicts = useMemo(
+    () => [...verdicts, ...references, ...streamVerdicts],
+    [references, streamVerdicts, verdicts],
+  );
+  const findLiveVerdict = (option: BriefMatchOption): VerdictSummary | null => {
+    if (option.verdictId) {
+      const byId = currentVerdicts.find((item) => item.id === option.verdictId);
+      if (byId) return byId;
+    }
+    return currentVerdicts.find((item) => item.matchId === option.matchId) ?? null;
+  };
 
   return (
     <AppScreen bottom={false}>
@@ -408,26 +452,13 @@ export default function HomeScreen() {
             right={<HeaderMetrics engine={engineQuery.data ?? null} />}
           />
 
-          <View style={styles.conversation}>
+          <View
+            style={styles.conversation}
+            onLayout={(event) => {
+              conversationTop.current = event.nativeEvent.layout.y;
+            }}
+          >
             <ConversationDate value={date} onChange={chooseDate} />
-
-            {focus ? (
-              <FocusSection
-                focus={focus}
-                focusData={focusQuery.data}
-                focusLoading={focusQuery.isLoading}
-                focusedVerdict={focusedVerdict}
-                otherCount={verdicts.length - (focusedVerdict ? 1 : 0)}
-                betExists={Boolean(focusedVerdict && betIds.has(focusedVerdict.id))}
-                onOpenVerdict={openVerdict}
-                onBet={setBetTarget}
-                onWhyNot={openWhyNot}
-                onSeal={setSealTarget}
-                onSwitch={focusSwitch}
-                onClearAll={focusClearAll}
-                onOnSale={goMatches}
-              />
-            ) : null}
 
             {briefStream ? (
               <AssistantBrief
@@ -528,13 +559,13 @@ export default function HomeScreen() {
                   </AssistantMessage>
                 ) : null}
 
-                {(focus || openedAll) ? (
+                {openedAll ? (
                   <StreamFeed
                     stream={stream}
                     heroVerdict={heroVerdict}
                     restVerdicts={restVerdicts}
                     betIds={betIds}
-                    showRest={!focus}
+                    showRest
                     hasNextPage={streamQuery.hasNextPage}
                     fetchingNext={streamQuery.isFetchingNextPage}
                     onOpenVerdict={openVerdict}
@@ -548,32 +579,75 @@ export default function HomeScreen() {
               </>
             )}
 
-            {!streamQuery.isLoading ? <LegalFooter text={copy.footer} /> : null}
-
-            {chatMessages.length > 0 || chat.isPending ? (
-              <View style={styles.chatThread}>
-                {chatMessages.map((message) =>
-                  message.role === "user" ? (
-                    <View key={message.id} style={styles.userRow}>
-                      <View style={styles.userBubble}>
-                        <Text variant="small" color={colors.white}>{message.text}</Text>
+            {conversation.messages.length > 0 || chat.isPending ? (
+              <View
+                style={styles.chatThread}
+                onLayout={(event) => {
+                  chatThreadTop.current = event.nativeEvent.layout.y;
+                }}
+              >
+                {conversation.messages.map((message) => {
+                  if (message.kind === "user") {
+                    return (
+                      <View key={message.id} style={styles.userRow}>
+                        <View style={styles.userBubble}>
+                          <Text variant="small" color={colors.white}>{message.text}</Text>
+                        </View>
                       </View>
-                    </View>
-                  ) : (
-                    <AssistantMessage key={message.id}>
-                      <ChatCardContent
-                        message={message}
-                        confirmed={confirmedConflicts.includes(message.id)}
-                        savingMemory={saveMemory.isPending}
+                    );
+                  }
+                  if (message.kind === "assistant") {
+                    return (
+                      <AssistantMessage key={message.id}>
+                        <ChatCardContent
+                          message={{
+                            id: message.id,
+                            role: "assistant",
+                            text: message.text,
+                            card: message.card,
+                            error: message.error,
+                          }}
+                          confirmed={Boolean(message.confirmed)}
+                          savingMemory={saveMemory.isPending}
+                          onOpenVerdict={openVerdict}
+                          onConfirmMemory={(key, value) => confirmMemory(message.id, key, value)}
+                        />
+                      </AssistantMessage>
+                    );
+                  }
+                  const focused = focus?.matchId === message.option.matchId;
+                  const resolvedVerdict = findLiveVerdict(message.option) ?? message.verdict;
+                  return (
+                    <View
+                      key={message.id}
+                      onLayout={(event) => {
+                        if (pendingMatchScroll.current !== message.id) return;
+                        pendingMatchScroll.current = null;
+                        const y = conversationTop.current + chatThreadTop.current
+                          + event.nativeEvent.layout.y - spacing.base;
+                        scrollRef.current?.scrollTo({ y: Math.max(0, y), animated: true });
+                      }}
+                    >
+                      <MatchConversationCard
+                        option={message.option}
+                        verdict={resolvedVerdict}
+                        focusData={focused ? focusQuery.data : null}
+                        focusLoading={focused && focusQuery.isLoading}
+                        betExists={Boolean(resolvedVerdict && betIds.has(resolvedVerdict.id))}
                         onOpenVerdict={openVerdict}
-                        onConfirmMemory={(key, value) => confirmMemory(message.id, key, value)}
+                        onOpenMatch={openWhyNot}
+                        onBet={setBetTarget}
+                        onWhyNot={openWhyNot}
+                        onSeal={setSealTarget}
                       />
-                    </AssistantMessage>
-                  ),
-                )}
+                    </View>
+                  );
+                })}
                 {chat.isPending ? <AssistantTyping text={`${meta.name}正在核对数据…`} /> : null}
               </View>
             ) : null}
+
+            {!streamQuery.isLoading ? <LegalFooter text={copy.footer} /> : null}
           </View>
         </ScrollView>
 
@@ -590,23 +664,82 @@ export default function HomeScreen() {
         streamDate={stream?.tradeDate ?? date}
         onsale={onsale}
         onSelectVerdict={(id) => {
-          const verdict = verdicts.find((item) => item.id === id);
+          setOpenedAll(false);
+          const verdict = verdicts.find((item) => item.id === id)
+            ?? references.find((item) => item.id === id)
+            ?? streamVerdicts.find((item) => item.id === id);
           if (verdict) {
             trackInteraction("focus_select", { matchId: verdict.matchId, verdictId: verdict.id });
             setFocus(focusFromVerdict(verdict, stream?.tradeDate ?? date));
+            const messageId = nextChatId("match");
+            pendingMatchScroll.current = messageId;
+            conversation.append({
+              id: messageId,
+              kind: "match",
+              option: {
+                matchId: verdict.matchId,
+                verdictId: verdict.id,
+                matchNo: verdict.matchNo,
+                league: verdict.league,
+                home: verdict.home,
+                away: verdict.away,
+                kickoff: verdict.kickoff,
+                status: verdict.status,
+                tier: verdict.tier,
+              },
+              verdict,
+              at: Date.now(),
+            });
             return;
           }
           const match = onsale.find((item) => item.verdictId === id);
           if (match) {
             trackInteraction("focus_select", { matchId: match.matchId, verdictId: id });
             setFocus(focusFromOnSale(match, stream?.tradeDate ?? date));
+            const messageId = nextChatId("match");
+            pendingMatchScroll.current = messageId;
+            conversation.append({
+              id: messageId,
+              kind: "match",
+              option: {
+                matchId: match.matchId,
+                verdictId: id,
+                matchNo: match.matchNo,
+                league: match.league,
+                home: match.home,
+                away: match.away,
+                kickoff: match.kickoff,
+                status: match.status,
+              },
+              verdict: null,
+              at: Date.now(),
+            });
           } else openVerdict(id);
         }}
         onSelectMatch={(matchId, tradeDate) => {
+          setOpenedAll(false);
           const match = onsale.find((item) => item.matchId === matchId);
           if (match) {
             trackInteraction("focus_select", { matchId: match.matchId });
             setFocus(focusFromOnSale(match, tradeDate || date));
+            const messageId = nextChatId("match");
+            pendingMatchScroll.current = messageId;
+            conversation.append({
+              id: messageId,
+              kind: "match",
+              option: {
+                matchId: match.matchId,
+                verdictId: match.verdictId,
+                matchNo: match.matchNo,
+                league: match.league,
+                home: match.home,
+                away: match.away,
+                kickoff: match.kickoff,
+                status: match.status,
+              },
+              verdict: null,
+              at: Date.now(),
+            });
           } else {
             router.push({
               pathname: "/match/[id]",

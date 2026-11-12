@@ -56,9 +56,10 @@ export function DetailHero({
       });
   const tier = detail.tier ?? (detail.status === "promoted" ? "verified"
     : detail.status === "killed" ? "avoid" : "market_reference");
+  const modelLabel = detail.modelSource === "sportmonks" ? "Sportmonks 模型" : "模型影子";
   const statusLabel =
     tier === "verified"
-      ? (detail.modelStatus === "shadow" ? "已核验 · 模型影子" : "核验预测")
+      ? (detail.modelStatus === "shadow" ? `已核验 · ${modelLabel}` : "核验预测")
       : tier === "market_reference" ? "市场参考"
         : tier === "avoid" ? "不建议" : "待数据";
   const statusColor =
@@ -86,7 +87,7 @@ export function DetailHero({
         </Text>
         <Chip label="预测引擎 v3" tone={dark ? "dark" : "neutral"} />
         {detail.modelStatus === "shadow" ? (
-          <Chip label="模型影子" tone={dark ? "dark" : "neutral"} />
+          <Chip label={modelLabel} tone={dark ? "dark" : "neutral"} />
         ) : null}
         {detail.status === "promoted" && published != null ? (
           <Chip

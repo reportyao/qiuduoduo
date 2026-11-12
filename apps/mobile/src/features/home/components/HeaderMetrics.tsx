@@ -46,7 +46,7 @@ export function HeaderMetrics({ engine, dataPoints }: {
         预测引擎 {engine.version}
       </Text>
       <Text variant="caption" color={colors.muted} numberOfLines={1}>
-        {points > 0 ? `今日采集全网 ${points.toLocaleString()} 条数据点` : "今日数据同步中"}
+        {points > 0 ? `今日采集 ${points.toLocaleString()} 条数据点` : "今日数据同步中"}
       </Text>
       <View style={styles.line}>
         <Animated.View style={[styles.dot, { opacity: pulse }]} />

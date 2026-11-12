@@ -16,8 +16,8 @@ AI 足球助理 / 赛前预测产品。当前产品口径以 [docs/qiuduoduo-v4-
 | 后端版本 | `0.8.0-w8+assistant`（`app.main`） |
 | 移动端版本 | `0.3.4` / versionCode `9`（`app.config.ts`，v4.1 尚未出正式 APK） |
 | OpenAPI | **158 路径 / 174 方法**（以 `packages/api-client/openapi.json` 为准） |
-| 后端测试 | **341 passed**（`python -m pytest -q`，2026-11-12 实测） |
-| 前端测试 | **47 passed** + typecheck / ESLint / Android Hermes bundle（2026-11-12 实测） |
+| 后端测试 | **345 passed**（`python -m pytest -q`，2026-11-12 实测） |
+| 前端测试 | **51 passed** + typecheck / ESLint / Android Hermes bundle（2026-11-12 实测） |
 | Alembic head | `20261112_23`（v4 core，up/down 已实现） |
 | 开发数据库 | SQLite + WAL（过渡）；生产目标境内 PostgreSQL 16，**尚未切库** |
 | v4.1 部署状态 | **已部署腾讯云生产（2026-11-12 11:38 CST）；管理后台 v=20261112d；v4 APK 已由 GitHub Actions 构建并在模拟器安装验证** |
@@ -49,8 +49,8 @@ AI 足球助理 / 赛前预测产品。当前产品口径以 [docs/qiuduoduo-v4-
 - **计划通知**：计划更新提醒/收藏未接；推送只做中性提示，不做跟单。
 - **生产 Postgres**：迁移与离线 SQL 已验证，真实切库需要云托管实例和维护窗口。
 - **JPush 真机**：Android core 已接，MuMu/Houdini 转译会崩；需 arm64 真机验收，Master Secret 与厂商通道待配。
-- **v4 发布包**：本轮只做了 Metro/Hermes bundle 与模拟器验收，没有生成、签名、上传正式 APK。
-- **生产部署**：2026-11-12 11:38 CST 已用 `deploy.py` 部署到 `43.128.24.244`；部署前备份代码 `jieqiu-backend-20261112-113522.tar.gz` 与 SQLite 库 `jieqiu-20261112-113522.db`（`/home/ubuntu/backups/`）。
+- **v4 发布包**：Metro/Hermes bundle 与 v4 APK 已在 MuMu 安装验证；正式签名、上架、iOS 未做。
+- **生产部署**：2026-11-12 11:38 CST 已用 `deploy.py` 部署到 `43.128.24.244`；部署前备份代码 `jieqiu-backend-20261112-113522.tar.gz` 与 SQLite 库 `jieqiu-20261112-113522.db`。13:44 CST 重新同步 Sportmonks 欧国联 6/6 场并重建判决，重算前库备份 `jieqiu-20261112-134211-pre-rebuild.db`（均在 `/home/ubuntu/backups/`）。
 
 ## 工程入口
 
@@ -71,7 +71,7 @@ just api-install          # pip install -r jieqiu-backend/requirements.txt
 just db-up                # 本地 Postgres（docker compose，端口 5433）
 just db-migrate           # alembic upgrade head
 just api-run              # uvicorn app.main:app --port 8100
-just api-test             # pytest（当前 341 tests）
+just api-test             # pytest（当前 345 tests）
 
 # 前端（Node 22 自带 corepack；仓库 .npmrc 固定 node-linker=hoisted）
 just install              # corepack pnpm install

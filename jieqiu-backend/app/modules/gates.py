@@ -3,7 +3,7 @@
 设计对齐 PRD §三关 与 UI 原型：
 - 价闸：抽水 ≤ 当日动态阈值（当日候选场中位数 + pad，夹 [10%, 13%]）
 - 市闸：≥2 个去水口径，逐结果最大离散度 < 5pp；单源 → pending_data（诚实）
-- 模闸：DC v1.1 收缩后最优方向 ≥ 53% 可推线；无模型预测 → pending_data
+- 模闸：DC 或 Sportmonks 1X2 预测收缩后最优方向 ≥ 53% 可推线；无模型预测 → pending_data
 """
 from __future__ import annotations
 
@@ -129,7 +129,7 @@ def model_gate(p_model: tuple[float, float, float] | None,
     if p_model is None:
         return GateResult(
             gate="model", result="pending_data",
-            detail={"reason": "DC 模型无该对阵预测（队名未入 xG 库或窗口数据不足）"},
+            detail={"reason": "DC 模型无该对阵预测，且 Sportmonks 1X2 预测缺失或过期"},
         )
     top = max(p_model)
     pick = best_pick(p_model, sp)

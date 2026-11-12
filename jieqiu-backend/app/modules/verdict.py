@@ -27,7 +27,7 @@ from .dc_model import DCModel, add_alias, fit as dc_fit, load_xg, predict as dc_
 from .gates import (breakeven_prob, dynamic_threshold, implied_probs,
                     market_gate, model_gate, price_gate, shrink_to_market)
 from .intl_odds import sources_for_match
-from .sportmonks import market_is_fresh
+from .sportmonks import handicap_probs, market_is_fresh, model_probs
 from .results_sync import has_results_proxy
 from .sealchain import link_revision
 
@@ -224,6 +224,8 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
                 sources = {"竞彩官方(去水)": p_jc}
         else:
             sources = {"竞彩官方(去水)": p_jc}
+        # 先取 Sportmonks：市场闸用 Pinnacle，模型闸在 DC 缺阵时用其预测概率。
+        sm = db.get(SportmonksMatchData, m.match_id)
         try:
             intl_rows = sources_for_match(db, m)
             for r in intl_rows:  # retrieved 倒序：同源多条时新快照优先（first-wins）
@@ -232,7 +234,6 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
                     sources[key] = implied_probs(r.sp_h, r.sp_d, r.sp_a)[:3]
             # Sportmonks Pinnacle 1X2 已是去水概率，可与竞彩官方直接做同口径对照；
             # 有它时不再依赖 The Odds API 才能过市闸。
-            sm = db.get(SportmonksMatchData, m.match_id)
             if sm is not None and isinstance(sm.odds, dict) and market_is_fresh(sm):
                 try:
                     triple = (float(sm.odds["home"]), float(sm.odds["draw"]),
@@ -254,8 +255,11 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
         if intl_err:
             mg.detail["intl_error"] = intl_err
 
-        # 模闸：DC 预测（hhad 按让球线调整口径）→ 收缩 → 可推线
+        # 模闸：优先本地 DC（hhad 按让球线调整口径）；DC 缺阵时用 Sportmonks
+        # 1X2 预测概率作后备模型。两者都先向市场收缩，再判断可推线。
         pred = None
+        raw_model: tuple[float, float, float] | None = None
+        using_sm_model = False
         if model is not None:
             line_val = None
             if pool == "hhad" and snap.goal_line:
@@ -267,12 +271,22 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
                 pred = predict_line(model, m.home, m.away, line_val)
             else:
                 pred = dc_predict(model, m.home, m.away)
-        p_model = None
         if pred is not None:
-            p_model = shrink_to_market((pred.p_home, pred.p_draw, pred.p_away), p_jc)
+            raw_model = (pred.p_home, pred.p_draw, pred.p_away)
+        elif pool == "hhad" and snap.goal_line:
+            # 1X2 预测不能直接套到让球盘：必须用正确比分分布推导同一让球线。
+            raw_model = handicap_probs(sm, snap.goal_line)
+            using_sm_model = raw_model is not None
+        else:
+            raw_model = model_probs(sm)
+            using_sm_model = raw_model is not None
+        p_model = None
+        if raw_model is not None:
+            p_model = shrink_to_market(raw_model, p_jc)
         dg = model_gate(p_model, (snap.sp_h, snap.sp_d, snap.sp_a), st.model_conf_threshold)
-        if model is not None:
-            dg.detail["engine_source"] = model.source
+        if p_model is not None:
+            dg.detail["engine_source"] = "sportmonks" if using_sm_model else (
+                model.source if model is not None else "dc")
 
         gates = {"price": pg.as_dict(), "market": mg.as_dict(), "model": dg.as_dict()}
         pick = dg.detail.get("pick")
@@ -285,11 +299,16 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
         all_pass = all(g["result"] == "pass" for g in gates.values())
         any_fail = any(g["result"] == "fail" for g in gates.values())
         cfg = db.get(LeagueModelConfig, m.league) if m.league else None
-        model_ready = bool(p_model is not None and pred is not None)
-        model_status = ("enabled" if (cfg is not None and cfg.dc_status == "enabled"
-                                      and model_ready)
-                        else "shadow" if model_ready else "unavailable")
-        model_source = "dc" if model_ready else "none"
+        dc_ready = bool(p_model is not None and pred is not None and not using_sm_model)
+        sm_ready = bool(p_model is not None and using_sm_model)
+        model_enabled = bool(
+            (cfg is not None and cfg.dc_status == "enabled" and dc_ready)
+            or (cfg is not None and cfg.sm_status == "enabled" and sm_ready)
+        )
+        model_status = ("enabled" if model_enabled
+                        else "shadow" if (dc_ready or sm_ready)
+                        else "unavailable")
+        model_source = "sportmonks" if sm_ready else "dc" if dc_ready else "none"
         if st.tier_enforce:
             if pg.result == "fail" or mg.result == "fail":
                 tier = "avoid"
@@ -324,7 +343,22 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
             },
         }
 
-        evidence = _evidence(m, snap, pool, intl_rows, model, pred, now_cn)
+        evidence = _evidence(
+            m, snap, pool, intl_rows,
+            None if using_sm_model else model,
+            None if using_sm_model else pred,
+            now_cn,
+        )
+        if using_sm_model and raw_model is not None and sm is not None:
+            evidence.append({
+                "tag": "已核验",
+                "t": ("模型 · Sportmonks 正确比分推导让球盘（市场收缩后）"
+                      if pool == "hhad" else
+                      "模型 · Sportmonks 1X2 预测（市场收缩后）"),
+                "d": f"{p_model[0]:.1%} / {p_model[1]:.1%} / {p_model[2]:.1%}"
+                     if p_model is not None else "—",
+                "src": f"Sportmonks fixture {sm.fixture_id} · cutoff {sm.data_cutoff}",
+            })
         if (sm is not None and isinstance(sm.odds, dict)
                 and all(k in sm.odds for k in ("home", "draw", "away"))
                 and market_is_fresh(sm)):
@@ -351,10 +385,15 @@ def build_verdicts(db: Session, trade_date: str, now_cn: str,
                           "away": round(breakeven_prob(snap.sp_a), 4)},
             "gates": gates,
             "model": {"shrunk": [round(x, 4) for x in p_model] if p_model else None,
-                      "raw": [round(pred.p_home, 4), round(pred.p_draw, 4),
-                              round(pred.p_away, 4)] if pred else None,
+                      "raw": [round(x, 4) for x in raw_model] if raw_model else None,
                       "pick": pick,
-                      "engine": f"Dixon-Coles v1.1 (rho={st.dc_rho}, halflife={st.dc_halflife_days}d)"},
+                      "engine": (
+                          "Sportmonks correct-score → handicap (market-shrunk)"
+                          if using_sm_model and pool == "hhad" else
+                          "Sportmonks 1X2 predictions (market-shrunk)"
+                          if using_sm_model else
+                          f"Dixon-Coles v1.1 (rho={st.dc_rho}, halflife={st.dc_halflife_days}d)"
+                      )},
             "evidence": evidence,
             "status": status,
             "tier": tier,

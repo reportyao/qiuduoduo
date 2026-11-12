@@ -172,3 +172,23 @@ def test_admin_recommendation_run_and_withdraw(client, db):
     assert r.status_code == 200, r.text
     db.refresh(snap)
     assert snap.status == service.WITHDRAWN
+
+
+def test_demoted_verdict_expires_old_published_snapshot(client, db):
+    _seed(db, mid="rec-demote", no="周三921")
+    snap = service.build_snapshots(db, today_cn())[0]
+    run = service.review_subject(db, service.SUBJECT_DECISION, snap.id)
+    assert run.status == "passed"
+    service.publish_subject(db, service.SUBJECT_DECISION, snap.id)
+    assert snap.status == service.PUBLISHED
+
+    verdict = db.get(Verdict, "v-rec-demote")
+    verdict.status = "killed"
+    verdict.tier = "market_reference"
+    db.commit()
+
+    service.build_snapshots(db, today_cn())
+    db.refresh(snap)
+    assert snap.status == service.EXPIRED
+    data = client.get("/recommendations/today").json()
+    assert all(v["match_id"] != "rec-demote" for v in data["verdicts"])

@@ -26,6 +26,88 @@ from .timeutil import trade_window
 CN_TZ = timezone(timedelta(hours=8))
 log = logging.getLogger(__name__)
 SM_MARKET_MAX_AGE = timedelta(hours=2)
+SM_MODEL_MAX_AGE = timedelta(hours=6)
+
+
+def model_probs(sm: SportmonksMatchData | None,
+                now: datetime | None = None) -> tuple[float, float, float] | None:
+    """Sportmonks 1X2 预测概率 → 三元组；缺失/过期/异常返回 None。
+
+    这是第三方模型概率，不是竞彩官方概率。只在 DC 模型无该对阵时作为明确
+    标注的后备模型使用，不能冒充本地 DC 模型。
+    """
+    if sm is None or not isinstance(sm.probs, dict) or sm.captured_at is None:
+        return None
+    try:
+        home = float(sm.probs["home"])
+        draw = float(sm.probs["draw"])
+        away = float(sm.probs["away"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    triple = (home, draw, away)
+    if min(triple) <= 0 or abs(sum(triple) - 1.0) > 0.05:
+        return None
+    captured = sm.captured_at
+    current = now or utcnow()
+    if captured.tzinfo is not None:
+        captured = captured.astimezone(timezone.utc).replace(tzinfo=None)
+    if current.tzinfo is not None:
+        current = current.astimezone(timezone.utc).replace(tzinfo=None)
+    if current - captured > SM_MODEL_MAX_AGE:
+        return None
+    return triple
+
+
+def handicap_probs(sm: SportmonksMatchData | None, line: str | float,
+                   now: datetime | None = None) -> tuple[float, float, float] | None:
+    """用 Sportmonks 正确比分分布推导指定让球线的胜/平/负概率。
+
+    竞彩 hhad 的让球线加在主队：主队净胜 + line > 0 为主胜。正确比分中的
+    Other_1/Other_2 分别代表“其他主胜/客胜比分”，按净胜 ±2 保守归并；
+    Other_X 归为平局。缺少比分分布时返回 None，不拿 1X2 概率硬套让球盘。
+    """
+    if model_probs(sm, now) is None or not isinstance(sm.probs, dict):
+        return None
+    try:
+        handicap = float(line)
+    except (TypeError, ValueError):
+        return None
+    raw_scores = sm.probs.get("scores")
+    if not isinstance(raw_scores, dict) or not raw_scores:
+        return None
+    home = draw = away = 0.0
+    for key, value in raw_scores.items():
+        try:
+            weight = float(value)
+        except (TypeError, ValueError):
+            continue
+        if weight <= 0:
+            continue
+        if key == "Other_1":
+            margin = 2
+        elif key == "Other_2":
+            margin = -2
+        elif key == "Other_X":
+            margin = 0
+        else:
+            parts = str(key).split("-")
+            if len(parts) != 2:
+                continue
+            try:
+                margin = int(parts[0]) - int(parts[1])
+            except ValueError:
+                continue
+        adjusted = margin + handicap
+        if adjusted > 0:
+            home += weight
+        elif adjusted == 0:
+            draw += weight
+        else:
+            away += weight
+    total = home + draw + away
+    if total <= 0:
+        return None
+    return home / total, draw / total, away / total
 
 
 def market_is_fresh(sm: SportmonksMatchData | None,
@@ -204,17 +286,29 @@ def _fetch_fixtures(base: str, token: str, start_day: str, end_day: str) -> list
 
 def _fetch_predictions(base: str, token: str, fixture_id: int) -> dict | None:
     probs = None
+    scores: dict[str, float] = {}
     pred = _get(base, f"/predictions/probabilities/fixtures/{fixture_id}",
                 f"api_token={token}&include=type&per_page=100")
     for row in (pred or {}).get("data") or []:
-        if row.get("type_id") == 237 and row.get("predictions"):
+        if row.get("type_id") == 237 and row.get("predictions") and probs is None:
             raw = row["predictions"]
-            probs = {"home": float(raw.get("home", 0)) / 100.0,
-                     "draw": float(raw.get("draw", 0)) / 100.0,
-                     "away": float(raw.get("away", 0)) / 100.0}
-            if sum(probs.values()) <= 0:
-                probs = None
+            triple = {"home": float(raw.get("home", 0)) / 100.0,
+                      "draw": float(raw.get("draw", 0)) / 100.0,
+                      "away": float(raw.get("away", 0)) / 100.0}
+            if sum(triple.values()) > 0:
+                probs = triple
+        elif row.get("type_id") == 240 and row.get("predictions"):
+            raw_scores = row["predictions"].get("scores") or {}
+            for key, value in raw_scores.items():
+                try:
+                    scores[str(key)] = float(value)
+                except (TypeError, ValueError):
+                    continue
+        if probs is not None and scores:
             break
+    if probs is not None and scores:
+        # 正确比分分布用于把 1X2 预测转换成让球盘概率；保留原始百分比。
+        probs["scores"] = scores
     time.sleep(0.15)
     return probs
 

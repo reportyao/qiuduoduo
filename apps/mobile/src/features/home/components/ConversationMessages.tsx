@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import type {
   AvoidItem,
@@ -117,12 +117,19 @@ export function AssistantBrief({
           <Text variant="caption" color={colors.amber}>
             {stats.promoted > 0
               ? `有 ${stats.promoted} 场已核验，但今天还没有发布预测`
-              : "今天还没有发布预测"}
+              : referenceCount > 0
+                ? `今天还没有已发布预测，但有 ${referenceCount} 场市场参考可看`
+                : "今天还没有发布预测"}
           </Text>
           {publishedMessage ? (
             <Text variant="caption" color={colors.subtle} style={styles.publishNote}>
               {/* 旧后端 message 仍写“判断/判决”；后端部署后可移除这层兼容。 */}
               {publishedMessage.replace(/判断/g, "预测").replace(/判决/g, "预测")}
+            </Text>
+          ) : null}
+          {referenceCount > 0 ? (
+            <Text variant="caption" color={colors.subtle} style={styles.publishNote}>
+              市场参考只代表市场倾向，不是模型预测；点下方场次查看依据。
             </Text>
           ) : null}
         </View>
@@ -171,6 +178,7 @@ export const VerdictMessage = memo(function VerdictMessage({
   onWhyNot,
   onSeal,
   onParlay,
+  header,
 }: {
   verdict: VerdictSummary;
   betExists?: boolean;
@@ -181,6 +189,7 @@ export const VerdictMessage = memo(function VerdictMessage({
   onWhyNot?: (matchId: string) => void;
   onSeal?: (id: string) => void;
   onParlay?: () => void;
+  header?: ReactNode;
 }) {
   const { copy } = usePersonaContent();
   const reference = verdict.tier === "market_reference";
@@ -212,6 +221,7 @@ export const VerdictMessage = memo(function VerdictMessage({
 
   return (
     <AssistantMessage dark={dark} delay={delay}>
+      {header}
       {hero ? (
         <Text variant="overline" color={dark ? colors.greenAccent : colors.green}>
           {copy.feedTitle}
@@ -229,13 +239,20 @@ export const VerdictMessage = memo(function VerdictMessage({
         </Text>
       </View>
 
-      <Text variant="h3" color={fg} style={styles.match}>
-        {verdict.home} <Text variant="small" color={sub}>vs</Text> {verdict.away}
-      </Text>
-      <Text variant="caption" color={sub}>
-        {verdict.league || "联赛待同步"} ·{" "}
-        {verdict.pool === "hhad" ? `让球 ${verdict.goalLine ?? ""}` : "胜平负"}
-      </Text>
+      <Pressable
+        onPress={() => onOpen(verdict.id)}
+        accessibilityRole="button"
+        accessibilityLabel={`${verdict.home} 对 ${verdict.away}，查看完整预测`}
+        hitSlop={4}
+      >
+        <Text variant="h3" color={fg} style={styles.match}>
+          {verdict.home} <Text variant="small" color={sub}>vs</Text> {verdict.away}
+        </Text>
+        <Text variant="caption" color={sub}>
+          {verdict.league || "联赛待同步"} ·{" "}
+          {verdict.pool === "hhad" ? `让球 ${verdict.goalLine ?? ""}` : "胜平负"}
+        </Text>
+      </Pressable>
 
       <View style={styles.pickRow}>
         <View style={styles.pickLeft}>
