@@ -47,9 +47,9 @@ export function DetailActionBar({
               ? betExists
                 ? copy.bought
                 : copy.buy
-              : detail.status === "killed"
+              : detail.status === "killed" && detail.tier !== "market_reference"
                 ? "看原因"
-                : "查看预测"
+                : "查看比赛"
         }
         onPress={promoted && !locked ? onBet : onWhyNot}
         disabled={promoted && (betExists || locked)}
