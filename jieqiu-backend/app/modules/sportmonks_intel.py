@@ -615,17 +615,18 @@ def sync_postmatch_intel(db: Session, base: str, token: str,
         return False
     xg: dict[str, float] = {}
     for item in data.get("xgfixture") or []:
-        if item.get("type_id") != 5304:
+        if int(item.get("type_id") or 0) != 5304:
             continue
         side = str(item.get("location") or "")
         value = _num((item.get("data") or {}).get("value"))
         if side in ("home", "away") and value is not None:
             xg[side] = round(value, 2)
     goals = []
+    sides, _ = _participants(data)
     for event in data.get("events") or []:
-        if event.get("type_id") != 14:
+        if int(event.get("type_id") or 0) != 14:
             continue
-        side = next((key for key, team in _participants(data)[0].items()
+        side = next((key for key, team in sides.items()
                      if team.get("id") == event.get("participant_id")), "")
         goals.append({
             "minute": event.get("minute"),
