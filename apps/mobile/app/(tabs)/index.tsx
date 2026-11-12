@@ -198,7 +198,7 @@ export default function HomeScreen() {
   useEffect(() => {
     const threadKey = `${session?.userId ?? "local"}:${date}`;
     if (!conversation.hydrated || hydratedThread.current === threadKey) return;
-    if (streamQuery.isLoading || recommendationsQuery.isLoading) return;
+    if (streamQuery.isLoading || recommendationsQuery.isLoading || recordQuery.isLoading) return;
     hydratedThread.current = threadKey;
     const last = conversation.messages[conversation.messages.length - 1];
     if (last?.kind === "match") {
@@ -212,7 +212,7 @@ export default function HomeScreen() {
     }
     if (conversation.messages.length > 0) autoScroll.current = true;
   }, [conversation.hydrated, conversation.messages, date, recommendationsQuery.isLoading,
-      session?.userId, streamQuery.isLoading]);
+      recordQuery.isLoading, session?.userId, streamQuery.isLoading]);
 
   useEffect(() => {
     setRecordVisible(false);
