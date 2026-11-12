@@ -31,7 +31,7 @@ function dimensionValue(items: EvidenceItem[]): IntelDimension[] {
     out.push({
       key: rule.key,
       label: rule.label,
-      value: hit.tag || "情报",
+      value: /背景|未定价|未验证/.test(hit.tag) ? "数据" : "核心",
       direction: directionFromText(text),
       note: text,
       source: hit.source,
@@ -119,7 +119,7 @@ function fromPayload(detail: VerdictDetail): IntelDimension[] | null {
       return {
         key: string(item.key, `d${index}`),
         label: string(item.label, "情报"),
-        value: string(item.value, "情报"),
+        value: /背景|未定价|未验证/.test(string(item.value)) ? "数据" : "核心",
         direction:
           item.direction === "up" || item.direction === "down" || item.direction === "flat"
             ? item.direction

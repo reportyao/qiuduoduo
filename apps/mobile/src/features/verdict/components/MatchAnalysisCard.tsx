@@ -86,18 +86,13 @@ export function MatchAnalysisCard({ matchId, date }: Props) {
   }
 
   const reason = analysis?.reason;
-  const missing = analysis?.missing ?? [];
   const canGenerate = reason === "not_generated";
-  const unavailableText = reason === "coverage"
-    ? `数据还不够，先不生成解读${missing.length ? `（缺 ${missing.join("、")}）` : ""}。`
-    : reason === "not_configured"
-      ? "AI 解读还没配置 deep 模型；先看三关与数据。"
-      : "这场暂时没有可用的 AI 解读。";
+  if (!canGenerate) return null;
 
   return (
     <Card style={styles.card}>
       <Text variant="h3">AI 解读</Text>
-      <Text variant="small" color={colors.muted}>{unavailableText}</Text>
+      <Text variant="small" color={colors.muted}>点下方生成这场解读。</Text>
       {canGenerate ? (
         <View style={styles.actions}>
           <Button
@@ -111,7 +106,7 @@ export function MatchAnalysisCard({ matchId, date }: Props) {
         </View>
       ) : null}
       <Text variant="caption" color={colors.subtle}>
-        只对覆盖完整、可深读的场次生成；生成后按数据截止缓存，数据变化会重新计算。
+        生成后按数据截止缓存，数据变化会重新计算。
       </Text>
     </Card>
   );

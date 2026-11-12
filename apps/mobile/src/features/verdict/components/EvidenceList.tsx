@@ -7,6 +7,10 @@ import { Card, Chip, Icon, Text } from "@/components/ui";
 
 const clean = (text: string) => text.replace(/Sportmonks\s*·?\s*/gi, "").trim();
 
+function tagLabel(tag: string): string {
+  return /背景|未定价|未验证/.test(tag) ? "数据" : "核心";
+}
+
 export function EvidenceList({
   items,
   cutoff,
@@ -15,6 +19,8 @@ export function EvidenceList({
   cutoff: string;
 }) {
   const [expanded, setExpanded] = useState<number | null>(0);
+  const rows = items.filter((item) =>
+    !/非五大联赛|窗口数据不足|W4 接入/.test(item.detail));
 
   return (
     <Card padded={false} style={styles.card}>
@@ -22,38 +28,36 @@ export function EvidenceList({
         <View style={styles.flex}>
           <Text variant="h3">预测依据</Text>
           <Text variant="caption" color={colors.muted}>
-            {items.length} 条 · 截止 {cutoff ? formatDateTime(cutoff) : "同步中"}
+            {rows.length} 条 · 截止 {cutoff ? formatDateTime(cutoff) : "同步中"}
           </Text>
         </View>
         <Text variant="caption" color={colors.subtle}>逐条可溯源</Text>
       </View>
 
-      {items.length === 0 ? (
+      {rows.length === 0 ? (
         <View style={styles.empty}>
-          <Text variant="small" color={colors.muted}>这场还没有可展示的依据。数据没到，不编。</Text>
+          <Text variant="small" color={colors.muted}>这场暂无公开依据。</Text>
         </View>
       ) : (
-        items.map((item, index) => {
+        rows.map((item, index) => {
           const open = expanded === index;
-          const tone =
-            item.tag.includes("未定价") || item.tag.includes("背景")
-              ? "neutral"
-              : "green";
+          const label = tagLabel(item.tag);
+          const tone = label === "核心" ? "green" : "neutral";
           return (
             <Pressable
               key={`${item.title}-${index}`}
               onPress={() => setExpanded(open ? null : index)}
               accessibilityRole="button"
               accessibilityState={{ expanded: open }}
-              accessibilityLabel={`${clean(item.title)}，${item.tag}`}
+              accessibilityLabel={`${clean(item.title)}，${label}`}
               style={({ pressed }) => [
                 styles.row,
-                index < items.length - 1 && styles.rowLine,
+                index < rows.length - 1 && styles.rowLine,
                 pressed && styles.pressed,
               ]}
             >
               <View style={styles.rowHead}>
-                <Chip label={item.tag} tone={tone} />
+                <Chip label={label} tone={tone} />
                 <Icon name={open ? "chevron-up" : "chevron-down"} size={15} color={colors.subtle} />
               </View>
               <Text variant="bodyStrong">{clean(item.title)}</Text>
@@ -64,9 +68,6 @@ export function EvidenceList({
           );
         })
       )}
-      <Text variant="caption" color={colors.subtle} style={styles.note}>
-        「已核验 / 已计入」才进入预测；「仅背景」不参与模型，只作人话解释。
-      </Text>
     </Card>
   );
 }

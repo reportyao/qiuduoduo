@@ -113,17 +113,6 @@ def _evidence(match: SPMatch, snap: SPSnapshot, pool: str, intl_rows: list,
             "src": (f"{'football-data 进球代理' if model.source == 'goals_proxy' else 'Understat xG'}"
                     f" · 衰减窗口 {model.window_days}d · 拟合至 {model.as_of:%Y-%m-%d}"),
         })
-    else:
-        ev.append({
-            "tag": "仅背景", "t": "DC 模型",
-            "d": "该对阵不在 xG 强度表内（非五大联赛或窗口数据不足）",
-            "src": "Understat · 2019-2025",
-        })
-    ev.append({
-        "tag": "仅背景", "t": "首发确认",
-        "d": "W4 接入 API-Football 后纳入模闸",
-        "src": "—",
-    })
     return ev
 
 
