@@ -95,10 +95,18 @@ export default function HomeScreen() {
   const conversationTop = useRef(0);
   const chatThreadTop = useRef(0);
   const pendingMatchScroll = useRef<string | null>(null);
+  const matchLayouts = useRef<Record<string, number>>({});
   const chatId = useRef(0);
   const nextChatId = (prefix: string) => {
     chatId.current += 1;
     return `${prefix}-${Date.now().toString(36)}-${chatId.current}`;
+  };
+  const scrollToMatch = (messageId: string) => {
+    const y = matchLayouts.current[messageId];
+    if (y == null) return false;
+    const target = conversationTop.current + chatThreadTop.current + y - spacing.base;
+    scrollRef.current?.scrollTo({ y: Math.max(0, target), animated: true });
+    return true;
   };
 
   const sendChat = (raw: string) => {
@@ -187,7 +195,12 @@ export default function HomeScreen() {
     const last = conversation.messages[conversation.messages.length - 1];
     if (last?.kind === "match") {
       pendingMatchScroll.current = last.id;
-      return;
+      // 若卡片在 effect 前已完成布局，直接滚；否则等 onLayout 回调。
+      const timer = setTimeout(() => {
+        if (pendingMatchScroll.current !== last.id) return;
+        if (scrollToMatch(last.id)) pendingMatchScroll.current = null;
+      }, 80);
+      return () => clearTimeout(timer);
     }
     if (conversation.messages.length > 0) autoScroll.current = true;
   }, [conversation.hydrated, conversation.messages, date, session?.userId]);
@@ -621,11 +634,10 @@ export default function HomeScreen() {
                     <View
                       key={message.id}
                       onLayout={(event) => {
+                        matchLayouts.current[message.id] = event.nativeEvent.layout.y;
                         if (pendingMatchScroll.current !== message.id) return;
                         pendingMatchScroll.current = null;
-                        const y = conversationTop.current + chatThreadTop.current
-                          + event.nativeEvent.layout.y - spacing.base;
-                        scrollRef.current?.scrollTo({ y: Math.max(0, y), animated: true });
+                        scrollToMatch(message.id);
                       }}
                     >
                       <MatchConversationCard
