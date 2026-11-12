@@ -36,23 +36,26 @@ export function DetailActionBar({
   const insets = useSafeAreaInsets();
   const { copy } = usePersonaContent();
   const promoted = detail.status === "promoted";
+  const reference = detail.tier === "market_reference";
   const locked = promoted && published === false;
   return (
     <View style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
       <Button
         label={
-          locked
-            ? "查看预测"
-            : promoted
-              ? betExists
-                ? copy.bought
-                : copy.buy
-              : detail.status === "killed" && detail.tier !== "market_reference"
-                ? "看原因"
-                : "查看比赛"
+          reference
+            ? "分享预测"
+            : locked
+              ? "查看预测"
+              : promoted
+                ? betExists
+                  ? copy.bought
+                  : copy.buy
+                : detail.status === "killed"
+                  ? "看原因"
+                  : "查看比赛"
         }
-        onPress={promoted && !locked ? onBet : onWhyNot}
-        disabled={promoted && (betExists || locked)}
+        onPress={reference ? onShare : promoted && !locked ? onBet : onWhyNot}
+        disabled={!reference && promoted && (betExists || locked)}
         fullWidth
       />
       <View style={styles.secondaryRow}>
