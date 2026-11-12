@@ -8,7 +8,7 @@ import {
   updateHomeMatchIntel,
   type HomeConversationMessage,
 } from "./conversation";
-import type { SportmonksIntelData } from "@/domain/types";
+import type { SportmonksIntelData, VerdictSummary } from "@/domain/types";
 
 const match: HomeConversationMessage = {
   id: "m-1",
@@ -25,6 +25,28 @@ const match: HomeConversationMessage = {
     tier: "market_reference",
   },
   verdict: null,
+};
+
+const verdict: VerdictSummary = {
+  id: "verdict-1",
+  matchId: "match-1",
+  matchNo: "周四001",
+  league: "欧国联",
+  home: "德国",
+  away: "法国",
+  kickoff: "2026-11-13 03:45:00",
+  pool: "had",
+  goalLine: null,
+  sp: { h: 2.1, d: 3.2, a: 3.4 },
+  rake: null,
+  rakeThreshold: null,
+  probs: { home: 0.45, draw: 0.3, away: 0.25 },
+  model: null,
+  pick: null,
+  status: "screening",
+  gates: {},
+  hash: null,
+  sealed: false,
 };
 
 describe("home conversation persistence", () => {
@@ -64,19 +86,7 @@ describe("home conversation persistence", () => {
       kind: "prediction",
       at: 3,
       option: match.option,
-      verdict: {
-        id: "verdict-1",
-        matchId: "match-1",
-        matchNo: "周四001",
-        league: "欧国联",
-        home: "德国",
-        away: "法国",
-        kickoff: "2026-11-13 03:45:00",
-        pool: "had",
-        sp: { home: 2.1, draw: 3.2, away: 3.4 },
-        probs: { home: 0.45, draw: 0.3, away: 0.25 },
-        gates: {},
-      },
+      verdict,
       lead: "完整判断在这里。",
     };
     const parsed = parseHomeMessages(JSON.stringify([prediction]));
@@ -107,12 +117,7 @@ describe("home conversation persistence", () => {
   it("updates intel on match and prediction messages for the same match", () => {
     const prediction: HomeConversationMessage = {
       id: "p-1", kind: "prediction", at: 2, option: match.option,
-      verdict: {
-        id: "verdict-1", matchId: "match-1", matchNo: "周四001", league: "欧国联",
-        home: "德国", away: "法国", kickoff: "2026-11-13 03:45:00", pool: "had",
-        sp: { home: 2.1, draw: 3.2, away: 3.4 },
-        probs: { home: 0.45, draw: 0.3, away: 0.25 }, gates: {},
-      },
+      verdict,
       lead: "完整判断在这里。",
     };
     const updated = updateHomeMatchIntel([match, prediction], "match-1", {
