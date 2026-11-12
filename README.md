@@ -3,7 +3,7 @@
 AI 足球助理 / 赛前预测产品。当前产品口径以 [docs/qiuduoduo-v4-final-plan.md](docs/qiuduoduo-v4-final-plan.md)（v4.1）为唯一有效方案：4 Tab = **助理 · 比赛 · 计划 · 我的**，计划是“每期 4 场、每场 100、总预算 400”的模拟定投方案，只展示、不跟单。
 
 - 仓库：https://github.com/reportyao/qiuduoduo
-- 当前开发分支：`feat/v4-plan-settlement`
+- 当前开发分支：`feat/v4-plan-settlement`（已合并到 `master`；生产已部署）
 - 生产后端：`jieqiu-backend/`（FastAPI 模块化单体，过渡期目录，迁移目标 `services/api/`）
 - 生产前端：`apps/mobile/`（Expo React Native，Android 先发，iOS 后补）
 - 接口契约：`packages/api-client/`（OpenAPI 快照 + 生成 TS client，禁止手写接口类型）
@@ -20,7 +20,7 @@ AI 足球助理 / 赛前预测产品。当前产品口径以 [docs/qiuduoduo-v4-
 | 前端测试 | **47 passed** + typecheck / ESLint / Android Hermes bundle（2026-11-12 实测） |
 | Alembic head | `20261112_23`（v4 core，up/down 已实现） |
 | 开发数据库 | SQLite + WAL（过渡）；生产目标境内 PostgreSQL 16，**尚未切库** |
-| v4.1 部署状态 | **已部署腾讯云生产（2026-11-12 11:38 CST）；管理后台 v=20261112d；v4 APK 尚未构建发布** |
+| v4.1 部署状态 | **已部署腾讯云生产（2026-11-12 11:38 CST）；管理后台 v=20261112d；v4 APK 已由 GitHub Actions 构建并在模拟器安装验证** |
 
 ## v4.1 已实现
 
