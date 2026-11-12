@@ -110,7 +110,7 @@
 - 计划自训练模型：只有 `feature_snapshots/model_registry/training_runs` 脚手架。
 - 计划更新提醒/收藏；不做跟单/自动记注/代购。
 - 生产 Postgres 切库、备份/PITR 恢复演练。
-- v4 APK 已由 GitHub Actions 构建（最终 run `43196689419`，commit `c56221a`）并在 MuMu 安装验证；正式签名/上架、iOS、真机 JPush 仍未做。安装包：`C:/Users/26363/Downloads/qiuduoduo-v41-20261112-intel.apk`。
+- v4 APK 已由 GitHub Actions 构建（最终 run `43210509035`，commit `34f4e4`）并在 MuMu 安装验证；正式签名/上架、iOS、真机 JPush 仍未做。安装包：`C:/Users/26363/Downloads/qiuduoduo-v41-20261112-intel.apk`。
 - 生产部署已完成（2026-11-12 11:38 CST；17:00 CST 追加 Sportmonks 情报层与 Alembic `20261112_24`）：`deploy.py` 部署到 `43.128.24.244`，`/health` 200，OpenAPI 158/174，管理后台静态资源 v=20261112e；生产仍为 SQLite。部署前备份在 `/home/ubuntu/backups/`（代码 `jieqiu-backend-20261112-113522.tar.gz`、库 `jieqiu-20261112-113522.db`）。
 - Sportmonks 订阅更新后（2026-11-12 13:44 CST）：生产重新同步 6/6 场欧国联，全部有 Pinnacle 去水赔率、1X2 预测和正确比分分布；AI 情报 6/6 同步。重建后 `周四001` 为 verified/promoted，`周四002/004/005` 为市场参考，`周四003/006` 不建议；`/recommendations/today` 返回 1 published snapshot + 3 references。重算前库备份：`/home/ubuntu/backups/jieqiu-20261112-134211-pre-rebuild.db`。17:00 CST 部署前库备份：`/home/ubuntu/backups/jieqiu-20261112-162055-pre-sm-intel.db`。
 
