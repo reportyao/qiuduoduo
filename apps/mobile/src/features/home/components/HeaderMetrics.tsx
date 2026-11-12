@@ -37,6 +37,8 @@ export function HeaderMetrics({ engine, dataPoints }: {
     );
   }
   const points = Math.max(0, Math.round(dataPoints ?? engine.today_data_points ?? 0));
+  const predictionTypes = Math.max(0, Math.round(engine.sportmonks_prediction_types ?? 0));
+  const lineups = Math.max(0, Math.round(engine.sportmonks_lineups ?? 0));
   return (
     <View style={styles.metrics} accessibilityLabel="预测引擎状态">
       <Text variant="caption" color={colors.muted} numberOfLines={1}>
@@ -51,7 +53,10 @@ export function HeaderMetrics({ engine, dataPoints }: {
       <View style={styles.line}>
         <Animated.View style={[styles.dot, { opacity: pulse }]} />
         <Text variant="caption" color={colors.muted} numberOfLines={1}>
-          {engine.markets_monitored} 盘口 · {engine.models_reviewing} 模型实时复审
+          {predictionTypes > 0
+            ? `${engine.markets_monitored} 盘口 · ${predictionTypes} 预测`
+            : `${engine.markets_monitored} 盘口配置 · ${engine.models_reviewing} 模型位`}
+          {lineups > 0 ? ` · ${lineups} 场首发` : ""}
         </Text>
       </View>
     </View>
@@ -59,8 +64,8 @@ export function HeaderMetrics({ engine, dataPoints }: {
 }
 
 const styles = StyleSheet.create({
-  metrics: { alignItems: "flex-end", gap: 1, maxWidth: 160 },
-  line: { flexDirection: "row", alignItems: "center", gap: spacing.xs, maxWidth: 160 },
+  metrics: { alignItems: "flex-end", gap: 1, maxWidth: 190 },
+  line: { flexDirection: "row", alignItems: "center", gap: spacing.xs, maxWidth: 190 },
   dot: {
     width: 6,
     height: 6,

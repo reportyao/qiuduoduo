@@ -20,6 +20,10 @@ class PulseCounts(BaseModel):
     lineups: int
     injuries: int
     standings: int
+    sportmonks_intel: int = 0
+    sportmonks_lineups: int = 0
+    sportmonks_standings: int = 0
+    sportmonks_prediction_types: int = 0
 
 
 class PulseDisplay(BaseModel):
@@ -132,6 +136,7 @@ class IntelFact(BaseModel):
 class Intel(BaseModel):
     facts: list[IntelFact]
     unknowns: list[str]
+    sportmonks: dict[str, Any] | None = None
 
 
 class Capabilities(BaseModel):

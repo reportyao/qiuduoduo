@@ -13,7 +13,7 @@ from ..config import get_settings
 from ..db import get_db
 from ..features.intel import service as intel_service
 from ..models import (AIResearch, DecisionSnapshot, IntlOdds, ModelRun, SPMatch,
-                       SPSnapshot, TeamAlias, Verdict)
+                       SPSnapshot, SportmonksFixtureIntel, TeamAlias, Verdict)
 from ..modules.messaging import build_stream_cached
 from ..modules.timeutil import (trade_date_from_kickoff, trade_date_now,
                                 trade_window)
@@ -337,6 +337,7 @@ def verdict_detail(verdict_id: str, db: Session = Depends(get_db)):
     v = db.get(Verdict, verdict_id)
     if v is None:
         raise HTTPException(404, "verdict not found")
+    sm_intel = db.get(SportmonksFixtureIntel, v.match_id)
     return {
         "id": v.id,
         "match_id": v.match_id,
@@ -352,6 +353,7 @@ def verdict_detail(verdict_id: str, db: Session = Depends(get_db)):
         "probs": {"home": v.p_home, "draw": v.p_draw, "away": v.p_away},
         "probability_compare": _probability_compare(db, v),
         "ai_research": _ai_research(db, v.match_id),
+        "sportmonks_intel": (sm_intel.payload or {}) if sm_intel else None,
         "rake": v.rake,
         "status": v.status,
         "tier": v.tier,

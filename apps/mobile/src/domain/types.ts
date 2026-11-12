@@ -193,6 +193,102 @@ export interface SealResponse {
   verifyHint: string;
 }
 
+export interface SportmonksLineupPlayer {
+  playerId?: number | null;
+  name: string;
+  number?: number | null;
+  position?: string;
+  formationField?: string;
+}
+
+export interface SportmonksLineupSide {
+  teamId?: number | null;
+  teamName: string;
+  formation: string;
+  starters: SportmonksLineupPlayer[];
+  subs: SportmonksLineupPlayer[];
+}
+
+export interface SportmonksStandingRow {
+  position?: number | null;
+  points?: number | null;
+  played?: number | null;
+  won?: number | null;
+  drawn?: number | null;
+  lost?: number | null;
+  goalsFor?: number | null;
+  goalsAgainst?: number | null;
+  goalDiff?: number | null;
+  form: string[];
+}
+
+export interface SportmonksH2HItem {
+  date: string;
+  home: string;
+  away: string;
+  scoreHome: number;
+  scoreAway: number;
+  result?: string;
+  league?: string;
+}
+
+export interface SportmonksPredictionHighlight {
+  key: string;
+  label: string;
+  values?: Record<string, number | null>;
+  scores?: { score: string; probability: number | null }[];
+}
+
+export interface SportmonksMarketSelection {
+  label: string;
+  price?: number | null;
+  probability?: number | null;
+}
+
+export interface SportmonksMarketBoard {
+  key: string;
+  name: string;
+  bookmaker: string;
+  line: string;
+  selections: SportmonksMarketSelection[];
+}
+
+export interface SportmonksIntelData {
+  fixtureId?: number | null;
+  league: string;
+  venue?: { name: string; city: string; capacity?: number | null; surface?: string } | null;
+  weather?: {
+    description: string;
+    temperature?: Record<string, number | null>;
+    feelsLike?: Record<string, number | null>;
+    wind?: Record<string, number | null>;
+    humidity?: string | null;
+    clouds?: string | null;
+  } | null;
+  coaches?: { home?: { name: string }; away?: { name: string } };
+  referees?: { main?: { name: string; role?: string }; crewCount?: number };
+  formations?: { home?: string; away?: string };
+  lineups?: { home?: SportmonksLineupSide; away?: SportmonksLineupSide };
+  sidelined?: { playerName: string; side: string; typeLabel: string }[];
+  standings?: { home?: SportmonksStandingRow; away?: SportmonksStandingRow };
+  h2h?: SportmonksH2HItem[];
+  recent?: { home: string[]; away: string[] };
+  predictionHighlights?: SportmonksPredictionHighlight[];
+  marketBoard?: SportmonksMarketBoard[];
+  matchFacts?: { typeName: string; text: string }[];
+  expectedLineups?: number;
+  prematchNews?: { title: string; text: string }[];
+  postmatch?: {
+    scoreHome: number | null;
+    scoreAway: number | null;
+    xgHome: number | null;
+    xgAway: number | null;
+    goals: { minute?: number | null; player: string; side: string; result: string }[];
+    capturedAt?: string | null;
+  } | null;
+  capturedAt?: string | null;
+}
+
 export interface ProbabilityCompareData {
   sp: ProbabilityTriple | null;
   model: ProbabilityTriple | null;
@@ -218,6 +314,7 @@ export interface VerdictDetail extends VerdictSummary {
   tradeDate: string;
   probabilityCompare?: ProbabilityCompareData | null;
   aiResearch?: AIResearchData | null;
+  sportmonksIntel?: SportmonksIntelData | null;
   gatesDetail: Partial<Record<GateKey, GateDetail>>;
   evidence: EvidenceItem[];
   dataCutoff: string;

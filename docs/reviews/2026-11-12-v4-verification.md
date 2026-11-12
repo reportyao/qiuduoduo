@@ -8,13 +8,13 @@
 
 | 项 | 命令 | 结果 |
 |---|---|---|
-| 后端 | `cd jieqiu-backend && python -m pytest -q` | **345 passed**（1309 warnings，主要为 NumPy/Pandas 弃用告警） |
-| 前端 | `cd apps/mobile && corepack pnpm test -- --run` | **51 passed / 14 files** |
+| 后端 | `cd jieqiu-backend && python -m pytest -q` | **349 passed**（1309 warnings，主要为 NumPy/Pandas 弃用告警） |
+| 前端 | `cd apps/mobile && corepack pnpm test -- --run` | **53 passed / 15 files** |
 | 类型 | `corepack pnpm typecheck` | 通过 |
 | Lint | `corepack pnpm lint` | 通过 |
 | Bundle | `corepack pnpm exec expo export --platform android --output-dir .export-check --clear` | 通过（Metro + Hermes） |
 | OpenAPI | 读取 `packages/api-client/openapi.json` | **158 路径 / 174 方法** |
-| 迁移 | `alembic heads` / 迁移文件 | 单一 head `20261112_23`，up/down 成对 |
+| 迁移 | `alembic heads` / 迁移文件 | 单一 head `20261112_24`，up/down 成对 |
 
 后端新增测试重点：
 
@@ -96,11 +96,17 @@
 | 首页聚焦卡不在对话流里、返回/重开丢历史 | 选中比赛后由助理在对话末尾追加比赛页卡；按用户+竞彩日写入 AsyncStorage，返回/重开恢复今日对话；长页卡按顶部对齐滚动 |
 | 底部输入框过大常驻 | 默认收起为右下角圆形图标，点击展开输入条，可收起；发送后保持展开便于连续追问 |
 | 详情页把 Sportmonks 模型标成“模型影子” | 概率对比与详情徽章显示“Sportmonks 模型/预测”，并保留未验证状态 |
+| 聚焦页显示“首发/伤停未接入、积分榜未同步” | 新增 `sportmonks_fixture_intel/predictions/markets`；首发/阵型/伤停/积分榜/H2H/天气/裁判/教练/多市场预测落库并接入 Focus |
+| 详情页缺少阵容、积分榜、环境、预测参考 | 新增 `SportmonksIntelSection`：首发与阵型、积分榜与近况、场地与环境、Sportmonks 预测参考、赛前动态、赛后复盘 |
+| AI 情报只有 H2H 摘要 | AIResearch fact pack 扩展为首发/伤停/积分榜/场地天气/裁判/多市场预测；focus facts 17 条、unknowns 清空 |
+| HeaderMetrics 把 5/7 配置当实际数据 | 改为“5 盘口 · N 预测 · N 场首发”，数据来自 pulse；数据状态页增加 Sportmonks 阵容/积分榜/环境源 |
+| 后台矩阵缺少阵容/积分榜覆盖 | 增加 `with_lineups/with_standings/with_predictions` 与逐场阵容、阵型、积分榜、天气、伤停、预测列 |
+| 赛后只有比分，没有 xG/事件 | 赛果回填后同步 `xGFixture/events` 到 intel payload 的 `postmatch`，详情页可展示比分、xG、进球时间线 |
 
 ## 5. 明确未完成
 
 - 真实支付/订单/回调；会员只能后台手动开通。
-- 多盘口完整数据：计划与 HeaderMetrics 的“5 盘口”目前是配置展示，实际计划只处理 1X2/让球。
+- 多盘口完整数据：计划仍只处理 1X2/让球；HeaderMetrics 已改为真实预测维度/首发覆盖，大小球/BTTS/半全场/正确比分只做情报展示，未进入计划或付费区。
 - 计划自训练模型：只有 `feature_snapshots/model_registry/training_runs` 脚手架。
 - 计划更新提醒/收藏；不做跟单/自动记注/代购。
 - 生产 Postgres 切库、备份/PITR 恢复演练。

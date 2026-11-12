@@ -116,6 +116,9 @@ export interface EngineStatus {
   today_data_points: number;
   markets_monitored: number;
   models_reviewing: number;
+  sportmonks_prediction_types?: number;
+  sportmonks_lineups?: number;
+  sportmonks_intel?: number;
   as_of: string;
 }
 

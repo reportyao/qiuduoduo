@@ -18,7 +18,8 @@ from sqlalchemy.orm import Session
 from ...config import get_settings
 from ...models import (AIResearch, ApiFootballFixture, Bet, IntlOdds, MatchInjury,
                        MatchLineup, MatchResult, ModelRun, SPMatch, SPSnapshot,
-                       SportmonksMatchData, TeamStanding, User, Verdict,
+                       SportmonksFixtureIntel, SportmonksMatchData,
+                       SportmonksPrediction, TeamStanding, User, Verdict,
                        VerdictRevision, WatchTarget)
 from ...modules.intel_research import effective_status
 from ...modules.intl_odds import sources_for_match
@@ -255,17 +256,34 @@ def _coverage(db: Session, match: SPMatch, date: str, v: Verdict | None,
     market_age = min([age for age in (market_age, sm_age) if age is not None],
                      default=None)
     fixt = _af_fixture(db, match.match_id)
+    sm_intel = db.get(SportmonksFixtureIntel, match.match_id)
+    sm_payload = (sm_intel.payload or {}) if sm_intel else {}
+    sm_lineups = sm_payload.get("lineups") or {}
+    sm_lineup_ok = bool(
+        ((sm_lineups.get("home") or {}).get("starters")
+         and (sm_lineups.get("away") or {}).get("starters")))
+    sm_intel_age = _age_utc(sm_intel.captured_at.isoformat(), now) if sm_intel else None
+    sm_lineup_ok = sm_lineup_ok and sm_intel_age is not None and sm_intel_age <= 6 * 3600
+    sm_standings = sm_payload.get("standings") or {}
+    sm_standings_ok = bool(sm_standings.get("home") and sm_standings.get("away"))
+    sm_standings_ok = (sm_standings_ok and sm_intel_age is not None
+                       and sm_intel_age <= 24 * 3600)
+
     lineups = _lineups(db, match.match_id)
     lineups_ok = len({r.side for r in lineups if r.starters and r.side in ("home", "away")}) == 2
     lineup_age = min((_age_utc(r.synced_at.isoformat(), now) for r in lineups
                       if r.synced_at is not None), default=None)
     lineups_ok = lineups_ok and lineup_age is not None and lineup_age <= 6 * 3600
+    lineups_present = bool(lineups) or sm_lineup_ok
+    lineups_ok = lineups_ok or sm_lineup_ok
     standings = _standings(db, fixt)
     standings_ids = {r.team_id for r in standings}
     standings_ok = bool(fixt and {fixt.home_team_id, fixt.away_team_id}.issubset(standings_ids))
     standings_age = min((_age_utc(r.synced_at.isoformat(), now) for r in standings
                          if r.synced_at is not None), default=None)
     standings_ok = standings_ok and standings_age is not None and standings_age <= 24 * 3600
+    standings_present = bool(standings) or sm_standings_ok
+    standings_ok = standings_ok or sm_standings_ok
     score = (25 if price_ok else 0) + (20 if market_ok else 0) +             (25 if model_ok else 0) + (10 if schedule_ok else 0) +             (15 if lineups_ok else 0) + (5 if standings_ok else 0)
     missing = []
     if not price_ok:
@@ -287,6 +305,7 @@ def _coverage(db: Session, match: SPMatch, date: str, v: Verdict | None,
     deep = (price_ok and market_ok and model_ok and score >= 70
             and minutes is not None and minutes >= 30
             and (lineups_ok or (hours is not None and hours >= 12)))
+    sm_sync = sm_intel.captured_at.isoformat() if sm_intel and sm_intel.captured_at else None
     sources = [
         {"key": "price",
          "status": "ok" if price_ok else "stale" if price_present else "missing",
@@ -299,17 +318,25 @@ def _coverage(db: Session, match: SPMatch, date: str, v: Verdict | None,
         {"key": "model", "status": "ok" if model_ok else "missing",
          "last_sync": None, "coverage": 1.0 if model_ok else 0.0},
         {"key": "lineups",
-         "status": "ok" if lineups_ok else "stale" if lineups else "missing",
-         "last_sync": max((r.synced_at.isoformat() for r in lineups
-                           if r.synced_at is not None), default=None),
+         "status": "ok" if lineups_ok else "stale" if lineups_present else "missing",
+         "last_sync": max(
+             [value for value in
+              [sm_sync] + [r.synced_at.isoformat() for r in lineups
+                           if r.synced_at is not None] if value], default=None),
          "coverage": 1.0 if lineups_ok else 0.0},
         {"key": "schedule", "status": "ok" if schedule_ok else "missing",
          "last_sync": match.kickoff, "coverage": 1.0 if schedule_ok else 0.0},
         {"key": "standings",
-         "status": "ok" if standings_ok else "stale" if standings else "missing",
-         "last_sync": max((r.synced_at.isoformat() for r in standings
-                           if r.synced_at is not None), default=None),
+         "status": "ok" if standings_ok else "stale" if standings_present else "missing",
+         "last_sync": max(
+             [value for value in
+              [sm_sync] + [r.synced_at.isoformat() for r in standings
+                           if r.synced_at is not None] if value], default=None),
          "coverage": 1.0 if standings_ok else 0.0},
+        {"key": "sportmonks_intel",
+         "status": "ok" if sm_intel else "missing",
+         "last_sync": sm_sync,
+         "coverage": 1.0 if sm_intel else 0.0},
     ]
     return {"score": score, "level": level, "deep_eligible": deep,
             "missing": missing, "sources": sources,
@@ -330,6 +357,11 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
             "confidence": 1.0,
         })
     sm = db.get(SportmonksMatchData, match.match_id)
+    sm_intel = db.get(SportmonksFixtureIntel, match.match_id)
+    sm_payload = (sm_intel.payload or {}) if sm_intel else {}
+    sm_lineups = sm_payload.get("lineups") or {}
+    sm_standings = sm_payload.get("standings") or {}
+    sm_sidelined = sm_payload.get("sidelined")
     if sm is not None and sm.odds and market_is_fresh(sm):
         probs = sm.odds
         facts.append({
@@ -466,10 +498,160 @@ def _facts(db: Session, match: SPMatch, v: Verdict | None, snap: SPSnapshot | No
         })
     else:
         unknowns.append("积分榜未同步")
+    sm_cutoff = sm_intel.captured_at.isoformat() if sm_intel and sm_intel.captured_at else None
+    if not valid_lines:
+        home_line = sm_lineups.get("home") or {}
+        away_line = sm_lineups.get("away") or {}
+        if home_line.get("starters") and away_line.get("starters"):
+            rows = []
+            for side, line in (("home", home_line), ("away", away_line)):
+                names = [p.get("name") for p in (line.get("starters") or [])[:4]
+                         if p.get("name")]
+                rows.append(f"{line.get('team_name') or side}: " + "、".join(names))
+            facts.append({
+                "id": "lineups", "kind": "lineup", "label": "首发",
+                "value": f"{home_line.get('formation') or '—'} / "
+                         f"{away_line.get('formation') or '—'}",
+                "detail": "；".join(rows) or "Sportmonks 首发已同步",
+                "source": "Sportmonks",
+                "captured_at": sm_cutoff, "status": "confirmed", "confidence": 0.9,
+            })
+    if (not injuries and not (fixt and fixt.injuries_synced_at is not None)
+            and sm_sidelined is not None):
+        rows = sm_sidelined or []
+        names = "、".join(f"{row.get('player_name')}（{row.get('type_label')}）"
+                          for row in rows[:6] if row.get("player_name"))
+        facts.append({
+            "id": "injuries", "kind": "injury", "label": "伤停",
+            "value": f"{len(rows)} 人" if rows else "无公开记录",
+            "detail": names or "Sportmonks 当前未返回伤停名单；不代表确认全员健康",
+            "source": "Sportmonks", "captured_at": sm_cutoff,
+            "status": "confirmed", "confidence": 0.85,
+        })
+    if not standings and sm_standings.get("home") and sm_standings.get("away"):
+        parts = []
+        for side in ("home", "away"):
+            row = sm_standings.get(side) or {}
+            parts.append(
+                f"{match.home if side == 'home' else match.away} 第{row.get('position')} · "
+                f"{row.get('points')}分 · {' '.join(row.get('form') or []) or '—'}"
+            )
+        facts.append({
+            "id": "standings", "kind": "standing", "label": "积分榜",
+            "value": " / ".join(parts),
+            "detail": "Sportmonks 小组排名、积分与近况；只作背景",
+            "source": "Sportmonks", "captured_at": sm_cutoff,
+            "status": "confirmed", "confidence": 0.85,
+        })
+    if not h2h["matches"] and sm_payload.get("h2h"):
+        items = [
+            f"{row.get('date')} {row.get('home')} "
+            f"{row.get('score_home')}-{row.get('score_away')} {row.get('away')}"
+            for row in (sm_payload.get("h2h") or [])[:3]
+        ]
+        facts.append({
+            "id": "h2h", "kind": "h2h", "label": "近期交锋",
+            "value": f"{len(sm_payload.get('h2h') or [])} 场",
+            "detail": "；".join(items), "source": "Sportmonks",
+            "captured_at": sm_cutoff, "status": "confirmed", "confidence": 0.8,
+        })
+    if not any(f.get("id", "").startswith("form_") for f in facts):
+        for side in ("home", "away"):
+            form = (sm_standings.get(side) or {}).get("form") or []
+            if form:
+                facts.append({
+                    "id": f"form_{side}", "kind": "form",
+                    "label": f"{match.home if side == 'home' else match.away} 近期",
+                    "value": " ".join(form),
+                    "detail": "Sportmonks 小组赛近况；样本小，只作参考",
+                    "source": "Sportmonks", "captured_at": sm_cutoff,
+                    "status": "confirmed", "confidence": 0.8,
+                })
+    venue = sm_payload.get("venue") or None
+    if venue:
+        facts.append({
+            "id": "venue", "kind": "venue", "label": "场地",
+            "value": f"{venue.get('name') or '—'} · {venue.get('city') or '—'}",
+            "detail": f"容量 {venue.get('capacity') or '—'} · "
+                      f"{venue.get('surface') or '草皮待确认'}",
+            "source": "Sportmonks", "captured_at": sm_cutoff,
+            "status": "confirmed", "confidence": 0.9,
+        })
+    weather = sm_payload.get("weather") or None
+    if weather:
+        temp = (weather.get("temperature") or {}).get("day")
+        wind = (weather.get("wind") or {}).get("speed")
+        facts.append({
+            "id": "weather", "kind": "weather", "label": "天气",
+            "value": f"{weather.get('description') or '—'} · {temp if temp is not None else '—'}°C",
+            "detail": f"体感 {(weather.get('feels_like') or {}).get('day', '—')}°C · "
+                      f"风速 {wind if wind is not None else '—'}",
+            "source": "Sportmonks", "captured_at": sm_cutoff,
+            "status": "confirmed", "confidence": 0.8,
+        })
+    referees = sm_payload.get("referees") or {}
+    if referees.get("main"):
+        main = referees["main"]
+        facts.append({
+            "id": "referee", "kind": "referee", "label": "主裁",
+            "value": main.get("name") or "—",
+            "detail": f"裁判组 {referees.get('crew_count') or 1} 人",
+            "source": "Sportmonks", "captured_at": sm_cutoff,
+            "status": "confirmed", "confidence": 0.8,
+        })
+    coaches = sm_payload.get("coaches") or {}
+    if coaches.get("home") or coaches.get("away"):
+        facts.append({
+            "id": "coaches", "kind": "coach", "label": "主教练",
+            "value": f"{(coaches.get('home') or {}).get('name') or '—'} / "
+                     f"{(coaches.get('away') or {}).get('name') or '—'}",
+            "detail": "双方主教练；只作背景", "source": "Sportmonks",
+            "captured_at": sm_cutoff, "status": "confirmed", "confidence": 0.8,
+        })
+    highlights = (sm_payload.get("prediction_highlights") or {}).get("items") or []
+    wanted = {"BTTS_PROBABILITY", "OVER_UNDER_2_5_PROBABILITY",
+              "DOUBLE_CHANCE_PROBABILITY", "CORRECT_SCORE_PROBABILITY"}
+    selected_highlights = [item for item in highlights if item.get("key") in wanted]
+    for item in selected_highlights[:4]:
+        key = item.get("key") or ""
+        values = item.get("values") or {}
+        if key == "BTTS_PROBABILITY":
+            value = f"是 {values.get('yes', '—')}% / 否 {values.get('no', '—')}%"
+        elif key == "OVER_UNDER_2_5_PROBABILITY":
+            value = f"大 {values.get('yes', '—')}% / 小 {values.get('no', '—')}%"
+        elif key == "DOUBLE_CHANCE_PROBABILITY":
+            value = (f"主或平 {values.get('draw_home', '—')}% / "
+                     f"平或客 {values.get('draw_away', '—')}% / "
+                     f"主或客 {values.get('home_away', '—')}%")
+        elif key == "CORRECT_SCORE_PROBABILITY":
+            value = " · ".join(
+                f"{row.get('score')} {row.get('probability')}%"
+                for row in (item.get("scores") or [])[:3]
+            )
+        else:
+            value = " / ".join(f"{k} {v}" for k, v in values.items() if v is not None)
+        if value:
+            facts.append({
+                "id": f"sm_{key.lower()}", "kind": "prediction",
+                "label": item.get("label") or "Sportmonks 预测",
+                "value": value,
+                "detail": "第三方预测参考，不参与价/市/模三闸",
+                "source": "Sportmonks 预测", "captured_at": sm_cutoff,
+                "status": "confirmed", "confidence": 0.7,
+            })
     if v is None or not v.pick:
         unknowns.append("模型未覆盖或未给出方向")
     if not intl:
-        unknowns.append("国际盘未覆盖")
+        if sm is not None and sm.odds:
+            unknowns = [item for item in unknowns if item != "国际盘未覆盖"]
+        else:
+            unknowns.append("国际盘未覆盖")
+    if sm_lineups.get("home", {}).get("starters") and sm_lineups.get("away", {}).get("starters"):
+        unknowns = [item for item in unknowns if not item.startswith("首发")]
+    if sm_sidelined is not None:
+        unknowns = [item for item in unknowns if item != "伤停未同步"]
+    if sm_standings.get("home") and sm_standings.get("away"):
+        unknowns = [item for item in unknowns if item != "积分榜未同步"]
     return facts, unknowns
 
 
@@ -568,8 +750,14 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
     ai_rows = list(db.scalars(
         select(AIResearch).where(AIResearch.match_id.in_(ids))
     ).all()) if ids else []
+    sm_intel_rows = list(db.scalars(
+        select(SportmonksFixtureIntel).where(SportmonksFixtureIntel.match_id.in_(ids))
+    ).all()) if ids else []
     sm_ready = [r for r in sm_rows if r.probs and market_is_fresh(r)]
     ai_ready = [r for r in ai_rows if effective_status(r) == "ready"]
+    sm_prediction_types = int(db.scalar(
+        select(func.count(func.distinct(SportmonksPrediction.type_id)))
+        .where(SportmonksPrediction.match_id.in_(ids))) or 0) if ids else 0
     model_runs = list(db.scalars(
         select(ModelRun).where(ModelRun.run_date == d, ModelRun.match_id.in_(ids))
     ).all()) if ids else []
@@ -592,19 +780,38 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
     for row in lineups:
         if row.starters and row.side in ("home", "away"):
             lineup_sides.setdefault(row.match_id, set()).add(row.side)
-    lineup_matches = sum(1 for sides in lineup_sides.values()
-                         if {"home", "away"}.issubset(sides))
+    lineup_ok_matches = {match_id for match_id, sides in lineup_sides.items()
+                         if {"home", "away"}.issubset(sides)}
+    sm_lineup_matches = 0
+    sm_standings_matches = 0
+    for row in sm_intel_rows:
+        payload = row.payload or {}
+        line = payload.get("lineups") or {}
+        if ((line.get("home") or {}).get("starters")
+                and (line.get("away") or {}).get("starters")):
+            sm_lineup_matches += 1
+            lineup_ok_matches.add(row.match_id)
+        table = payload.get("standings") or {}
+        if table.get("home") and table.get("away"):
+            sm_standings_matches += 1
+    lineup_matches = len(lineup_ok_matches)
     lineup_age = min((_age_utc(r.synced_at.isoformat(), now) for r in lineups
                       if r.synced_at is not None), default=None)
     standings_age = min((_age_utc(r.synced_at.isoformat(), now) for r in standing_rows
                          if r.synced_at is not None), default=None)
     linked_count = len({f.match_id for f in linked_fixtures if f.match_id})
-    lineup_status = ("missing" if not lineups else
-                     "stale" if lineup_age is None or lineup_age > 6 * 3600 else
+    sm_intel_age = min((_age_utc(r.captured_at.isoformat(), now)
+                        for r in sm_intel_rows if r.captured_at is not None),
+                       default=None)
+    lineup_status = ("missing" if not lineups and not sm_lineup_matches else
+                     "stale" if (lineup_age is None or lineup_age > 6 * 3600)
+                     and (sm_intel_age is None or sm_intel_age > 6 * 3600) else
                      "ok" if matches and lineup_matches >= len(matches) else "partial")
-    standings_status = ("missing" if not standing_rows else
-                        "stale" if standings_age is None or standings_age > 24 * 3600 else
-                        "ok" if linked_count and len(standing_rows) >= linked_count * 2
+    standings_status = ("missing" if not standing_rows and not sm_standings_matches else
+                        "stale" if (standings_age is None or standings_age > 24 * 3600)
+                        and (sm_intel_age is None or sm_intel_age > 24 * 3600) else
+                        "ok" if matches and (len(standing_rows) >= linked_count * 2
+                                             or sm_standings_matches >= len(matches))
                         else "partial")
     model_matches = {r.match_id for r in model_runs
                      if r.gate == "model" and r.result != "pending_data"}
@@ -619,7 +826,7 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
     raw_points = (len(snapshots) * 3 + len(intl) * 3 + len(model_runs)
                   + len(sm_ready) * 3 + len(ai_ready)
                   + evidence_count + len(lineups) + len(injuries)
-                  + len(standing_rows))
+                  + len(standing_rows) + len(sm_intel_rows) * 2)
     last_snaps = max((s.captured_at for s in snapshots), default=None)
     last_intl = max((r.retrieved_at for r in intl), default=None)
     stale = None
@@ -672,8 +879,10 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
          "coverage": (len(model_matches) / len(matches)) if matches else 0.0},
         {"key": "lineups", "label": "阵容/伤停",
          "status": lineup_status,
-         "last_sync": max((r.synced_at.isoformat() for r in lineups
-                           if r.synced_at is not None), default=None),
+         "last_sync": max(
+             [r.synced_at.isoformat() for r in lineups if r.synced_at is not None]
+             + [r.captured_at.isoformat() for r in sm_intel_rows
+                if r.captured_at is not None], default=None),
          "coverage": (lineup_matches / len(matches)) if matches else 0.0},
         {"key": "schedule", "label": "赛程", "status": "ok" if matches else "missing",
          "last_sync": None, "coverage": 1.0 if matches else 0.0},
@@ -681,9 +890,20 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
          "last_sync": None, "coverage": 1.0 if results_count else 0.0},
         {"key": "standings", "label": "积分榜",
          "status": standings_status,
-         "last_sync": max((r.synced_at.isoformat() for r in standing_rows
-                           if r.synced_at is not None), default=None),
-         "coverage": min(1.0, len(standing_rows) / (linked_count * 2)) if linked_count else 0.0},
+         "last_sync": max(
+             [r.synced_at.isoformat() for r in standing_rows
+              if r.synced_at is not None]
+             + [r.captured_at.isoformat() for r in sm_intel_rows
+                if r.captured_at is not None], default=None),
+         "coverage": (min(1.0, len(standing_rows) / (linked_count * 2))
+                      if linked_count else 0.0) or (
+             (sm_standings_matches / len(matches)) if matches else 0.0)},
+        {"key": "sportmonks_intel", "label": "Sportmonks 阵容/积分榜/环境",
+         "status": "ok" if matches and len(sm_intel_rows) >= len(matches) else
+                   "partial" if sm_intel_rows else "missing",
+         "last_sync": max((r.captured_at.isoformat() for r in sm_intel_rows
+                           if r.captured_at is not None), default=None),
+         "coverage": (len(sm_intel_rows) / len(matches)) if matches else 0.0},
     ]
     result = {
         "trade_date": d, "as_of": now.isoformat(timespec="seconds"),
@@ -694,7 +914,11 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
                    "intel_items": evidence_count + len(lineups) + len(injuries) + len(standing_rows),
                    "sportmonks": len(sm_ready), "ai_intel": len(ai_ready),
                    "sealed_links": len(sealed), "lineups": len(lineups),
-                   "injuries": len(injuries), "standings": len(standing_rows)},
+                   "injuries": len(injuries), "standings": len(standing_rows),
+                   "sportmonks_intel": len(sm_intel_rows),
+                   "sportmonks_lineups": sm_lineup_matches,
+                   "sportmonks_standings": sm_standings_matches,
+                   "sportmonks_prediction_types": sm_prediction_types},
         "data_points": raw_points,
         "display": {"data_points": int(round(raw_points * factor)), "factor": factor, "unit": "数据点"},
         "all_time": {"data_points": all_points,
@@ -716,7 +940,7 @@ def build_pulse(db: Session, date: str | None = None) -> dict:
              "status": "ok" if sealed else "missing"},
         ],
         "sources": sources, "outcomes": outcomes, "excluded": outcomes["killed"],
-        "definition": "data_points = sp_snapshots*3 + intl_odds*3 + sm_ready*3 + ai_ready + model_runs + intel_items; "
+        "definition": "data_points = sp_snapshots*3 + intl_odds*3 + sm_ready*3 + ai_ready + model_runs + intel_items + sportmonks_intel*2; "
                       "display = data_points × factor；不乘场次/封存/准确率",
     }
     if use_cache:
@@ -755,6 +979,7 @@ def build_focus(db: Session, match_id: str, date: str | None = None,
     intl = sources_for_match(db, match)
     facts, unknowns = _facts(db, match, v, snap, intl, now)
     coverage = _coverage(db, match, d, v, snap, intl, now)
+    sm_intel = db.get(SportmonksFixtureIntel, match_id)
     watch = bool(user and db.scalar(select(WatchTarget).where(
         WatchTarget.user_id == user.id, WatchTarget.target_type == "match",
         WatchTarget.target_id == match_id)))
@@ -779,7 +1004,8 @@ def build_focus(db: Session, match_id: str, date: str | None = None,
                  "sealed_at": v.sealed_at.isoformat() if v and v.sealed_at else None,
                  "revision": int(revisions)},
         "coverage": coverage,
-        "intel": {"facts": facts, "unknowns": unknowns},
+        "intel": {"facts": facts, "unknowns": unknowns,
+                  "sportmonks": (sm_intel.payload or {}) if sm_intel else None},
         "interpretation": None,
         "capabilities": caps,
         "actions": actions,

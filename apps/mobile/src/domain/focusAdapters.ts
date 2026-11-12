@@ -1,4 +1,6 @@
 import { array, nullableNumber, nullableString, record, string } from "@/lib/parse";
+import type { SportmonksIntelData } from "./types";
+import { adaptSportmonksIntel } from "./sportmonksAdapters";
 
 export interface FocusCoverageSource {
   key: string;
@@ -68,6 +70,7 @@ export interface MatchFocus {
   capabilities: FocusCapabilities;
   actions: FocusAction[];
   verdictId: string | null;
+  sportmonks?: SportmonksIntelData | null;
 }
 
 export interface PulseCounts {
@@ -82,6 +85,10 @@ export interface PulseCounts {
   lineups: number;
   injuries: number;
   standings: number;
+  sportmonksIntel?: number;
+  sportmonksLineups?: number;
+  sportmonksStandings?: number;
+  sportmonksPredictionTypes?: number;
 }
 
 export interface PulseSource {
@@ -189,6 +196,7 @@ export function adaptFocus(value: unknown): MatchFocus | null {
       };
     }),
     verdictId: nullableString(record(raw.verdict).id),
+    sportmonks: adaptSportmonksIntel(record(raw.intel).sportmonks),
   };
 }
 
@@ -214,6 +222,10 @@ export function adaptPulse(value: unknown): Pulse {
       lineups: Number(counts.lineups ?? 0),
       injuries: Number(counts.injuries ?? 0),
       standings: Number(counts.standings ?? 0),
+      sportmonksIntel: Number(counts.sportmonks_intel ?? 0),
+      sportmonksLineups: Number(counts.sportmonks_lineups ?? 0),
+      sportmonksStandings: Number(counts.sportmonks_standings ?? 0),
+      sportmonksPredictionTypes: Number(counts.sportmonks_prediction_types ?? 0),
     },
     dataPoints: Number(raw.data_points ?? 0),
     display: {

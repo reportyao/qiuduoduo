@@ -166,6 +166,65 @@ class SportmonksMatchData(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
+class SportmonksFixtureIntel(Base):
+    """Sportmonks 单场结构化情报：阵容/阵型/伤停/积分榜/H2H/场地/天气/裁判。
+
+    payload 只存展示所需字段，不重复存全量赔率；保留 captured_at 供前端
+    标注“已公布/预计”和数据新鲜度，避免把旧阵容当最终名单。
+    """
+
+    __tablename__ = "sportmonks_fixture_intel"
+
+    match_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    fixture_id: Mapped[int] = mapped_column(Integer, index=True)
+    league: Mapped[str] = mapped_column(String(128), default="")
+    home_name: Mapped[str] = mapped_column(String(128), default="")
+    away_name: Mapped[str] = mapped_column(String(128), default="")
+    kickoff_utc: Mapped[str] = mapped_column(String(32), default="")
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    captured_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    data_cutoff: Mapped[str] = mapped_column(String(32), default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class SportmonksPrediction(Base):
+    """Sportmonks 的 28 维赛前预测；按 match_id + type_id 覆盖更新。"""
+
+    __tablename__ = "sportmonks_predictions"
+    __table_args__ = (
+        UniqueConstraint("match_id", "type_id", name="uq_sm_prediction_match_type"),
+        Index("ix_sm_predictions_match", "match_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    match_id: Mapped[str] = mapped_column(String(32))
+    type_id: Mapped[int] = mapped_column(Integer)
+    type_code: Mapped[str] = mapped_column(String(64), default="")
+    type_name: Mapped[str] = mapped_column(String(128), default="")
+    probabilities: Mapped[dict] = mapped_column(JSON, default=dict)
+    captured_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class SportmonksMarket(Base):
+    """Sportmonks 选定市场快照（1X2/亚盘/大小球等），供前端展示市场参考。"""
+
+    __tablename__ = "sportmonks_markets"
+    __table_args__ = (
+        UniqueConstraint("match_id", "market_key", name="uq_sm_market_match_key"),
+        Index("ix_sm_markets_match", "match_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    match_id: Mapped[str] = mapped_column(String(32))
+    market_key: Mapped[str] = mapped_column(String(32))
+    market_name: Mapped[str] = mapped_column(String(64), default="")
+    bookmaker: Mapped[str] = mapped_column(String(32), default="")
+    line: Mapped[str] = mapped_column(String(16), default="")
+    selections: Mapped[list] = mapped_column(JSON, default=list)
+    captured_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
 class AIResearch(Base):
     """单场 AI 情报：Sportmonks 结构化事实 + LLM 中文摘要。"""
 

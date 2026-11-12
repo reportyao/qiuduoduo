@@ -218,8 +218,27 @@ sportmonks_odds_snapshot         # 只存选定市场
 - 当前 6 场已经具备把覆盖率从 55 提升到约 75、解锁 `deep_eligible` 和 AI 单场解读的条件；这也是对用户感知提升最大的一步。
 - 多市场赔率/预测是第二步，先展示、再复核、最后才考虑进入计划或付费区。
 
-## 10. 审查边界
+## 10. 本轮实施状态（2026-11-12 17:00 CST）
 
-- 本审查未修改运行代码、未新增表、未改 API。
+P0/P1/P2 基础已落地，不再只是方案：
+
+- **新增表**：`sportmonks_fixture_intel`、`sportmonks_predictions`、`sportmonks_markets`；Alembic head `20261112_24`。
+- **同步**：`_sync_match()` 自动同步 fixture 情报、25+ 维预测、选定市场；生产 6/6 场已落库。
+- **Focus**：`coverage` 从 55 提升到 100（价格新鲜时），`deep_eligible=true`；facts 从 3 条扩展到 17 条，unknowns 清空。
+- **AI 情报**：AIResearch 已包含首发/阵型、伤停姓名、积分榜、场地天气、裁判、H2H、多市场预测参考。
+- **前端**：详情页新增 `首发与阵型`、`积分榜与近况`、`场地与环境`、`Sportmonks 预测参考`、`赛前动态`、`赛后复盘`（有数据时）；FocusPanel 默认展示核心三关 + 2 条情报，可展开全部。
+- **HeaderMetrics**：显示真实 `预测维度` 与 `场首发`，不再把 5/7 配置当作全部数据。
+- **后台**：数据页与 Sportmonks 矩阵增加到 `with_lineups`、`with_standings`、`with_predictions`、逐场阵容/积分榜/预测列。
+- **测试**：后端 349 passed；前端 53 passed / 15 files；typecheck/lint/Android bundle 通过。
+
+仍未做/边界：
+
+- TV stations 只保留在接口层，未做地区筛选与展示（低优先级）。
+- `expectedLineups/prematchNews/xGFixture/pressure/trends/statistics/events` 赛前经常为空；赛后 xG/进球时间线已能落 `postmatch`，但尚未做完整统计图。
+- Sportmonks 预测/赔率仍是第三方参考，未复核进入付费计划；结算规则与 Max 权益展示需产品确认。
+
+## 11. 审查边界
+
+- 本轮审查后已改运行代码、新增表、改 API/前端；上节为实际落地状态。
 - `expectedLineups/prematchNews/xGFixture/pressure/trends/statistics/events` 在赛前为空，不能按“已有数据”宣传。
 - Sportmonks 预测/赔率的最终商用边界、结算规则、Max 权益展示仍需产品/合规确认。

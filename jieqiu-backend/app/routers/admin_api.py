@@ -30,7 +30,8 @@ from ..models import (AIResearch, AdminAudit, AdminUser, CollectorStatus,
                       DecisionSnapshot, EngineConfig, InteractionEvent, LeagueModelConfig, LLMProfile,
                       Notification, PersonaLLMModel, PlanCycle, PushToken,
                       RecommendationEvent, RecommendationPlan, ReviewRun,
-                      SPMatch, SPSnapshot, SportmonksMatchData, User,
+                      SPMatch, SPSnapshot, SportmonksFixtureIntel,
+                      SportmonksMatchData, SportmonksPrediction, User,
                       UserMembership, Verdict)
 from ..modules import (admin_auth, api_football, engine, llm_gateway, membership,
                        ops, persona_llm, persona_registry, plan_service, supply)
@@ -1347,6 +1348,27 @@ def _sportmonks_status(db: Session, date: str) -> dict:
                for m in matches if m.match_id not in rows]
     latest = max((r.captured_at for r in rows.values() if r.captured_at), default=None)
     covered = [rows[m.match_id] for m in matches if m.match_id in rows]
+    ids = [m.match_id for m in matches]
+    intel_rows = {row.match_id: row for row in db.scalars(
+        select(SportmonksFixtureIntel).where(
+            SportmonksFixtureIntel.match_id.in_(ids))).all()} if ids else {}
+    pred_counts = dict(db.execute(
+        select(SportmonksPrediction.match_id, func.count())
+        .where(SportmonksPrediction.match_id.in_(ids))
+        .group_by(SportmonksPrediction.match_id)
+    ).all()) if ids else {}
+    with_lineups = sum(
+        1 for row in intel_rows.values()
+        if (((row.payload or {}).get("lineups") or {}).get("home") or {}).get("starters")
+        and (((row.payload or {}).get("lineups") or {}).get("away") or {}).get("starters")
+    )
+    with_standings = sum(
+        1 for row in intel_rows.values()
+        if ((row.payload or {}).get("standings") or {}).get("home")
+        and ((row.payload or {}).get("standings") or {}).get("away")
+    )
+    with_weather = sum(
+        1 for row in intel_rows.values() if (row.payload or {}).get("weather"))
     return {
         "configured": bool(get_settings().sportmonks_token),
         "matches": len(matches),
@@ -1355,7 +1377,15 @@ def _sportmonks_status(db: Session, date: str) -> dict:
         "missing_count": len(missing),
         "with_odds": sum(1 for r in covered if r.odds),
         "with_probs": sum(1 for r in covered if r.probs),
+        "with_intel": len(intel_rows),
+        "with_lineups": with_lineups,
+        "with_standings": with_standings,
+        "with_weather": with_weather,
+        "with_predictions": sum(1 for count in pred_counts.values() if count),
         "latest": latest.isoformat() if latest else None,
+        "intel_latest": max(
+            (r.captured_at for r in intel_rows.values() if r.captured_at),
+            default=None).isoformat() if intel_rows else None,
     }
 
 
@@ -1393,6 +1423,14 @@ def admin_sm_matrix(date: str | None = None,
         select(SportmonksMatchData).where(SportmonksMatchData.match_id.in_(ids))).all()} if ids else {}
     intel_rows = {r.match_id: r for r in db.scalars(
         select(AIResearch).where(AIResearch.match_id.in_(ids))).all()} if ids else {}
+    detailed_rows = {r.match_id: r for r in db.scalars(
+        select(SportmonksFixtureIntel).where(
+            SportmonksFixtureIntel.match_id.in_(ids))).all()} if ids else {}
+    pred_counts = dict(db.execute(
+        select(SportmonksPrediction.match_id, func.count())
+        .where(SportmonksPrediction.match_id.in_(ids))
+        .group_by(SportmonksPrediction.match_id)
+    ).all()) if ids else {}
     verdict_rows = db.scalars(select(Verdict).where(Verdict.match_id.in_(ids))
                               .order_by(Verdict.created_at.desc())).all() if ids else []
     verdicts: dict[str, Verdict] = {}
@@ -1403,6 +1441,10 @@ def admin_sm_matrix(date: str | None = None,
     for match in matches:
         sm = sm_rows.get(match.match_id)
         intel = intel_rows.get(match.match_id)
+        detailed = detailed_rows.get(match.match_id)
+        payload = (detailed.payload or {}) if detailed else {}
+        lineups = payload.get("lineups") or {}
+        table = payload.get("standings") or {}
         verdict = verdicts.get(match.match_id)
         rows.append({
             "match_id": match.match_id,
@@ -1428,6 +1470,20 @@ def admin_sm_matrix(date: str | None = None,
                 "headline": intel.headline if intel else "",
                 "captured_at": _iso(intel.captured_at) if intel else None,
             },
+            "sportmonks": {
+                "captured_at": _iso(detailed.captured_at) if detailed else None,
+                "lineups": bool((lineups.get("home") or {}).get("starters")
+                                and (lineups.get("away") or {}).get("starters")),
+                "formation_home": (lineups.get("home") or {}).get("formation") or "",
+                "formation_away": (lineups.get("away") or {}).get("formation") or "",
+                "starters": sum(len((lineups.get(side) or {}).get("starters") or [])
+                                for side in ("home", "away")),
+                "standings": bool(table.get("home") and table.get("away")),
+                "weather": bool(payload.get("weather")),
+                "referees": bool((payload.get("referees") or {}).get("main")),
+                "sidelined": len(payload.get("sidelined") or []),
+                "predictions": pred_counts.get(match.match_id, 0),
+            },
             "verdict": {
                 "id": verdict.id, "status": verdict.status,
                 "tier": verdict.tier,
@@ -1447,6 +1503,9 @@ def admin_sm_matrix(date: str | None = None,
             "missing": sum(1 for r in rows if not r["mapped"]),
             "with_probs": sum(1 for r in rows if r["probs"]),
             "with_odds": sum(1 for r in rows if r["odds"]),
+            "with_lineups": sum(1 for r in rows if r["sportmonks"]["lineups"]),
+            "with_standings": sum(1 for r in rows if r["sportmonks"]["standings"]),
+            "with_predictions": sum(1 for r in rows if r["sportmonks"]["predictions"]),
             "intel_ready": sum(1 for r in rows if r["intel"]["status"] == "ready"),
             "promoted": sum(1 for r in rows if r["verdict"] and r["verdict"]["status"] == "promoted"),
             "tiers": {

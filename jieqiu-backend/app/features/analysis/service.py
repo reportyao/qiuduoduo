@@ -19,13 +19,14 @@ from ...modules import llm_gateway
 from ...modules.compliance import scan_text
 from ..intel import service as intel_service
 
-PROMPT_VER = "match-analysis-v1"
+PROMPT_VER = "match-analysis-v2-sportmonks-intel"
 _TTL_HOURS = 6
-_MAX_FACTS = 14
+_MAX_FACTS = 24
 
 _SYSTEM = (
     "你是球多多赛前数据解读助手。只根据用户给出的 fact pack 解释这场："
-    "方向、成立条件、主要风险、失效条件和数据缺口。"
+    "方向、成立条件、主要风险、失效条件和数据缺口；可解释阵容/伤停、积分榜、"
+    "场地天气、裁判、交锋与 Sportmonks 多市场预测，但必须标明哪些是第三方预测参考。"
     "不得改写概率或方向，不得新增 fact pack 里没有的数字，不得承诺收益，"
     "不得使用任何绝对化、承诺性话术。事实不足就直说。"
     "只输出 JSON，不要 Markdown。"

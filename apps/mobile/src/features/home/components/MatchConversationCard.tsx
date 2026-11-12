@@ -42,6 +42,11 @@ export const MatchConversationCard = memo(function MatchConversationCard({
     && verdict.tier !== "market_reference");
   const accent = dark ? colors.greenAccent : colors.green;
   const sub = dark ? colors.mutedInverse : colors.muted;
+  const sm = focusData?.sportmonks;
+  const homeFormation = sm?.lineups?.home?.formation;
+  const awayFormation = sm?.lineups?.away?.formation;
+  const homePosition = sm?.standings?.home?.position;
+  const awayPosition = sm?.standings?.away?.position;
   const head = (
     <View style={styles.head}>
       <View style={styles.headRow}>
@@ -58,6 +63,23 @@ export const MatchConversationCard = memo(function MatchConversationCard({
       {!dark && focusData ? <FocusPanel focus={focusData} loading={focusLoading} /> : null}
       {!dark && focusLoading && !focusData ? (
         <Text variant="caption" color={sub}>正在核对这场的覆盖数据…</Text>
+      ) : null}
+      {dark && sm ? (
+        <View style={styles.darkIntel}>
+          <Text variant="caption" color={accent}>
+            {homeFormation || awayFormation
+              ? `首发 ${homeFormation || "—"} / ${awayFormation || "—"}`
+              : "首发待同步"}
+            {sm.sidelined?.length ? ` · 伤停 ${sm.sidelined.length} 人` : ""}
+          </Text>
+          <Text variant="caption" color={sub} numberOfLines={1}>
+            {homePosition != null && awayPosition != null
+              ? `积分榜 ${homePosition} / ${awayPosition} · `
+              : ""}
+            {sm.weather?.description ? `${sm.weather.description} ` : ""}
+            {sm.referees?.main?.name ? `· 主裁 ${sm.referees.main.name}` : ""}
+          </Text>
+        </View>
       ) : null}
     </View>
   );
@@ -109,6 +131,7 @@ export const MatchConversationCard = memo(function MatchConversationCard({
 const styles = StyleSheet.create({
   head: { gap: spacing.xs, marginBottom: spacing.sm },
   headRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  darkIntel: { gap: 2, marginTop: 2 },
   match: { marginTop: spacing.base },
   pendingText: { marginTop: spacing.sm, lineHeight: 21 },
   actions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.base },

@@ -1,4 +1,10 @@
-import type { EvidenceItem, IntelDimension, IntelReport, VerdictDetail } from "./types";
+import type {
+  EvidenceItem,
+  IntelDimension,
+  IntelReport,
+  SportmonksIntelData,
+  VerdictDetail,
+} from "./types";
 import { array, number, record, string } from "@/lib/parse";
 
 const DIMENSION_RULES: { key: string; label: string; keywords: string[] }[] = [
@@ -40,6 +46,75 @@ function dimensionValue(items: EvidenceItem[]): IntelDimension[] {
   });
 }
 
+function sportmonksDimensions(data?: SportmonksIntelData | null): IntelDimension[] {
+  if (!data) return [];
+  const out: IntelDimension[] = [];
+  const home = data.standings?.home;
+  const away = data.standings?.away;
+  if (home || away) {
+    out.push({
+      key: "motivation",
+      label: "战意",
+      value: `${home?.position ?? "—"} / ${away?.position ?? "—"}`,
+      direction: "flat",
+      note: `积分榜：主队第 ${home?.position ?? "—"}（${home?.points ?? "—"} 分），客队第 ${away?.position ?? "—"}（${away?.points ?? "—"} 分）。只作背景。`,
+      source: "Sportmonks",
+    });
+  }
+  const homeLine = data.lineups?.home;
+  const awayLine = data.lineups?.away;
+  if (homeLine?.starters?.length && awayLine?.starters?.length) {
+    const injured = data.sidelined ?? [];
+    out.push({
+      key: "lineup",
+      label: "阵容",
+      value: "首发已公布",
+      direction: injured.length > 0 ? "down" : "flat",
+      note: `${homeLine.formation || "—"} / ${awayLine.formation || "—"}；${injured.length ? `伤停 ${injured.map((row) => row.playerName).slice(0, 3).join("、")}` : "未返回公开伤停名单"}`,
+      source: "Sportmonks",
+    });
+  }
+  if (data.recent?.home?.length || data.recent?.away?.length) {
+    const homeForm = data.recent?.home ?? [];
+    const awayForm = data.recent?.away ?? [];
+    const wins = [...homeForm, ...awayForm].filter((item) => item === "W").length;
+    const losses = [...homeForm, ...awayForm].filter((item) => item === "L").length;
+    out.push({
+      key: "form",
+      label: "状态",
+      value: `${homeForm.slice(0, 4).join("") || "—"} / ${awayForm.slice(0, 4).join("") || "—"}`,
+      direction: wins > losses ? "up" : losses > wins ? "down" : "flat",
+      note: "Sportmonks 小组赛近况；样本小，只作参考。",
+      source: "Sportmonks",
+    });
+  }
+  const venue = data.venue;
+  const weather = data.weather;
+  const referee = data.referees?.main;
+  if (venue || weather || referee) {
+    const temp = weather?.temperature?.day;
+    out.push({
+      key: "environment",
+      label: "环境",
+      value: weather?.description || referee?.name || venue?.city || "已同步",
+      direction: "flat",
+      note: [
+        venue?.name ? `球场 ${venue.name}${venue.city ? `（${venue.city}）` : ""}` : "",
+        temp != null ? `日间 ${temp}°C` : "",
+        referee?.name ? `主裁 ${referee.name}` : "",
+      ].filter(Boolean).join("；") || "环境数据已同步。",
+      source: "Sportmonks",
+    });
+  }
+  return out;
+}
+
+function mergeDimensions(base: IntelDimension[], extra: IntelDimension[]): IntelDimension[] {
+  const byKey = new Map(base.map((item) => [item.key, item]));
+  for (const item of extra) byKey.set(item.key, item);
+  return [...byKey.values()];
+}
+
 function fromPayload(detail: VerdictDetail): IntelDimension[] | null {
   const intel = record(record(detail.payload).intel);
   const dimensions = array(intel.dimensions);
@@ -68,7 +143,10 @@ function fromPayload(detail: VerdictDetail): IntelDimension[] | null {
  */
 export function buildIntelReport(detail: VerdictDetail): IntelReport {
   const payloadIntel = record(record(detail.payload).intel);
-  const dimensions = fromPayload(detail) ?? dimensionValue(detail.evidence);
+  const dimensions = mergeDimensions(
+    fromPayload(detail) ?? dimensionValue(detail.evidence),
+    sportmonksDimensions(detail.sportmonksIntel),
+  );
   const unPriced = detail.evidence.filter((item) => /未定价|not.?priced/i.test(item.tag)).length;
   const priced = detail.evidence.filter((item) => /已核验|已计入/.test(item.tag)).length;
   const pendingGate = (["market", "model"] as const).find(

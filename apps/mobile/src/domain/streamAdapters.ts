@@ -19,6 +19,7 @@ import type {
   WhyNotResponse,
   YouState,
 } from "./types";
+import { adaptSportmonksIntel } from "./sportmonksAdapters";
 import { utcIso } from "@/lib/format";
 import {
   array,
@@ -312,6 +313,7 @@ export function adaptVerdictDetail(value: unknown): VerdictDetail | null {
     tradeDate: string(raw.trade_date),
     probabilityCompare: probabilityCompare(raw.probability_compare ?? payload.probability_compare),
     aiResearch: aiResearch(raw.ai_research),
+    sportmonksIntel: adaptSportmonksIntel(raw.sportmonks_intel ?? raw.sportmonksIntel),
     gatesDetail: gateDetails(raw.gates),
     evidence: adaptEvidence(payload.evidence),
     dataCutoff: string(payload.data_cutoff ?? raw.data_cutoff),

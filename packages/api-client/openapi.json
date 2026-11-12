@@ -9307,6 +9307,18 @@
             },
             "type": "array",
             "title": "Unknowns"
+          },
+          "sportmonks": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sportmonks"
           }
         },
         "type": "object",
@@ -11453,6 +11465,26 @@
           "standings": {
             "type": "integer",
             "title": "Standings"
+          },
+          "sportmonks_intel": {
+            "type": "integer",
+            "title": "Sportmonks Intel",
+            "default": 0
+          },
+          "sportmonks_lineups": {
+            "type": "integer",
+            "title": "Sportmonks Lineups",
+            "default": 0
+          },
+          "sportmonks_standings": {
+            "type": "integer",
+            "title": "Sportmonks Standings",
+            "default": 0
+          },
+          "sportmonks_prediction_types": {
+            "type": "integer",
+            "title": "Sportmonks Prediction Types",
+            "default": 0
           }
         },
         "type": "object",

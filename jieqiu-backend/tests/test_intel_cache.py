@@ -21,7 +21,7 @@ def test_intel_sync_reuses_cached_summary_when_facts_unchanged(db, monkeypatch):
     facts = {"value": ["曼城近 5 场 4 胜", "曼联两名主力伤停"]}
     calls = []
 
-    def fake_fetch(_fixture_id):
+    def fake_fetch(_fixture_id, *args, **kwargs):
         return list(facts["value"]), 2
 
     def fake_summarize(_db, items, injured):

@@ -11,7 +11,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..models import AIResearch, SPMatch, SportmonksMatchData, utcnow
+from ..models import (AIResearch, SPMatch, SportmonksFixtureIntel,
+                      SportmonksMatchData, utcnow)
 from .sportmonks import _get
 from .timeutil import CN, trade_window
 
@@ -30,7 +31,8 @@ def effective_status(row: AIResearch, now=None) -> str:
     return row.status
 
 
-def _fetch(fixture_id: int) -> tuple[list[str], int]:
+def _fetch(fixture_id: int, db: Session | None = None,
+           match_id: str | None = None) -> tuple[list[str], int]:
     settings = get_settings()
     token = settings.sportmonks_token.strip()
     if not token:
@@ -38,17 +40,77 @@ def _fetch(fixture_id: int) -> tuple[list[str], int]:
     base = settings.sportmonks_base_url.rstrip("/")
     facts: list[str] = []
     payload = _get(base, f"/match-facts/{fixture_id}",
-                   f"api_token={token}&per_page=10&locale=zh")
+                   f"api_token={token}&per_page=100&include=type&locale=zh")
     for row in (payload or {}).get("data") or []:
         text = row.get("natural_language")
         if text:
             facts.append(str(text)[:220])
     injured = 0
-    fixture = _get(base, f"/fixtures/{fixture_id}",
-                   f"api_token={token}&include=sidelined&locale=zh")
-    data = (fixture or {}).get("data") or {}
-    injured = len(data.get("sidelined") or [])
-    return facts[:6], injured
+    intel = db.get(SportmonksFixtureIntel, match_id) if db and match_id else None
+    structured = (intel.payload or {}) if intel else {}
+    if structured:
+        lineups = structured.get("lineups") or {}
+        home_line = lineups.get("home") or {}
+        away_line = lineups.get("away") or {}
+        if home_line.get("starters") and away_line.get("starters"):
+            home_names = "、".join(
+                p.get("name") for p in home_line["starters"][:4] if p.get("name"))
+            away_names = "、".join(
+                p.get("name") for p in away_line["starters"][:4] if p.get("name"))
+            facts.append(
+                f"首发：{home_line.get('team_name')} {home_line.get('formation') or ''} "
+                f"（{home_names}）；{away_line.get('team_name')} "
+                f"{away_line.get('formation') or ''}（{away_names}）"
+            )
+        sidelined = structured.get("sidelined") or []
+        injured = len(sidelined)
+        if sidelined:
+            facts.append("伤停：" + "、".join(
+                f"{row.get('player_name')}（{row.get('type_label')}）"
+                for row in sidelined[:6] if row.get("player_name")))
+        standings = structured.get("standings") or {}
+        for side in ("home", "away"):
+            row = standings.get(side) or {}
+            if row:
+                facts.append(
+                    f"积分榜：{home_line.get('team_name') if side == 'home' else away_line.get('team_name')} "
+                    f"第{row.get('position')}，{row.get('points')}分，近况 "
+                    f"{' '.join(row.get('form') or []) or '—'}"
+                )
+        weather = structured.get("weather") or {}
+        venue = structured.get("venue") or {}
+        if venue:
+            facts.append(
+                f"场地：{venue.get('name') or '—'}，{venue.get('city') or '—'}，"
+                f"容量 {venue.get('capacity') or '—'}"
+            )
+        if weather:
+            facts.append(
+                f"天气：{weather.get('description') or '—'}，"
+                f"日间 {(weather.get('temperature') or {}).get('day', '—')}°C，"
+                f"风速 {(weather.get('wind') or {}).get('speed', '—')}"
+            )
+        main_ref = (structured.get("referees") or {}).get("main") or {}
+        if main_ref:
+            facts.append(f"主裁：{main_ref.get('name') or '—'}")
+        highlights = (structured.get("prediction_highlights") or {}).get("items") or []
+        for item in highlights[:3]:
+            values = item.get("values") or {}
+            if item.get("key") == "CORRECT_SCORE_PROBABILITY":
+                text = "、".join(
+                    f"{row.get('score')} {row.get('probability')}%"
+                    for row in (item.get("scores") or [])[:2])
+            else:
+                text = " / ".join(f"{key} {value}%" for key, value in values.items()
+                                  if isinstance(value, (int, float)))
+            if text:
+                facts.append(f"Sportmonks 预测参考（{item.get('label')}）：{text}")
+    else:
+        fixture = _get(base, f"/fixtures/{fixture_id}",
+                       f"api_token={token}&include=sidelined&locale=zh")
+        data = (fixture or {}).get("data") or {}
+        injured = len(data.get("sidelined") or [])
+    return facts[:12], injured
 
 
 def _extract_json(text: str) -> dict:
@@ -68,7 +130,8 @@ def _summarize(db: Session, facts: list[str], injured: int) -> tuple[str, list[s
                 [{"role": "system", "content":
                   "把给定的赛前事实翻译成简体中文，输出 JSON："
                   '{"headline":"一句话","points":["要点1","要点2"]}。'
-                  "只翻译事实，不预测、不编造；最多 3 条要点。"},
+                  "只翻译事实，不预测、不编造；事实写“首发”就是已公布，不要改写成“预计”；"
+                  "最多 5 条要点。"},
                  {"role": "user", "content": json.dumps(
                      {"facts": facts, "injured_count": injured}, ensure_ascii=False)}],
                 max_tokens=800,
@@ -76,7 +139,16 @@ def _summarize(db: Session, facts: list[str], injured: int) -> tuple[str, list[s
             if res is not None and not res.degraded and res.text:
                 obj = _extract_json(res.text)
                 headline = str(obj.get("headline") or "")[:200]
-                points = [str(x)[:160] for x in (obj.get("points") or [])][:3]
+                points = [str(x)[:160] for x in (obj.get("points") or [])][:5]
+                if any("首发" in fact for fact in facts):
+                    # 事实包已写“首发”，LLM 不得降级成“预计首发”。
+                    def confirmed(text: str) -> str:
+                        return (text.replace("预计采用", "采用")
+                                .replace("预计排出", "排出")
+                                .replace("预计首发", "首发")
+                                .replace("预计阵容", "阵容"))
+                    headline = confirmed(headline)
+                    points = [confirmed(point) for point in points]
                 if headline:
                     return headline, points
         except Exception:  # noqa: BLE001 - 摘要失败用确定性兜底
@@ -92,7 +164,7 @@ def sync_match(db: Session, match_id: str) -> bool:
     sm = db.get(SportmonksMatchData, match_id)
     if sm is None:
         return False
-    facts, injured = _fetch(sm.fixture_id)
+    facts, injured = _fetch(sm.fixture_id, db=db, match_id=match_id)
     facts_hash = hashlib.sha256(json.dumps(
         {"facts": facts, "injured": injured}, ensure_ascii=False,
         sort_keys=True).encode("utf-8")).hexdigest()

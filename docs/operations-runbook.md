@@ -5,6 +5,8 @@
 > **v4.1 部署状态**：2026-11-12 11:38 CST 已用 `deploy.py` 部署到 `43.128.24.244`，`systemctl is-active jieqiu-backend` = active，`/health` 200，OpenAPI 158/174，管理后台静态资源 `v=20261112d`；生产仍为 SQLite（`/home/ubuntu/jieqiu-data/jieqiu.db`，约 40M）。部署前备份：`/home/ubuntu/backups/jieqiu-backend-20261112-113522.tar.gz`（代码）与 `jieqiu-20261112-113522.db`（库）。回滚：停服务 → 解压代码备份到 `/home/ubuntu/jieqiu-backend` → 用 `sqlite3` 的 `.backup` 恢复库（或先保留现库为 `.bak`）→ `systemctl start jieqiu-backend`。v4 新增计划/会员/结算/OPC 表已在生产 SQLite 建表；后续观察 `settle_pending`、`settle_open_cycles`、会员到期 job 与 seed 是否正常写 `ops_jobs/ops_exceptions`。
 >
 > **2026-11-12 13:44 CST 数据更新**：Sportmonks 新订阅生效后，生产重新同步欧国联 6/6 场（fixture、Pinnacle 去水赔率、1X2 预测、正确比分分布、AI 情报）；判决链在 DC 缺阵时使用 Sportmonks 1X2/正确比分推导的后备模型，并标注 `model_source=sportmonks`。重建后 1 场 verified、3 场市场参考、2 场不建议；重算前库备份 `/home/ubuntu/backups/jieqiu-20261112-134211-pre-rebuild.db`。
+>
+> **2026-11-12 17:00 CST 情报层部署**：生产应用 Alembic `20261112_24`，新增 `sportmonks_fixture_intel/predictions/markets`；6/6 场已同步 11 人首发、阵型、教练、裁判、伤停、积分榜、H2H、天气/场地和 25 维预测。聚焦覆盖从 55 提升到 100（价格新鲜时），`deep_eligible=true`；AIResearch 已包含阵容/伤停/积分榜/环境。部署前库备份 `/home/ubuntu/backups/jieqiu-20261112-162055-pre-sm-intel.db`。回滚：停服务 → `alembic downgrade 20261112_23` → 恢复上述库/旧代码 → 启动。
 
 ## 1. 进程与目录
 

@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import logging
 import re
 import time
 from datetime import datetime, timedelta, timezone
@@ -23,6 +24,7 @@ from .sportmonks import _get, match_fixture
 
 CN = timezone(timedelta(hours=8))
 _FINISHED = {"FT", "AET", "PEN", "FINISHED"}
+log = logging.getLogger(__name__)
 _SCORE_RE = re.compile(r"(\d+)\s*[-:]\s*(\d+)")
 
 
@@ -125,6 +127,13 @@ def sync_results(db: Session, days: int = 2, limit: int = 80) -> dict:
         ))
         seen.add(key)
         inserted += 1
+        # 赛后情报是增强项：失败不影响赛果落库/结算。
+        try:
+            from .sportmonks_intel import sync_postmatch_intel
+            sync_postmatch_intel(db, base, token, match, sm.fixture_id)
+        except Exception:  # noqa: BLE001
+            log.exception("sportmonks postmatch intel failed match_id=%s",
+                          match.match_id)
     db.commit()
     from .settlement import settle_pending
     from .plan_service import settle_open_cycles

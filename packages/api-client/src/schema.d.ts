@@ -3328,6 +3328,10 @@ export interface components {
             facts: components["schemas"]["IntelFact"][];
             /** Unknowns */
             unknowns: string[];
+            /** Sportmonks */
+            sportmonks?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** IntelFact */
         IntelFact: {
@@ -4155,6 +4159,26 @@ export interface components {
             injuries: number;
             /** Standings */
             standings: number;
+            /**
+             * Sportmonks Intel
+             * @default 0
+             */
+            sportmonks_intel: number;
+            /**
+             * Sportmonks Lineups
+             * @default 0
+             */
+            sportmonks_lineups: number;
+            /**
+             * Sportmonks Standings
+             * @default 0
+             */
+            sportmonks_standings: number;
+            /**
+             * Sportmonks Prediction Types
+             * @default 0
+             */
+            sportmonks_prediction_types: number;
         };
         /** PulseDisplay */
         PulseDisplay: {

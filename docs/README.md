@@ -1,6 +1,6 @@
 # 球多多文档索引
 
-最后对账：2026-11-12。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：后端 `0.8.0-w8+assistant` / 移动端 `0.3.4`，OpenAPI **158 路径 / 174 方法**，后端 **345 tests**，前端 **51 tests**，Alembic head `20261112_23`；开发库仍是 SQLite + WAL，生产目标境内 PostgreSQL 16 尚未切库。
+最后对账：2026-11-12。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：后端 `0.8.0-w8+assistant` / 移动端 `0.3.4`，OpenAPI **158 路径 / 174 方法**，后端 **349 tests**，前端 **53 tests**，Alembic head `20261112_24`；开发库仍是 SQLite + WAL，生产目标境内 PostgreSQL 16 尚未切库。
 
 > **产品/技术方案唯一有效版本：** [qiuduoduo-v4-final-plan.md](./qiuduoduo-v4-final-plan.md)。  
 > 其他 `ai-*` / `membership-*` / `grounded-*` 产品方案已标记作废，仅作历史参考；技术文档（architecture / database / API / workbench / OPC）不受影响。
@@ -94,7 +94,7 @@
 | 文档 | 内容 |
 |---|---|
 | [2026-11-12-sportmonks-data-gap-review.md](./reviews/2026-11-12-sportmonks-data-gap-review.md) | Sportmonks 数据能力与前端缺口：首发/阵型/伤停/积分榜/H2H/天气/裁判/28 维预测/169 市场，P0–P2 实施建议 |
-| [2026-11-12-v4-verification.md](./reviews/2026-11-12-v4-verification.md) | v4.1 交付验证：345/51 测试、OpenAPI 158/174、模拟器路径、已修问题、明确未完成 |
+| [2026-11-12-v4-verification.md](./reviews/2026-11-12-v4-verification.md) | v4.1 交付验证：349/53 测试、OpenAPI 158/174、模拟器路径、已修问题、明确未完成 |
 | [2026-11-11-deep-review.md](./reviews/2026-11-11-deep-review.md) | 当日深审：概率卡模型字段、SM 数据覆盖/过期、赛果回填 500、脉搏/聚焦数据源、同场串关等修复与剩余缺口 |
 | [2026-11-04-code-review-pass2.md](./reviews/2026-11-04-code-review-pass2.md) | 第二轮代码复审（历史快照）：并发/事务/采集器/前端清理；当时 182 tests |
 | [2026-11-04-full-stack.md](./reviews/2026-11-04-full-stack.md) | 第一轮全栈深审与修复（历史快照）；残余风险 |

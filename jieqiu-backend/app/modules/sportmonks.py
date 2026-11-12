@@ -372,8 +372,16 @@ def _sync_match(db: Session, base: str, token: str, match: SPMatch,
     fixture_id = int(fixture.get("id") or 0)
     probs = _fetch_predictions(base, token, fixture_id)
     odds, bookmaker = _fetch_odds(base, token, fixture_id)
-    return _snapshot(db, match, fixture, probs, odds, bookmaker, source,
-                     replace=replace)
+    row = _snapshot(db, match, fixture, probs, odds, bookmaker, source,
+                    replace=replace)
+    # 结构化情报是增强项：失败不能回滚预测/市场主链，也不能让旧情报变成
+    # “最新”。异常只记录，下一轮同步会再试。
+    try:
+        from .sportmonks_intel import sync_fixture_intel
+        sync_fixture_intel(db, base, token, match, fixture)
+    except Exception:  # noqa: BLE001 - 情报失败不能阻断预测落库
+        log.exception("sportmonks intel sync failed match_id=%s", match.match_id)
+    return row
 
 
 def sync_trade_date(db: Session, date: str, max_matches: int = 40) -> dict:
