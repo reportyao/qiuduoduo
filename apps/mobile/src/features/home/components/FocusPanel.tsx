@@ -34,8 +34,14 @@ export function FocusPanel({
   if (!focus) return null;
   const betAction = focus.actions.find((action) => action.id === "bet");
   const coreKinds = new Set(["price", "market", "model"]);
+  const priority: Record<string, number> = {
+    lineup: 0, standing: 1, injury: 2, h2h: 3,
+    form: 4, venue: 5, weather: 6, referee: 7, coach: 8, prediction: 9,
+  };
   const core = focus.facts.filter((fact) => coreKinds.has(fact.kind)).slice(0, 3);
-  const intel = focus.facts.filter((fact) => !coreKinds.has(fact.kind));
+  const intel = focus.facts
+    .filter((fact) => !coreKinds.has(fact.kind))
+    .sort((a, b) => (priority[a.kind] ?? 20) - (priority[b.kind] ?? 20));
   const visible = expanded ? focus.facts : [...core, ...intel.slice(0, 2)];
   const hidden = Math.max(0, focus.facts.length - visible.length);
   const unknownVisible = expanded ? focus.unknowns : focus.unknowns.slice(0, 2);
