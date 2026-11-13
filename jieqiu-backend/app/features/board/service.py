@@ -340,8 +340,13 @@ def enrich_result_details(db: Session, days: int = 3, limit: int = 60) -> dict:
     updated = 0
     for result, _sm in rows:
         existing = db.get(MatchResultDetail, result.id)
+        # 角球统计可能晚于 FT 才齐；已拿到角球才停止重拉，避免整场漏项。
         if existing is not None and existing.actuals:
-            continue
+            if existing.actuals.get("corners_total") is not None:
+                continue
+            captured = existing.stats_captured_at
+            if captured and utcnow() - captured < timedelta(hours=6):
+                continue
         payload = _get(
             base, f"/fixtures/{result.fixture_id}",
             f"api_token={token}&include=participants;scores;state;periods;"
