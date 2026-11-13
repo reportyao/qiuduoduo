@@ -47,3 +47,6 @@ matchlist_official.json
 
 # 本地模拟器截图/临时构建产物，不入库
 builds/
+
+# Expo Web 本地导出（部署副本在 jieqiu-backend/app/static/h5）
+apps/mobile/.export-web/

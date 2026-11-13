@@ -1,10 +1,11 @@
 """FastAPI 入口。启动即建表（W2 简化；W4 换 Alembic 迁移）。"""
 import logging
+from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 
 from .db import init_db
 from .middleware import RateLimitMiddleware
@@ -78,6 +79,25 @@ app.include_router(compliance_router)
 app.include_router(plans_router)
 app.include_router(v4_router)
 app.include_router(collector_router)
+
+# H5 预览：与移动端同一套 Expo/React Native Web 代码，部署在 /h5 下。
+# 只做预览，不作为正式 Web 产品；未构建时返回 404，不影响 API。
+_H5_DIR = Path(__file__).resolve().parent / "static" / "h5"
+
+
+@app.get("/h5", include_in_schema=False)
+@app.get("/h5/{path:path}", include_in_schema=False)
+def h5_preview(path: str = ""):
+    root = _H5_DIR.resolve()
+    target = (root / path).resolve()
+    if root not in target.parents and target != root:
+        raise HTTPException(404, "not found")
+    if path and target.is_file():
+        return FileResponse(target)
+    index = root / "index.html"
+    if not index.is_file():
+        raise HTTPException(404, "H5 preview not built")
+    return FileResponse(index, headers={"Cache-Control": "no-cache"})
 
 
 def _warm_models() -> None:

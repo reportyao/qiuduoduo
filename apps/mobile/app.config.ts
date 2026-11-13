@@ -7,7 +7,7 @@ const config: ExpoConfig = {
   orientation: "portrait",
   userInterfaceStyle: "light",
   scheme: "jieqiu",
-  platforms: ["android", "ios"],
+  platforms: ["android", "ios", "web"],
   newArchEnabled: true,
   icon: "./assets/icon.png",
   splash: {
@@ -52,8 +52,14 @@ const config: ExpoConfig = {
       },
     ],
   ],
+  web: {
+    bundler: "metro",
+    output: "single",
+    favicon: "./assets/favicon.png",
+  },
   experiments: {
     typedRoutes: true,
+    baseUrl: "/h5",
   },
 };
 

@@ -633,7 +633,8 @@ def _predicted_label(code: str, key: str, market_line: str = "") -> str:
             return f"其他比分 {key[6:]}"
         return key
     if code.startswith("CORNERS_OVER_UNDER_"):
-        label = {"over": "大", "under": "小", "equal": "走水"}.get(key, key)
+        label = {"over": "大", "under": "小", "equal": "走水",
+                 "yes": "大", "no": "小"}.get(key, key)
         return f"{label} {_line_text(code, 'CORNERS_OVER_UNDER_')}".strip()
     if code.startswith("HOME_OVER_UNDER_") or code.startswith("AWAY_OVER_UNDER_"):
         prefix = "主队" if code.startswith("HOME_") else "客队"
@@ -732,6 +733,16 @@ def _product_actual(snapshot: SportmonksPredictionSnapshot,
         return actual_key, {"home": "让球主胜", "draw": "让球平",
                             "away": "让球客胜"}[actual_key]
     return actual_key, _outcome_cn(actual_key)
+
+
+def _line_code(code: str, selected_code: str, selected_line: str) -> str:
+    if code == selected_code:
+        return selected_line
+    for prefix in ("OVER_UNDER_", "HOME_OVER_UNDER_", "AWAY_OVER_UNDER_",
+                   "CORNERS_OVER_UNDER_"):
+        if code.startswith(prefix):
+            return _line_text(code, prefix)
+    return ""
 
 
 def _new_settlement(snapshot: SportmonksPredictionSnapshot, *, source: str,
@@ -843,11 +854,9 @@ def settle_prediction_snapshots(db: Session, limit: int = 100) -> dict:
             rows.append(_new_settlement(
                 snapshot, source="sportmonks", prediction_type=code,
                 label=str(item.get("type_name") or code), predicted_key=predicted_key,
-                predicted_label=_predicted_label(
-                    code, predicted_key,
-                    selected_ou if code.startswith("OVER_UNDER_") else ""),
+                predicted_label=_predicted_label(code, predicted_key),
                 probability=probability,
-                market_line=selected_ou if code.startswith("OVER_UNDER_") else "",
+                market_line=_line_code(code, ou_code, selected_ou),
                 actual_key=actual_key, actual_label=actual_label, counted=counted))
         for row in rows:
             old = existing_product if row.source == "product" else existing_sportmonks.get(row.prediction_type)
@@ -956,7 +965,7 @@ def _probability_rows(snapshot: SportmonksPredictionSnapshot | None,
             labels = {key: _outcome_cn(key) for key in source}
     else:
         source = _probabilities(raw_item or {})
-        labels = {str(key): _predicted_label(row.prediction_type, str(key), row.market_line)
+        labels = {str(key): _predicted_label(row.prediction_type, str(key))
                   for key in source}
     out = []
     for key, value in source.items():

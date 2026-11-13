@@ -2,7 +2,9 @@
 
 本文件是 AI 与人类协作开发的**仓库级上下文入口**。任何 AI/开发者在改动代码前必须先读本文件；提交前必须按 Definition of Done 自检。
 
-当前事实（2026-11-13）：生产代码仍在 `jieqiu-backend/`，OpenAPI **162 路径 / 178 方法**，后端 **360 tests**，前端 **64 tests**，Alembic head `20261113_26`；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。v4.1 已部署腾讯云生产（2026-11-12 11:38 CST，管理后台静态资源 v=20261112e）；17:00 CST 追加 Sportmonks 情报层（首发/阵型/伤停/积分榜/H2H/天气/裁判/25 维预测/选定市场，Alembic `20261112_24`）。2026-11-13 新增比赛中心：即时/赛果/预测战绩三 Tab，赛前预测快照锁定、赛后 25 维逐条对照（Alembic `20261113_26`）。v4 APK 已由 GitHub Actions 构建并在模拟器安装验证；2026-11-12 最终对话版 APK 对应 commit `2d8e75e`（workflow run `43351698209`），正式签名/上架未做。文档索引见 [docs/README.md](./docs/README.md)。
+**H5 预览（2026-11-13）**：`apps/mobile` 已开启 Expo Web，与 App 共用同一套组件；生产预览 http://43.128.24.244:8100/h5/ ，本地 `just mobile-web`，重新导出 `just mobile-web-export`（产物进 `jieqiu-backend/app/static/h5/`）。H5 只做内部预览，不替代原生推送/安装包能力。
+
+当前事实（2026-11-13）：生产代码仍在 `jieqiu-backend/`，OpenAPI **162 路径 / 178 方法**，后端 **362 tests**，前端 **64 tests**，Alembic head `20261113_26`；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。v4.1 已部署腾讯云生产（2026-11-12 11:38 CST，管理后台静态资源 v=20261112e）；17:00 CST 追加 Sportmonks 情报层（首发/阵型/伤停/积分榜/H2H/天气/裁判/25 维预测/选定市场，Alembic `20261112_24`）。2026-11-13 新增比赛中心：即时/赛果/预测战绩三 Tab，赛前预测快照锁定、赛后 25 维逐条对照（Alembic `20261113_26`）。v4 APK 已由 GitHub Actions 构建并在模拟器安装验证；2026-11-12 最终对话版 APK 对应 commit `2d8e75e`（workflow run `43351698209`），正式签名/上架未做。文档索引见 [docs/README.md](./docs/README.md)。
 
 ## 1. 架构地图
 

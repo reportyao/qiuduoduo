@@ -54,6 +54,14 @@ mobile-install:
 mobile-start:
     cd apps/mobile && corepack pnpm start
 
+# H5 预览：与 App 共用同一套 Expo/React Native Web 代码
+mobile-web:
+    cd apps/mobile && corepack pnpm web
+
+mobile-web-export:
+    cd apps/mobile && EXPO_PUBLIC_API_BASE_URL=http://43.128.24.244:8100 EXPO_PUBLIC_APP_ENV=staging EXPO_PUBLIC_ALLOW_HTTP=true corepack pnpm web:export
+    rm -rf jieqiu-backend/app/static/h5 && cp -R apps/mobile/.export-web jieqiu-backend/app/static/h5
+
 mobile-android:
     cd apps/mobile && corepack pnpm android
 
