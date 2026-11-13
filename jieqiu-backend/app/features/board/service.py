@@ -629,6 +629,8 @@ def _predicted_label(code: str, key: str, market_line: str = "") -> str:
             return f"{outcome.get(parts[0], parts[0])}/{outcome.get(parts[1], parts[1])}"
         return key
     if code == "CORRECT_SCORE_PROBABILITY":
+        if key.startswith("Other_"):
+            return f"其他比分 {key[6:]}"
         return key
     if code.startswith("CORNERS_OVER_UNDER_"):
         label = {"over": "大", "under": "小", "equal": "走水"}.get(key, key)
