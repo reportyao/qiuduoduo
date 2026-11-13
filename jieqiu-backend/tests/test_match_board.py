@@ -245,6 +245,13 @@ def test_sync_live_states_parses_inplay_and_period_minute(db, monkeypatch):
     assert state.ht_home == 0 and state.ht_away == 1
 
 
+def test_implied_ou_line_follows_sporttery_total_goals():
+    selections = {"s0": "32.00", "s1": "9.35", "s2": "5.40", "s3": "4.40",
+                  "s4": "4.15", "s5": "5.25", "s6": "7.50", "s7": "7.25"}
+    assert service._implied_ou_line(selections) == "4.5"
+    assert service._implied_ou_line({}) == ""
+
+
 def test_product_actual_uses_real_outcome_not_predicted_key():
     snapshot = SimpleNamespace(
         product_pick={"dir": "主胜"}, market_lines={"product_pool": "hhad",

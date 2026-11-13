@@ -373,6 +373,37 @@ def _prediction_rows(db: Session, match_ids: list[str]) -> dict[str, list[Sportm
     return out
 
 
+_TTG_LINES = (0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5)
+
+
+def _implied_ou_line(selections: dict) -> str:
+    """从竞彩总进球赔率反推最接近五五开的 Sportmonks 大小球盘口。
+
+    竞彩不卖标准 O/U，只卖 0/1/2/…/7+ 总进球；用去水前的隐含概率找
+    P(over) 最接近 50% 的线，避免所有比赛都固定成 2.5。
+    """
+    probs: dict[int, float] = {}
+    for key, value in (selections or {}).items():
+        text = str(key)
+        if not text.startswith("s") or not text[1:].isdigit():
+            continue
+        try:
+            odds = float(value)
+        except (TypeError, ValueError):
+            continue
+        if odds > 1:
+            probs[int(text[1:])] = 1.0 / odds
+    if not probs:
+        return ""
+    best_line, best_gap = "", 2.0
+    for line in _TTG_LINES:
+        over = sum(p for goals, p in probs.items() if goals > line)
+        gap = abs(over - 0.5)
+        if gap < best_gap:
+            best_gap, best_line = gap, f"{line:.1f}"
+    return best_line
+
+
 def _market_lines(db: Session, match_ids: list[str]) -> dict[str, dict]:
     out: dict[str, dict] = {}
     if not match_ids:
@@ -390,8 +421,13 @@ def _market_lines(db: Session, match_ids: list[str]) -> dict[str, dict]:
             item["ou"] = row.line
             item["ou_source"] = "sporttery"
         elif row.pool == "ttg" and "ou" not in item:
-            item["ou"] = "2.5"
-            item["ou_source"] = "sporttery_ttg"
+            line = _implied_ou_line(row.selections or {})
+            if line:
+                item["ou"] = line
+                item["ou_source"] = "sporttery_ttg_implied"
+            else:
+                item["ou"] = "2.5"
+                item["ou_source"] = "sporttery_ttg"
     for item in out.values():
         item.setdefault("ou", "2.5")
         item.setdefault("ou_source", "sportmonks")
@@ -699,8 +735,24 @@ def settle_prediction_snapshots(db: Session, limit: int = 100) -> dict:
                 market_line=str((snapshot.market_lines or {}).get("product_line") or ""),
                 actual_key=actual_key, actual_label=actual_label, counted=True))
         selected_ou = str((snapshot.market_lines or {}).get("ou") or "2.5")
-        ou_code = "OVER_UNDER_" + selected_ou.replace(".", "_") + "_PROBABILITY"
         available_codes = {str(x.get("type_code") or "") for x in snapshot.predictions or []}
+        ou_code = "OVER_UNDER_" + selected_ou.replace(".", "_") + "_PROBABILITY"
+        if ou_code not in available_codes:
+            # 竞彩推出来的线（如 0.5）Sportmonks 未必提供；取最接近的可用盘口。
+            try:
+                target = float(selected_ou)
+            except (TypeError, ValueError):
+                target = 2.5
+            options = []
+            for candidate in available_codes:
+                if not candidate.startswith("OVER_UNDER_"):
+                    continue
+                line = _code_line(candidate, "OVER_UNDER_")
+                if line is not None:
+                    options.append((abs(line - target), candidate, line))
+            if options:
+                _, ou_code, line = min(options)
+                selected_ou = str(int(line)) if line.is_integer() else str(line)
         has_product = bool(pick.get("dir"))
         for item in snapshot.predictions or []:
             code = str(item.get("type_code") or "")
@@ -713,9 +765,7 @@ def settle_prediction_snapshots(db: Session, limit: int = 100) -> dict:
             counted = False
             if code == "FULLTIME_RESULT_PROBABILITY" and not has_product:
                 counted = True
-            if code == ou_code or (
-                    code == "OVER_UNDER_2_5_PROBABILITY"
-                    and ou_code not in available_codes):
+            if code == ou_code:
                 counted = True
             if code == "BTTS_PROBABILITY":
                 counted = True
