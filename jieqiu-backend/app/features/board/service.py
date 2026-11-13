@@ -783,7 +783,12 @@ def settle_prediction_snapshots(db: Session, limit: int = 100) -> dict:
         has_product = bool(pick.get("dir"))
         for item in snapshot.predictions or []:
             code = str(item.get("type_code") or "")
-            predicted_key, probability = _argmax(_probabilities(item))
+            probabilities = _probabilities(item)
+            if code == "CORRECT_SCORE_PROBABILITY":
+                # Other_1/Other_2/Other_X 是聚合桶，不能当成一个具体比分。
+                probabilities = {key: value for key, value in probabilities.items()
+                                 if not str(key).startswith("Other_")}
+            predicted_key, probability = _argmax(probabilities)
             # 角球大小球预测键是 yes/no/equal，实际值统一为 over/under/equal。
             if code.startswith("CORNERS_OVER_UNDER_"):
                 predicted_key = {"yes": "over", "no": "under"}.get(
