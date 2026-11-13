@@ -4,7 +4,6 @@ import { useRouter, type Href } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
 import { EmptyState, ErrorState, Skeleton, Text } from "@/components/ui";
-import { useHideFloatingOnScroll } from "@/features/assistant/useHideFloatingOnScroll";
 import { errorText } from "@/lib/errors";
 import { todayCn, tradeDateCnFromKickoff } from "@/lib/format";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
@@ -26,7 +25,6 @@ const SUBTITLES: Record<MatchTab, string> = {
 
 export default function MatchesScreen() {
   const router = useRouter();
-  const onScroll = useHideFloatingOnScroll();
   const [tab, setTab] = useState<MatchTab>("live");
   const [date, setDate] = useState(todayCn());
   const [pulling, setPulling] = useState(false);
@@ -58,8 +56,6 @@ export default function MatchesScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
-        onScroll={onScroll}
-        scrollEventThrottle={48}
         refreshControl={
           <RefreshControl refreshing={pulling} onRefresh={refresh} tintColor={colors.green} />
         }

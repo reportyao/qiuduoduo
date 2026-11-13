@@ -7,6 +7,7 @@ import { resultLabel, resultTone } from "../labels";
 
 function mainPickText(main: PredictionHistoryMatch["main_prediction"]): string {
   if (!main) return "暂无主预测";
+  if (main.direction) return main.direction;
   const key = main.key;
   const outcome: Record<string, string> = { home: "主胜", draw: "平局", away: "客胜" };
   if (outcome[key]) return outcome[key];

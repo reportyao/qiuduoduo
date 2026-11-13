@@ -17,7 +17,6 @@ import {
   Toggle,
   useToast,
 } from "@/components/ui";
-import { useHideFloatingOnScroll } from "@/features/assistant/useHideFloatingOnScroll";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { useAuthStore, isLoggedIn } from "@/features/auth/authStore";
 import { useMeQuery, useDisciplineMutation, useRestMutation } from "@/features/account/queries";
@@ -30,7 +29,6 @@ export default function MeScreen() {
   const router = useRouter();
   const toast = useToast();
   const { meta, copy } = usePersonaContent();
-  const onScroll = useHideFloatingOnScroll();
   const session = useAuthStore((s) => s.session);
   const logout = useAuthStore((s) => s.logout);
   const setPersona = usePrefsStore((s) => s.setPersona);
@@ -108,8 +106,6 @@ export default function MeScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
-        onScroll={onScroll}
-        scrollEventThrottle={48}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.green} />}
       >
         {meQuery.isError ? (

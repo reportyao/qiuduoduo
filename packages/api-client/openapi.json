@@ -11787,6 +11787,11 @@
             "title": "Key",
             "default": ""
           },
+          "direction": {
+            "type": "string",
+            "title": "Direction",
+            "default": ""
+          },
           "probability": {
             "anyOf": [
               {
@@ -11932,6 +11937,29 @@
         ],
         "title": "PredictionHistoryResponse"
       },
+      "PredictionProbability": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "default": ""
+          },
+          "probability": {
+            "type": "number",
+            "title": "Probability"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "probability"
+        ],
+        "title": "PredictionProbability"
+      },
       "PredictionSettlementItem": {
         "properties": {
           "source": {
@@ -11967,6 +11995,13 @@
               }
             ],
             "title": "Predicted Probability"
+          },
+          "probabilities": {
+            "items": {
+              "$ref": "#/components/schemas/PredictionProbability"
+            },
+            "type": "array",
+            "title": "Probabilities"
           },
           "market_line": {
             "type": "string",

@@ -453,6 +453,29 @@ def _market_lines(db: Session, match_ids: list[str]) -> dict[str, dict]:
     return out
 
 
+def _product_snapshot(verdict: Verdict | None) -> tuple[dict | None, dict | None]:
+    """展示用主预测取模型三方向最高概率；EV pick 保留在 product_pick。"""
+    if verdict is None:
+        return None, None
+    payload = verdict.payload or {}
+    model = payload.get("model") or {}
+    shrunk = model.get("shrunk")
+    probs: dict[str, float] = {}
+    if isinstance(shrunk, list) and len(shrunk) >= 3:
+        for key, value in zip(("home", "draw", "away"), shrunk[:3]):
+            try:
+                probs[key] = float(value)
+            except (TypeError, ValueError):
+                pass
+    if len(probs) == 3:
+        key = max(probs, key=probs.get)
+        return {"dir": _outcome_cn(key), "prob": round(probs[key], 6)}, probs
+    pick = verdict.pick or {}
+    if pick.get("dir"):
+        return {"dir": pick["dir"], "prob": pick.get("prob")}, None
+    return None, None
+
+
 def freeze_prediction_snapshots(db: Session, now: datetime | None = None) -> dict:
     """开球前持续更新、到点锁定；没有赛前数据不赛后补造。"""
     current_utc = (now or utcnow()).replace(tzinfo=None)
@@ -488,6 +511,7 @@ def freeze_prediction_snapshots(db: Session, now: datetime | None = None) -> dic
                 "captured_at": row.captured_at.isoformat() if row.captured_at else "",
             } for row in items]
             verdict = verdicts.get(match.match_id)
+            top_pick, product_probs = _product_snapshot(verdict)
             snapshot_lines = dict(lines.get(match.match_id) or {})
             if verdict is not None:
                 snapshot_lines["product_pool"] = verdict.pool
@@ -498,12 +522,15 @@ def freeze_prediction_snapshots(db: Session, now: datetime | None = None) -> dic
                     kickoff_cn=match.kickoff, captured_at=utcnow(),
                     predictions=payload, market_lines=snapshot_lines,
                     product_pick=verdict.pick if verdict else None,
+                    product_top_pick=top_pick, product_probs=product_probs,
                     verdict_id=verdict.id if verdict else None, status="open"))
             elif existing.locked_at is None:
                 existing.predictions = payload
                 existing.captured_at = utcnow()
                 existing.market_lines = snapshot_lines or existing.market_lines
                 existing.product_pick = verdict.pick if verdict else existing.product_pick
+                existing.product_top_pick = top_pick or existing.product_top_pick
+                existing.product_probs = product_probs or existing.product_probs
                 existing.verdict_id = verdict.id if verdict else existing.verdict_id
             opened += 1
             continue
@@ -515,6 +542,7 @@ def freeze_prediction_snapshots(db: Session, now: datetime | None = None) -> dic
             continue
         if items and all(row.captured_at and row.captured_at <= kickoff_utc for row in items):
             verdict = verdicts.get(match.match_id)
+            top_pick, product_probs = _product_snapshot(verdict)
             db.add(SportmonksPredictionSnapshot(
                 match_id=match.match_id, fixture_id=sm.fixture_id,
                 kickoff_cn=match.kickoff,
@@ -533,6 +561,7 @@ def freeze_prediction_snapshots(db: Session, now: datetime | None = None) -> dic
                     "product_line": verdict.goal_line if verdict else "",
                 },
                 product_pick=verdict.pick if verdict else None,
+                product_top_pick=top_pick, product_probs=product_probs,
                 verdict_id=verdict.id if verdict else None,
                 snapshot_source="legacy_cache", status="locked"))
             locked += 1
@@ -678,9 +707,7 @@ def _actual_for_type(code: str, actuals: dict[str, Any]) -> tuple[str, str]:
 
 
 def _product_actual(snapshot: SportmonksPredictionSnapshot,
-                    actuals: dict[str, Any]) -> tuple[str, str]:
-    pick = snapshot.product_pick or {}
-    direction = str(pick.get("dir") or "")
+                    actuals: dict[str, Any], direction: str) -> tuple[str, str]:
     if direction not in ("主胜", "平局", "客胜"):
         return "", ""
     ft_home = actuals.get("ft_home")
@@ -751,18 +778,23 @@ def settle_prediction_snapshots(db: Session, limit: int = 100) -> dict:
             SportmonksPredictionSettlement.match_id == snapshot.match_id,
             SportmonksPredictionSettlement.source == "product"))
         rows: list[SportmonksPredictionSettlement] = []
-        pick = snapshot.product_pick or {}
-        if pick.get("dir"):
-            actual_key, actual_label = _product_actual(snapshot, actuals)
-            prob = pick.get("prob")
+        top_pick = snapshot.product_top_pick or {}
+        if not top_pick and snapshot.verdict_id:
+            top_pick, _ = _product_snapshot(db.get(Verdict, snapshot.verdict_id))
+        if not top_pick:
+            top_pick = snapshot.product_pick or {}
+        direction = str(top_pick.get("dir") or "")
+        if direction:
+            actual_key, actual_label = _product_actual(snapshot, actuals, direction)
+            prob = top_pick.get("prob")
             product_pool = str((snapshot.market_lines or {}).get("product_pool") or "")
             product_prefix = "让球" if product_pool == "hhad" else ""
             rows.append(_new_settlement(
                 snapshot, source="product", prediction_type="product_main",
                 label="主预测",
                 predicted_key={"主胜": "home", "平局": "draw", "客胜": "away"}.get(
-                    str(pick.get("dir")), str(pick.get("dir"))),
-                predicted_label=f"{product_prefix}{pick.get('dir') or ''}",
+                    direction, direction),
+                predicted_label=f"{product_prefix}{direction}",
                 probability=float(prob) if prob is not None else None,
                 market_line=str((snapshot.market_lines or {}).get("product_line") or ""),
                 actual_key=actual_key, actual_label=actual_label, counted=True))
@@ -785,7 +817,7 @@ def settle_prediction_snapshots(db: Session, limit: int = 100) -> dict:
             if options:
                 _, ou_code, line = min(options)
                 selected_ou = str(int(line)) if line.is_integer() else str(line)
-        has_product = bool(pick.get("dir"))
+        has_product = bool(direction)
         for item in snapshot.predictions or []:
             code = str(item.get("type_code") or "")
             probabilities = _probabilities(item)
@@ -895,6 +927,7 @@ def build_prediction_history(db: Session, date: str | None = None,
             "main_prediction": {
                 "label": main.prediction_label,
                 "key": main.predicted_key,
+                "direction": main.predicted_label,
                 "probability": main.predicted_probability,
                 "actual": main.actual_label,
                 "result": main.result,
@@ -908,6 +941,33 @@ def build_prediction_history(db: Session, date: str | None = None,
     return {"date": day, "summary": _accuracy(rows), "count": len(items), "matches": items}
 
 
+def _probability_rows(snapshot: SportmonksPredictionSnapshot | None,
+                      row: SportmonksPredictionSettlement,
+                      raw_item: dict | None,
+                      product_probs: dict | None) -> list[dict]:
+    if row.source == "product":
+        source = dict(product_probs or {})
+        pool = str((snapshot.market_lines or {}).get("product_pool") or "") if snapshot else ""
+        prefix = "让球" if pool == "hhad" else ""
+        labels = {key: f"{prefix}{_outcome_cn(key)}" for key in source}
+    else:
+        source = _probabilities(raw_item or {})
+        labels = {str(key): _predicted_label(row.prediction_type, str(key), row.market_line)
+                  for key in source}
+    out = []
+    for key, value in source.items():
+        try:
+            probability = _norm_prob(float(value))
+        except (TypeError, ValueError):
+            continue
+        if probability is None:
+            continue
+        out.append({"key": str(key), "label": labels.get(str(key), str(key)),
+                    "probability": probability})
+    out.sort(key=lambda item: item["probability"], reverse=True)
+    return out
+
+
 def build_prediction_history_detail(db: Session, match_id: str) -> dict | None:
     match = db.get(SPMatch, match_id)
     if match is None:
@@ -917,6 +977,13 @@ def build_prediction_history_detail(db: Session, match_id: str) -> dict | None:
         MatchResult.fixture_id == snapshot.fixture_id)) if snapshot else None
     rows = db.scalars(select(SportmonksPredictionSettlement).where(
         SportmonksPredictionSettlement.match_id == match_id)).all()
+    product_probs: dict = {}
+    if snapshot is not None:
+        product_probs = dict(snapshot.product_probs or {})
+        if not product_probs and snapshot.verdict_id:
+            _, product_probs = _product_snapshot(db.get(Verdict, snapshot.verdict_id))
+    raw_items = {str(item.get("type_code") or ""): item
+                 for item in (snapshot.predictions or [])} if snapshot else {}
     return {
         "match_id": match_id,
         "match_no": match.match_no,
@@ -943,6 +1010,8 @@ def build_prediction_history_detail(db: Session, match_id: str) -> dict | None:
             "predicted_key": row.predicted_key,
             "predicted_label": row.predicted_label,
             "predicted_probability": row.predicted_probability,
+            "probabilities": _probability_rows(
+                snapshot, row, raw_items.get(row.prediction_type), product_probs),
             "market_line": row.market_line,
             "actual_key": row.actual_key,
             "actual_label": row.actual_label,

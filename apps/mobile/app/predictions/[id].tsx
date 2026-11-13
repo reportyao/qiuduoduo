@@ -175,21 +175,31 @@ function ItemRow({
 }) {
   return (
     <View style={[styles.item, !last && styles.itemLine]}>
-      <View style={styles.flex}>
-        <Text variant={muted ? "small" : "smallStrong"} numberOfLines={1}>
+      <View style={styles.itemHead}>
+        <Text variant={muted ? "small" : "smallStrong"} style={styles.flex} numberOfLines={2}>
           {item.label || item.type}
         </Text>
-        <Text variant="caption" color={colors.muted} numberOfLines={1}>
-          预测 {item.predicted_label || item.predicted_key || "—"}
-          {item.predicted_probability != null ? ` · ${pct(item.predicted_probability, 0)}` : ""}
-        </Text>
-      </View>
-      <View style={styles.resultCol}>
         <Chip label={resultLabel(item.result)} tone={resultTone(item.result)} />
-        <Text variant="caption" color={colors.muted} numberOfLines={1}>
-          实际 {item.actual_label || "—"}
-        </Text>
       </View>
+      <Text variant="caption" color={colors.muted}>
+        预测 {item.predicted_label || item.predicted_key || "—"}
+        {item.predicted_probability != null ? ` · ${pct(item.predicted_probability, 1)}` : ""}
+        {"  ·  "}实际 {item.actual_label || "—"}
+      </Text>
+      {item.probabilities?.length ? (
+        <View style={styles.probWrap}>
+          {item.probabilities.map((row) => {
+            const top = row.key === item.predicted_key;
+            return (
+              <View key={row.key} style={[styles.prob, top && styles.probTop]}>
+                <Text variant="caption" color={top ? colors.green : colors.muted}>
+                  {row.label || row.key} {pct(row.probability, 1)}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -221,13 +231,18 @@ const styles = StyleSheet.create({
   },
   emptyLine: { paddingVertical: spacing.md },
   item: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
+    gap: spacing.xs,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    minHeight: 64,
   },
+  itemHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   itemLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
-  resultCol: { alignItems: "flex-end", gap: 3, maxWidth: 132 },
+  probWrap: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 2 },
+  prob: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+    backgroundColor: colors.surfaceSunken,
+  },
+  probTop: { backgroundColor: colors.greenSoft },
 });

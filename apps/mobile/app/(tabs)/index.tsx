@@ -35,6 +35,7 @@ import { buildBriefOptions } from "@/features/home/briefOptions";
 import { MatchConversationCard } from "@/features/home/components/MatchConversationCard";
 import { summarizeIntel } from "@/features/home/conversation";
 import { useHomeConversation } from "@/features/home/useHomeConversation";
+import { useHomeSelectionStore } from "@/features/home/homeSelectionStore";
 import { StreamFeed } from "@/features/home/components/StreamFeed";
 import { HeaderMetrics } from "@/features/home/components/HeaderMetrics";
 import { DataStatusSheet, LegalFooter } from "@/features/home/components/HomeSections";
@@ -88,6 +89,8 @@ export default function HomeScreen() {
   const focus = useFocusStore((s) => s.focus);
   const setFocus = useFocusStore((s) => s.setFocus);
   const clearFocus = useFocusStore((s) => s.clearFocus);
+  const pendingSelection = useHomeSelectionStore((s) => s.pending);
+  const consumeSelection = useHomeSelectionStore((s) => s.consume);
   const conversation = useHomeConversation(date, session?.userId ?? "local");
   const updateConversationIntel = conversation.updateIntel;
   const lastDailyRecordDate = usePrefsStore((s) => s.lastDailyRecordDate);
@@ -176,6 +179,44 @@ export default function HomeScreen() {
     setManualDate(focus.tradeDate !== currentTradeDateCn());
     setOpenedAll(false);
   }, [date, focus]);
+
+  // 任意 Tab 的今日比赛浮层选中后，回到首页走同一套「看这场」交互。
+  useEffect(() => {
+    if (!pendingSelection) return;
+    const { option, verdict, match, tradeDate } = pendingSelection;
+    if (tradeDate !== date) {
+      // 先聚焦目标再切日期，避免旧的 focus 把日期拉回去。
+      if (verdict) setFocus(focusFromVerdict(verdict, tradeDate));
+      else if (match) setFocus(focusFromOnSale(match, tradeDate));
+      setDate(tradeDate);
+      setManualDate(tradeDate !== currentTradeDateCn());
+      setOpenedAll(false);
+      return;
+    }
+    setOpenedAll(false);
+    if (verdict) {
+      trackInteraction("focus_select", { matchId: option.matchId, verdictId: verdict.id });
+      setFocus(focusFromVerdict(verdict, tradeDate));
+    } else if (match) {
+      trackInteraction("focus_select", { matchId: option.matchId });
+      setFocus(focusFromOnSale(match, tradeDate));
+    }
+    autoScroll.current = true;
+    conversation.append({
+      id: nextChatId("u"),
+      kind: "user",
+      text: `看这场：${option.home} vs ${option.away}`,
+      at: Date.now(),
+    });
+    conversation.append({
+      id: nextChatId("match"),
+      kind: "match",
+      option,
+      verdict,
+      at: Date.now(),
+    });
+    consumeSelection();
+  }, [conversation, consumeSelection, date, pendingSelection, setFocus]);
 
   const streamQuery = useStreamQuery(date);
   const recommendationsQuery = useRecommendationsTodayQuery(date);
@@ -714,10 +755,15 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
 
-        <ChatComposer
-          onSend={sendChat}
-          sending={chat.isPending}
-        />
+        <View
+          style={[styles.composerLayer, { paddingBottom: Math.max(insets.bottom, 0) }]}
+          pointerEvents="box-none"
+        >
+          <ChatComposer
+            onSend={sendChat}
+            sending={chat.isPending}
+          />
+        </View>
       </KeyboardAvoidingView>
 
       <MatchPickerSheet
@@ -851,6 +897,13 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  composerLayer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 20,
+  },
   scrollContent: { paddingBottom: spacing.x4 },
   conversation: {
     paddingHorizontal: layout.pagePadding,

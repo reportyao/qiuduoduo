@@ -93,9 +93,10 @@ def _seed_match(db, kickoff: str):
         match_no="周四901", league="欧国联", home="主队", away="客队",
         kickoff=kickoff, pool="had", goal_line="", sp_h=2.1, sp_d=3.2,
         sp_a=3.4, rake=0.09, p_home=0.45, p_draw=0.3, p_away=0.25,
-        pick={"dir": "主胜", "prob": 0.37, "sp": 2.1},
+        pick={"dir": "客胜", "prob": 0.25, "sp": 3.4},
         status="screening", tier="market_reference",
-        gates={"price": {"result": "pass"}}, payload={"model": {}},
+        gates={"price": {"result": "pass"}},
+        payload={"model": {"shrunk": [0.45, 0.30, 0.25]}},
         payload_hash="a" * 64))
     db.commit()
 
@@ -173,27 +174,41 @@ def test_prediction_snapshot_locks_once_and_settles_all_dimensions(db):
                    if row.prediction_type == "CORNERS_OVER_UNDER_5_PROBABILITY")
     assert corners.actual_key == "over" and corners.result == "hit"
     assert not corners.counted_in_accuracy
-    correct = next(row for row in rows
-                   if row.prediction_type == "CORRECT_SCORE_PROBABILITY")
-    # 概率最高的 1-1 与实际 2-1 不一致，仍要展示对照。
-    assert correct.predicted_key == "1-1" and correct.result == "miss"
-
     history = service.build_prediction_history(db, kickoff[:10])
     assert history["count"] == 1
     assert history["matches"][0]["score_home"] == 2
     assert history["matches"][0]["score_away"] == 1
+    assert history["matches"][0]["main_prediction"]["direction"] == "主胜"
+    assert history["matches"][0]["main_prediction"]["probability"] == 0.45
     assert history["summary"]["settled_items"] == 3
     detail = service.build_prediction_history_detail(db, "board-1")
     assert detail is not None and len(detail["items"]) == 26
     assert detail["score_home"] == 2 and detail["score_away"] == 1
     labels = {item["type"]: item["predicted_label"] for item in detail["items"]}
     assert labels["product_main"] == "主胜"
+    product = next(item for item in detail["items"]
+                   if item["type"] == "product_main")
+    assert product["predicted_probability"] == 0.45
+    assert [row["key"] for row in product["probabilities"]] == [
+        "home", "draw", "away"]
+    assert product["probabilities"][0]["probability"] == 0.45
     assert labels["OVER_UNDER_2_5_PROBABILITY"] == "大 2.5"
     assert labels["CORNERS_OVER_UNDER_5_PROBABILITY"] == "大 5"
     htft = next(item for item in detail["items"]
                 if item["type"] == "HTFT_PROBABILITY")
     assert htft["actual_label"] == "主胜/主胜"
     assert htft["actual_key"] == "home_home"
+    fulltime = next(item for item in detail["items"]
+                    if item["type"] == "FULLTIME_RESULT_PROBABILITY")
+    assert len(fulltime["probabilities"]) == 3
+    correct_detail = next(item for item in detail["items"]
+                          if item["type"] == "CORRECT_SCORE_PROBABILITY")
+    assert len(correct_detail["probabilities"]) == 4
+    assert correct_detail["probabilities"][0]["key"] == "Other_1"
+    # 概率最高的 1-1 与实际 2-1 不一致，仍要展示对照。
+    correct = next(row for row in rows
+                   if row.prediction_type == "CORRECT_SCORE_PROBABILITY")
+    assert correct.predicted_key == "1-1" and correct.result == "miss"
 
 
 def test_live_and_result_boards_do_not_expose_predictions(db, client):
@@ -275,10 +290,10 @@ def test_product_actual_uses_real_outcome_not_predicted_key():
         product_pick={"dir": "主胜"}, market_lines={"product_pool": "hhad",
                                                      "product_line": "-1"})
     assert service._product_actual(snapshot, {
-        "ft_home": 2, "ft_away": 1, "ft_outcome": "home"}) == ("draw", "让球平")
+        "ft_home": 2, "ft_away": 1, "ft_outcome": "home"}, "主胜") == ("draw", "让球平")
     snapshot.market_lines = {"product_pool": "had", "product_line": ""}
     assert service._product_actual(snapshot, {
-        "ft_home": 2, "ft_away": 1, "ft_outcome": "home"}) == ("home", "主胜")
+        "ft_home": 2, "ft_away": 1, "ft_outcome": "home"}, "主胜") == ("home", "主胜")
 
 
 def test_result_board_prioritizes_interested_match_without_label(db):

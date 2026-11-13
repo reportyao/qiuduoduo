@@ -383,6 +383,9 @@ class SportmonksPredictionSnapshot(Base):
     predictions: Mapped[list] = mapped_column(JSON, default=list)
     market_lines: Mapped[dict] = mapped_column(JSON, default=dict)
     product_pick: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # 展示用主预测：取模型三方向最高概率，不取 EV pick；product_pick 仍保留 EV 方向。
+    product_top_pick: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    product_probs: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     verdict_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
     snapshot_source: Mapped[str] = mapped_column(String(24), default="sportmonks")
     status: Mapped[str] = mapped_column(String(16), default="open")

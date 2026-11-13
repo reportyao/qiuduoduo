@@ -51,6 +51,7 @@ class ResultBoardResponse(BaseModel):
 class PredictionHistoryMain(BaseModel):
     label: str = ""
     key: str = ""
+    direction: str = ""
     probability: float | None = None
     actual: str = ""
     result: str = ""
@@ -95,6 +96,12 @@ class PredictionSnapshotMeta(BaseModel):
     source: str = ""
 
 
+class PredictionProbability(BaseModel):
+    key: str
+    label: str = ""
+    probability: float
+
+
 class PredictionSettlementItem(BaseModel):
     source: str
     type: str
@@ -102,6 +109,7 @@ class PredictionSettlementItem(BaseModel):
     predicted_key: str = ""
     predicted_label: str = ""
     predicted_probability: float | None = None
+    probabilities: list[PredictionProbability] = Field(default_factory=list)
     market_line: str = ""
     actual_key: str = ""
     actual_label: str = ""

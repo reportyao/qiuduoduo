@@ -852,6 +852,7 @@ async function loadWorkbench() {
       <div class="integration-actions">
         <button class="btn primary small" id="wb-ai">AI 体检</button>
         <button class="btn ghost small" id="wb-refresh">刷新</button>
+        ${canOperate() ? '<button class="btn secondary small" id="wb-users">用户与会员</button>' : ""}
       </div>
     </div>
     <div id="wb-diagnosis"></div>
@@ -867,6 +868,7 @@ async function loadWorkbench() {
   `;
   els("[data-wb-action]").forEach(btn => btn.onclick = () => wbRunAction(btn.dataset.wbAction));
   el("#wb-refresh").onclick = loadWorkbench;
+  if (el("#wb-users")) el("#wb-users").onclick = () => showView("app-users");
   el("#wb-ai").onclick = async () => {
     const btn = el("#wb-ai"); btn.disabled = true; btn.textContent = "AI 分析中…";
     try {

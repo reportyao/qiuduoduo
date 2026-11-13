@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
 import { Button, Card, Chip, EmptyState, ErrorState, Skeleton, Text } from "@/components/ui";
-import { useHideFloatingOnScroll } from "@/features/assistant/useHideFloatingOnScroll";
 import {
   useMembershipQuery,
   usePlanCurrentQuery,
@@ -30,7 +29,6 @@ const BET_LABEL: Record<string, string> = {
 
 export default function PlansScreen() {
   const router = useRouter();
-  const onScroll = useHideFloatingOnScroll();
   const [risk, setRisk] = useState<PlanRisk>("stable");
   const [refreshing, setRefreshing] = useState(false);
   const summary = usePlanSummaryQuery();
@@ -64,8 +62,6 @@ export default function PlansScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
-        onScroll={onScroll}
-        scrollEventThrottle={48}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.green} />}
       >
         <Text variant="overline" color={colors.green}>AI 计划</Text>

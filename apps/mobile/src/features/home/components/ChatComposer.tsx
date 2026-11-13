@@ -104,7 +104,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.pagePadding,
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
-    backgroundColor: colors.bg,
   },
   fab: {
     width: 54,
@@ -131,7 +130,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.pagePadding,
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
-    backgroundColor: colors.bg,
   },
   bar: {
     minHeight: 54,

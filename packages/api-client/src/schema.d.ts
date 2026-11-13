@@ -4306,6 +4306,11 @@ export interface components {
              * @default
              */
             key: string;
+            /**
+             * Direction
+             * @default
+             */
+            direction: string;
             /** Probability */
             probability?: number | null;
             /**
@@ -4384,6 +4389,18 @@ export interface components {
             /** Matches */
             matches: components["schemas"]["PredictionHistoryMatch"][];
         };
+        /** PredictionProbability */
+        PredictionProbability: {
+            /** Key */
+            key: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /** Probability */
+            probability: number;
+        };
         /** PredictionSettlementItem */
         PredictionSettlementItem: {
             /** Source */
@@ -4407,6 +4424,8 @@ export interface components {
             predicted_label: string;
             /** Predicted Probability */
             predicted_probability?: number | null;
+            /** Probabilities */
+            probabilities?: components["schemas"]["PredictionProbability"][];
             /**
              * Market Line
              * @default
