@@ -3,10 +3,10 @@ import type {
   SportmonksIntelData,
   SportmonksStandingRow,
 } from "@/domain/types";
-import { Card, Chip, ProbabilityBreakdown, Text } from "@/components/ui";
+import { Card, Chip, Text } from "@/components/ui";
 import { ageLabel } from "@/lib/freshness";
 import { colors, radii, spacing } from "@/theme/tokens";
-import { predictionDistribution } from "../predictionData";
+import { PredictionGroupBoard } from "./PredictionGroupBoard";
 
 function sectionAge(data: SportmonksIntelData, key: string): string {
   return ageLabel(data.sections?.[key]?.capturedAt || data.capturedAt) || "已更新";
@@ -193,30 +193,7 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
             </View>
             <Text variant="caption" color={colors.subtle}>{sectionAge(data, "predictions")}</Text>
           </View>
-          <View>
-            {highlights.map((item, index) => {
-              const dist = predictionDistribution(item);
-              return (
-                <View
-                  key={item.key}
-                  style={[styles.dim, index < highlights.length - 1 && styles.dimLine]}
-                >
-                  <View style={styles.dimHead}>
-                    <Text variant="smallStrong" style={styles.flex} numberOfLines={1}>
-                      {item.label}
-                    </Text>
-                    <Text variant="caption" color={colors.green} numberOfLines={1}>
-                      {dist.predictedLabel} {dist.predictedValue.toFixed(1)}%
-                    </Text>
-                  </View>
-                  <ProbabilityBreakdown
-                    items={dist.items}
-                    predictedKey={dist.predictedKey}
-                  />
-                </View>
-              );
-            })}
-          </View>
+          <PredictionGroupBoard highlights={highlights} />
         </Card>
       ) : null}
 

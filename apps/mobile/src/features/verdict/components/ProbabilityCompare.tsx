@@ -7,12 +7,27 @@ function pct(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function Row({ label, probs, tone }: { label: string; probs: ProbabilityTriple; tone: string }) {
+function Row({
+  label,
+  probs,
+  tone,
+  delta,
+}: {
+  label: string;
+  probs: ProbabilityTriple;
+  tone: string;
+  delta?: number;
+}) {
   return (
     <View style={styles.row}>
       <View style={styles.rowTop}>
         <Text variant="small" color={colors.muted}>{label}</Text>
-        <Text variant="smallStrong" mono>{pct(probs.home)} / {pct(probs.draw)} / {pct(probs.away)}</Text>
+        <View style={styles.rowRight}>
+          {delta != null ? (
+            <Text variant="caption" color={colors.amber}>分歧 {delta.toFixed(1)}pp</Text>
+          ) : null}
+          <Text variant="smallStrong" mono>{pct(probs.home)} / {pct(probs.draw)} / {pct(probs.away)}</Text>
+        </View>
       </View>
       <View style={styles.bar}>
         <View style={[styles.seg, { flex: Math.max(probs.home, 0.01), backgroundColor: tone }]} />
@@ -21,6 +36,16 @@ function Row({ label, probs, tone }: { label: string; probs: ProbabilityTriple; 
       </View>
     </View>
   );
+}
+
+function divergence(a?: ProbabilityTriple, b?: ProbabilityTriple): number | undefined {
+  if (!a || !b) return undefined;
+  const values = [
+    Math.abs(a.home - b.home),
+    Math.abs(a.draw - b.draw),
+    Math.abs(a.away - b.away),
+  ];
+  return Math.max(...values) * 100;
 }
 
 function Legend({ color, label }: { color: string; label: string }) {
@@ -50,9 +75,21 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
         </View>
       </View>
 
-      {data.sp ? <Row label="竞彩隐含" probs={data.sp} tone={colors.green} /> : null}
+      {data.sp ? (
+        <Row
+          label="竞彩隐含"
+          probs={data.sp}
+          tone={colors.green}
+          delta={divergence(data.model ?? data.thirdParty?.probs, data.sp)}
+        />
+      ) : null}
       {data.model ? (
-        <Row label="模型概率" probs={data.model} tone={colors.greenDark} />
+        <Row
+          label="模型概率"
+          probs={data.model}
+          tone={colors.greenDark}
+          delta={divergence(data.model, data.market?.probs ?? data.thirdParty?.probs)}
+        />
       ) : null}
       {data.market ? (
         <Row label="市场概率" probs={data.market.probs} tone={colors.muted} />
@@ -74,6 +111,7 @@ const styles = StyleSheet.create({
   head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   row: { gap: spacing.xs },
   rowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: spacing.sm },
+  rowRight: { flexDirection: "row", alignItems: "baseline", gap: spacing.sm },
   legend: { flexDirection: "row", gap: spacing.sm },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   dot: { width: 6, height: 6, borderRadius: 3 },

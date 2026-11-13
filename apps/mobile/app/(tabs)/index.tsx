@@ -38,6 +38,7 @@ import { useHomeConversation } from "@/features/home/useHomeConversation";
 import { useHomeSelectionStore } from "@/features/home/homeSelectionStore";
 import { StreamFeed } from "@/features/home/components/StreamFeed";
 import { HeaderMetrics } from "@/features/home/components/HeaderMetrics";
+import { TodayBriefCard } from "@/features/home/components/TodayBriefCard";
 import { DataStatusSheet, LegalFooter } from "@/features/home/components/HomeSections";
 import {
   AssistantMessage,
@@ -548,6 +549,22 @@ export default function HomeScreen() {
 
           <View style={styles.conversation}>
             <ConversationDate value={date} onChange={chooseDate} />
+
+            {briefStream ? (
+              <TodayBriefCard
+                date={date}
+                total={briefStream.stats.total}
+                predicted={verdicts.length + references.length}
+                published={recommendationsQuery.data?.snapshots.length ?? 0}
+                onsale={viewingToday ? onsale.length : briefStream.onsale.length}
+                options={briefOptions}
+                onSelect={selectBriefOption}
+                onOpenData={() => {
+                  trackInteraction("pulse_open");
+                  setDataOpen(true);
+                }}
+              />
+            ) : null}
 
             {briefStream ? (
               <AssistantBrief

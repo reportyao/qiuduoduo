@@ -33,6 +33,7 @@ import { MatchAnalysisCard } from "@/features/verdict/components/MatchAnalysisCa
 import { IntelSection } from "@/features/verdict/components/IntelSection";
 import { EvidenceList } from "@/features/verdict/components/EvidenceList";
 import { DetailActionBar } from "@/features/verdict/components/DetailActionBar";
+import { DetailSectionTabs, type DetailSection } from "@/features/verdict/components/DetailSectionTabs";
 import { BetSheet } from "@/features/verdict/components/BetSheet";
 import { SealSheet } from "@/features/verdict/components/SealSheet";
 
@@ -42,6 +43,7 @@ export default function VerdictDetailScreen() {
   const toast = useToast();
   const { copy, id: personaId } = usePersonaContent();
   const session = useAuthStore((s) => s.session);
+  const [section, setSection] = useState<DetailSection>("overview");
   const [betOpen, setBetOpen] = useState(false);
   const [sealOpen, setSealOpen] = useState(false);
   const setFocus = useFocusStore((s) => s.setFocus);
@@ -177,22 +179,47 @@ export default function VerdictDetailScreen() {
           />
         ) : null}
         <DetailHero detail={detail} published={published} onSeal={() => setSealOpen(true)} />
-        {detail.probabilityCompare ? (
-          <ProbabilityCompareCard data={detail.probabilityCompare} />
-        ) : null}
-        <IntelSection report={buildIntelReport(detail)} />
-        {detail.aiResearch ? <AiIntelCard data={detail.aiResearch} /> : null}
-        <SportmonksIntelSection data={detail.sportmonksIntel} />
-        <MatchAnalysisCard matchId={detail.matchId} date={detail.tradeDate} />
-        <EvidenceList items={detail.evidence} cutoff={detail.dataCutoff} />
+        <DetailSectionTabs value={section} onChange={setSection} />
 
-        {pm && pm.kind === "promoted" ? (
-          <Card style={styles.counter}>
-            <Text variant="h3">赛后复盘</Text>
-            <Text variant="small" color={colors.muted} style={styles.counterText}>
-              {pm.attribution?.class ?? "待归因"} · {pm.attribution?.note ?? pm.whatIf}
-            </Text>
-          </Card>
+        {section === "overview" ? (
+          <>
+            <IntelSection report={buildIntelReport(detail)} />
+            {detail.aiResearch ? <AiIntelCard data={detail.aiResearch} /> : null}
+          </>
+        ) : null}
+
+        {section === "predictions" ? (
+          <SportmonksIntelSection data={detail.sportmonksIntel} />
+        ) : null}
+
+        {section === "markets" ? (
+          <>
+            {detail.probabilityCompare ? (
+              <ProbabilityCompareCard data={detail.probabilityCompare} />
+            ) : null}
+            <MatchAnalysisCard matchId={detail.matchId} date={detail.tradeDate} />
+            <EvidenceList items={detail.evidence} cutoff={detail.dataCutoff} />
+          </>
+        ) : null}
+
+        {section === "review" ? (
+          <>
+            {pm && pm.kind === "promoted" ? (
+              <Card style={styles.counter}>
+                <Text variant="h3">赛后复盘</Text>
+                <Text variant="small" color={colors.muted} style={styles.counterText}>
+                  {pm.attribution?.class ?? "待归因"} · {pm.attribution?.note ?? pm.whatIf}
+                </Text>
+              </Card>
+            ) : (
+              <Card style={styles.counter}>
+                <Text variant="h3">赛后复盘</Text>
+                <Text variant="small" color={colors.muted} style={styles.counterText}>
+                  赛果未出或暂无复盘；开球并结算后这里会给出归因。
+                </Text>
+              </Card>
+            )}
+          </>
         ) : null}
 
         <Text variant="caption" color={colors.subtle} center style={styles.footer}>

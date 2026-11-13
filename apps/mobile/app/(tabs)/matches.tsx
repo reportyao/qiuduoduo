@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
 import { EmptyState, ErrorState, Skeleton, Text } from "@/components/ui";
 import { errorText } from "@/lib/errors";
-import { todayCn, tradeDateCnFromKickoff } from "@/lib/format";
+import { countdownText, formatTime, parseCnDateTime, todayCn, tradeDateCnFromKickoff } from "@/lib/format";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 import { DateNavigator } from "@/features/matches/components/DateNavigator";
 import { LiveMatchCard, ResultMatchCard } from "@/features/matches/components/MatchCard";
@@ -16,6 +16,7 @@ import {
   usePredictionHistoryQuery,
   useResultBoardQuery,
 } from "@/features/matches/queries";
+import { useOnSaleQuery } from "@/features/home/queries";
 
 const SUBTITLES: Record<MatchTab, string> = {
   live: "只显示进行中的竞彩场次",
@@ -30,10 +31,18 @@ export default function MatchesScreen() {
   const [pulling, setPulling] = useState(false);
 
   const live = useLiveBoardQuery(tab === "live");
+  const onsale = useOnSaleQuery(tab === "live");
   const results = useResultBoardQuery(date, tab === "results");
   const history = usePredictionHistoryQuery(date, tab === "predictions");
 
   const liveItems = live.data?.matches ?? [];
+  const nextMatch = useMemo(() => {
+    const now = Date.now();
+    return (onsale.data ?? [])
+      .map((item) => ({ item, time: parseCnDateTime(item.kickoff)?.getTime() ?? 0 }))
+      .filter((row) => row.time > now)
+      .sort((a, b) => a.time - b.time)[0]?.item ?? null;
+  }, [onsale.data]);
   const resultItems = results.data?.matches ?? [];
   const historyItems = history.data?.matches ?? [];
 
@@ -62,7 +71,14 @@ export default function MatchesScreen() {
       >
         <SegmentedTabs value={tab} onChange={setTab} liveCount={live.data?.count ?? 0} />
 
-        {tab === "live" ? <LiveSummary count={live.data?.count ?? 0} /> : (
+        {tab === "live" ? (
+          <LiveSummary
+            count={live.data?.count ?? 0}
+            nextLabel={nextMatch
+              ? `下一场 ${formatTime(nextMatch.kickoff)} · ${nextMatch.home} vs ${nextMatch.away} · ${countdownText(nextMatch.kickoff)}`
+              : "今日待开赛场次已结束"}
+          />
+        ) : (
           <DateNavigator date={date} onChange={setDate} />
         )}
 
@@ -149,13 +165,13 @@ export default function MatchesScreen() {
   );
 }
 
-function LiveSummary({ count }: { count: number }) {
+function LiveSummary({ count, nextLabel }: { count: number; nextLabel: string }) {
   return (
     <View style={styles.liveStrip}>
       <View style={[styles.liveDot, count === 0 && styles.idleDot]} />
       <Text variant="bodyStrong">{count > 0 ? `${count} 场进行中` : "等待开赛"}</Text>
-      <Text variant="caption" color={colors.muted} style={styles.flex}>
-        {count > 0 ? "30 秒自动刷新" : "开赛后自动出现"}
+      <Text variant="caption" color={colors.muted} style={styles.flex} numberOfLines={1}>
+        {count > 0 ? "30 秒自动刷新" : nextLabel}
       </Text>
     </View>
   );
