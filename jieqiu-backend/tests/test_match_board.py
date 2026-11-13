@@ -37,7 +37,7 @@ _PREDICTIONS = [
     (239, "DOUBLE_CHANCE_PROBABILITY", "双重机会",
      {"draw_home": 60.0, "draw_away": 63.0, "home_away": 77.0}),
     (240, "CORRECT_SCORE_PROBABILITY", "正确比分",
-     {"2-1": 8.0, "1-1": 9.0, "0-1": 7.0}),
+     {"scores": {"2-1": 8.0, "1-1": 9.0, "0-1": 7.0}}),
     (326, "HOME_OVER_UNDER_3_5_PROBABILITY", "主队大小球3.5",
      {"yes": 7.0, "no": 93.0}),
     (327, "AWAY_OVER_UNDER_3_5_PROBABILITY", "客队大小球3.5",

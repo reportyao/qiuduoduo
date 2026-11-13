@@ -549,6 +549,13 @@ def _argmax(values: dict[str, Any]) -> tuple[str, float | None]:
     return best_key, best_value
 
 
+def _probabilities(item: dict) -> dict[str, Any]:
+    """正确比分在 Sportmonks 里嵌了一层 scores，其余维度是平铺的。"""
+    values = item.get("probabilities") or {}
+    nested = values.get("scores") if isinstance(values, dict) else None
+    return nested if isinstance(nested, dict) and nested else values
+
+
 def _norm_prob(value: float | None) -> float | None:
     if value is None:
         return None
@@ -776,7 +783,7 @@ def settle_prediction_snapshots(db: Session, limit: int = 100) -> dict:
         has_product = bool(pick.get("dir"))
         for item in snapshot.predictions or []:
             code = str(item.get("type_code") or "")
-            predicted_key, probability = _argmax(item.get("probabilities") or {})
+            predicted_key, probability = _argmax(_probabilities(item))
             # 角球大小球预测键是 yes/no/equal，实际值统一为 over/under/equal。
             if code.startswith("CORNERS_OVER_UNDER_"):
                 predicted_key = {"yes": "over", "no": "under"}.get(
