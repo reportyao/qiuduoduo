@@ -408,29 +408,43 @@ def _market_lines(db: Session, match_ids: list[str]) -> dict[str, dict]:
     out: dict[str, dict] = {}
     if not match_ids:
         return out
+    sm_ou: dict[str, str] = {}
     for row in db.scalars(select(SportmonksMarket).where(
             SportmonksMarket.match_id.in_(match_ids))):
-        out.setdefault(row.match_id, {})[row.market_key] = row.line or ""
-    # 竞彩总进球/大小球优先；TTG 池没有 handicap line 时按其自然分界 2.5 球。
-    for row in db.scalars(select(SPPoolSnapshot).where(
-            SPPoolSnapshot.match_id.in_(match_ids),
-            SPPoolSnapshot.pool.in_(["ou", "ttg"]))
-            .order_by(SPPoolSnapshot.captured_at)):
         item = out.setdefault(row.match_id, {})
+        if row.market_key == "ou":
+            if row.line:
+                sm_ou[row.match_id] = row.line
+        else:
+            item[row.market_key] = row.line or ""
+
+    # 盘口优先级：竞彩明确大小球 > 竞彩总进球隐含线 > Sportmonks 选定市场 > 2.5 兜底。
+    pool_rows = list(db.scalars(select(SPPoolSnapshot).where(
+        SPPoolSnapshot.match_id.in_(match_ids),
+        SPPoolSnapshot.pool.in_(["ou", "ttg"]))
+        .order_by(SPPoolSnapshot.captured_at)))
+    sporttery_ou: dict[str, str] = {}
+    ttg_line: dict[str, str] = {}
+    for row in pool_rows:
         if row.pool == "ou" and row.line:
-            item["ou"] = row.line
-            item["ou_source"] = "sporttery"
-        elif row.pool == "ttg" and "ou" not in item:
+            sporttery_ou[row.match_id] = row.line
+        elif row.pool == "ttg":
             line = _implied_ou_line(row.selections or {})
             if line:
-                item["ou"] = line
-                item["ou_source"] = "sporttery_ttg_implied"
-            else:
-                item["ou"] = "2.5"
-                item["ou_source"] = "sporttery_ttg"
-    for item in out.values():
-        item.setdefault("ou", "2.5")
-        item.setdefault("ou_source", "sportmonks")
+                ttg_line[row.match_id] = line
+    for match_id, item in out.items():
+        if sporttery_ou.get(match_id):
+            item["ou"] = sporttery_ou[match_id]
+            item["ou_source"] = "sporttery"
+        elif ttg_line.get(match_id):
+            item["ou"] = ttg_line[match_id]
+            item["ou_source"] = "sporttery_ttg_implied"
+        elif sm_ou.get(match_id):
+            item["ou"] = sm_ou[match_id]
+            item["ou_source"] = "sportmonks"
+        else:
+            item.setdefault("ou", "2.5")
+            item.setdefault("ou_source", "sportmonks")
     return out
 
 

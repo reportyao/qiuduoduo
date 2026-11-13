@@ -8,7 +8,8 @@ from sqlalchemy import select
 
 from app.features.board import service
 from app.models import (MatchResult, MatchResultDetail, SPMatch,
-                        SportmonksLiveState, SportmonksMatchData,
+                        SPPoolSnapshot, SportmonksLiveState,
+                        SportmonksMarket, SportmonksMatchData,
                         SportmonksPrediction,
                         SportmonksPredictionSettlement,
                         SportmonksPredictionSnapshot, User, Verdict,
@@ -243,6 +244,19 @@ def test_sync_live_states_parses_inplay_and_period_minute(db, monkeypatch):
     assert state.state_short == "2H" and state.minute == "67"
     assert state.score_home == 1 and state.score_away == 1
     assert state.ht_home == 0 and state.ht_away == 1
+
+
+def test_market_lines_prefer_sporttery_ttg_over_sportmonks(db):
+    _seed_match(db, future_kickoff(today_cn()))
+    db.add(SportmonksMarket(match_id="board-1", market_key="ou", line="2.5"))
+    db.add(SPPoolSnapshot(
+        match_id="board-1", pool="ttg", line="", captured_at="2026-11-13 10:00:00",
+        selections={"s0": "32.00", "s1": "9.35", "s2": "5.40", "s3": "4.40",
+                    "s4": "4.15", "s5": "5.25", "s6": "7.50", "s7": "7.25"}))
+    db.commit()
+    lines = service._market_lines(db, ["board-1"])
+    assert lines["board-1"]["ou"] == "4.5"
+    assert lines["board-1"]["ou_source"] == "sporttery_ttg_implied"
 
 
 def test_implied_ou_line_follows_sporttery_total_goals():
