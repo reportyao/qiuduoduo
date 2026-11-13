@@ -277,3 +277,34 @@ def test_focus_uses_sportmonks_lineups_and_standings(client, db):
     assert any(f["id"] == "lineups" for f in data["intel"]["facts"])
     assert "首发/伤停未接入" not in data["intel"]["unknowns"]
     assert "积分榜未同步" not in data["intel"]["unknowns"]
+
+
+def test_market_board_keeps_all_supported_market_types(monkeypatch):
+    rows = []
+    for market_id, labels in (
+        (1, ("Home", "Draw", "Away")),
+        (6, ("Home", "Away")),
+        (7, ("Over", "Under")),
+        (80, ("Over", "Under")),
+        (26, ("Home", "Away")),
+        (28, ("Over", "Under")),
+        (31, ("Home", "Draw", "Away")),
+        (20, ("Over", "Under")),
+        (21, ("Over", "Under")),
+        (62, ("Home", "Away")),
+        (67, ("Over", "Under")),
+    ):
+        for index, label in enumerate(labels):
+            rows.append({
+                "market_id": market_id, "label": label, "value": "2.00",
+                "probability": "50%", "handicap": "0", "total": "2.5",
+                "sort_order": index,
+            })
+
+    monkeypatch.setattr(si, "_get", lambda *args, **kwargs: {"data": rows})
+    board = si._market_board(1, "http://test", "token")
+    assert {row["key"] for row in board} == {
+        "1x2", "ah", "goal_line", "ou", "ah_1h", "ou_1h", "1h_winner",
+        "home_total", "away_total", "corners_ah", "corners_ou",
+    }
+    assert next(row for row in board if row["key"] == "1x2")["selections"][0]["label"] == "主胜"

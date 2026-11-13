@@ -421,23 +421,41 @@ def _market_board(fixture_id: int, base: str, token: str) -> list[dict]:
     rows = (payload or {}).get("data") or []
     board: list[dict] = []
     label_cn = {"home": "主胜", "draw": "平局", "away": "客胜",
-                "over": "大", "under": "小"}
-    for market_id, key, name in (
-        (1, "1x2", "胜平负"),
-        (6, "ah", "亚洲让球"),
-        (80, "ou", "大小球"),
-    ):
+                "over": "大", "under": "小", "yes": "是", "no": "否"}
+    specs = (
+        (1, "1x2", "胜平负", None, None),
+        (6, "ah", "亚洲让球", "handicap", 0.0),
+        (7, "goal_line", "进球线", "total", 2.5),
+        (80, "ou", "大小球", "total", 2.5),
+        (26, "ah_1h", "半场亚洲让球", "handicap", 0.0),
+        (28, "ou_1h", "半场大小球", "total", 1.5),
+        (31, "1h_winner", "半场胜平负", None, None),
+        (20, "home_total", "主队总进球", "total", 0.5),
+        (21, "away_total", "客队总进球", "total", 0.5),
+        (62, "corners_ah", "角球让球", "handicap", 0.0),
+        (67, "corners_ou", "角球大小", "total", 9.5),
+    )
+    for market_id, key, name, line_field, target in specs:
         subset = [row for row in rows if row.get("market_id") == market_id]
         if not subset:
             continue
         line = ""
-        if market_id == 6:
-            lines = [str(row.get("handicap")) for row in subset if row.get("handicap") is not None]
-            line = min(lines, key=lambda value: abs(_num(value) or 99)) if lines else ""
-            subset = [row for row in subset if str(row.get("handicap")) == line]
-        elif market_id == 80:
-            line = "2.5"
-            subset = [row for row in subset if str(row.get("total")) == line]
+        if line_field:
+            groups: dict[str, list[dict]] = {}
+            for row in subset:
+                value = row.get(line_field)
+                if value is None:
+                    continue
+                groups.setdefault(str(value), []).append(row)
+            if groups:
+                def rank(item: tuple[str, list[dict]]) -> tuple[int, float]:
+                    text, group = item
+                    number = _num(text)
+                    gap = abs(number - target) if number is not None and target is not None else 0.0
+                    return (len(group), -gap)
+                line, subset = max(groups.items(), key=rank)
+            else:
+                subset = []
         selections = []
         for row in subset:
             label = str(row.get("label") or "").lower()
@@ -457,7 +475,6 @@ def _market_board(fixture_id: int, base: str, token: str) -> list[dict]:
                 "selections": selections,
             })
     return board
-
 
 def _weather(fixture: dict) -> dict | None:
     raw = fixture.get("weatherreport")
