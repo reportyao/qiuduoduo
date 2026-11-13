@@ -391,7 +391,7 @@ def _predictions(fixture_id: int, base: str, token: str) -> tuple[list[dict], li
                 ((key, _num(value)) for key, value in scores.items()
                  if _num(value) is not None and not str(key).startswith("Other")),
                 key=lambda pair: pair[1] or 0, reverse=True,
-            )[:3]
+            )
             if top:
                 highlights.append({
                     "key": code,
