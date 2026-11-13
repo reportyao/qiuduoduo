@@ -38,7 +38,7 @@ function Row({
   );
 }
 
-function divergence(a?: ProbabilityTriple, b?: ProbabilityTriple): number | undefined {
+function divergence(a?: ProbabilityTriple | null, b?: ProbabilityTriple | null): number | undefined {
   if (!a || !b) return undefined;
   const values = [
     Math.abs(a.home - b.home),
@@ -92,7 +92,12 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
         />
       ) : null}
       {data.market ? (
-        <Row label="市场概率" probs={data.market.probs} tone={colors.muted} />
+        <Row
+          label="市场概率"
+          probs={data.market.probs}
+          tone={colors.muted}
+          delta={divergence(data.sp, data.market.probs)}
+        />
       ) : null}
       {data.thirdParty ? (
         <Row label="多维预测" probs={data.thirdParty.probs} tone={colors.amber} />
