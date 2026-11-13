@@ -104,7 +104,7 @@ export function ProbabilityBreakdown({
 }
 
 function formatPct(value: number): string {
-  return `${value >= 10 ? Math.round(value) : value.toFixed(1)}%`;
+  return `${value.toFixed(1)}%`;
 }
 
 function segmentColor(key: string, predicted?: string, actual?: string, dark = false): string {
