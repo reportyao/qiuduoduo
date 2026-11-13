@@ -673,8 +673,10 @@ def _product_actual(snapshot: SportmonksPredictionSnapshot,
         actual_key = "home" if diff > 0 else ("draw" if diff == 0 else "away")
     if not actual_key:
         return "", ""
-    label = _outcome_cn(actual_key)
-    return actual_key, f"让球{label}" if handicap else label
+    if handicap:
+        return actual_key, {"home": "让球主胜", "draw": "让球平",
+                            "away": "让球客胜"}[actual_key]
+    return actual_key, _outcome_cn(actual_key)
 
 
 def _new_settlement(snapshot: SportmonksPredictionSnapshot, *, source: str,
