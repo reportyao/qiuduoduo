@@ -28,7 +28,7 @@ function standingLine(label: string, row?: SportmonksStandingRow): string {
   return `${label}：第 ${row.position ?? "—"} · ${row.points ?? "—"} 分 · ${record} · ${formText(row.form)}`;
 }
 
-function predictionValue(item: SportmonksPredictionHighlight): string {
+export function predictionValue(item: SportmonksPredictionHighlight): string {
   if (item.key === "CORRECT_SCORE_PROBABILITY" && item.scores?.length) {
     return item.scores
       .slice(0, 3)

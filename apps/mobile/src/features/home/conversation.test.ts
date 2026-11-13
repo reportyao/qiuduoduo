@@ -120,6 +120,8 @@ describe("home conversation persistence", () => {
     const intel = summarizeIntel(data);
     expect(intel?.prediction).toContain("全场胜平负");
     expect(intel?.prediction).toContain("37%");
+    expect(intel?.predictions).toHaveLength(1);
+    expect(intel?.markets).toEqual([]);
     expect(intel?.sections?.predictions).toBe("2026-11-12T13:20:12Z");
   });
 

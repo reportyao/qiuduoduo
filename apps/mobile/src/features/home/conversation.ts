@@ -1,8 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { ChatCard, SportmonksIntelData, VerdictSummary } from "@/domain/types";
+import type {
+  ChatCard,
+  SportmonksIntelData,
+  SportmonksMarketBoard,
+  SportmonksPredictionHighlight,
+  VerdictSummary,
+} from "@/domain/types";
 import type { BriefMatchOption } from "@/features/home/components/BriefMatchPicker";
 
-const STORAGE_PREFIX = "jieqiu.home.thread.v3";
+const STORAGE_PREFIX = "jieqiu.home.thread.v4";
 const MAX_MESSAGES = 60;
 
 export interface MatchIntelSummary {
@@ -20,6 +26,8 @@ export interface MatchIntelSummary {
   weather?: string;
   referee?: string;
   prediction?: string;
+  predictions?: SportmonksPredictionHighlight[];
+  markets?: SportmonksMarketBoard[];
   market?: string;
   h2h?: string;
   news?: string;
@@ -143,7 +151,7 @@ export function summarizeIntel(
     sections[key] = meta.capturedAt ?? null;
   }
   return {
-    v: 2,
+    v: 3,
     homeFormation: data.formations?.home || data.lineups?.home?.formation,
     awayFormation: data.formations?.away || data.lineups?.away?.formation,
     injuries: (data.sidelined ?? []).map((row) => row.playerName).filter(Boolean).slice(0, 4),
@@ -156,6 +164,8 @@ export function summarizeIntel(
     weather: data.weather?.description,
     referee: data.referees?.main?.name,
     prediction: topPrediction(data),
+    predictions: data.predictionHighlights ?? [],
+    markets: data.marketBoard ?? [],
     market: marketPick
       ? `${marketPick.label} ${pctText(marketPick.probability)}`
       : undefined,
@@ -169,7 +179,7 @@ export function summarizeIntel(
 }
 
 function isSummary(value: unknown): value is MatchIntelSummary {
-  return isObject(value) && value.v === 2 && Array.isArray(value.injuries);
+  return isObject(value) && value.v === 3 && Array.isArray(value.injuries);
 }
 
 export function parseHomeMessages(raw: string | null): HomeConversationMessage[] {

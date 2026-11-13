@@ -16,7 +16,6 @@ import { Text, useToast } from "@/components/ui";
 import { usePersonaContent } from "@/features/personas/usePersona";
 import { usePrefsStore } from "@/features/preferences/prefsStore";
 import { useAuthStore } from "@/features/auth/authStore";
-import { useHideFloatingOnScroll } from "@/features/assistant/useHideFloatingOnScroll";
 import {
   focusFromOnSale,
   focusFromVerdict,
@@ -27,6 +26,7 @@ import { ChatCardContent } from "@/features/assistant/components/ChatCardContent
 import { useMemoryMutations } from "@/features/account/queries";
 import { flattenStream, useEngineStatusQuery, useFocusQuery, useOnSaleQuery, usePulseQuery, useRecommendationsTodayQuery, useRecordSummaryQuery, useStreamQuery } from "@/features/home/queries";
 import { useBetsQuery } from "@/features/records/queries";
+import { useMembershipQuery } from "@/features/plans/queries";
 import { trackInteraction } from "@/features/telemetry/interactions";
 import { ChatComposer } from "@/features/home/components/ChatComposer";
 import { MatchPickerSheet } from "@/features/home/components/MatchPickerSheet";
@@ -54,6 +54,7 @@ import {
   VerdictMessage,
 } from "@/features/home/components/ConversationMessages";
 import { BetSheet } from "@/features/verdict/components/BetSheet";
+import { SportmonksPredictionBoard } from "@/features/verdict/components/SportmonksPredictionBoard";
 import { SealSheet } from "@/features/verdict/components/SealSheet";
 import { ApiError, errorText } from "@/lib/errors";
 import { currentTradeDateCn, formatDate, shiftDateCn } from "@/lib/format";
@@ -154,7 +155,6 @@ export default function HomeScreen() {
   };
 
   // 头像常驻在 Tab 层；任意页面开始纵向阅读时收起，避免压住正文。
-  const onScroll = useHideFloatingOnScroll();
 
 
   useEffect(() => {
@@ -212,6 +212,7 @@ export default function HomeScreen() {
   const focusQuery = useFocusQuery(focus?.matchId ?? null, focus?.tradeDate ?? date, Boolean(focus));
   const onsaleQuery = useOnSaleQuery();
   const betsQuery = useBetsQuery(Boolean(session));
+  const membershipQuery = useMembershipQuery();
 
   useEffect(() => {
     if (!focus?.matchId || !focusQuery.data?.sportmonks) return;
@@ -470,6 +471,7 @@ export default function HomeScreen() {
       >
         <ScrollView
           ref={scrollRef}
+          style={styles.flex}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.scrollContent,
@@ -484,7 +486,6 @@ export default function HomeScreen() {
             scrollRef.current?.scrollToEnd({ animated: true });
           }}
           scrollEventThrottle={48}
-          onScroll={onScroll}
           refreshControl={
             <RefreshControl
               refreshing={pulling}
@@ -663,17 +664,27 @@ export default function HomeScreen() {
                     : undefined;
                   if (message.kind === "prediction") {
                     return (
-                      <VerdictMessage
-                        key={message.id}
-                        verdict={resolvedVerdict ?? message.verdict}
-                        header={<Text variant="body">{message.lead}</Text>}
-                        compact
-                        betExists={Boolean(resolvedVerdict && betIds.has(resolvedVerdict.id))}
-                        onOpen={openVerdict}
-                        onBet={setBetTarget}
-                        onWhyNot={openWhyNot}
-                        onSeal={setSealTarget}
-                      />
+                      <View key={message.id}>
+                        <VerdictMessage
+                          verdict={resolvedVerdict ?? message.verdict}
+                          header={<Text variant="body">{message.lead}</Text>}
+                          compact
+                          betExists={Boolean(resolvedVerdict && betIds.has(resolvedVerdict.id))}
+                          onOpen={openVerdict}
+                          onBet={setBetTarget}
+                          onWhyNot={openWhyNot}
+                          onSeal={setSealTarget}
+                        />
+                        <AssistantMessage>
+                          <SportmonksPredictionBoard
+                            predictions={message.intel?.predictions}
+                            markets={message.intel?.markets}
+                            capturedAt={message.intel?.capturedAt}
+                            locked={!membershipQuery.data?.is_paid}
+                            onUnlock={() => router.push("/membership")}
+                          />
+                        </AssistantMessage>
+                      </View>
                     );
                   }
                   return (
