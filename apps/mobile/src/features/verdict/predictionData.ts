@@ -55,7 +55,9 @@ export function predictionDistribution(
         : labelFor(item.key, row.key),
       value: row.value,
     }));
-  const top = items[0];
+  const top = item.key === "CORRECT_SCORE_PROBABILITY"
+    ? (items.find((row) => !row.key.startsWith("Other")) ?? items[0])
+    : items[0];
   return {
     items,
     predictedKey: top?.key ?? "",
