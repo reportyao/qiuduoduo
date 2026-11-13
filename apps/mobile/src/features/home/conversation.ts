@@ -8,7 +8,7 @@ import type {
 } from "@/domain/types";
 import type { BriefMatchOption } from "@/features/home/components/BriefMatchPicker";
 
-const STORAGE_PREFIX = "jieqiu.home.thread.v4";
+const STORAGE_PREFIX = "jieqiu.home.thread.v5";
 const MAX_MESSAGES = 60;
 
 export interface MatchIntelSummary {
@@ -151,7 +151,7 @@ export function summarizeIntel(
     sections[key] = meta.capturedAt ?? null;
   }
   return {
-    v: 3,
+    v: 4,
     homeFormation: data.formations?.home || data.lineups?.home?.formation,
     awayFormation: data.formations?.away || data.lineups?.away?.formation,
     injuries: (data.sidelined ?? []).map((row) => row.playerName).filter(Boolean).slice(0, 4),
@@ -179,7 +179,7 @@ export function summarizeIntel(
 }
 
 function isSummary(value: unknown): value is MatchIntelSummary {
-  return isObject(value) && value.v === 3 && Array.isArray(value.injuries);
+  return isObject(value) && value.v === 4 && Array.isArray(value.injuries);
 }
 
 export function parseHomeMessages(raw: string | null): HomeConversationMessage[] {

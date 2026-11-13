@@ -44,6 +44,18 @@ describe("sportmonks intel adapter", () => {
     expect(data?.marketBoard?.[0].selections[0].price).toBe(1.9);
   });
 
+  it("parses list-shaped prediction highlights from the API", () => {
+    const data = adaptSportmonksIntel({
+      league: "欧国联",
+      prediction_highlights: [{
+        key: "FULLTIME_RESULT_PROBABILITY", label: "全场胜平负",
+        values: { home: 37.2, draw: 22.9, away: 39.9 },
+      }],
+    });
+    expect(data?.predictionHighlights).toHaveLength(1);
+    expect(data?.predictionHighlights?.[0].key).toBe("FULLTIME_RESULT_PROBABILITY");
+  });
+
   it("returns null for malformed input without throwing", () => {
     expect(adaptSportmonksIntel(null)).toBeNull();
     expect(adaptSportmonksIntel({ lineups: { home: {} } })?.lineups?.home).toBeUndefined();

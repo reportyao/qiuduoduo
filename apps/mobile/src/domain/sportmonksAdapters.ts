@@ -183,7 +183,11 @@ export function adaptSportmonksIntel(value: unknown): SportmonksIntelData | null
       home: array(recent.home).map((item) => string(item)).filter(Boolean),
       away: array(recent.away).map((item) => string(item)).filter(Boolean),
     },
-    predictionHighlights: array(record(raw.prediction_highlights ?? raw.predictionHighlights).items)
+    predictionHighlights: array(
+      Array.isArray(raw.prediction_highlights ?? raw.predictionHighlights)
+        ? raw.prediction_highlights ?? raw.predictionHighlights
+        : record(raw.prediction_highlights ?? raw.predictionHighlights).items,
+    )
       .map(highlight)
       .filter((item): item is SportmonksPredictionHighlight => Boolean(item)),
     marketBoard: array(raw.market_board ?? raw.marketBoard)

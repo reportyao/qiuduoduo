@@ -38,7 +38,7 @@ export function SportmonksPredictionBoard({
         <Text variant="caption" color={colors.subtle}>{ageLabel(capturedAt)}</Text>
       </View>
 
-      <View style={styles.board}>
+      <View style={[styles.board, locked && styles.lockedBoard]}>
         <View style={[styles.rows, locked && styles.lockedRows]} pointerEvents="none">
           {preview.map((item) => (
             <View key={item.key} style={styles.row}>
@@ -91,6 +91,7 @@ const styles = StyleSheet.create({
   head: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.sm },
   headText: { gap: 2 },
   board: { position: "relative", borderRadius: radii.md, overflow: "hidden" },
+  lockedBoard: { minHeight: 252 },
   rows: { gap: 1 },
   lockedRows: { opacity: 0.16 },
   row: {
@@ -107,7 +108,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: spacing.sm,
     right: spacing.sm,
-    top: "12%",
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
     alignItems: "center",
     gap: spacing.sm,
     padding: spacing.lg,
