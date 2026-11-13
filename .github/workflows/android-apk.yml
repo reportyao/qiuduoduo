@@ -102,6 +102,7 @@ jobs:
             - 使用 debug keystore 签名，仅供内部安装测试，不可上架分发
             - 首次安装需要允许“安装未知来源应用”
             - 首页：今日预测 / 通过三关 / 已发布预测 / 在售；无 published 时显示原因
+            - 比赛中心：即时 / 赛果 / 预测战绩；即时与赛果不展示预测，预测战绩可展开单场 25 维对照
             - 未发布详情为浅色复核预览，锁住记注与分享
           files: apps/mobile/qiuduoduo-${{ github.ref_name }}.apk
           fail_on_unmatched_files: true
