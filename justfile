@@ -62,6 +62,12 @@ mobile-web-export:
     cd apps/mobile && EXPO_PUBLIC_API_BASE_URL=http://43.128.24.244:8100 EXPO_PUBLIC_APP_ENV=staging EXPO_PUBLIC_ALLOW_HTTP=true corepack pnpm web:export
     rm -rf jieqiu-backend/app/static/h5 && cp -R apps/mobile/.export-web jieqiu-backend/app/static/h5
 
+# 本机有 ~/.ssh/jieqiu_deploy 时，一键把最新 H5 静态文件推到生产预览。
+h5-publish:
+    just mobile-web-export
+    ssh -i ~/.ssh/jieqiu_deploy ubuntu@43.128.24.244 "mkdir -p /home/ubuntu/jieqiu-backend/app/static/h5"
+    scp -r -i ~/.ssh/jieqiu_deploy jieqiu-backend/app/static/h5/. ubuntu@43.128.24.244:/home/ubuntu/jieqiu-backend/app/static/h5/
+
 mobile-android:
     cd apps/mobile && corepack pnpm android
 

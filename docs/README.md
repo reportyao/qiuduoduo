@@ -7,6 +7,7 @@
 - 生产预览：http://43.128.24.244:8100/h5/
 - 本地开发：`cd apps/mobile && corepack pnpm web`（默认连本机 `127.0.0.1:8100`）
 - 重新导出：`just mobile-web-export`，产物写入 `jieqiu-backend/app/static/h5/`
+- 一键发布到生产预览：`just h5-publish`（本机需有 `~/.ssh/jieqiu_deploy`）
 - 预览构建使用 `EXPO_PUBLIC_API_BASE_URL=http://43.128.24.244:8100`；正式 App 仍由 GitHub Actions 构建 APK。
 - H5 是内部预览入口，不替代 App 的推送、JPush、安装包等原生能力。
 
