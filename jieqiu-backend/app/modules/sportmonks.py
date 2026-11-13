@@ -416,7 +416,14 @@ def sync_trade_date(db: Session, date: str, max_matches: int = 40) -> dict:
         _sync_match(db, base, token, match, fixture)
         synced += 1
     db.commit()
+    board_snapshots = {"opened": 0, "locked": 0, "skipped": 0}
+    try:
+        from ..features.board import service as board_service
+        board_snapshots = board_service.freeze_prediction_snapshots(db)
+    except Exception:  # noqa: BLE001 - 快照失败不能阻断主同步
+        log.exception("prediction snapshot freeze failed")
     return {"ok": True, "reason": "done", "synced": synced,
+            "snapshots": board_snapshots,
             "unmatched": unmatched[:10], "matches": len(matches),
             "total_matches": len(all_matches),
             "truncated": max(0, len(all_matches) - len(matches))}

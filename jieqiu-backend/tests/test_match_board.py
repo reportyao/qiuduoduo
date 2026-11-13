@@ -1,0 +1,282 @@
+"""比赛看板：即时/赛果隔离、预测快照锁定与 25 维结算。"""
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
+
+from sqlalchemy import select
+
+from app.features.board import service
+from app.models import (MatchResult, MatchResultDetail, SPMatch,
+                        SportmonksLiveState, SportmonksMatchData,
+                        SportmonksPrediction,
+                        SportmonksPredictionSettlement,
+                        SportmonksPredictionSnapshot, User, Verdict,
+                        WatchTarget, utcnow)
+from tests.conftest import CN, future_kickoff, today_cn
+
+CN_TZ = CN
+UTC = timezone.utc
+
+_PREDICTIONS = [
+    (231, "BTTS_PROBABILITY", "双方进球", {"yes": 61.5, "no": 38.5}),
+    (232, "HTFT_PROBABILITY", "半场/全场", {
+        "home_home": 30.0, "home_draw": 3.0, "home_away": 2.0,
+        "draw_home": 10.0, "draw_draw": 8.0, "draw_away": 6.0,
+        "away_home": 2.0, "away_draw": 4.0, "away_away": 35.0}),
+    (233, "FIRST_HALF_WINNER_PROBABILITY", "半场胜平负",
+     {"home": 40.0, "draw": 30.0, "away": 30.0}),
+    (234, "OVER_UNDER_1_5_PROBABILITY", "大小球1.5", {"yes": 82.0, "no": 18.0}),
+    (235, "OVER_UNDER_2_5_PROBABILITY", "大小球2.5", {"yes": 62.0, "no": 38.0}),
+    (236, "OVER_UNDER_3_5_PROBABILITY", "大小球3.5", {"yes": 40.0, "no": 60.0}),
+    (237, "FULLTIME_RESULT_PROBABILITY", "全场胜平负",
+     {"home": 37.0, "draw": 23.0, "away": 40.0}),
+    (238, "TEAM_TO_SCORE_FIRST_PROBABILITY", "先得分球队",
+     {"home": 40.0, "away": 55.0, "draw": 5.0}),
+    (239, "DOUBLE_CHANCE_PROBABILITY", "双重机会",
+     {"draw_home": 60.0, "draw_away": 63.0, "home_away": 77.0}),
+    (240, "CORRECT_SCORE_PROBABILITY", "正确比分",
+     {"2-1": 8.0, "1-1": 9.0, "0-1": 7.0}),
+    (326, "HOME_OVER_UNDER_3_5_PROBABILITY", "主队大小球3.5",
+     {"yes": 7.0, "no": 93.0}),
+    (327, "AWAY_OVER_UNDER_3_5_PROBABILITY", "客队大小球3.5",
+     {"yes": 9.0, "no": 91.0}),
+    (328, "AWAY_OVER_UNDER_2_5_PROBABILITY", "客队大小球2.5",
+     {"yes": 21.0, "no": 79.0}),
+    (330, "HOME_OVER_UNDER_2_5_PROBABILITY", "主队大小球2.5",
+     {"yes": 20.0, "no": 80.0}),
+    (331, "HOME_OVER_UNDER_1_5_PROBABILITY", "主队大小球1.5",
+     {"yes": 42.0, "no": 58.0}),
+    (332, "AWAY_OVER_UNDER_1_5_PROBABILITY", "客队大小球1.5",
+     {"yes": 45.0, "no": 55.0}),
+    (333, "AWAY_OVER_UNDER_0_5_PROBABILITY", "客队大小球0.5",
+     {"yes": 74.0, "no": 26.0}),
+    (334, "HOME_OVER_UNDER_0_5_PROBABILITY", "主队大小球0.5",
+     {"yes": 71.0, "no": 29.0}),
+    (1679, "OVER_UNDER_4_5_PROBABILITY", "大小球4.5", {"yes": 24.0, "no": 76.0}),
+    (1683, "CORNERS_OVER_UNDER_5_PROBABILITY", "角球大小5",
+     {"yes": 90.0, "no": 5.0, "equal": 5.0}),
+    (1685, "CORNERS_OVER_UNDER_6_PROBABILITY", "角球大小6",
+     {"yes": 84.0, "no": 9.0, "equal": 7.0}),
+    (1686, "CORNERS_OVER_UNDER_7_PROBABILITY", "角球大小7",
+     {"yes": 75.0, "no": 16.0, "equal": 9.0}),
+    (1687, "CORNERS_OVER_UNDER_9_PROBABILITY", "角球大小9",
+     {"yes": 54.0, "no": 34.0, "equal": 12.0}),
+    (1689, "CORNERS_OVER_UNDER_8_PROBABILITY", "角球大小8",
+     {"yes": 65.0, "no": 24.0, "equal": 11.0}),
+    (1690, "CORNERS_OVER_UNDER_4_PROBABILITY", "角球大小4",
+     {"yes": 95.0, "no": 2.0, "equal": 3.0}),
+]
+
+
+def _kickoff_utc_value(value: str) -> datetime:
+    return datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(
+        tzinfo=CN_TZ).astimezone(UTC).replace(tzinfo=None)
+
+
+def _seed_match(db, kickoff: str):
+    db.merge(SPMatch(
+        match_id="board-1", match_no="周四901", league="欧国联",
+        home_raw="主队", away_raw="客队", home="主队", away="客队",
+        kickoff=kickoff, single_flag=True))
+    db.merge(SportmonksMatchData(
+        match_id="board-1", fixture_id=99001, league="欧国联",
+        home_name="主队", away_name="客队",
+        kickoff_utc="2026-11-13 13:00:00", captured_at=utcnow()))
+    for type_id, code, name, probabilities in _PREDICTIONS:
+        db.merge(SportmonksPrediction(
+            match_id="board-1", type_id=type_id, type_code=code,
+            type_name=name, probabilities=probabilities, captured_at=utcnow()))
+    db.merge(Verdict(
+        id="v-board-1", trade_date=today_cn(), match_id="board-1",
+        match_no="周四901", league="欧国联", home="主队", away="客队",
+        kickoff=kickoff, pool="had", goal_line="", sp_h=2.1, sp_d=3.2,
+        sp_a=3.4, rake=0.09, p_home=0.45, p_draw=0.3, p_away=0.25,
+        pick={"dir": "主胜", "prob": 0.37, "sp": 2.1},
+        status="screening", tier="market_reference",
+        gates={"price": {"result": "pass"}}, payload={"model": {}},
+        payload_hash="a" * 64))
+    db.commit()
+
+
+def test_prediction_snapshot_locks_once_and_settles_all_dimensions(db):
+    kickoff = future_kickoff(today_cn())
+    _seed_match(db, kickoff)
+    before = _kickoff_utc_value(kickoff) - timedelta(minutes=30)
+    opened = service.freeze_prediction_snapshots(db, now=before)
+    assert opened["opened"] == 1
+    snapshot = db.get(SportmonksPredictionSnapshot, "board-1")
+    assert snapshot is not None and snapshot.locked_at is None
+    assert len(snapshot.predictions) == 25
+
+    after = _kickoff_utc_value(kickoff) + timedelta(minutes=1)
+    locked = service.freeze_prediction_snapshots(db, now=after)
+    assert locked["locked"] == 1
+    assert snapshot.locked_at is not None
+    frozen_predictions = list(snapshot.predictions)
+    # 再次冻结不能改动已锁定内容。
+    service.freeze_prediction_snapshots(db, now=after + timedelta(hours=1))
+    assert snapshot.predictions == frozen_predictions
+
+    result = MatchResult(
+        source="sportmonks", league="欧国联", home_raw="主队", away_raw="客队",
+        home="主队", away="客队", match_date=kickoff[:10], fixture_id=99001,
+        status="FT", ft_home=2, ft_away=1, ht_home=1, ht_away=0,
+        goals_home=2, goals_away=1, retrieved_at=utcnow().isoformat())
+    db.add(result)
+    db.flush()
+    db.add(MatchResultDetail(
+        result_id=result.id, fixture_id=99001,
+        actuals=service.parse_actuals({
+            "state": {"short_name": "FT"},
+            "scores": [
+                {"score": {"participant": "home", "goals": 1},
+                 "description": "1ST_HALF"},
+                {"score": {"participant": "away", "goals": 0},
+                 "description": "1ST_HALF"},
+                {"score": {"participant": "home", "goals": 2},
+                 "description": "2ND_HALF"},
+                {"score": {"participant": "away", "goals": 1},
+                 "description": "2ND_HALF"},
+                {"score": {"participant": "home", "goals": 2},
+                 "description": "CURRENT"},
+                {"score": {"participant": "away", "goals": 1},
+                 "description": "CURRENT"},
+            ],
+            "statistics": [
+                {"type": {"developer_name": "CORNERS"},
+                 "location": "home", "data": {"value": 4}},
+                {"type": {"developer_name": "CORNERS"},
+                 "location": "away", "data": {"value": 3}},
+            ],
+            "events": [
+                {"type_id": 14, "participant_id": 10, "minute": 20, "id": 1},
+                {"type_id": 14, "participant_id": 20, "minute": 70, "id": 2},
+            ],
+            "participants": [
+                {"id": 10, "name": "主队", "meta": {"location": "home"}},
+                {"id": 20, "name": "客队", "meta": {"location": "away"}},
+            ],
+        })))
+    db.commit()
+    settled = service.settle_prediction_snapshots(db)
+    assert settled["settled"] == 1
+    rows = db.scalars(select(SportmonksPredictionSettlement).where(
+        SportmonksPredictionSettlement.match_id == "board-1")).all()
+    assert len(rows) == 26
+    counted = [row for row in rows if row.counted_in_accuracy]
+    assert {row.prediction_type for row in counted} == {
+        "product_main", "OVER_UNDER_2_5_PROBABILITY", "BTTS_PROBABILITY"}
+    assert all(row.result in ("hit", "miss", "push") for row in counted)
+    corners = next(row for row in rows
+                   if row.prediction_type == "CORNERS_OVER_UNDER_5_PROBABILITY")
+    assert corners.actual_key == "over" and corners.result == "hit"
+    assert not corners.counted_in_accuracy
+    correct = next(row for row in rows
+                   if row.prediction_type == "CORRECT_SCORE_PROBABILITY")
+    # 概率最高的 1-1 与实际 2-1 不一致，仍要展示对照。
+    assert correct.predicted_key == "1-1" and correct.result == "miss"
+
+    history = service.build_prediction_history(db, kickoff[:10])
+    assert history["count"] == 1
+    assert history["matches"][0]["score_home"] == 2
+    assert history["matches"][0]["score_away"] == 1
+    assert history["summary"]["settled_items"] == 3
+    detail = service.build_prediction_history_detail(db, "board-1")
+    assert detail is not None and len(detail["items"]) == 26
+    assert detail["score_home"] == 2 and detail["score_away"] == 1
+    labels = {item["type"]: item["predicted_label"] for item in detail["items"]}
+    assert labels["product_main"] == "主胜"
+    assert labels["OVER_UNDER_2_5_PROBABILITY"] == "大 2.5"
+    assert labels["CORNERS_OVER_UNDER_5_PROBABILITY"] == "大 5"
+
+
+def test_live_and_result_boards_do_not_expose_predictions(db, client):
+    kickoff = future_kickoff(today_cn())
+    _seed_match(db, kickoff)
+    db.merge(SportmonksLiveState(
+        match_id="board-1", fixture_id=99001, state_short="2H", minute="72",
+        score_home=1, score_away=1, ht_home=0, ht_away=1))
+    db.commit()
+
+    live = client.get("/matches/live").json()
+    assert live["count"] == 1
+    row = live["matches"][0]
+    assert row["match_id"] == "board-1"
+    assert "prediction" not in row and "pick" not in row
+    assert row["state"] == "2H" and row["minute"] == "72"
+
+    result = MatchResult(
+        source="sportmonks", league="欧国联", home_raw="主队", away_raw="客队",
+        home="主队", away="客队", match_date=kickoff[:10], fixture_id=99001,
+        status="FT", ft_home=2, ft_away=1, ht_home=1, ht_away=0,
+        goals_home=2, goals_away=1, retrieved_at=utcnow().isoformat())
+    db.add(result)
+    db.commit()
+    finished = client.get("/matches/results", params={"date": kickoff[:10]}).json()
+    assert finished["count"] == 1
+    assert finished["matches"][0]["score_home"] == 2
+    assert "prediction" not in finished["matches"][0]
+
+
+def test_sync_live_states_parses_inplay_and_period_minute(db, monkeypatch):
+    kickoff = future_kickoff(today_cn())
+    _seed_match(db, kickoff)
+    payload = {"data": [{
+        "id": 99001,
+        "state": {"short_name": "2H"},
+        "scores": [
+            {"score": {"participant": "home", "goals": 1}, "description": "CURRENT"},
+            {"score": {"participant": "away", "goals": 1}, "description": "CURRENT"},
+            {"score": {"participant": "home", "goals": 0}, "description": "1ST_HALF"},
+            {"score": {"participant": "away", "goals": 1}, "description": "1ST_HALF"},
+        ],
+        "periods": [{"sort_order": 2, "minutes": 67}],
+    }]}
+    monkeypatch.setattr(service, "_get", lambda *args, **kwargs: payload)
+    monkeypatch.setattr(service, "get_settings", lambda: SimpleNamespace(
+        sportmonks_token="test", sportmonks_base_url="http://sportmonks.test"))
+    message = service.sync_live_states(db, force=True)
+    assert "live 1/1" in message
+    state = db.get(SportmonksLiveState, "board-1")
+    assert state is not None
+    assert state.state_short == "2H" and state.minute == "67"
+    assert state.score_home == 1 and state.score_away == 1
+    assert state.ht_home == 0 and state.ht_away == 1
+
+
+def test_result_board_prioritizes_interested_match_without_label(db):
+    day = today_cn()
+    rows = [("board-early", "周四902", f"{day} 19:00:00", 191),
+            ("board-late", "周四903", f"{day} 21:00:00", 192)]
+    for match_id, match_no, kickoff, fixture_id in rows:
+        db.merge(SPMatch(
+            match_id=match_id, match_no=match_no, league="欧国联",
+            home_raw=f"{match_id}-主", away_raw=f"{match_id}-客",
+            home=f"{match_id}-主", away=f"{match_id}-客",
+            kickoff=kickoff, single_flag=False))
+        db.merge(SportmonksMatchData(
+            match_id=match_id, fixture_id=fixture_id,
+            league="欧国联", home_name=f"{match_id}-主",
+            away_name=f"{match_id}-客", kickoff_utc="", captured_at=utcnow()))
+        db.add(MatchResult(
+            source="sportmonks", league="欧国联",
+            home_raw=f"{match_id}-主", away_raw=f"{match_id}-客",
+            home=f"{match_id}-主", away=f"{match_id}-客",
+            match_date=day, fixture_id=fixture_id,
+            status="FT", ft_home=1, ft_away=0, ht_home=0, ht_away=0,
+            goals_home=1, goals_away=0, retrieved_at=utcnow().isoformat()))
+    user = User(id="u-board", device_token="dev-board", display_name="测试")
+    db.add(user)
+    db.add(WatchTarget(user_id=user.id, target_type="match",
+                       target_id="board-early"))
+    db.commit()
+
+    anonymous = service.build_result_board(db, day)
+    assert [row["match_id"] for row in anonymous["matches"]] == [
+        "board-late", "board-early"]
+    personalized = service.build_result_board(db, day, user=user)
+    assert [row["match_id"] for row in personalized["matches"]] == [
+        "board-early", "board-late"]
+    assert personalized["matches"][0]["interest"] is True
+    assert "watched" not in personalized["matches"][0]

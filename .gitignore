@@ -44,3 +44,6 @@ sp-collector/register_result.txt
 sp-collector/*.bak-*
 jczq_leagues_2m.json
 matchlist_official.json
+
+# 本地模拟器截图/临时构建产物，不入库
+builds/

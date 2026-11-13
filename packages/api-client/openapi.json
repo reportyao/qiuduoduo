@@ -709,6 +709,241 @@
         }
       }
     },
+    "/matches/live": {
+      "get": {
+        "tags": [
+          "match-board"
+        ],
+        "summary": "Matches Live",
+        "description": "即时比赛：只返回有竞彩映射的进行中场次，不含预测。",
+        "operationId": "matches_live_matches_live_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "force",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Force"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LiveBoardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches/results": {
+      "get": {
+        "tags": [
+          "match-board"
+        ],
+        "summary": "Matches Results",
+        "description": "赛果：只返回比分与状态，不展示预测。",
+        "operationId": "matches_results_matches_results_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultBoardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predictions/history": {
+      "get": {
+        "tags": [
+          "match-board"
+        ],
+        "summary": "Prediction History",
+        "description": "预测战绩列表：汇总命中率与每场主预测，不携带 25 维明细。",
+        "operationId": "prediction_history_predictions_history_get",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionHistoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/predictions/history/{match_id}": {
+      "get": {
+        "tags": [
+          "match-board"
+        ],
+        "summary": "Prediction History Detail",
+        "description": "单场全部预测维度与实际结果对照。",
+        "operationId": "prediction_history_detail_predictions_history__match_id__get",
+        "parameters": [
+          {
+            "name": "match_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Match Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PredictionHistoryDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/tools/parlay/check": {
       "post": {
         "tags": [
@@ -9557,6 +9792,135 @@
         ],
         "title": "LLMProfileUpdate"
       },
+      "LiveBoardResponse": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/LiveMatch"
+            },
+            "type": "array",
+            "title": "Matches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "count",
+          "matches"
+        ],
+        "title": "LiveBoardResponse"
+      },
+      "LiveMatch": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No",
+            "default": ""
+          },
+          "league": {
+            "type": "string",
+            "title": "League",
+            "default": ""
+          },
+          "home": {
+            "type": "string",
+            "title": "Home",
+            "default": ""
+          },
+          "away": {
+            "type": "string",
+            "title": "Away",
+            "default": ""
+          },
+          "kickoff": {
+            "type": "string",
+            "title": "Kickoff",
+            "default": ""
+          },
+          "state": {
+            "type": "string",
+            "title": "State",
+            "default": ""
+          },
+          "minute": {
+            "type": "string",
+            "title": "Minute",
+            "default": ""
+          },
+          "score_home": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Home"
+          },
+          "score_away": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Away"
+          },
+          "ht_home": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ht Home"
+          },
+          "ht_away": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ht Away"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id"
+        ],
+        "title": "LiveMatch"
+      },
       "LoginBody": {
         "properties": {
           "username": {
@@ -11286,6 +11650,395 @@
         ],
         "title": "PlanPublic"
       },
+      "PredictionAccuracy": {
+        "properties": {
+          "total_items": {
+            "type": "integer",
+            "title": "Total Items"
+          },
+          "settled_items": {
+            "type": "integer",
+            "title": "Settled Items"
+          },
+          "hit_items": {
+            "type": "integer",
+            "title": "Hit Items"
+          },
+          "push_items": {
+            "type": "integer",
+            "title": "Push Items"
+          },
+          "miss_items": {
+            "type": "integer",
+            "title": "Miss Items"
+          },
+          "hit_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hit Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_items",
+          "settled_items",
+          "hit_items",
+          "push_items",
+          "miss_items"
+        ],
+        "title": "PredictionAccuracy"
+      },
+      "PredictionHistoryDetailResponse": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No",
+            "default": ""
+          },
+          "league": {
+            "type": "string",
+            "title": "League",
+            "default": ""
+          },
+          "home": {
+            "type": "string",
+            "title": "Home",
+            "default": ""
+          },
+          "away": {
+            "type": "string",
+            "title": "Away",
+            "default": ""
+          },
+          "kickoff": {
+            "type": "string",
+            "title": "Kickoff",
+            "default": ""
+          },
+          "score_home": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Home"
+          },
+          "score_away": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Away"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": ""
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/PredictionSnapshotMeta"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/PredictionAccuracy"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PredictionSettlementItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id",
+          "snapshot",
+          "summary",
+          "items"
+        ],
+        "title": "PredictionHistoryDetailResponse"
+      },
+      "PredictionHistoryMain": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "default": ""
+          },
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "default": ""
+          },
+          "probability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Probability"
+          },
+          "actual": {
+            "type": "string",
+            "title": "Actual",
+            "default": ""
+          },
+          "result": {
+            "type": "string",
+            "title": "Result",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "PredictionHistoryMain"
+      },
+      "PredictionHistoryMatch": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No",
+            "default": ""
+          },
+          "league": {
+            "type": "string",
+            "title": "League",
+            "default": ""
+          },
+          "home": {
+            "type": "string",
+            "title": "Home",
+            "default": ""
+          },
+          "away": {
+            "type": "string",
+            "title": "Away",
+            "default": ""
+          },
+          "kickoff": {
+            "type": "string",
+            "title": "Kickoff",
+            "default": ""
+          },
+          "score_home": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Home"
+          },
+          "score_away": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Away"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": ""
+          },
+          "interest": {
+            "type": "boolean",
+            "title": "Interest",
+            "default": false
+          },
+          "main_prediction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PredictionHistoryMain"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "settled_dimensions": {
+            "type": "integer",
+            "title": "Settled Dimensions",
+            "default": 0
+          },
+          "total_dimensions": {
+            "type": "integer",
+            "title": "Total Dimensions",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id"
+        ],
+        "title": "PredictionHistoryMatch"
+      },
+      "PredictionHistoryResponse": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/PredictionAccuracy"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/PredictionHistoryMatch"
+            },
+            "type": "array",
+            "title": "Matches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "summary",
+          "count",
+          "matches"
+        ],
+        "title": "PredictionHistoryResponse"
+      },
+      "PredictionSettlementItem": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "default": ""
+          },
+          "predicted_key": {
+            "type": "string",
+            "title": "Predicted Key",
+            "default": ""
+          },
+          "predicted_label": {
+            "type": "string",
+            "title": "Predicted Label",
+            "default": ""
+          },
+          "predicted_probability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Probability"
+          },
+          "market_line": {
+            "type": "string",
+            "title": "Market Line",
+            "default": ""
+          },
+          "actual_key": {
+            "type": "string",
+            "title": "Actual Key",
+            "default": ""
+          },
+          "actual_label": {
+            "type": "string",
+            "title": "Actual Label",
+            "default": ""
+          },
+          "result": {
+            "type": "string",
+            "title": "Result"
+          },
+          "counted_in_accuracy": {
+            "type": "boolean",
+            "title": "Counted In Accuracy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "type",
+          "result",
+          "counted_in_accuracy"
+        ],
+        "title": "PredictionSettlementItem"
+      },
+      "PredictionSnapshotMeta": {
+        "properties": {
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "locked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": ""
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "PredictionSnapshotMeta"
+      },
       "ProfilePatch": {
         "properties": {
           "name": {
@@ -11986,6 +12739,129 @@
           "refresh_token"
         ],
         "title": "RefreshBody"
+      },
+      "ResultBoardResponse": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/ResultMatch"
+            },
+            "type": "array",
+            "title": "Matches"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "count",
+          "matches"
+        ],
+        "title": "ResultBoardResponse"
+      },
+      "ResultMatch": {
+        "properties": {
+          "match_id": {
+            "type": "string",
+            "title": "Match Id"
+          },
+          "match_no": {
+            "type": "string",
+            "title": "Match No",
+            "default": ""
+          },
+          "league": {
+            "type": "string",
+            "title": "League",
+            "default": ""
+          },
+          "home": {
+            "type": "string",
+            "title": "Home",
+            "default": ""
+          },
+          "away": {
+            "type": "string",
+            "title": "Away",
+            "default": ""
+          },
+          "kickoff": {
+            "type": "string",
+            "title": "Kickoff",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": ""
+          },
+          "score_home": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Home"
+          },
+          "score_away": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Away"
+          },
+          "ht_home": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ht Home"
+          },
+          "ht_away": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ht Away"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": ""
+          },
+          "interest": {
+            "type": "boolean",
+            "title": "Interest",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "match_id"
+        ],
+        "title": "ResultMatch"
       },
       "ResultsSyncBody": {
         "properties": {

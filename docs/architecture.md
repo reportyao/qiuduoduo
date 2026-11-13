@@ -3,14 +3,15 @@
 > 状态：已采纳（ADR-0001 / 0002 / 0003）。**本文描述目标态，不等同于当前目录。**
 > 目标：让 AI 开发“每次只在一个小上下文里写对”，并让错误在类型、契约、测试层被立刻发现。
 
-## 0. 当前实现（2026-11-12）
+## 0. 当前实现（2026-11-13）
 
 - 生产后端仍在 `jieqiu-backend/`，尚未迁到 `services/api/`；`services/` 只有迁移说明。
 - 生产前端在 `apps/mobile/`；`apps/web/`、`apps/admin/` 仍是规划，当前管理后台是后端同进程的 `/admin`。
-- OpenAPI **158 路径 / 174 方法**；后端 **349 tests**；前端 **53 tests**；Alembic head `20261112_24`。
+- OpenAPI **162 路径 / 178 方法**；后端 **357 tests**；前端 **63 tests**；Alembic head `20261113_25`。
 - Postgres 是目标生产库；未设置 `JQ_PROD_DATABASE_URL` 时生产部署仍可能是旧 SQLite 兼容模式。
 - 新增的 catalog/actions 已按 feature slice 落地；verdict/assistant 仍是混合目录，迁移未完成。
 - **v4.1 产品结构已落地**：移动端 4 Tab = 助理/比赛/计划/我的；`app/features/plans/` + `app/features/v4_router.py` 提供计划、会员、引擎指标、每日战绩；`app/modules/plan_service.py`、`membership.py`、`settlement.py`、`performance.py`、`assistant_copy.py`、`ops.py` 为 v4 领域模块。
+- **v4.2 比赛中心已落地**：比赛 Tab 三块（即时/赛果/预测战绩）；`sportmonks_live_state` 轻量实时状态、`sportmonks_prediction_snapshots` 开球前锁定、`sportmonks_prediction_settlements` 25 维赛后逐条结算；即时/赛果 API 不返回预测字段；命中率按预测条目、只计主流玩法。
 - **计划 v1**：`plan_cycles / plan_bets / plan_bet_legs`；每期最多 4 场、每场 100、预算 400；只处理竞彩 1X2/让球；正 edge/EV 才入池；不足 4 场不硬凑。全市场与自训练模型未实现。
 - **会员**：`user_memberships / membership_events / analysis_quota / market_access`；免费每日 1 场，Pro/Max 不限；后台手动开通是唯一真实开通路径；充值页是假 UI。
 - **赛果结算**：`match_results` 90 分钟字段 + `market_settlements` + `settle_pending`；1X2/让球/OU/BTTS/比分按 FT90，整数亚盘 void/push；`performance_daily` 为战绩读模型。
@@ -129,7 +130,7 @@ packages/api       生成的 client
 - Alembic 是 schema 事实源；
 - SQLite 仅允许纯单元测试、一次性工具或尚未切换的旧部署；
 - OpenAPI 由 FastAPI 生成；后端导出 `packages/api-client/openapi.json` 快照，client 从快照离线生成；
-- Postgres 迁移先于应用启动；Alembic head 为 `20261112_24`，baseline 24 张表，当前 ORM 共 68 张表（新增 interaction_events、API-Football 5 张表、LLM 4 张表、AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表，以及 v4 的结算/计划/会员/OPC/记忆/训练 19 张表）；
+- Postgres 迁移先于应用启动；Alembic head 为 `20261113_25`，baseline 24 张表，当前 ORM 共 73 张表（新增 interaction_events、API-Football 5 张表、LLM 4 张表、AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表、v4 的结算/计划/会员/OPC/记忆/训练 19 张表，以及比赛中心 5 张表）；
 - AI 输出必须通过 Pydantic / JSON Schema 校验；
 - 领域事件必须有 `dedupe_key`、`payload_hash`、`data_cutoff`。
 

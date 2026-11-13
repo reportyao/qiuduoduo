@@ -4,7 +4,7 @@
 import json, socket, sqlite3, time, urllib.request, os, sys
 from datetime import datetime, timezone, timedelta
 
-API = "https://webapi.sporttery.cn/gateway/jc/football/getMatchCalculatorV1.qry?poolCode=hhad,had&channel=c"
+API = "https://webapi.sporttery.cn/gateway/jc/football/getMatchCalculatorV1.qry?poolCode=hhad,had,ttg,hafu,crs&channel=c"
 HDR = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "Referer": "https://www.sporttery.cn/"}
 HERE = os.path.dirname(os.path.abspath(__file__))
 DB = os.path.join(HERE, "sp_data.db")
@@ -59,7 +59,9 @@ CREATE TABLE IF NOT EXISTS matches (match_no TEXT, match_id TEXT, league TEXT,
   home TEXT, away TEXT, kickoff TEXT, single_flag INTEGER, PRIMARY KEY (match_id));
 CREATE TABLE IF NOT EXISTS sp_snapshots (match_id TEXT, pool TEXT, goal_line TEXT,
   sp_h REAL, sp_d REAL, sp_a REAL, captured_at TEXT,
-  PRIMARY KEY (match_id, pool, captured_at));""")
+  PRIMARY KEY (match_id, pool, captured_at));
+CREATE TABLE IF NOT EXISTS sp_pool_snapshots (match_id TEXT, pool TEXT, line TEXT,
+  selections TEXT, captured_at TEXT, PRIMARY KEY (match_id, pool, captured_at));""")
     con.commit(); return con
 
 def fetch():
@@ -73,7 +75,7 @@ def fetch():
         return json.loads(r.read().decode("utf-8"))
 
 def parse(d):
-    rows_m, rows_s = [], []
+    rows_m, rows_s, rows_p = [], [], []
     ts = now_cn()
     for block in d.get("value", {}).get("matchInfoList", []):
         # 联赛名在 subMatch 上（顶层 block 只有 businessDate）；旧代码读 block 会全空。
@@ -85,6 +87,19 @@ def parse(d):
                            m.get("homeTeamAbbName",""), m.get("awayTeamAbbName",""),
                            f"{m.get('matchDate','')} {m.get('matchTime','')}",
                            1 if m.get("single") == 1 else 0))
+            for pool_name in ("ttg", "hafu", "crs"):
+                p = m.get(pool_name)
+                if not isinstance(p, dict) or not p:
+                    continue
+                selections = {}
+                for key, value in p.items():
+                    if key.lower() in {"updatedate", "updatetime", "goalline", "goallinevalue", "single"}:
+                        continue
+                    if isinstance(value, (str, int, float)) and value not in ("", None):
+                        selections[str(key)] = value
+                if selections:
+                    rows_p.append((mid, pool_name, str(p.get("goalLine", "")),
+                                   json.dumps(selections, ensure_ascii=False), ts))
             for pool in ("had", "hhad"):
                 p = m.get(pool)
                 if not p: continue
@@ -94,7 +109,7 @@ def parse(d):
                         continue  # 与后端契约一致：SP 必须 > 1
                     rows_s.append((mid, pool, str(p.get("goalLine", "")), *vals, ts))
                 except (TypeError, ValueError): pass
-    return rows_m, rows_s, ts
+    return rows_m, rows_s, rows_p, ts
 
 def push():
     try:
@@ -122,10 +137,11 @@ def main():
     fails = 0; last_push = 0; cycle = 0
     while True:
         try:
-            rows_m, rows_s, ts = parse(fetch())
+            rows_m, rows_s, rows_p, ts = parse(fetch())
             cur = con.cursor()
             cur.executemany("INSERT OR REPLACE INTO matches VALUES (?,?,?,?,?,?,?)", rows_m)
             cur.executemany("INSERT OR IGNORE INTO sp_snapshots VALUES (?,?,?,?,?,?,?)", rows_s)
+            cur.executemany("INSERT OR IGNORE INTO sp_pool_snapshots VALUES (?,?,?,?,?)", rows_p)
             con.commit(); fails = 0; cycle += 1
             total = con.execute("SELECT COUNT(*) FROM sp_snapshots").fetchone()[0]
             STATE.update(last_success_at=now_cn(), last_error="", cycle=cycle,

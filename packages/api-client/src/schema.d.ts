@@ -208,6 +208,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/matches/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Matches Live
+         * @description 即时比赛：只返回有竞彩映射的进行中场次，不含预测。
+         */
+        get: operations["matches_live_matches_live_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/matches/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Matches Results
+         * @description 赛果：只返回比分与状态，不展示预测。
+         */
+        get: operations["matches_results_matches_results_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/predictions/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prediction History
+         * @description 预测战绩列表：汇总命中率与每场主预测，不携带 25 维明细。
+         */
+        get: operations["prediction_history_predictions_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/predictions/history/{match_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prediction History Detail
+         * @description 单场全部预测维度与实际结果对照。
+         */
+        get: operations["prediction_history_detail_predictions_history__match_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tools/parlay/check": {
         parameters: {
             query?: never;
@@ -3444,6 +3524,65 @@ export interface components {
              */
             reasoning: string;
         };
+        /** LiveBoardResponse */
+        LiveBoardResponse: {
+            /** Date */
+            date: string;
+            /** Count */
+            count: number;
+            /** Matches */
+            matches: components["schemas"]["LiveMatch"][];
+        };
+        /** LiveMatch */
+        LiveMatch: {
+            /** Match Id */
+            match_id: string;
+            /**
+             * Match No
+             * @default
+             */
+            match_no: string;
+            /**
+             * League
+             * @default
+             */
+            league: string;
+            /**
+             * Home
+             * @default
+             */
+            home: string;
+            /**
+             * Away
+             * @default
+             */
+            away: string;
+            /**
+             * Kickoff
+             * @default
+             */
+            kickoff: string;
+            /**
+             * State
+             * @default
+             */
+            state: string;
+            /**
+             * Minute
+             * @default
+             */
+            minute: string;
+            /** Score Home */
+            score_home?: number | null;
+            /** Score Away */
+            score_away?: number | null;
+            /** Ht Home */
+            ht_home?: number | null;
+            /** Ht Away */
+            ht_away?: number | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
         /** LoginBody */
         LoginBody: {
             /** Username */
@@ -4097,6 +4236,214 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** PredictionAccuracy */
+        PredictionAccuracy: {
+            /** Total Items */
+            total_items: number;
+            /** Settled Items */
+            settled_items: number;
+            /** Hit Items */
+            hit_items: number;
+            /** Push Items */
+            push_items: number;
+            /** Miss Items */
+            miss_items: number;
+            /** Hit Rate */
+            hit_rate?: number | null;
+        };
+        /** PredictionHistoryDetailResponse */
+        PredictionHistoryDetailResponse: {
+            /** Match Id */
+            match_id: string;
+            /**
+             * Match No
+             * @default
+             */
+            match_no: string;
+            /**
+             * League
+             * @default
+             */
+            league: string;
+            /**
+             * Home
+             * @default
+             */
+            home: string;
+            /**
+             * Away
+             * @default
+             */
+            away: string;
+            /**
+             * Kickoff
+             * @default
+             */
+            kickoff: string;
+            /** Score Home */
+            score_home?: number | null;
+            /** Score Away */
+            score_away?: number | null;
+            /**
+             * Status
+             * @default
+             */
+            status: string;
+            snapshot: components["schemas"]["PredictionSnapshotMeta"];
+            summary: components["schemas"]["PredictionAccuracy"];
+            /** Items */
+            items: components["schemas"]["PredictionSettlementItem"][];
+        };
+        /** PredictionHistoryMain */
+        PredictionHistoryMain: {
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Key
+             * @default
+             */
+            key: string;
+            /** Probability */
+            probability?: number | null;
+            /**
+             * Actual
+             * @default
+             */
+            actual: string;
+            /**
+             * Result
+             * @default
+             */
+            result: string;
+        };
+        /** PredictionHistoryMatch */
+        PredictionHistoryMatch: {
+            /** Match Id */
+            match_id: string;
+            /**
+             * Match No
+             * @default
+             */
+            match_no: string;
+            /**
+             * League
+             * @default
+             */
+            league: string;
+            /**
+             * Home
+             * @default
+             */
+            home: string;
+            /**
+             * Away
+             * @default
+             */
+            away: string;
+            /**
+             * Kickoff
+             * @default
+             */
+            kickoff: string;
+            /** Score Home */
+            score_home?: number | null;
+            /** Score Away */
+            score_away?: number | null;
+            /**
+             * Status
+             * @default
+             */
+            status: string;
+            /**
+             * Interest
+             * @default false
+             */
+            interest: boolean;
+            main_prediction?: components["schemas"]["PredictionHistoryMain"] | null;
+            /**
+             * Settled Dimensions
+             * @default 0
+             */
+            settled_dimensions: number;
+            /**
+             * Total Dimensions
+             * @default 0
+             */
+            total_dimensions: number;
+        };
+        /** PredictionHistoryResponse */
+        PredictionHistoryResponse: {
+            /** Date */
+            date: string;
+            summary: components["schemas"]["PredictionAccuracy"];
+            /** Count */
+            count: number;
+            /** Matches */
+            matches: components["schemas"]["PredictionHistoryMatch"][];
+        };
+        /** PredictionSettlementItem */
+        PredictionSettlementItem: {
+            /** Source */
+            source: string;
+            /** Type */
+            type: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Predicted Key
+             * @default
+             */
+            predicted_key: string;
+            /**
+             * Predicted Label
+             * @default
+             */
+            predicted_label: string;
+            /** Predicted Probability */
+            predicted_probability?: number | null;
+            /**
+             * Market Line
+             * @default
+             */
+            market_line: string;
+            /**
+             * Actual Key
+             * @default
+             */
+            actual_key: string;
+            /**
+             * Actual Label
+             * @default
+             */
+            actual_label: string;
+            /** Result */
+            result: string;
+            /** Counted In Accuracy */
+            counted_in_accuracy: boolean;
+        };
+        /** PredictionSnapshotMeta */
+        PredictionSnapshotMeta: {
+            /** Captured At */
+            captured_at?: string | null;
+            /** Locked At */
+            locked_at?: string | null;
+            /**
+             * Status
+             * @default
+             */
+            status: string;
+            /**
+             * Source
+             * @default
+             */
+            source: string;
+        };
         /** ProfilePatch */
         ProfilePatch: {
             /** Name */
@@ -4365,6 +4712,68 @@ export interface components {
         RefreshBody: {
             /** Refresh Token */
             refresh_token: string;
+        };
+        /** ResultBoardResponse */
+        ResultBoardResponse: {
+            /** Date */
+            date: string;
+            /** Count */
+            count: number;
+            /** Matches */
+            matches: components["schemas"]["ResultMatch"][];
+        };
+        /** ResultMatch */
+        ResultMatch: {
+            /** Match Id */
+            match_id: string;
+            /**
+             * Match No
+             * @default
+             */
+            match_no: string;
+            /**
+             * League
+             * @default
+             */
+            league: string;
+            /**
+             * Home
+             * @default
+             */
+            home: string;
+            /**
+             * Away
+             * @default
+             */
+            away: string;
+            /**
+             * Kickoff
+             * @default
+             */
+            kickoff: string;
+            /**
+             * Status
+             * @default
+             */
+            status: string;
+            /** Score Home */
+            score_home?: number | null;
+            /** Score Away */
+            score_away?: number | null;
+            /** Ht Home */
+            ht_home?: number | null;
+            /** Ht Away */
+            ht_away?: number | null;
+            /**
+             * Source
+             * @default
+             */
+            source: string;
+            /**
+             * Interest
+             * @default false
+             */
+            interest: boolean;
         };
         /** ResultsSyncBody */
         ResultsSyncBody: {
@@ -5068,6 +5477,135 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InteractionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    matches_live_matches_live_get: {
+        parameters: {
+            query?: {
+                date?: string | null;
+                force?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveBoardResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    matches_results_matches_results_get: {
+        parameters: {
+            query?: {
+                date?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResultBoardResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prediction_history_predictions_history_get: {
+        parameters: {
+            query?: {
+                date?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictionHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    prediction_history_detail_predictions_history__match_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                match_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PredictionHistoryDetailResponse"];
                 };
             };
             /** @description Validation Error */

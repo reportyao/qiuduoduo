@@ -137,10 +137,14 @@ def sync_results(db: Session, days: int = 2, limit: int = 80) -> dict:
     db.commit()
     from .settlement import settle_pending
     from .plan_service import settle_open_cycles
+    from ..features.board import service as board_service
     settled = settle_pending(db)
     settle_open_cycles(db)
+    enriched = board_service.enrich_result_details(db, days=days + 1)
+    predictions = board_service.settle_prediction_snapshots(db)
     return {"ok": True, "checked": len(rows), "inserted": inserted,
-            "skipped": skipped, "settled": settled}
+            "skipped": skipped, "settled": settled,
+            "actuals": enriched, "prediction_settlements": predictions}
 
 
 def _fetch_day(base: str, token: str, day: str) -> list[dict]:

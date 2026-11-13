@@ -327,6 +327,109 @@ class MatchResult(Base):
     retrieved_at: Mapped[str] = mapped_column(String(32), default="")
 
 
+
+
+
+class SPPoolSnapshot(Base):
+    """竞彩非三选一池（总进球/比分/半全场等）原始快照，按池幂等追加。"""
+
+    __tablename__ = "sp_pool_snapshots"
+    __table_args__ = (
+        UniqueConstraint("match_id", "pool", "captured_at",
+                         name="uq_sp_pool_snapshot"),
+        Index("ix_sp_pool_snapshots_match_pool", "match_id", "pool"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    match_id: Mapped[str] = mapped_column(String(32))
+    pool: Mapped[str] = mapped_column(String(12))
+    line: Mapped[str] = mapped_column(String(16), default="")
+    selections: Mapped[dict] = mapped_column(JSON, default=dict)
+    captured_at: Mapped[str] = mapped_column(String(32))
+
+
+class SportmonksLiveState(Base):
+    """竞彩映射场次的即时状态；只存看板所需字段，避免重写情报大 JSON。"""
+
+    __tablename__ = "sportmonks_live_state"
+
+    match_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    fixture_id: Mapped[int] = mapped_column(Integer, index=True)
+    state_short: Mapped[str] = mapped_column(String(16), default="", index=True)
+    minute: Mapped[str] = mapped_column(String(8), default="")
+    score_home: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    score_away: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ht_home: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    ht_away: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    periods: Mapped[list] = mapped_column(JSON, default=list)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class SportmonksPredictionSnapshot(Base):
+    """开球前锁定的 25 维预测快照；赛后战绩只认这份，不认覆盖更新表。"""
+
+    __tablename__ = "sportmonks_prediction_snapshots"
+    __table_args__ = (
+        Index("ix_sm_prediction_snapshots_kickoff", "kickoff_cn"),
+        Index("ix_sm_prediction_snapshots_locked", "locked_at"),
+    )
+
+    match_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    fixture_id: Mapped[int] = mapped_column(Integer, index=True)
+    kickoff_cn: Mapped[str] = mapped_column(String(32), default="")
+    captured_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    cutoff_reason: Mapped[str] = mapped_column(String(24), default="pre_kickoff")
+    predictions: Mapped[list] = mapped_column(JSON, default=list)
+    market_lines: Mapped[dict] = mapped_column(JSON, default=dict)
+    product_pick: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    verdict_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    snapshot_source: Mapped[str] = mapped_column(String(24), default="sportmonks")
+    status: Mapped[str] = mapped_column(String(16), default="open")
+
+
+class SportmonksPredictionSettlement(Base):
+    """单条预测维度的赛后对照；主流维度 counted_in_accuracy=true。"""
+
+    __tablename__ = "sportmonks_prediction_settlements"
+    __table_args__ = (
+        UniqueConstraint("match_id", "source", "prediction_type",
+                         name="uq_sm_settlement_match_source_type"),
+        Index("ix_sm_settlement_counted_result", "counted_in_accuracy", "result"),
+        Index("ix_sm_settlement_kickoff", "kickoff_cn"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    match_id: Mapped[str] = mapped_column(String(32), index=True)
+    fixture_id: Mapped[int] = mapped_column(Integer, default=0)
+    kickoff_cn: Mapped[str] = mapped_column(String(32), default="")
+    source: Mapped[str] = mapped_column(String(16), default="sportmonks")  # product / sportmonks
+    prediction_type: Mapped[str] = mapped_column(String(64))
+    prediction_label: Mapped[str] = mapped_column(String(128), default="")
+    predicted_key: Mapped[str] = mapped_column(String(64), default="")
+    predicted_label: Mapped[str] = mapped_column(String(128), default="")
+    predicted_probability: Mapped[float | None] = mapped_column(Float, nullable=True)
+    market_line: Mapped[str] = mapped_column(String(16), default="")
+    actual_key: Mapped[str] = mapped_column(String(64), default="")
+    actual_label: Mapped[str] = mapped_column(String(128), default="")
+    result: Mapped[str] = mapped_column(String(24), default="insufficient_data")
+    counted_in_accuracy: Mapped[bool] = mapped_column(Boolean, default=False)
+    rule_version: Mapped[str] = mapped_column(String(16), default="v1")
+    settled_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class MatchResultDetail(Base):
+    """赛果增强事实：角球/先进球/半全场等，按 fixture_id 幂等补齐。"""
+
+    __tablename__ = "match_result_details"
+
+    result_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    fixture_id: Mapped[int] = mapped_column(Integer, index=True, default=0)
+    actuals: Mapped[dict] = mapped_column(JSON, default=dict)
+    stats_captured_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 class ApiFootballFixture(Base):
     """API-Football fixture 快照；match_id 为空表示未链接到竞彩场次。"""
 

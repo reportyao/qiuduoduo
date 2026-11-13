@@ -2,7 +2,7 @@
 
 本文件是 AI 与人类协作开发的**仓库级上下文入口**。任何 AI/开发者在改动代码前必须先读本文件；提交前必须按 Definition of Done 自检。
 
-当前事实（2026-11-12）：生产代码仍在 `jieqiu-backend/`，OpenAPI **158 路径 / 174 方法**，后端 **353 tests**，前端 **59 tests**，Alembic head `20261112_24`；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。v4.1 已部署腾讯云生产（2026-11-12 11:38 CST，管理后台静态资源 v=20261112e）；17:00 CST 追加 Sportmonks 情报层（首发/阵型/伤停/积分榜/H2H/天气/裁判/25 维预测/选定市场，Alembic `20261112_24`）。v4 APK 已由 GitHub Actions 构建并在模拟器安装验证；2026-11-12 最终对话版 APK 对应 commit `2d8e75e`（workflow run `43351698209`），正式签名/上架未做。文档索引见 [docs/README.md](./docs/README.md)。
+当前事实（2026-11-13）：生产代码仍在 `jieqiu-backend/`，OpenAPI **162 路径 / 178 方法**，后端 **357 tests**，前端 **63 tests**，Alembic head `20261113_25`；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。v4.1 已部署腾讯云生产（2026-11-12 11:38 CST，管理后台静态资源 v=20261112e）；17:00 CST 追加 Sportmonks 情报层（首发/阵型/伤停/积分榜/H2H/天气/裁判/25 维预测/选定市场，Alembic `20261112_24`）。2026-11-13 新增比赛中心：即时/赛果/预测战绩三 Tab，赛前预测快照锁定、赛后 25 维逐条对照（Alembic `20261113_25`）。v4 APK 已由 GitHub Actions 构建并在模拟器安装验证；2026-11-12 最终对话版 APK 对应 commit `2d8e75e`（workflow run `43351698209`），正式签名/上架未做。文档索引见 [docs/README.md](./docs/README.md)。
 
 ## 1. 架构地图
 
@@ -35,6 +35,17 @@ jieqiu-backend/app/modules/membership.py
 jieqiu-backend/app/modules/performance.py
 jieqiu-backend/app/modules/assistant_copy.py
 jieqiu-backend/app/modules/ops.py
+```
+
+比赛中心（2026-11-13）：
+
+```text
+apps/mobile/app/(tabs)/matches.tsx              即时/赛果/预测战绩
+apps/mobile/app/predictions/[id].tsx            单场 25 维预测 vs 实际
+apps/mobile/src/features/matches/               查询/卡片/标签
+jieqiu-backend/app/features/board/              live state、预测快照、结算
+jieqiu-backend/app/sportmonks_cli.py            live/freeze/enrich/settle/board 命令
+jieqiu-backend/migrations/versions/20261113_25_match_board.py
 ```
 
 当前过渡期保留：
@@ -128,11 +139,14 @@ app/features/<feature>/
 - AI 不得把业务逻辑放进 router 或 UI 组件。
 - AI 提交前必须运行 `just api-test` 和相关前端测试。
 
-## 7. 产品内容规则（2026-11-12 修订）
+## 7. 产品内容规则（2026-11-13 修订）
 
 - 允许经审核的赛前预测、参考组合、参考预算；不承诺收益。
 - 公开文案明确使用“预测方向/预测概率/置信度”；不得使用“精准预测/必中/稳赚”，付费详情必须写明方向、条件、失效条件与成本。
 - 推荐观点与组合必须经 `decision_snapshots` / `recommendation_plans` → `review_runs`（L1 规则/事实、L2 数字、L3 人设、L4 对抗、L5 发布门）→ `published` 后才能作为正式内容；Today Hero 只读 `/recommendations/today` 的 published。`/tools/parlay/plan` 仍是**preview**，UI 必须标注“参考·未复核”，不得进入付费区。
+- **比赛中心**：比赛 Tab 只做即时/赛果/预测战绩三块；即时只展示有竞彩映射的进行中场次，即时与赛果都不返回预测字段；预测战绩展示全部 25 维预测 vs 实际。命中率按“预测条目”统计，只计主流玩法（主预测、当前盘口大小球、BTTS），角球/半全场等只对照不计入。大小球必须按竞彩实际盘口匹配，不固定 2.5。所有用户都能看预测结果。
+- **预测历史不可补造**：只认开球前锁定的 `sportmonks_prediction_snapshots`；覆盖更新表不作为历史事实，没有赛前快照就不生成战绩。
+- **静默排序**：关注/看过/问过的比赛只影响排序，不在 UI 打“看过/问过”标签；赛果与预测战绩按比赛时间倒序分组，个性化组在前。
 - **AI 计划是 4 场模拟定投，不是跟单**：每期最多 4 场、每场 100、预算 400；不做 `plan_follows`、不自动记注、不代购、不托管资金；文案必须写“模拟方案/模拟收益”。
 - **计划分级**：免费/Pro 只能看历史摘要与锁定态，Max 才能看完整 bets/legs；Pro 文案不得暗示含 AI 计划。
 - **会员**：权益、额度、计划门控、后台手动开通是真实能力；充值/支付 UI 是假的，不得创建订单、不得伪造支付成功。会员只能由 `/admin` 手动开通/撤销。

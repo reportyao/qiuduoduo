@@ -10,6 +10,7 @@ from .db import init_db
 from .middleware import RateLimitMiddleware
 from .features.catalog.router import router as catalog_router
 from .features.intel.router import router as intel_router
+from .features.board.router import router as board_router
 from .features.tools.router import router as tools_router
 from .features.persona.router import router as persona_router
 from .features.recommendations.router import router as recommendations_router
@@ -60,6 +61,7 @@ async def legacy_console_redirect(request: Request, call_next):
 # catalog 必须在 api 之前注册：/verdicts/today 不能被 /verdicts/{verdict_id} 抢先匹配。
 app.include_router(catalog_router, tags=["catalog"])
 app.include_router(intel_router)
+app.include_router(board_router)
 app.include_router(tools_router)
 app.include_router(persona_router)
 app.include_router(recommendations_router)

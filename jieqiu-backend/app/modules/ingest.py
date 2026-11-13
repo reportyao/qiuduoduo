@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import json
 import sqlite3
 from dataclasses import dataclass
 
@@ -12,7 +13,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 
 from ..contracts import validate_matches, validate_snapshots
-from ..models import SPMatch, SPSnapshot
+from ..models import SPMatch, SPPoolSnapshot, SPSnapshot
 from .align import Aligner, seed_aliases
 
 
@@ -22,9 +23,10 @@ class IngestResult:
     snapshots_inserted: int
     snapshots_seen: int
     alias_unresolved: list[str]
+    pool_snapshots_inserted: int = 0
 
 
-def _read_collector(path: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+def _read_collector(path: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     con = sqlite3.connect(path)
     try:
         matches = pd.read_sql_query(
@@ -35,18 +37,29 @@ def _read_collector(path: str) -> tuple[pd.DataFrame, pd.DataFrame]:
             "select match_id, pool, goal_line, sp_h, sp_d, sp_a, captured_at from sp_snapshots",
             con,
         )
+        pools = pd.DataFrame(columns=[
+            "match_id", "pool", "line", "selections", "captured_at"])
+        try:
+            pools = pd.read_sql_query(
+                "select match_id, pool, line, selections, captured_at"
+                " from sp_pool_snapshots",
+                con,
+            )
+        except (sqlite3.OperationalError, pd.errors.DatabaseError):
+            # 旧采集器尚无该表：保持兼容，不阻断主快照入库。
+            pass
     finally:
         con.close()
     # collector 表列名 home/away 为原始名 → 复制为 home_raw/away_raw 语义
     matches = matches.rename(columns={})  # 保持原列，下面统一处理
-    return matches, snaps
+    return matches, snaps, pools
 
 
 def import_collector_db(db: Session, collector_db_path: str) -> IngestResult:
     seed_aliases(db)
     aligner = Aligner(db)
 
-    raw_m, raw_s = _read_collector(collector_db_path)
+    raw_m, raw_s, raw_p = _read_collector(collector_db_path)
 
     # ---- 场次 ----
     raw_m = raw_m.rename(columns={"home": "home_raw", "away": "away_raw"})
@@ -105,10 +118,33 @@ def import_collector_db(db: Session, collector_db_path: str) -> IngestResult:
         res = db.execute(stmt, rows[i:i + CHUNK])
         s_ins += res.rowcount or 0
 
+    p_ins = 0
+    if not raw_p.empty:
+        pool_rows = []
+        for row in raw_p.itertuples(index=False):
+            try:
+                selections = json.loads(row.selections) if isinstance(row.selections, str) else {}
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(selections, dict) or not selections:
+                continue
+            pool_rows.append({
+                "match_id": str(row.match_id), "pool": str(row.pool),
+                "line": str(row.line or ""), "selections": selections,
+                "captured_at": str(row.captured_at),
+            })
+        for i in range(0, len(pool_rows), CHUNK):
+            stmt = (upsert_insert(SPPoolSnapshot.__table__)
+                    .on_conflict_do_nothing(index_elements=[
+                        "match_id", "pool", "captured_at"]))
+            res = db.execute(stmt, pool_rows[i:i + CHUNK])
+            p_ins += res.rowcount or 0
+
     db.commit()
     return IngestResult(
         matches_upserted=m_up,
         snapshots_inserted=s_ins,
         snapshots_seen=len(snaps_df),
+        pool_snapshots_inserted=p_ins,
         alias_unresolved=sorted(set(unresolved))[:20],
     )

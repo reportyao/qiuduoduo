@@ -1501,6 +1501,7 @@ async function loadData() {
   const af = data.api_football || {};
   const published = supply.published ?? 0;
   const summary = matrix.summary || {};
+  const board = matrix.board || {};
   const pct = value => value == null ? "—" : `${Math.round(Number(value) * 100)}%`;
   const triple = probs => {
     if (!probs) return '<span class="card-sub">—</span>';
@@ -1548,6 +1549,7 @@ async function loadData() {
       <div class="kpi"><div class="kpi-label">SM 预测</div><div class="kpi-value">${summary.with_probs ?? 0}</div><div class="kpi-foot">市场赔率 ${summary.with_odds ?? 0}</div></div>
       <div class="kpi ${(summary.with_lineups ?? 0) >= (summary.matches ?? 0) && (summary.matches ?? 0) > 0 ? "green" : "amber"}"><div class="kpi-label">SM 情报包</div><div class="kpi-value">${summary.with_lineups ?? 0}/${summary.matches ?? 0}</div><div class="kpi-foot">积分榜 ${summary.with_standings ?? 0} · 预测 ${summary.with_predictions ?? 0}</div></div>
       <div class="kpi ${(summary.intel_ready ?? 0) >= (summary.matches ?? 0) && (summary.matches ?? 0) > 0 ? "green" : "amber"}"><div class="kpi-label">AI 情报</div><div class="kpi-value">${summary.intel_ready ?? 0}</div><div class="kpi-foot">就绪 / ${summary.matches ?? 0} 场</div></div>
+      <div class="kpi ${board.hit_rate != null ? "green" : "amber"}"><div class="kpi-label">预测看板</div><div class="kpi-value">${board.locked_snapshots ?? 0} 锁定</div><div class="kpi-foot">进行中 ${board.live_states ?? 0} · 结算 ${board.settled_items ?? 0} 条 · 命中率 ${board.hit_rate == null ? "—" : `${Math.round(board.hit_rate * 100)}%`}</div></div>
     </div>
     <div class="card"><h2 class="card-title">内容供给</h2>
       <div class="flow">
@@ -1587,7 +1589,7 @@ async function loadData() {
         <th>SM 预测</th><th>SM 市场</th><th>阵容/积分榜</th><th>AI 情报</th><th>判决</th><th>操作</th>
       </tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="empty">今日暂无竞彩场次</div>'}
       <div class="card-sub" style="margin-top:10px">分层：核验 ${summary.tiers?.verified ?? 0} · 市场参考 ${summary.tiers?.market_reference ?? 0} · 不建议 ${summary.tiers?.avoid ?? 0} · 待数据 ${summary.tiers?.no_data ?? 0}</div>
-      <div class="card-sub" style="margin-top:6px">SP 最新快照 ${esc(fmtTime(data.sync?.latest, true))} · 延迟 ${data.sync?.lag_seconds == null ? "—" : `${data.sync.lag_seconds}s`} · 手动映射会立即拉取预测、Pinnacle 1X2 与中文情报。</div>
+      <div class="card-sub" style="margin-top:6px">SP 最新快照 ${esc(fmtTime(data.sync?.latest, true))} · 延迟 ${data.sync?.lag_seconds == null ? "—" : `${data.sync.lag_seconds}s`} · 手动映射会立即拉取预测、Pinnacle 1X2 与中文情报。看板：开放快照 ${board.open_snapshots ?? 0} · 锁定 ${board.locked_snapshots ?? 0} · 已结算 ${board.settled_items ?? 0} 条（命中 ${board.hit_items ?? 0} / 走水 ${board.push_items ?? 0} / 未中 ${board.miss_items ?? 0}）。</div>
     </div>
     <div class="card">
       <div class="toolbar"><div><h2 style="margin:0">辅助数据</h2><div class="card-sub" style="margin:0">只补阵容/伤停和国际盘缺口；不作为发布前置</div></div>

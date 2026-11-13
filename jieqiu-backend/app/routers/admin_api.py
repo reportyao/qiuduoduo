@@ -31,7 +31,9 @@ from ..models import (AIResearch, AdminAudit, AdminUser, CollectorStatus,
                       Notification, PersonaLLMModel, PlanCycle, PushToken,
                       RecommendationEvent, RecommendationPlan, ReviewRun,
                       SPMatch, SPSnapshot, SportmonksFixtureIntel,
-                      SportmonksMatchData, SportmonksPrediction, User,
+                      SportmonksLiveState, SportmonksMatchData,
+                      SportmonksPrediction, SportmonksPredictionSettlement,
+                      SportmonksPredictionSnapshot, User,
                       UserMembership, Verdict)
 from ..modules import (admin_auth, api_football, engine, llm_gateway, membership,
                        ops, persona_llm, persona_registry, plan_service, supply)
@@ -1494,8 +1496,32 @@ def admin_sm_matrix(date: str | None = None,
                 "has_model": verdict.model_h is not None,
             } if verdict else None,
         })
+    snapshots = db.scalars(
+        select(SportmonksPredictionSnapshot).where(
+            SportmonksPredictionSnapshot.kickoff_cn >= start,
+            SportmonksPredictionSnapshot.kickoff_cn <= end)).all()
+    settlements = db.scalars(
+        select(SportmonksPredictionSettlement).where(
+            SportmonksPredictionSettlement.kickoff_cn >= start,
+            SportmonksPredictionSettlement.kickoff_cn <= end)).all()
+    counted = [row for row in settlements if row.counted_in_accuracy]
+    decided = [row for row in counted if row.result in ("hit", "miss", "push")]
+    live_states = db.scalar(select(func.count()).select_from(SportmonksLiveState)) or 0
     return {
         "date": date,
+        "board": {
+            "live_states": live_states,
+            "snapshots": len(snapshots),
+            "locked_snapshots": sum(1 for row in snapshots if row.locked_at),
+            "open_snapshots": sum(1 for row in snapshots if not row.locked_at),
+            "settled_items": len(decided),
+            "counted_items": len(counted),
+            "hit_items": sum(1 for row in decided if row.result == "hit"),
+            "push_items": sum(1 for row in decided if row.result == "push"),
+            "miss_items": sum(1 for row in decided if row.result == "miss"),
+            "hit_rate": (round(sum(1 for row in decided if row.result == "hit")
+                               / len(decided), 4) if decided else None),
+        },
         "summary": {
             "matches": len(rows),
             "mapped": sum(1 for r in rows if r["mapped"]),

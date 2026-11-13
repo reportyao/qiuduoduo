@@ -9,18 +9,19 @@ AI 足球助理 / 赛前预测产品。当前产品口径以 [docs/qiuduoduo-v4-
 - 接口契约：`packages/api-client/`（OpenAPI 快照 + 生成 TS client，禁止手写接口类型）
 - 数据底座：`sp-collector/`（竞彩官方 SP 自采，家宽出口）
 
-## 当前事实（2026-11-12）
+## 当前事实（2026-11-13）
 
 | 事实 | 当前值 |
 |---|---|
 | 后端版本 | `0.8.0-w8+assistant`（`app.main`） |
 | 移动端版本 | `0.3.4` / versionCode `9`（`app.config.ts`，v4.1 尚未出正式 APK） |
-| OpenAPI | **158 路径 / 174 方法**（以 `packages/api-client/openapi.json` 为准） |
-| 后端测试 | **349 passed**（`python -m pytest -q`，2026-11-12 实测） |
-| 前端测试 | **53 passed** + typecheck / ESLint / Android Hermes bundle（2026-11-12 实测） |
-| Alembic head | `20261112_24`（v4 core，up/down 已实现） |
+| OpenAPI | **162 路径 / 178 方法**（以 `packages/api-client/openapi.json` 为准） |
+| 后端测试 | **357 passed**（`python -m pytest -q`，2026-11-13 实测） |
+| 前端测试 | **63 passed** + typecheck / ESLint / Android Hermes bundle（2026-11-13 实测） |
+| Alembic head | `20261113_25`（比赛中心，up/down 已实现） |
 | 开发数据库 | SQLite + WAL（过渡）；生产目标境内 PostgreSQL 16，**尚未切库** |
 | v4.1 部署状态 | **已部署腾讯云生产（2026-11-12 11:38 CST）；管理后台 v=20261112e；v4 APK 已由 GitHub Actions 构建并在模拟器安装验证** |
+| 比赛中心 | 即时 / 赛果 / 预测战绩三 Tab；赛前快照锁定、25 维赛后对照；命中率按预测条目统计 |
 
 ## v4.1 已实现
 
