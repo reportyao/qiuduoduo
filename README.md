@@ -16,7 +16,7 @@ AI 足球助理 / 赛前预测产品。当前产品口径以 [docs/qiuduoduo-v4-
 | 后端版本 | `0.8.0-w8+assistant`（`app.main`） |
 | 移动端版本 | `0.3.4` / versionCode `9`（`app.config.ts`，v4.1 尚未出正式 APK） |
 | OpenAPI | **162 路径 / 178 方法**（以 `packages/api-client/openapi.json` 为准） |
-| 后端测试 | **357 passed**（`python -m pytest -q`，2026-11-13 实测） |
+| 后端测试 | **360 passed**（`python -m pytest -q`，2026-11-13 实测） |
 | 前端测试 | **63 passed** + typecheck / ESLint / Android Hermes bundle（2026-11-13 实测） |
 | Alembic head | `20261113_25`（比赛中心，up/down 已实现） |
 | 开发数据库 | SQLite + WAL（过渡）；生产目标境内 PostgreSQL 16，**尚未切库** |
