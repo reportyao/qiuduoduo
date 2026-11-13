@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui";
+import type { OnSaleItem } from "@/domain/types";
 import { formatTime } from "@/lib/format";
 import { colors, radii, spacing } from "@/theme/tokens";
 
@@ -14,9 +15,11 @@ export interface BriefMatchOption {
   kickoff: string;
   status?: string | null;
   tier?: string | null;
+  coverage?: OnSaleItem["coverage"];
 }
 
 function statusLabel(option: BriefMatchOption): string {
+  if (option.coverage?.missing.includes("sportmonks_intel")) return "第三方未覆盖";
   if (option.tier === "verified") return "预测";
   if (option.tier === "market_reference") return "预测";
   if (option.tier === "avoid") return "赛前";

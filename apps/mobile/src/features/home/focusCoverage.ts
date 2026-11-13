@@ -7,6 +7,7 @@ const LABELS: Record<string, string> = {
   lineups: "阵容",
   standings: "积分榜",
   schedule: "赛程",
+  sportmonks_intel: "第三方情报",
 };
 
 export interface CoverageGaps {

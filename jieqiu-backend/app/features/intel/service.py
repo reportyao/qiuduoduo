@@ -296,6 +296,8 @@ def _coverage(db: Session, match: SPMatch, date: str, v: Verdict | None,
         missing.append("lineups")
     if not standings_ok:
         missing.append("standings")
+    if not sm_intel:
+        missing.append("sportmonks_intel")
     # 缺少任一必需来源时不能标 full；否则前端会显示“覆盖完整”但 deep_eligible=false。
     level = ("full" if score >= 70 and not missing else
              "partial" if score >= 50 else "insufficient")

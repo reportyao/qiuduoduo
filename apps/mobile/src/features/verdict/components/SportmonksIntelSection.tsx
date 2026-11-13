@@ -30,8 +30,8 @@ function standingLine(label: string, row?: SportmonksStandingRow): string {
 
 export function predictionValue(item: SportmonksPredictionHighlight): string {
   if (item.key === "CORRECT_SCORE_PROBABILITY" && item.scores?.length) {
-    return item.scores
-      .slice(0, 3)
+    return [...item.scores]
+      .sort((a, b) => (b.probability ?? 0) - (a.probability ?? 0))
       .map((row) => `${row.score} ${pct(row.probability)}`)
       .join(" · ");
   }

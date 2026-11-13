@@ -122,7 +122,7 @@ def test_sync_lineups_injuries_standings_and_focus(client, db, monkeypatch):
     source = {s["key"]: s for s in focus["coverage"]["sources"]}
     assert source["lineups"]["status"] == "ok"
     assert source["standings"]["status"] == "ok"
-    assert focus["coverage"]["missing"] == ["market"]
+    assert set(focus["coverage"]["missing"]) == {"market", "sportmonks_intel"}
 
 
 def test_lineup_snapshot_replaces_stale_side(client, db, monkeypatch):

@@ -37,7 +37,7 @@ export function AccuracyCard({ summary }: { summary: PredictionAccuracy }) {
         <View style={[styles.fill, { width: `${Math.round((rate ?? 0) * 100)}%` }]} />
       </View>
       <Text variant="caption" color={colors.mutedInverse} style={styles.heroNote}>
-        按预测条目逐条统计 · 计入 {summary.total_items} 条；角球、半全场等只做对照，不计入命中率。
+        按预测条目逐条统计 · 计入 {summary.total_items} 条；仅统计有赛前快照的场次，角球、半全场只做对照。
       </Text>
     </View>
   );

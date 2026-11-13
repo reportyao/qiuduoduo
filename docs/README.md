@@ -1,5 +1,9 @@
 # 球多多文档索引
 
+## 数据覆盖审计
+
+- [2026-11-13 数据覆盖审计](./reviews/2026-11-13-data-coverage-audit.md)：逐场区分拉取缺口、处理截断与历史边界。
+
 ## H5 预览
 
 移动端 UI 已开启 Expo Web，与 Android/iOS 共用同一套 React Native 组件和 `src/features/` 代码；H5 上改好的页面不需要再手工复制到 App。

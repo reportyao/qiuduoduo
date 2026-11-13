@@ -32,6 +32,7 @@ const MISSING_LABEL: Record<string, string> = {
   model: "模型",
   lineups: "首发",
   standings: "积分榜",
+  sportmonks_intel: "第三方情报",
 };
 
 const STATUS_LABEL: Record<string, string> = {

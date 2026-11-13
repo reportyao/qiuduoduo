@@ -52,6 +52,7 @@ export function buildBriefOptions(
         kickoff: match.kickoff,
         status: match.status,
         tier: match.tier ?? null,
+        coverage: match.coverage,
       });
     }
   }

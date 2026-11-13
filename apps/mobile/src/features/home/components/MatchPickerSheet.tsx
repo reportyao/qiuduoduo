@@ -163,7 +163,11 @@ export function MatchPickerSheet({
                 </Text>
                 <Text variant="caption" color={colors.muted}>
                   {row.verdictId ? rowStatus(row.status, row.tier) : `在售 · ${saleCountdownText(row.close)}`}
-                  {row.coverage ? ` · 覆盖 ${row.coverage.score}` : ""}
+                  {row.coverage
+                    ? ` · 覆盖 ${row.coverage.score}${row.coverage.missing.includes("sportmonks_intel")
+                      ? " · 第三方未覆盖"
+                      : row.coverage.missing.length ? ` · 缺 ${row.coverage.missing.length} 项` : ""}`
+                    : ""}
                 </Text>
               </View>
               {row.gates?.price === "pass" ? (

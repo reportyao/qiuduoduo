@@ -33,6 +33,7 @@ function optionFromMatch(match: OnSaleItem): BriefMatchOption {
     kickoff: match.kickoff,
     status: match.status,
     tier: match.tier ?? null,
+    coverage: match.coverage,
   };
 }
 
