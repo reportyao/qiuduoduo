@@ -948,8 +948,10 @@ def _probability_rows(snapshot: SportmonksPredictionSnapshot | None,
     if row.source == "product":
         source = dict(product_probs or {})
         pool = str((snapshot.market_lines or {}).get("product_pool") or "") if snapshot else ""
-        prefix = "让球" if pool == "hhad" else ""
-        labels = {key: f"{prefix}{_outcome_cn(key)}" for key in source}
+        if pool == "hhad":
+            labels = {"home": "让球主胜", "draw": "让球平", "away": "让球客胜"}
+        else:
+            labels = {key: _outcome_cn(key) for key in source}
     else:
         source = _probabilities(raw_item or {})
         labels = {str(key): _predicted_label(row.prediction_type, str(key), row.market_line)
@@ -957,13 +959,15 @@ def _probability_rows(snapshot: SportmonksPredictionSnapshot | None,
     out = []
     for key, value in source.items():
         try:
-            probability = _norm_prob(float(value))
+            probability = float(value)
         except (TypeError, ValueError):
             continue
-        if probability is None:
+        # Sportmonks 原始预测全是百分数（0.06 也是 0.06%），不能套 0-1 启发式。
+        probability = probability if row.source == "product" else probability / 100.0
+        if probability < 0:
             continue
         out.append({"key": str(key), "label": labels.get(str(key), str(key)),
-                    "probability": probability})
+                    "probability": round(probability, 6)})
     out.sort(key=lambda item: item["probability"], reverse=True)
     return out
 

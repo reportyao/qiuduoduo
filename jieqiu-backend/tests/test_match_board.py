@@ -201,10 +201,12 @@ def test_prediction_snapshot_locks_once_and_settles_all_dimensions(db):
     fulltime = next(item for item in detail["items"]
                     if item["type"] == "FULLTIME_RESULT_PROBABILITY")
     assert len(fulltime["probabilities"]) == 3
+    assert fulltime["probabilities"][0]["probability"] == 0.4
     correct_detail = next(item for item in detail["items"]
                           if item["type"] == "CORRECT_SCORE_PROBABILITY")
     assert len(correct_detail["probabilities"]) == 4
     assert correct_detail["probabilities"][0]["key"] == "Other_1"
+    assert correct_detail["probabilities"][0]["probability"] == 0.2
     # 概率最高的 1-1 与实际 2-1 不一致，仍要展示对照。
     correct = next(row for row in rows
                    if row.prediction_type == "CORRECT_SCORE_PROBABILITY")
