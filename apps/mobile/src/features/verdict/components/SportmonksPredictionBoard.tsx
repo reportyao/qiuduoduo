@@ -23,7 +23,7 @@ export function SportmonksPredictionBoard({
   onUnlock?: () => void;
 }) {
   const { width } = useWindowDimensions();
-  const marketWidth = width >= 410 ? "48%" : "100%";
+  const marketWidth = width >= 360 ? "48%" : "100%";
   if (!predictions.length && !markets.length) return null;
   const preview = locked ? predictions.slice(0, 3) : predictions;
   const total = predictions.length;

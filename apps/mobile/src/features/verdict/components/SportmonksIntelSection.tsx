@@ -44,7 +44,7 @@ function LineupSide({ side }: { side: NonNullable<SportmonksIntelData["lineups"]
 
 export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | null }) {
   const { width } = useWindowDimensions();
-  const marketWidth = width >= 410 ? "48%" : "100%";
+  const marketWidth = width >= 360 ? "48%" : "100%";
   if (!data) return null;
   const homeLine = data.lineups?.home;
   const awayLine = data.lineups?.away;
