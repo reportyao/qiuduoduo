@@ -42,7 +42,7 @@ export function SportmonksPredictionBoard({
         <View style={[styles.rows, locked && styles.lockedRows]} pointerEvents="none">
           {preview.map((item) => (
             <View key={item.key} style={styles.row}>
-              <Text variant="small" color={colors.muted} style={styles.label} numberOfLines={1}>
+              <Text variant="small" color={colors.muted} style={styles.label} numberOfLines={2}>
                 {item.label}
               </Text>
               <Text variant="smallStrong" style={styles.value} numberOfLines={2}>
@@ -52,7 +52,7 @@ export function SportmonksPredictionBoard({
           ))}
           {shownMarkets.map((market) => (
             <View key={market.key} style={styles.row}>
-              <Text variant="small" color={colors.muted} style={styles.label} numberOfLines={1}>
+              <Text variant="small" color={colors.muted} style={styles.label} numberOfLines={2}>
                 {market.name}{market.line ? ` ${market.line}` : ""}
               </Text>
               <Text variant="smallStrong" style={styles.value} numberOfLines={2}>
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.line,
   },
-  label: { width: 88, lineHeight: 19 },
+  label: { width: 108, lineHeight: 18 },
   value: { flex: 1, lineHeight: 19 },
   lock: {
     position: "absolute",
