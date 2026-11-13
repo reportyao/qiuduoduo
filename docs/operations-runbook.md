@@ -1,6 +1,6 @@
 # 运维 Runbook（当前实现）
 
-最后更新：2026-11-12。适用于当前过渡期 `jieqiu-backend/` + 单台腾讯云 VPS；目标数据库是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，见 ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。
+最后更新：2026-11-13。适用于当前过渡期 `jieqiu-backend/` + 单台腾讯云 VPS；目标数据库是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，见 ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。
 
 > **v4.1 部署状态**：2026-11-12 11:38 CST 已用 `deploy.py` 部署到 `43.128.24.244`，`systemctl is-active jieqiu-backend` = active，`/health` 200，OpenAPI 158/174，管理后台静态资源 `v=20261112e`；生产仍为 SQLite（`/home/ubuntu/jieqiu-data/jieqiu.db`，约 40M）。部署前备份：`/home/ubuntu/backups/jieqiu-backend-20261112-113522.tar.gz`（代码）与 `jieqiu-20261112-113522.db`（库）。回滚：停服务 → 解压代码备份到 `/home/ubuntu/jieqiu-backend` → 用 `sqlite3` 的 `.backup` 恢复库（或先保留现库为 `.bak`）→ `systemctl start jieqiu-backend`。v4 新增计划/会员/结算/OPC 表已在生产 SQLite 建表；后续观察 `settle_pending`、`settle_open_cycles`、会员到期 job 与 seed 是否正常写 `ops_jobs/ops_exceptions`。
 >
