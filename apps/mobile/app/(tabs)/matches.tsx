@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
@@ -24,22 +24,6 @@ const SUBTITLES: Record<MatchTab, string> = {
   predictions: "赛前锁定 · 赛后逐维对照",
 };
 
-interface Group<T> {
-  title: string;
-  data: T[];
-}
-
-function groupByLeague<T extends { league: string }>(items: T[]): Group<T>[] {
-  const groups = new Map<string, T[]>();
-  for (const item of items) {
-    const key = item.league || "其他比赛";
-    const list = groups.get(key);
-    if (list) list.push(item);
-    else groups.set(key, [item]);
-  }
-  return [...groups].map(([title, data]) => ({ title, data }));
-}
-
 export default function MatchesScreen() {
   const router = useRouter();
   const onScroll = useHideFloatingOnScroll();
@@ -51,11 +35,9 @@ export default function MatchesScreen() {
   const results = useResultBoardQuery(date, tab === "results");
   const history = usePredictionHistoryQuery(date, tab === "predictions");
 
-  const liveItems = useMemo(() => live.data?.matches ?? [], [live.data]);
-  const resultItems = useMemo(() => results.data?.matches ?? [], [results.data]);
-  const historyItems = useMemo(() => history.data?.matches ?? [], [history.data]);
-  const liveGroups = useMemo(() => groupByLeague(liveItems), [liveItems]);
-  const resultGroups = useMemo(() => groupByLeague(resultItems), [resultItems]);
+  const liveItems = live.data?.matches ?? [];
+  const resultItems = results.data?.matches ?? [];
+  const historyItems = history.data?.matches ?? [];
 
   const refresh = async () => {
     setPulling(true);
@@ -106,25 +88,23 @@ export default function MatchesScreen() {
               onAction={() => live.refetch()}
             />
           ) : (
-            liveGroups.map((group) => (
-              <Section key={group.title} group={group}>
-                {group.data.map((item) => (
-                  <LiveMatchCard
-                    key={item.match_id}
-                    match={item}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/match/[id]",
-                        params: {
-                          id: item.match_id,
-                          date: tradeDateCnFromKickoff(item.kickoff),
-                        },
-                      })
-                    }
-                  />
-                ))}
-              </Section>
-            ))
+            <View style={styles.list}>
+              {liveItems.map((item) => (
+                <LiveMatchCard
+                  key={item.match_id}
+                  match={item}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/match/[id]",
+                      params: {
+                        id: item.match_id,
+                        date: tradeDateCnFromKickoff(item.kickoff),
+                      },
+                    })
+                  }
+                />
+              ))}
+            </View>
           )
         ) : tab === "results" ? (
           resultItems.length === 0 ? (
@@ -136,13 +116,11 @@ export default function MatchesScreen() {
               onAction={() => results.refetch()}
             />
           ) : (
-            resultGroups.map((group) => (
-              <Section key={group.title} group={group} subtitle="FT90">
-                {group.data.map((item) => (
-                  <ResultMatchCard key={item.match_id} match={item} />
-                ))}
-              </Section>
-            ))
+            <View style={styles.list}>
+              {resultItems.map((item) => (
+                <ResultMatchCard key={item.match_id} match={item} />
+              ))}
+            </View>
           )
         ) : (
           <>
@@ -156,7 +134,7 @@ export default function MatchesScreen() {
                 onAction={() => history.refetch()}
               />
             ) : (
-              <View style={styles.historyList}>
+              <View style={styles.list}>
                 {historyItems.map((item) => (
                   <PredictionMatchCard
                     key={item.match_id}
@@ -187,28 +165,6 @@ function LiveSummary({ count }: { count: number }) {
   );
 }
 
-function Section<T>({
-  group,
-  subtitle,
-  children,
-}: {
-  group: Group<T>;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHead}>
-        <Text variant="overline" color={colors.green}>{group.title}</Text>
-        <Text variant="caption" color={colors.subtle}>
-          {subtitle ? `${subtitle} · ` : ""}{group.data.length} 场
-        </Text>
-      </View>
-      {children}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: layout.pagePadding,
@@ -230,13 +186,6 @@ const styles = StyleSheet.create({
   },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.green },
   idleDot: { backgroundColor: colors.subtle },
-  section: { marginTop: spacing.xl },
-  sectionHead: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    gap: spacing.sm,
-  },
+  list: { marginTop: spacing.md },
   skeleton: { gap: spacing.sm, marginTop: spacing.xl },
-  historyList: { marginTop: spacing.xs },
 });
