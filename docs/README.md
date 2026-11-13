@@ -1,13 +1,13 @@
 # 球多多文档索引
 
-最后对账：2026-11-12。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：后端 `0.8.0-w8+assistant` / 移动端 `0.3.4`，OpenAPI **158 路径 / 174 方法**，后端 **353 tests**，前端 **58 tests**，Alembic head `20261112_24`；开发库仍是 SQLite + WAL，生产目标境内 PostgreSQL 16 尚未切库。
+最后对账：2026-11-12。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：后端 `0.8.0-w8+assistant` / 移动端 `0.3.4`，OpenAPI **158 路径 / 174 方法**，后端 **353 tests**，前端 **59 tests**，Alembic head `20261112_24`；开发库仍是 SQLite + WAL，生产目标境内 PostgreSQL 16 尚未切库。
 
 > **产品/技术方案唯一有效版本：** [qiuduoduo-v4-final-plan.md](./qiuduoduo-v4-final-plan.md)。  
 > 其他 `ai-*` / `membership-*` / `grounded-*` 产品方案已标记作废，仅作历史参考；技术文档（architecture / database / API / workbench / OPC）不受影响。
 
 ## 当前状态（2026-11-12）
 
-- **v4.1 已完成并部署腾讯云生产（2026-11-12 11:38 CST）；v4 APK 已由 GitHub Actions 构建并在模拟器安装验证；最终对话版 APK 为 commit `9e4f66a`（run `43317636603`）。** 4 Tab 为助理/比赛/计划/我的；记录移入“我的 → 我的记录”。
+- **v4.1 已完成并部署腾讯云生产（2026-11-12 11:38 CST）；v4 APK 已由 GitHub Actions 构建并在模拟器安装验证；最终对话版 APK 为 commit `2d8e75e`（run `43351698209`）。** 4 Tab 为助理/比赛/计划/我的；记录移入“我的 → 我的记录”。
 - **计划**：`plan_cycles / plan_bets / plan_bet_legs` 已落地；每期最多 4 场、每场 100、总预算 400；稳健/平衡/进取三种结构；v1 选场只处理 1X2/让球，要求正 edge、正 EV，同联赛最多 2 场，不足 4 场不硬凑。
 - **会员**：权益、每日免费额度、Max 计划门控、后台手动开通/撤销、到期 job 已实现；充值页只是假 UI，不创建订单、不接支付。
 - **赛果**：FT90 口径、整数亚盘 void/push、`market_settlements`、独立 `settle_pending`、`performance_daily` 已实现；账本/周报/复盘排除 void。
