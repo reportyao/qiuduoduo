@@ -1,6 +1,6 @@
 import { StyleSheet, View } from "react-native";
 import type { SportmonksMarketBoard, SportmonksPredictionHighlight } from "@/domain/types";
-import { Button, Card, Icon, Text } from "@/components/ui";
+import { Button, Icon, Text } from "@/components/ui";
 import { ageLabel } from "@/lib/freshness";
 import { colors, radii, spacing } from "@/theme/tokens";
 import { predictionValue } from "./SportmonksIntelSection";
@@ -27,7 +27,7 @@ export function SportmonksPredictionBoard({
   const shownMarkets = locked ? markets.slice(0, 1) : markets;
   const total = predictions.length;
   return (
-    <Card style={styles.card}>
+    <View style={styles.card}>
       <View style={styles.head}>
         <View style={styles.headText}>
           <Text variant="h3">全部预测</Text>
@@ -82,7 +82,7 @@ export function SportmonksPredictionBoard({
           还有 {total - preview.length} 维预测与市场已锁定
         </Text>
       ) : null}
-    </Card>
+    </View>
   );
 }
 
