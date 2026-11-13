@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from "react-native";
 import { colors, radii, spacing } from "@/theme/tokens";
 import { Chip, Icon, Text } from "@/components/ui";
-import { pct } from "@/lib/format";
+import { formatTime, pct } from "@/lib/format";
 import type { PredictionAccuracy, PredictionHistoryMatch } from "../queries";
 import { resultLabel, resultTone } from "../labels";
 
@@ -36,7 +36,7 @@ export function AccuracyCard({ summary }: { summary: PredictionAccuracy }) {
         <View style={[styles.fill, { width: `${Math.round((rate ?? 0) * 100)}%` }]} />
       </View>
       <Text variant="caption" color={colors.mutedInverse} style={styles.heroNote}>
-        按预测条目逐条统计；角球、半全场等只做对照，不计入命中率。
+        按预测条目逐条统计 · 计入 {summary.total_items} 条；角球、半全场等只做对照，不计入命中率。
       </Text>
     </View>
   );
@@ -84,6 +84,7 @@ export function PredictionMatchCard({
         <Text variant="caption" color={colors.muted} numberOfLines={1} style={styles.flex}>
           {match.league || "未分类"}
           {match.match_no ? ` · ${match.match_no}` : ""}
+          {match.kickoff ? ` · ${formatTime(match.kickoff)}` : ""}
         </Text>
         <Chip label={resultLabel(result)} tone={resultTone(result)} />
       </View>
@@ -101,7 +102,7 @@ export function PredictionMatchCard({
             {main?.probability != null ? ` · ${pct(main.probability, 0)}` : ""}
           </Text>
           <Text variant="small" color={colors.muted}>
-            实际 {main?.actual || "待结算"} · 已结算 {match.settled_dimensions}/{match.total_dimensions} 维
+            实际 {main?.actual || "待结算"} · 已结算 {match.settled_dimensions}/{match.total_dimensions} 项
           </Text>
         </View>
         <Icon name="chevron-forward" size={16} color={colors.subtle} />

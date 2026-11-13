@@ -5,7 +5,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
 import { Card, Chip, EmptyState, ErrorState, Skeleton, Text } from "@/components/ui";
 import { errorText } from "@/lib/errors";
-import { formatDateTime, pct } from "@/lib/format";
+import { formatDateTime, pct, utcIso } from "@/lib/format";
 import { goBackOr } from "@/lib/navigation";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 import {
@@ -65,7 +65,7 @@ function Body({
           <Text variant="caption" color={colors.muted}>
             {formatDateTime(data.kickoff)} 开赛
           </Text>
-          <Chip label={scoreStatusLabel(data.status)} tone="green" />
+          <Chip label={scoreStatusLabel(data.status) || "待赛果"} tone={data.status ? "green" : "neutral"} />
         </View>
         <View style={styles.teams}>
           <View style={styles.flex}>
@@ -123,7 +123,7 @@ function snapshotText(snapshot: {
     return "没有赛前快照；这场不做历史对照，也不补造。";
   }
   if (snapshot.locked_at) {
-    return `赛前快照已锁定 · ${formatDateTime(snapshot.locked_at)} · ${snapshot.status === "locked" ? "锁定" : snapshot.status}`;
+    return `赛前快照已锁定 · ${formatDateTime(utcIso(snapshot.locked_at))} · ${snapshot.status === "locked" ? "锁定" : snapshot.status}`;
   }
   return "快照仍在更新：开球后锁定，锁定前不会写入历史战绩。";
 }
