@@ -51,7 +51,8 @@ AI 足球助理 / 赛前预测产品。当前产品口径以 [docs/qiuduoduo-v4-
 - **生产 Postgres**：迁移与离线 SQL 已验证，真实切库需要云托管实例和维护窗口。
 - **JPush 真机**：Android core 已接，MuMu/Houdini 转译会崩；需 arm64 真机验收，Master Secret 与厂商通道待配。
 - **v4 发布包**：Metro/Hermes bundle 与 v4 APK 已在 MuMu 安装验证；正式签名、上架、iOS 未做。
-- **生产部署**：2026-11-12 11:38 CST 已用 `deploy.py` 部署到 `43.128.24.244`；部署前备份代码 `jieqiu-backend-20261112-113522.tar.gz` 与 SQLite 库 `jieqiu-20261112-113522.db`。13:44 CST 重新同步 Sportmonks 欧国联 6/6 场并重建判决，重算前库备份 `jieqiu-20261112-134211-pre-rebuild.db`。17:00 CST 部署 Sportmonks 情报层（首发/阵型/伤停/积分榜/H2H/天气/裁判/25 维预测/选定市场），Alembic head `20261112_24`，部署前库备份 `jieqiu-20261112-162055-pre-sm-intel.db`（均在 `/home/ubuntu/backups/`）。
+- **比赛中心 APK**：2026-11-13 由 GitHub Actions 构建，tag `apk-20261113-match-center-v3`（commit `1bf0026`），APK 资源 `qiuduoduo-apk-20261113-match-center-v3.apk`（72.2MB，debug keystore）；已校验 zip 完整性与 Hermes bundle 包含即时/赛果/预测战绩文案，本机无 Android SDK 未做安装验证。
+- **生产部署**：2026-11-12 11:38 CST 已用 `deploy.py` 部署到 `43.128.24.244`；部署前备份代码 `jieqiu-backend-20261112-113522.tar.gz` 与 SQLite 库 `jieqiu-20261112-113522.db`。13:44 CST 重新同步 Sportmonks 欧国联 6/6 场并重建判决，重算前库备份 `jieqiu-20261112-134211-pre-rebuild.db`。17:00 CST 部署 Sportmonks 情报层（首发/阵型/伤停/积分榜/H2H/天气/裁判/25 维预测/选定市场），Alembic head `20261112_24`，部署前库备份 `jieqiu-20261112-162055-pre-sm-intel.db`（均在 `/home/ubuntu/backups/`）。2026-11-13 13:11 CST 部署比赛中心，Alembic `20261113_25`，备份 `jieqiu-backend-20261113-131018.tar.gz` / `jieqiu-20261113-131018-pre-match-board.db`。
 
 ## 工程入口
 
