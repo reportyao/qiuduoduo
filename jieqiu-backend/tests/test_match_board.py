@@ -257,7 +257,7 @@ def test_product_actual_uses_real_outcome_not_predicted_key():
         product_pick={"dir": "主胜"}, market_lines={"product_pool": "hhad",
                                                      "product_line": "-1"})
     assert service._product_actual(snapshot, {
-        "ft_home": 2, "ft_away": 1, "ft_outcome": "home"}) == ("draw", "平局")
+        "ft_home": 2, "ft_away": 1, "ft_outcome": "home"}) == ("draw", "让球平")
     snapshot.market_lines = {"product_pool": "had", "product_line": ""}
     assert service._product_actual(snapshot, {
         "ft_home": 2, "ft_away": 1, "ft_outcome": "home"}) == ("home", "主胜")

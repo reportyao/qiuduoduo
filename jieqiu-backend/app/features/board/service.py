@@ -663,7 +663,8 @@ def _product_actual(snapshot: SportmonksPredictionSnapshot,
         return "", ""
     actual_key = str(actuals.get("ft_outcome") or "")
     lines = snapshot.market_lines or {}
-    if str(lines.get("product_pool") or lines.get("pool") or "") == "hhad":
+    handicap = str(lines.get("product_pool") or lines.get("pool") or "") == "hhad"
+    if handicap:
         try:
             line = float(lines.get("product_line") or 0)
         except (TypeError, ValueError):
@@ -672,7 +673,8 @@ def _product_actual(snapshot: SportmonksPredictionSnapshot,
         actual_key = "home" if diff > 0 else ("draw" if diff == 0 else "away")
     if not actual_key:
         return "", ""
-    return actual_key, _outcome_cn(actual_key)
+    label = _outcome_cn(actual_key)
+    return actual_key, f"让球{label}" if handicap else label
 
 
 def _new_settlement(snapshot: SportmonksPredictionSnapshot, *, source: str,
@@ -725,12 +727,14 @@ def settle_prediction_snapshots(db: Session, limit: int = 100) -> dict:
         if pick.get("dir"):
             actual_key, actual_label = _product_actual(snapshot, actuals)
             prob = pick.get("prob")
+            product_pool = str((snapshot.market_lines or {}).get("product_pool") or "")
+            product_prefix = "让球" if product_pool == "hhad" else ""
             rows.append(_new_settlement(
                 snapshot, source="product", prediction_type="product_main",
                 label="主预测",
                 predicted_key={"主胜": "home", "平局": "draw", "客胜": "away"}.get(
                     str(pick.get("dir")), str(pick.get("dir"))),
-                predicted_label=str(pick.get("dir") or ""),
+                predicted_label=f"{product_prefix}{pick.get('dir') or ''}",
                 probability=float(prob) if prob is not None else None,
                 market_line=str((snapshot.market_lines or {}).get("product_line") or ""),
                 actual_key=actual_key, actual_label=actual_label, counted=True))
