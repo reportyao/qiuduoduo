@@ -245,6 +245,17 @@ def test_sync_live_states_parses_inplay_and_period_minute(db, monkeypatch):
     assert state.ht_home == 0 and state.ht_away == 1
 
 
+def test_product_actual_uses_real_outcome_not_predicted_key():
+    snapshot = SimpleNamespace(
+        product_pick={"dir": "主胜"}, market_lines={"product_pool": "hhad",
+                                                     "product_line": "-1"})
+    assert service._product_actual(snapshot, {
+        "ft_home": 2, "ft_away": 1, "ft_outcome": "home"}) == ("draw", "平局")
+    snapshot.market_lines = {"product_pool": "had", "product_line": ""}
+    assert service._product_actual(snapshot, {
+        "ft_home": 2, "ft_away": 1, "ft_outcome": "home"}) == ("home", "主胜")
+
+
 def test_result_board_prioritizes_interested_match_without_label(db):
     day = today_cn()
     rows = [("board-early", "周四902", f"{day} 19:00:00", 191),

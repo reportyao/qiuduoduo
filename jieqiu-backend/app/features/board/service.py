@@ -621,17 +621,22 @@ def _product_actual(snapshot: SportmonksPredictionSnapshot,
     direction = str(pick.get("dir") or "")
     if direction not in ("主胜", "平局", "客胜"):
         return "", ""
-    actual = _outcome_cn(str(actuals.get("ft_outcome") or ""))
+    ft_home = actuals.get("ft_home")
+    ft_away = actuals.get("ft_away")
+    if ft_home is None or ft_away is None:
+        return "", ""
+    actual_key = str(actuals.get("ft_outcome") or "")
     lines = snapshot.market_lines or {}
     if str(lines.get("product_pool") or lines.get("pool") or "") == "hhad":
         try:
             line = float(lines.get("product_line") or 0)
         except (TypeError, ValueError):
             line = 0.0
-        diff = int(actuals.get("ft_home") or 0) - int(actuals.get("ft_away") or 0) + line
-        actual = "主胜" if diff > 0 else ("平局" if diff == 0 else "客胜")
-    key = {"主胜": "home", "平局": "draw", "客胜": "away"}[direction]
-    return key, actual
+        diff = int(ft_home) - int(ft_away) + line
+        actual_key = "home" if diff > 0 else ("draw" if diff == 0 else "away")
+    if not actual_key:
+        return "", ""
+    return actual_key, _outcome_cn(actual_key)
 
 
 def _new_settlement(snapshot: SportmonksPredictionSnapshot, *, source: str,
