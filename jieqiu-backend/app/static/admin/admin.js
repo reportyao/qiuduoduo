@@ -99,6 +99,9 @@ function applyRole() {
   els("[data-admin-only]").forEach(item => {
     item.style.display = canAdmin() ? "" : "none";
   });
+  els("[data-operator-only]").forEach(item => {
+    item.style.display = canOperate() ? "" : "none";
+  });
 }
 
 function statusPill(status) {

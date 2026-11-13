@@ -184,6 +184,7 @@ function ItemRow({
       <Text variant="caption" color={colors.muted}>
         预测 {item.predicted_label || item.predicted_key || "—"}
         {item.predicted_probability != null ? ` · ${pct(item.predicted_probability, 1)}` : ""}
+        {item.market_line ? ` · 盘口 ${item.market_line}` : ""}
         {"  ·  "}实际 {item.actual_label || "—"}
       </Text>
       {item.probabilities?.length ? (
