@@ -174,7 +174,7 @@ export const VerdictMessage = memo(function VerdictMessage({
     ? pickDirectionLabel(verdict.pool, verdict.pick.dir)
     : pickDirectionLabel(verdict.pool, marketDir);
   const pickProb = verdict.pick?.prob ?? verdict.probs[marketKey];
-  const summary = `${pickLabel}，预测概率 ${pickProb != null ? pct(pickProb) : "—"}。抽水 ${pct(verdict.rake)}，阈值 ${pct(verdict.rakeThreshold)}。`;
+  const summary = `抽水 ${pct(verdict.rake)} · 阈值 ${pct(verdict.rakeThreshold)}`;
 
   const fg = dark ? colors.inkInverse : colors.ink;
   const sub = dark ? colors.mutedInverse : colors.muted;
@@ -227,7 +227,7 @@ export const VerdictMessage = memo(function VerdictMessage({
         </View>
       </View>
 
-      <Text variant="body" color={fg} style={styles.summary}>{summary}</Text>
+      <Text variant="caption" color={sub} style={styles.summary}>{summary}</Text>
 
       <ProbabilityBar probs={verdict.probs} dark={dark} pool={verdict.pool} />
 

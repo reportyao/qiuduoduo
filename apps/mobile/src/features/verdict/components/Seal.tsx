@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    paddingTop: spacing.base,
+    paddingTop: spacing.lg,
   },
   text: { flex: 1 },
   stamp: {

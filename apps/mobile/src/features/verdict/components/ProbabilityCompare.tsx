@@ -10,15 +10,24 @@ function pct(value: number): string {
 function Row({ label, probs, tone }: { label: string; probs: ProbabilityTriple; tone: string }) {
   return (
     <View style={styles.row}>
-      <Text variant="caption" color={colors.muted} style={styles.rowLabel}>{label}</Text>
+      <View style={styles.rowTop}>
+        <Text variant="small" color={colors.muted}>{label}</Text>
+        <Text variant="smallStrong" mono>{pct(probs.home)} / {pct(probs.draw)} / {pct(probs.away)}</Text>
+      </View>
       <View style={styles.bar}>
         <View style={[styles.seg, { flex: Math.max(probs.home, 0.01), backgroundColor: tone }]} />
         <View style={[styles.seg, { flex: Math.max(probs.draw, 0.01), backgroundColor: colors.lineStrong }]} />
         <View style={[styles.seg, { flex: Math.max(probs.away, 0.01), backgroundColor: colors.amber }]} />
       </View>
-      <Text variant="caption" color={colors.ink} style={styles.values}>
-        {pct(probs.home)} / {pct(probs.draw)} / {pct(probs.away)}
-      </Text>
+    </View>
+  );
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <View style={styles.legendItem}>
+      <View style={[styles.dot, { backgroundColor: color }]} />
+      <Text variant="caption" color={colors.muted}>{label}</Text>
     </View>
   );
 }
@@ -34,7 +43,11 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
     <Card style={styles.card}>
       <View style={styles.head}>
         <Text variant="h3">概率对比</Text>
-        <Text variant="caption" color={colors.green}>预测概率</Text>
+        <View style={styles.legend}>
+          <Legend color={colors.green} label="主胜" />
+          <Legend color={colors.lineStrong} label="平局" />
+          <Legend color={colors.amber} label="客胜" />
+        </View>
       </View>
 
       {data.sp ? <Row label="竞彩隐含" probs={data.sp} tone={colors.green} /> : null}
@@ -60,7 +73,10 @@ const styles = StyleSheet.create({
   card: { marginTop: spacing.base, gap: spacing.sm },
   head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   row: { gap: spacing.xs },
-  rowLabel: { lineHeight: 16 },
+  rowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", gap: spacing.sm },
+  legend: { flexDirection: "row", gap: spacing.sm },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  dot: { width: 6, height: 6, borderRadius: 3 },
   bar: {
     flexDirection: "row",
     height: 8,
@@ -69,6 +85,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSunken,
   },
   seg: { height: "100%" },
-  values: { lineHeight: 16 },
   note: { lineHeight: 17 },
 });

@@ -6,7 +6,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { colors, fontFamily, layout, radii, spacing, type } from "@/theme/tokens";
+import { colors, fontFamily, radii, spacing, type } from "@/theme/tokens";
 import { Icon, type IconName } from "./Icon";
 import { Text } from "./Text";
 
@@ -78,7 +78,7 @@ export function Button({
   accessibilityHint,
 }: ButtonProps) {
   const palette = PALETTE[variant];
-  const height = size === "md" ? layout.touch : 36;
+  const height = size === "md" ? 48 : 40;
   const isDisabled = disabled || loading;
 
   return (
@@ -125,7 +125,7 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: radii.sm,
+    borderRadius: radii.md,
     borderWidth: 1,
     paddingHorizontal: spacing.xl,
     alignItems: "center",

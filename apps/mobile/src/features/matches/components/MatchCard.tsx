@@ -90,7 +90,7 @@ function TeamRow({
       <Text variant={strong ? "bodyStrong" : "body"} numberOfLines={1} style={styles.teamName}>
         {name || "待同步"}
       </Text>
-      <Text variant={strong ? "h3" : "bodyStrong"} style={styles.teamScore}>
+      <Text variant="h3" style={styles.teamScore}>
         {scoreText(score)}
       </Text>
     </View>
@@ -107,17 +107,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.line,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    marginTop: spacing.sm,
-    minHeight: 84,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    minHeight: 92,
   },
   pressed: { opacity: 0.72 },
   minuteBox: {
-    width: 56,
+    width: 60,
     alignSelf: "stretch",
     borderRadius: radii.md,
     backgroundColor: colors.greenSoft,
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   minuteBreak: { backgroundColor: colors.amberSoft },
-  statusCol: { width: 44, alignItems: "center", gap: 2 },
+  statusCol: { width: 52, alignItems: "center", gap: 2 },
   body: { flex: 1, gap: 4 },
   teamRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   teamName: { flex: 1 },

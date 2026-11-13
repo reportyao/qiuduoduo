@@ -1,9 +1,9 @@
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import type { SportmonksMarketBoard, SportmonksPredictionHighlight } from "@/domain/types";
-import { Button, Icon, Text } from "@/components/ui";
+import { Button, Icon, ProbabilityBreakdown, Text } from "@/components/ui";
 import { ageLabel } from "@/lib/freshness";
 import { colors, radii, spacing } from "@/theme/tokens";
-import { predictionValue } from "./SportmonksIntelSection";
+import { predictionDistribution } from "../predictionData";
 
 /**
  * 完整预测板：Sportmonks 返回的 25 维预测 + 选定市场。
@@ -22,9 +22,10 @@ export function SportmonksPredictionBoard({
   locked?: boolean;
   onUnlock?: () => void;
 }) {
+  const { width } = useWindowDimensions();
+  const marketWidth = width >= 410 ? "48%" : "100%";
   if (!predictions.length && !markets.length) return null;
-  const preview = locked ? predictions.slice(0, 6) : predictions;
-  const shownMarkets = locked ? markets.slice(0, 1) : markets;
+  const preview = locked ? predictions.slice(0, 3) : predictions;
   const total = predictions.length;
   return (
     <View style={styles.card}>
@@ -40,27 +41,28 @@ export function SportmonksPredictionBoard({
 
       <View style={[styles.board, locked && styles.lockedBoard]}>
         <View style={[styles.rows, locked && styles.lockedRows]} pointerEvents="none">
-          {preview.map((item) => (
-            <View key={item.key} style={styles.row}>
-              <Text variant="small" color={colors.muted} style={styles.label} numberOfLines={2}>
-                {item.label}
-              </Text>
-              <Text variant="smallStrong" style={styles.value} numberOfLines={2}>
-                {predictionValue(item)}
-              </Text>
-            </View>
-          ))}
-          {shownMarkets.map((market) => (
-            <View key={market.key} style={styles.row}>
-              <Text variant="small" color={colors.muted} style={styles.label} numberOfLines={2}>
-                {market.name}{market.line ? ` ${market.line}` : ""}
-              </Text>
-              <Text variant="smallStrong" style={styles.value} numberOfLines={2}>
-                {market.selections.map((row) =>
-                  `${row.label} ${row.price ?? "—"}（${row.probability ?? "—"}%）`).join(" · ")}
-              </Text>
-            </View>
-          ))}
+          {preview.map((item, index) => {
+            const dist = predictionDistribution(item);
+            return (
+              <View
+                key={item.key}
+                style={[styles.dim, index < preview.length - 1 && styles.dimLine]}
+              >
+                <View style={styles.dimHead}>
+                  <Text variant="small" color={colors.muted} style={styles.flex} numberOfLines={1}>
+                    {item.label}
+                  </Text>
+                  <Text variant="caption" color={colors.green} numberOfLines={1}>
+                    {dist.predictedLabel} {dist.predictedValue.toFixed(1)}%
+                  </Text>
+                </View>
+                <ProbabilityBreakdown
+                  items={dist.items}
+                  predictedKey={dist.predictedKey}
+                />
+              </View>
+            );
+          })}
         </View>
 
         {locked ? (
@@ -77,6 +79,34 @@ export function SportmonksPredictionBoard({
         ) : null}
       </View>
 
+      {!locked && markets.length ? (
+        <View style={styles.marketGrid}>
+          {markets.map((market) => (
+            <View key={market.key} style={[styles.marketCard, { width: marketWidth }]}>
+              <View style={styles.marketHead}>
+                <Text variant="captionStrong" style={styles.flex} numberOfLines={1}>
+                  {market.name}
+                </Text>
+                {market.line ? (
+                  <Text variant="caption" color={colors.green} mono>{market.line}</Text>
+                ) : null}
+              </View>
+              {market.selections.map((row) => (
+                <View key={`${market.key}-${row.label}`} style={styles.selectionRow}>
+                  <Text variant="caption" color={colors.muted} style={styles.flex} numberOfLines={1}>
+                    {row.label}
+                  </Text>
+                  <Text variant="captionStrong" mono>{row.price?.toFixed(2) ?? "—"}</Text>
+                  <Text variant="caption" color={colors.subtle} style={styles.probability}>
+                    {row.probability != null ? `${row.probability.toFixed(0)}%` : "—"}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       {locked && total > preview.length ? (
         <Text variant="caption" color={colors.subtle}>
           还有 {total - preview.length} 维预测与市场已锁定
@@ -90,20 +120,26 @@ const styles = StyleSheet.create({
   card: { marginTop: spacing.md, gap: spacing.md },
   head: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.sm },
   headText: { gap: 2 },
+  flex: { flex: 1 },
   board: { position: "relative", borderRadius: radii.md, overflow: "hidden" },
-  lockedBoard: { minHeight: 252 },
-  rows: { gap: 1 },
-  lockedRows: { opacity: 0.16 },
-  row: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.sm,
-    paddingVertical: 7,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.line,
+  lockedBoard: { minHeight: 300 },
+  rows: { gap: 0 },
+  lockedRows: { opacity: 0.14 },
+  dim: { paddingVertical: spacing.md, gap: 2 },
+  dimLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
+  dimHead: { flexDirection: "row", alignItems: "baseline", gap: spacing.sm, marginBottom: 2 },
+  marketGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.sm },
+  marketCard: {
+    gap: 4,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.bgElevated,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
-  label: { width: 108, lineHeight: 18 },
-  value: { flex: 1, lineHeight: 19 },
+  marketHead: { flexDirection: "row", alignItems: "baseline", gap: spacing.xs, marginBottom: 2 },
+  selectionRow: { flexDirection: "row", alignItems: "baseline", gap: spacing.xs },
+  probability: { width: 38, textAlign: "right" },
   lock: {
     position: "absolute",
     left: spacing.sm,

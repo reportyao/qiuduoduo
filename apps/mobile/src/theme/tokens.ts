@@ -5,36 +5,37 @@ import { Platform } from "react-native";
  * 视觉基准来自 archive/legacy/jieqiu-app/index.html v3.1（暖白 + 深墨绿），但生产字号不低于 11px。
  */
 export const colors = {
-  bg: "#F5F4EF",
-  bgElevated: "#FBFAF6",
-  surface: "#FFFFFF",
-  surfaceSunken: "#F1EFE8",
-  ink: "#15211B",
-  inkInverse: "#F3F6F2",
-  muted: "#55615B",
-  mutedInverse: "#A6B5AD",
-  subtle: "#64706A",
-  line: "#E9E7E0",
-  lineStrong: "#DCD8CD",
+  bg: "#F6F3EC",
+  bgElevated: "#FCFAF5",
+  surface: "#FFFEFB",
+  surfaceSunken: "#EEEADF",
+  ink: "#17221C",
+  inkInverse: "#F4F6F1",
+  muted: "#59655E",
+  mutedInverse: "#B3C0B8",
+  subtle: "#6C776F",
+  line: "#E5E0D4",
+  lineStrong: "#D6CFBF",
 
-  green: "#0E6B4F",
-  greenPressed: "#0A5740",
-  greenSoft: "#EAF3EE",
-  greenSoftStrong: "#DDEDE4",
-  greenDark: "#0A4F3C",
-  greenAccent: "#9FE3C8",
+  green: "#0C6549",
+  greenPressed: "#084D38",
+  greenSoft: "#E7F0EA",
+  greenSoftStrong: "#D7E8DE",
+  greenDark: "#063E2E",
+  greenAccent: "#A8E4C9",
 
   danger: "#A8443A",
   dangerPressed: "#8F352D",
   dangerSoft: "#F7E9E6",
+  dangerAccent: "#F2B8AE",
 
-  amber: "#8A5510",
-  amberSoft: "#F7EFE1",
-  amberLine: "#EBD9B8",
+  amber: "#8C5A16",
+  amberSoft: "#F6EEDD",
+  amberLine: "#E4D2AF",
 
-  heroTop: "#122B22",
-  heroBottom: "#0A1813",
-  heroLine: "rgba(159,227,200,0.18)",
+  heroTop: "#132920",
+  heroBottom: "#08130E",
+  heroLine: "rgba(168,228,201,0.20)",
 
   white: "#FFFFFF",
   black: "#000000",
@@ -64,12 +65,12 @@ export const spacing = {
 
 export const radii = {
   sm: 10,
-  md: 12,
-  lg: 16,
-  xl: 18,
-  card: 16,
-  hero: 24,
-  sheet: 24,
+  md: 14,
+  lg: 18,
+  xl: 22,
+  card: 20,
+  hero: 26,
+  sheet: 28,
   pill: 999,
 } as const;
 
@@ -83,26 +84,26 @@ export const fontFamily = {
   mono: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
 } as const;
 
-/** 字号下限 11：设计稿里的 9.5px 标签在生产端统一抬到 11。 */
+/** 移动端阅读优先：正文 15、辅助 13、说明 12，杜绝 11px 正文。 */
 export const type = {
-  display: { fontSize: 28, lineHeight: 34, fontWeight: "600" as const, letterSpacing: -0.4 },
-  h1: { fontSize: 24, lineHeight: 31, fontWeight: "600" as const, letterSpacing: -0.3, fontVariant: ["tabular-nums"] as const },
-  h2: { fontSize: 20, lineHeight: 27, fontWeight: "600" as const, letterSpacing: -0.3, fontVariant: ["tabular-nums"] as const },
-  h3: { fontSize: 16, lineHeight: 23, fontWeight: "600" as const, fontVariant: ["tabular-nums"] as const },
-  body: { fontSize: 14, lineHeight: 22, fontWeight: "400" as const },
-  bodyStrong: { fontSize: 14, lineHeight: 22, fontWeight: "600" as const },
-  small: { fontSize: 12, lineHeight: 19, fontWeight: "400" as const },
-  smallStrong: { fontSize: 12, lineHeight: 19, fontWeight: "600" as const },
-  caption: { fontSize: 11, lineHeight: 16, fontWeight: "400" as const },
-  captionStrong: { fontSize: 11, lineHeight: 16, fontWeight: "600" as const },
+  display: { fontSize: 34, lineHeight: 41, fontWeight: "600" as const, letterSpacing: -0.5 },
+  h1: { fontSize: 28, lineHeight: 36, fontWeight: "600" as const, letterSpacing: -0.3, fontVariant: ["tabular-nums"] as const },
+  h2: { fontSize: 23, lineHeight: 31, fontWeight: "600" as const, letterSpacing: -0.2, fontVariant: ["tabular-nums"] as const },
+  h3: { fontSize: 18, lineHeight: 25, fontWeight: "600" as const, fontVariant: ["tabular-nums"] as const },
+  body: { fontSize: 16, lineHeight: 24, fontWeight: "400" as const },
+  bodyStrong: { fontSize: 16, lineHeight: 24, fontWeight: "600" as const },
+  small: { fontSize: 14, lineHeight: 21, fontWeight: "400" as const },
+  smallStrong: { fontSize: 14, lineHeight: 21, fontWeight: "600" as const },
+  caption: { fontSize: 12, lineHeight: 18, fontWeight: "400" as const },
+  captionStrong: { fontSize: 12, lineHeight: 18, fontWeight: "600" as const },
   overline: {
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: 12,
+    lineHeight: 18,
     fontWeight: "600" as const,
-    letterSpacing: 0.2,
+    letterSpacing: 0.4,
   },
-  metric: { fontSize: 28, lineHeight: 32, fontWeight: "600" as const, letterSpacing: -0.5, fontVariant: ["tabular-nums"] as const },
-  mono: { fontSize: 11, lineHeight: 16, fontWeight: "400" as const, letterSpacing: 0.1, fontVariant: ["tabular-nums"] as const },
+  metric: { fontSize: 34, lineHeight: 38, fontWeight: "600" as const, letterSpacing: -0.6, fontVariant: ["tabular-nums"] as const },
+  mono: { fontSize: 12, lineHeight: 18, fontWeight: "400" as const, letterSpacing: 0.1, fontVariant: ["tabular-nums"] as const },
 } as const;
 
 export const shadows = {
@@ -140,10 +141,10 @@ export const shadows = {
 
 export const layout = {
   maxWidth: 430,
-  pagePadding: 24,
-  headerHeight: 64,
-  tabBarHeight: 56,
-  composerHeight: 56,
+  pagePadding: 20,
+  headerHeight: 68,
+  tabBarHeight: 60,
+  composerHeight: 60,
   touch: 44,
   inputHeight: 48,
 } as const;

@@ -3,7 +3,7 @@ import { ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
-import { Card, Chip, EmptyState, ErrorState, Skeleton, Text } from "@/components/ui";
+import { Card, Chip, EmptyState, ErrorState, ProbabilityBreakdown, Skeleton, Text } from "@/components/ui";
 import { errorText } from "@/lib/errors";
 import { formatDateTime, pct, utcIso } from "@/lib/format";
 import { goBackOr } from "@/lib/navigation";
@@ -61,6 +61,7 @@ function Body({
   return (
     <>
       <Card style={styles.hero}>
+        <Text variant="overline" color={colors.green}>赛后复盘</Text>
         <View style={styles.heroTop}>
           <Text variant="caption" color={colors.muted}>
             {formatDateTime(data.kickoff)} 开赛
@@ -116,16 +117,20 @@ function Body({
 
 function snapshotText(snapshot: {
   status: string;
+  captured_at?: string | null;
   locked_at?: string | null;
   source: string;
 }): string {
   if (snapshot.status === "missing") {
     return "没有赛前快照；这场不做历史对照，也不补造。";
   }
-  if (snapshot.locked_at) {
-    return `赛前快照已锁定 · ${formatDateTime(utcIso(snapshot.locked_at))} · ${snapshot.status === "locked" ? "锁定" : snapshot.status}`;
+  const cutoff = snapshot.captured_at
+    ? formatDateTime(utcIso(snapshot.captured_at))
+    : "时间待同步";
+  if (snapshot.status === "locked") {
+    return `数据截止 ${cutoff} · 赛前已锁定`;
   }
-  return "快照仍在更新：开球后锁定，锁定前不会写入历史战绩。";
+  return `数据截止 ${cutoff} · 开球后锁定`;
 }
 
 function SummaryCount({ summary }: { summary: PredictionAccuracy }) {
@@ -188,18 +193,16 @@ function ItemRow({
         {"  ·  "}实际 {item.actual_label || "—"}
       </Text>
       {item.probabilities?.length ? (
-        <View style={styles.probWrap}>
-          {item.probabilities.map((row) => {
-            const top = row.key === item.predicted_key;
-            return (
-              <View key={row.key} style={[styles.prob, top && styles.probTop]}>
-                <Text variant="caption" color={top ? colors.green : colors.muted}>
-                  {row.label || row.key} {pct(row.probability, 1)}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
+        <ProbabilityBreakdown
+          items={item.probabilities.map((row) => ({
+            key: row.key,
+            label: row.label || row.key,
+            value: row.probability,
+          }))}
+          unit="ratio"
+          predictedKey={item.predicted_key}
+          actualKey={item.actual_key}
+        />
       ) : null}
     </View>
   );
@@ -238,12 +241,5 @@ const styles = StyleSheet.create({
   },
   itemHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   itemLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
-  probWrap: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginTop: 2 },
-  prob: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radii.pill,
-    backgroundColor: colors.surfaceSunken,
-  },
-  probTop: { backgroundColor: colors.greenSoft },
+
 });

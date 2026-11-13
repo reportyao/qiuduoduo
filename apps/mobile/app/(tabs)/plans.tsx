@@ -90,28 +90,35 @@ export default function PlansScreen() {
           <ErrorState message={errorText(summary.error ?? current.error)} onRetry={refresh} />
         ) : (
           <>
-            <Card style={styles.summaryCard}>
+            <View style={styles.summaryCard}>
               <View style={styles.summaryHead}>
-                <Text variant="h3">{item?.name ?? "稳健定投"}</Text>
-                <Text variant="caption" color={colors.muted}>
+                <View style={styles.flex}>
+                  <Text variant="overline" color={colors.greenAccent}>AI 模拟定投</Text>
+                  <Text variant="h3" color={colors.inkInverse}>{item?.name ?? "稳健定投"}</Text>
+                </View>
+                <Text variant="caption" color={colors.mutedInverse}>
                   {item?.settled ?? 0} 期已结算
                 </Text>
               </View>
-              <Text variant="metric" color={(item?.pnl ?? 0) > 0 ? colors.green : (item?.pnl ?? 0) < 0 ? colors.danger : colors.ink}>
+              <Text
+                variant="metric"
+                color={(item?.pnl ?? 0) > 0 ? colors.greenAccent
+                  : (item?.pnl ?? 0) < 0 ? colors.dangerAccent : colors.inkInverse}
+              >
                 {signed(item?.pnl ?? 0)}
               </Text>
-              <Text variant="caption" color={colors.muted}>
+              <Text variant="small" color={colors.mutedInverse}>
                 累计模拟收益 · 近 7 天 {signed(item?.last_7d ?? 0)} · 近 30 天 {signed(item?.last_30d ?? 0)}
               </Text>
               {plan ? (
-                <Text variant="caption" color={colors.muted}>
+                <Text variant="caption" color={colors.mutedInverse}>
                   本期最大回撤 {plan.max_drawdown == null ? "—" : money(plan.max_drawdown)}
                 </Text>
               ) : null}
-              <Text variant="caption" color={colors.subtle} style={styles.note}>
-                历史模拟，不代表未来；页面只展示方案，不涉及真实资金。
+              <Text variant="caption" color={colors.mutedInverse} style={styles.note}>
+                历史模拟，不代表未来；只展示方案，不涉及真实资金。
               </Text>
-            </Card>
+            </View>
 
             {!plan ? (
               <EmptyState
@@ -229,12 +236,19 @@ const styles = StyleSheet.create({
   title: { marginTop: 2 },
   lead: { marginTop: spacing.xs, lineHeight: 20 },
   riskRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.base, marginBottom: spacing.base, flexWrap: "wrap" },
-  summaryCard: { gap: spacing.xs },
+  summaryCard: {
+    gap: spacing.sm,
+    backgroundColor: colors.heroBottom,
+    borderWidth: 1,
+    borderColor: colors.heroLine,
+    borderRadius: radii.hero,
+    padding: spacing.x4,
+  },
   planCard: { marginTop: spacing.base, gap: spacing.sm },
   summaryHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
   note: { lineHeight: 17 },
   metrics: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs },
-  metric: { flex: 1, backgroundColor: colors.bgElevated, borderRadius: radii.md, padding: spacing.sm, gap: 2 },
+  metric: { flex: 1, backgroundColor: colors.bgElevated, borderRadius: radii.md, padding: spacing.md, gap: 2 },
   lock: { backgroundColor: colors.amberSoft, borderRadius: radii.md, padding: spacing.base, gap: spacing.xs },
   bets: { gap: spacing.sm, marginTop: spacing.xs },
   bet: { backgroundColor: colors.bgElevated, borderRadius: radii.md, padding: spacing.base, gap: 3 },
@@ -242,7 +256,7 @@ const styles = StyleSheet.create({
   leg: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line, paddingTop: spacing.xs, gap: 1 },
   sectionHead: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginTop: spacing.x4, marginBottom: spacing.sm },
   emptyHistory: { lineHeight: 20 },
-  historyRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.base, minHeight: 62 },
+  historyRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.lg, minHeight: 68 },
   rowLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
   pressed: { opacity: 0.7 },
   flex: { flex: 1 },

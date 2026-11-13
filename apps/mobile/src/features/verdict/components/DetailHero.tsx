@@ -36,7 +36,6 @@ export function DetailHero({
     ? pickDirectionLabel(detail.pool, detail.pick.dir)
     : pickDirectionLabel(detail.pool, marketDir);
   const displayProb = detail.pick?.prob ?? detail.probs[marketKey];
-  const summary = `${pickLabel}，预测概率 ${pct(displayProb)}。`;
   const tier = detail.tier ?? (detail.status === "promoted" ? "verified"
     : detail.status === "killed" ? "avoid" : "market_reference");
   const statusLabel = tier === "avoid" ? "回避" : "预测";
@@ -88,9 +87,6 @@ export function DetailHero({
         </View>
       </View>
 
-      <Text variant="body" color={dark ? colors.inkInverse : colors.ink} style={styles.summary}>
-        {summary}
-      </Text>
       <ProbabilityBar probs={detail.probs} dark={dark} pool={detail.pool} />
       <SealLine hash={detail.payloadHash} sealed={Boolean(detail.sealedAt)} dark={dark} onPress={onSeal} />
       <Text variant="caption" color={dark ? colors.mutedInverse : colors.subtle} style={styles.cutoff}>
@@ -145,6 +141,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   prob: { alignItems: "flex-end" },
-  summary: { marginVertical: spacing.base, lineHeight: 22 },
   cutoff: { marginTop: spacing.sm, lineHeight: 16 },
 });

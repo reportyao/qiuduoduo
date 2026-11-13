@@ -1,12 +1,13 @@
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, useWindowDimensions, View } from "react-native";
 import type {
   SportmonksIntelData,
   SportmonksPredictionHighlight,
   SportmonksStandingRow,
 } from "@/domain/types";
-import { Card, Chip, Text } from "@/components/ui";
+import { Card, Chip, ProbabilityBreakdown, Text } from "@/components/ui";
 import { ageLabel } from "@/lib/freshness";
-import { colors, spacing } from "@/theme/tokens";
+import { colors, radii, spacing } from "@/theme/tokens";
+import { predictionDistribution } from "../predictionData";
 
 function pct(value?: number | null): string {
   return value == null ? "—" : `${value.toFixed(1)}%`;
@@ -98,6 +99,8 @@ function LineupSide({ side }: { side: NonNullable<SportmonksIntelData["lineups"]
 }
 
 export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | null }) {
+  const { width } = useWindowDimensions();
+  const marketWidth = width >= 410 ? "48%" : "100%";
   if (!data) return null;
   const homeLine = data.lineups?.home;
   const awayLine = data.lineups?.away;
@@ -235,30 +238,82 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
         </Card>
       ) : null}
 
-      {highlights.length || markets.length ? (
+      {highlights.length ? (
         <Card style={styles.card}>
           <View style={styles.head}>
-            <Text variant="h3">预测</Text>
+            <View style={styles.headText}>
+              <Text variant="h3">25 维预测</Text>
+              <Text variant="caption" color={colors.muted}>
+                Sportmonks 概率 · 全部展开
+              </Text>
+            </View>
             <Text variant="caption" color={colors.subtle}>{sectionAge(data, "predictions")}</Text>
           </View>
-          {highlights.map((item) => (
-            <View key={item.key} style={styles.predictionRow}>
-              <Text variant="captionStrong" style={styles.predictionLabel}>{item.label}</Text>
-              <Text variant="caption" color={colors.muted} style={styles.flex}>{predictionValue(item)}</Text>
-            </View>
-          ))}
-          {markets.map((market) => (
-            <View key={market.key} style={styles.marketRow}>
-              <Text variant="captionStrong" style={styles.predictionLabel}>
-                {market.name}{market.line ? ` ${market.line}` : ""}
+          <View>
+            {highlights.map((item, index) => {
+              const dist = predictionDistribution(item);
+              return (
+                <View
+                  key={item.key}
+                  style={[styles.dim, index < highlights.length - 1 && styles.dimLine]}
+                >
+                  <View style={styles.dimHead}>
+                    <Text variant="smallStrong" style={styles.flex} numberOfLines={1}>
+                      {item.label}
+                    </Text>
+                    <Text variant="caption" color={colors.green} numberOfLines={1}>
+                      {dist.predictedLabel} {dist.predictedValue.toFixed(1)}%
+                    </Text>
+                  </View>
+                  <ProbabilityBreakdown
+                    items={dist.items}
+                    predictedKey={dist.predictedKey}
+                  />
+                </View>
+              );
+            })}
+          </View>
+        </Card>
+      ) : null}
+
+      {markets.length ? (
+        <Card style={styles.card}>
+          <View style={styles.head}>
+            <View style={styles.headText}>
+              <Text variant="h3">市场参考</Text>
+              <Text variant="caption" color={colors.muted}>
+                Pinnacle · {markets.length} 个市场
               </Text>
-              <Text variant="caption" color={colors.muted} style={styles.flex}>
+            </View>
+            <Text variant="caption" color={colors.subtle}>{sectionAge(data, "predictions")}</Text>
+          </View>
+          <View style={styles.marketGrid}>
+            {markets.map((market) => (
+              <View key={market.key} style={[styles.marketCard, { width: marketWidth }]}>
+                <View style={styles.marketHead}>
+                  <Text variant="captionStrong" style={styles.flex} numberOfLines={1}>
+                    {market.name}
+                  </Text>
+                  {market.line ? (
+                    <Text variant="caption" color={colors.green} mono>{market.line}</Text>
+                  ) : null}
+                </View>
                 {market.selections.map((row) => (
-                  `${row.label} ${row.price ?? "—"}${row.probability != null ? `（${row.probability.toFixed(1)}%）` : ""}`
-                )).join(" · ")}
-              </Text>
-            </View>
-          ))}
+                  <View key={`${market.key}-${row.label}`} style={styles.selectionRow}>
+                    <Text variant="caption" color={colors.muted} style={styles.flex} numberOfLines={1}>
+                      {row.label}
+                    </Text>
+                    <Text variant="captionStrong" mono>
+                      {row.price?.toFixed(2) ?? "—"}
+                    </Text>
+                    <Text variant="caption" color={colors.subtle} style={styles.probability}>
+                      {row.probability != null ? `${row.probability.toFixed(0)}%` : "—"}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
         </Card>
       ) : null}
     </>
@@ -266,8 +321,24 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: spacing.md, gap: spacing.md },
-  head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  card: { marginTop: spacing.md, gap: spacing.lg },
+  head: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.sm },
+  headText: { gap: 2, flex: 1 },
+  dim: { paddingVertical: spacing.md, gap: 2 },
+  dimLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },
+  dimHead: { flexDirection: "row", alignItems: "baseline", gap: spacing.sm },
+  marketGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  marketCard: {
+    gap: 4,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.bgElevated,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  marketHead: { flexDirection: "row", alignItems: "baseline", gap: spacing.xs, marginBottom: 2 },
+  selectionRow: { flexDirection: "row", alignItems: "baseline", gap: spacing.xs },
+  probability: { width: 38, textAlign: "right" },
   lineupGrid: { flexDirection: "row", gap: spacing.xl },
   lineupSide: { flex: 1, gap: 3 },
   sideHead: { flexDirection: "row", alignItems: "center", gap: spacing.xs, marginBottom: 2 },

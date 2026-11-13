@@ -62,7 +62,7 @@ export default function MinorScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: layout.pagePadding },
+  screen: { flex: 1, width: "100%", maxWidth: layout.maxWidth, alignSelf: "center", backgroundColor: colors.bg, paddingHorizontal: layout.pagePadding },
   hero: { alignItems: "center", marginTop: spacing.x4, gap: spacing.xs },
   avatar: { width: 92, height: 92, borderRadius: 46, marginBottom: spacing.base },
   title: { marginTop: spacing.xs },

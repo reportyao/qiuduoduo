@@ -31,6 +31,7 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.screen} edges={["top", "bottom", "left", "right"]}>
+      <View style={styles.frame}>
       <View style={styles.brandRow}>
         <Text variant="h2">球多多</Text>
         <Text variant="caption" color={colors.muted}>AI 赛前预测</Text>
@@ -98,6 +99,7 @@ export default function OnboardingScreen() {
           </Text>
         </View>
       )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -125,7 +127,14 @@ function Promise({
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: layout.pagePadding },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  frame: {
+    flex: 1,
+    width: "100%",
+    maxWidth: layout.maxWidth,
+    alignSelf: "center",
+    paddingHorizontal: layout.pagePadding,
+  },
   brandRow: {
     flexDirection: "row",
     alignItems: "baseline",

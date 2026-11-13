@@ -72,7 +72,7 @@ export function BottomTabBar({
             <View style={styles.iconWrap}>
               <Icon
                 name={focused ? meta.activeIcon : meta.icon}
-                size={22}
+                size={23}
                 color={focused ? colors.green : colors.muted}
               />
               {route.name === "me" && unread > 0 ? (
@@ -108,14 +108,14 @@ const styles = StyleSheet.create({
   },
   item: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 52,
     alignItems: "center",
     justifyContent: "flex-start",
     gap: 1,
   },
   pressed: { opacity: 0.6 },
   iconWrap: { width: 28, height: 24, alignItems: "center", justifyContent: "center" },
-  label: { fontSize: 11, lineHeight: 15 },
+  label: { fontSize: 12, lineHeight: 16 },
   labelActive: { fontWeight: "600" },
   badge: {
     position: "absolute",

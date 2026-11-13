@@ -76,7 +76,7 @@ export function StatusDot({ color, size = 6 }: { color: string; size?: number })
 
 const styles = StyleSheet.create({
   chip: {
-    minHeight: 28,
+    minHeight: 32,
     borderRadius: radii.pill,
     borderWidth: 1,
     paddingHorizontal: spacing.md,

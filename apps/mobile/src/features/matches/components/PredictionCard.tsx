@@ -23,21 +23,24 @@ export function AccuracyCard({ summary }: { summary: PredictionAccuracy }) {
     <View style={styles.hero}>
       <View style={styles.heroTop}>
         <View style={styles.heroRate}>
+          <Text variant="overline" color={colors.greenAccent}>预测战绩</Text>
           <Text variant="metric" color={colors.white}>{pct(rate, 1)}</Text>
-          <Text variant="caption" color={colors.mutedInverse}>主流玩法命中率</Text>
+          <Text variant="small" color={colors.mutedInverse}>主流玩法命中率</Text>
         </View>
-        <View style={styles.heroCounts}>
-          <Count label="已结算" value={summary.settled_items} />
-          <Count label="命中" value={summary.hit_items} tone={colors.greenAccent} />
-          <Count label="未中" value={summary.miss_items} tone={colors.inkInverse} />
-          <Count label="走水" value={summary.push_items} />
-        </View>
+        <Text variant="caption" color={colors.mutedInverse}>
+          已结算 {summary.settled_items} 条
+        </Text>
       </View>
       <View style={styles.track}>
         <View style={[styles.fill, { width: `${Math.round((rate ?? 0) * 100)}%` }]} />
       </View>
+      <View style={styles.heroStats}>
+        <Count label="命中" value={summary.hit_items} tone={colors.greenAccent} />
+        <Count label="未中" value={summary.miss_items} tone={colors.inkInverse} />
+        <Count label="走水" value={summary.push_items} tone={colors.mutedInverse} />
+      </View>
       <Text variant="caption" color={colors.mutedInverse} style={styles.heroNote}>
-        按预测条目逐条统计 · 计入 {summary.total_items} 条；仅统计有赛前快照的场次，角球、半全场只做对照。
+        按预测条目统计 · 仅含有赛前快照的场次，角球、半全场只做对照。
       </Text>
     </View>
   );
@@ -98,15 +101,23 @@ export function PredictionMatchCard({
       </View>
       <View style={styles.pickRow}>
         <View style={styles.flex}>
-          <Text variant="caption" color={colors.muted}>
-            主预测 · {pick}
-            {main?.probability != null ? ` · ${pct(main.probability, 0)}` : ""}
-          </Text>
-          <Text variant="small" color={colors.muted}>
-            实际 {main?.actual || "待结算"} · 已结算 {match.settled_dimensions}/{match.total_dimensions} 项
+          <Text variant="caption" color={colors.muted}>主预测</Text>
+          <Text variant="h3" color={result === "hit" ? colors.green : colors.ink} numberOfLines={1}>
+            {pick}
           </Text>
         </View>
-        <Icon name="chevron-forward" size={16} color={colors.subtle} />
+        <View style={styles.probability}>
+          <Text variant="caption" color={colors.muted}>预测概率</Text>
+          <Text variant="bodyStrong" mono>
+            {main?.probability != null ? pct(main.probability, 1) : "—"}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.cardFooter}>
+        <Text variant="caption" color={colors.muted} style={styles.flex}>
+          实际 {main?.actual || "待结算"} · 已结算 {match.settled_dimensions}/{match.total_dimensions} 项
+        </Text>
+        <Icon name="chevron-forward" size={18} color={colors.subtle} />
       </View>
     </Pressable>
   );
@@ -116,14 +127,14 @@ const styles = StyleSheet.create({
   hero: {
     backgroundColor: colors.heroBottom,
     borderRadius: radii.hero,
-    padding: spacing.lg,
+    padding: spacing.x4,
     marginTop: spacing.md,
-    gap: spacing.md,
+    gap: spacing.lg,
   },
-  heroTop: { flexDirection: "row", alignItems: "center", gap: spacing.lg },
-  heroRate: { gap: 1 },
-  heroCounts: { flex: 1, flexDirection: "row", justifyContent: "flex-end", gap: spacing.md },
-  count: { alignItems: "flex-end", gap: 1 },
+  heroTop: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: spacing.md },
+  heroRate: { gap: 1, flex: 1 },
+  heroStats: { flexDirection: "row", gap: spacing.x6 },
+  count: { gap: 1 },
   track: {
     height: 5,
     borderRadius: radii.pill,
@@ -134,12 +145,12 @@ const styles = StyleSheet.create({
   heroNote: { lineHeight: 16 },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+    borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.line,
-    padding: spacing.md,
-    marginTop: spacing.sm,
-    gap: spacing.sm,
+    padding: spacing.lg,
+    marginTop: spacing.md,
+    gap: spacing.md,
   },
   pressed: { opacity: 0.72 },
   cardTop: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
@@ -149,9 +160,11 @@ const styles = StyleSheet.create({
   pickRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.line,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.md,
   },
+  probability: { alignItems: "flex-end", gap: 1 },
+  cardFooter: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
 });
