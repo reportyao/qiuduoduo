@@ -193,8 +193,8 @@ src/
 
 ## 11. 当前验证状态（2026-11-13）
 
-- 后端 **357 passed**；OpenAPI **162 路径 / 178 方法**；Alembic head `20261113_25`。
-- 前端 **63 Vitest passed**；typecheck / ESLint 通过；Android Hermes bundle 通过（Metro export）。
+- 后端 **357 passed**；OpenAPI **162 路径 / 178 方法**；Alembic head `20261113_26`。
+- 前端 **64 Vitest passed**；typecheck / ESLint 通过；Android Hermes bundle 通过（Metro export）。
 - 比赛 Tab 已改为即时 / 赛果 / 预测战绩：即时只显示有竞彩映射的进行中场次，赛果只显示比分与半场，预测战绩汇总主预测并进入单场 25 维对照；即时/赛果不展示预测。
 - MuMu x86_64 模拟器实测：onboarding/年龄门、首页对话与 HeaderMetrics、比赛、计划、计划详情、我的、我的记录、会员页、聊天。
 - 本轮修复：计划腿队名/方向缺失、0 盈亏显示 `+¥0`、会员副标题截断、当前会员按钮、HeaderMetrics 0 数据点、计划页底部遮挡、登录前查询闪烁。

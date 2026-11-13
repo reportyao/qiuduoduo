@@ -8,7 +8,7 @@
 >
 > **2026-11-12 17:00 CST 情报层部署**：生产应用 Alembic `20261112_24`，新增 `sportmonks_fixture_intel/predictions/markets`；6/6 场已同步 11 人首发、阵型、教练、裁判、伤停、积分榜、H2H、天气/场地和 25 维预测。聚焦覆盖从 55 提升到 100（价格新鲜时），`deep_eligible=true`；AIResearch 已包含阵容/伤停/积分榜/环境。部署前库备份 `/home/ubuntu/backups/jieqiu-20261112-162055-pre-sm-intel.db`。回滚：停服务 → `alembic downgrade 20261112_23` → 恢复上述库/旧代码 → 启动。
 >
-> **2026-11-13 13:11 CST 比赛中心部署**：生产应用 Alembic `20261113_25`，新增 `sp_pool_snapshots / sportmonks_live_state / sportmonks_prediction_snapshots / sportmonks_prediction_settlements / match_result_details`；管理后台静态资源 `v=20261113a`。首次 `freeze` 生成 12 场赛前快照（4 场锁定），`enrich` 补齐 6 场 actuals，`settle` 写入 4 场 × 26 项对照；`/matches/live`、`/matches/results`、`/predictions/history` 均返回 200。部署前备份：`/home/ubuntu/backups/jieqiu-backend-20261113-131018.tar.gz`（代码）与 `jieqiu-20261113-131018-pre-match-board.db`（库，46M）。回滚：停服务 → `alembic downgrade 20261112_24` → 解压代码备份 → 用 Python `sqlite3` 的 `.backup` 恢复库 → 启动。
+> **2026-11-13 13:11 CST 比赛中心部署**：生产应用 Alembic `20261113_26`，新增 `sp_pool_snapshots / sportmonks_live_state / sportmonks_prediction_snapshots / sportmonks_prediction_settlements / match_result_details`；管理后台静态资源 `v=20261113a`。首次 `freeze` 生成 12 场赛前快照（4 场锁定），`enrich` 补齐 6 场 actuals，`settle` 写入 4 场 × 26 项对照；`/matches/live`、`/matches/results`、`/predictions/history` 均返回 200。部署前备份：`/home/ubuntu/backups/jieqiu-backend-20261113-131018.tar.gz`（代码）与 `jieqiu-20261113-131018-pre-match-board.db`（库，46M）。回滚：停服务 → `alembic downgrade 20261112_24` → 解压代码备份 → 用 Python `sqlite3` 的 `.backup` 恢复库 → 启动。
 
 ## 1. 进程与目录
 

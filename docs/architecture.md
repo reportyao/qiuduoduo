@@ -7,7 +7,7 @@
 
 - 生产后端仍在 `jieqiu-backend/`，尚未迁到 `services/api/`；`services/` 只有迁移说明。
 - 生产前端在 `apps/mobile/`；`apps/web/`、`apps/admin/` 仍是规划，当前管理后台是后端同进程的 `/admin`。
-- OpenAPI **162 路径 / 178 方法**；后端 **360 tests**；前端 **63 tests**；Alembic head `20261113_25`。
+- OpenAPI **162 路径 / 178 方法**；后端 **360 tests**；前端 **64 tests**；Alembic head `20261113_26`。
 - Postgres 是目标生产库；未设置 `JQ_PROD_DATABASE_URL` 时生产部署仍可能是旧 SQLite 兼容模式。
 - 新增的 catalog/actions 已按 feature slice 落地；verdict/assistant 仍是混合目录，迁移未完成。
 - **v4.1 产品结构已落地**：移动端 4 Tab = 助理/比赛/计划/我的；`app/features/plans/` + `app/features/v4_router.py` 提供计划、会员、引擎指标、每日战绩；`app/modules/plan_service.py`、`membership.py`、`settlement.py`、`performance.py`、`assistant_copy.py`、`ops.py` 为 v4 领域模块。
@@ -130,7 +130,7 @@ packages/api       生成的 client
 - Alembic 是 schema 事实源；
 - SQLite 仅允许纯单元测试、一次性工具或尚未切换的旧部署；
 - OpenAPI 由 FastAPI 生成；后端导出 `packages/api-client/openapi.json` 快照，client 从快照离线生成；
-- Postgres 迁移先于应用启动；Alembic head 为 `20261113_25`，baseline 24 张表，当前 ORM 共 73 张表（新增 interaction_events、API-Football 5 张表、LLM 4 张表、AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表、v4 的结算/计划/会员/OPC/记忆/训练 19 张表，以及比赛中心 5 张表）；
+- Postgres 迁移先于应用启动；Alembic head 为 `20261113_26`，baseline 24 张表，当前 ORM 共 73 张表（新增 interaction_events、API-Football 5 张表、LLM 4 张表、AI 解读 1 张表、人设翻译 4 张表、推荐主链 4 张表、管理账号/审计 2 张表、v4 的结算/计划/会员/OPC/记忆/训练 19 张表，以及比赛中心 5 张表）；
 - AI 输出必须通过 Pydantic / JSON Schema 校验；
 - 领域事件必须有 `dedupe_key`、`payload_hash`、`data_cutoff`。
 
