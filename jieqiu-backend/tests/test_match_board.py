@@ -190,6 +190,10 @@ def test_prediction_snapshot_locks_once_and_settles_all_dimensions(db):
     assert labels["product_main"] == "主胜"
     assert labels["OVER_UNDER_2_5_PROBABILITY"] == "大 2.5"
     assert labels["CORNERS_OVER_UNDER_5_PROBABILITY"] == "大 5"
+    htft = next(item for item in detail["items"]
+                if item["type"] == "HTFT_PROBABILITY")
+    assert htft["actual_label"] == "主胜/主胜"
+    assert htft["actual_key"] == "home_home"
 
 
 def test_live_and_result_boards_do_not_expose_predictions(db, client):

@@ -638,7 +638,7 @@ def _actual_for_type(code: str, actuals: dict[str, Any]) -> tuple[str, str]:
         return key, {"draw_home": "主或平", "draw_away": "平或客", "home_away": "主或客"}[key]
     if code == "HTFT_PROBABILITY":
         key = str(actuals.get("htft") or "")
-        return key, key
+        return key, _predicted_label(code, key)
     if code == "CORRECT_SCORE_PROBABILITY":
         score = f"{actuals.get('ft_home')}-{actuals.get('ft_away')}"
         return score, score
