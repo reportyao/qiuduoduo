@@ -112,5 +112,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 1,
   },
-  assistantName: { marginTop: 1, fontSize: 11, lineHeight: 14 },
+  assistantName: { marginTop: 1, fontSize: 12, lineHeight: 16 },
 });
