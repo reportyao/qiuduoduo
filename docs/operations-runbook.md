@@ -14,6 +14,8 @@
 >
 > **H5 发布纪律（长期有效）**：① 只做合并式发布（`just h5-publish` 或 scp 覆盖），**严禁在服务器 `rm -rf` h5 目录**——旧 entry 是缓存用户的回退路径；② 手动 `expo export` 必须带完整 `EXPO_PUBLIC_API_BASE_URL/APP_ENV/ALLOW_HTTP` 前缀（漏带会让 env 校验 fail-closed 在启动时抛错 → H5 黑屏，2026-11-14 实际发生过，靠浏览器捕获 unhandledrejection 定位）；③ 验证方式：`curl /h5/` 取 entry 哈希应等于本地 `index.html` 引用，`curl 旧entry` 应 200 + javascript MIME，`curl 不存在.js` 应 404。
 
+> **2026-11-14 OPC 运营控制面补全（已部署，无数据库变更）**：commit `271ff27`，管理后台静态资源 `v=20261113b→20261114a`，后端全量 **369 tests** 通过。改动：① OPC 任务生产者补全——`settle_open_cycles`（plan 结算）、`membership_expire`（会员到期）、`seed_daily`（每日 seed）接入 `ops_jobs`/`ops_exception`（此前仅 `settle_pending` 有记录），失败记 exception 后吞掉异常不让调度链被单次失败拖死；② `/admin/api/ops-v4` 新增 `summary`（按 job_key 聚合最近 200 次：最近状态/耗时/失败数/最近错误）；③ `/admin/api/app-users` 新增合规巡检字段（年龄门/未成年锁定/自排除/连败保护开关/休息至/今日 AI 额度）；④ 管理后台 UI：异常队列页新增「任务健康汇总」卡、用户与会员表新增「合规/额度」列。部署方式：scp 7 个文件（admin_api/ops/plan_service/membership/seed/admin.js/index.html）+ `systemctl restart`，冒烟 active、`/health` 200、admin shell 引用 `v=20261114a`、`/admin/api/ops-v4` 未认证 401、journalctl 无 error。回滚：`git checkout 271ff27~1 -- app/routers/admin_api.py app/modules/ops.py app/modules/plan_service.py app/modules/membership.py app/seed.py app/static/admin/` 后重启。
+
 ## 1. 进程与目录
 
 | 项 | 当前值 |
