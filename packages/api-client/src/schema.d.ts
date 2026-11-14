@@ -4362,6 +4362,11 @@ export interface components {
              * @default
              */
             result: string;
+            /**
+             * Kind
+             * @default
+             */
+            kind: string;
         };
         /** PredictionAccuracy */
         PredictionAccuracy: {

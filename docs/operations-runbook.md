@@ -18,7 +18,7 @@
 
 > **2026-11-14 工作台并入 OPC（已部署，无数据库变更）**：commit `c39731e`，后端全量 **371 tests**。① `build_workbench` 新增 **ops 阶段**（key=`ops`）：聚合 seed_daily/settle_pending/settle_open_cycles/membership_expire 四个核心任务的健康汇总与未处理异常——核心任务最近失败或 sev≥3 异常 → `blocked`（工作台 headline 自动点名主卡点），管理员首屏即可定生死，无需跳异常队列页；② `run_action` 的一键动作（重启采集器/同步国际盘/同步 Sportmonks/同步情报/测 LLM/跑主链）全部接入 `ops_jobs`（`action_*`），业务失败记 error+sev2 异常、崩溃记 sev3——每个按钮可追溯、失败自动进异常队列；③ diagnose 上下文带 ops 摘要，LLM 诊断可读任务失败原因。部署：scp `app/features/ops/workbench.py` + restart，冒烟 active/`/health` 200/workbench 未认证 401/journalctl 无 error。回滚：`git checkout c39731e~1 -- app/features/ops/workbench.py` 后重启。
 
-> **数据源完整性已知限制（Sportmonks 事件覆盖）**：低档订阅的 fixture events 不保证全量——实测 2026-11-14 周五003（保加利亚 0-5 冰岛）终场 5 球但 API 仅返回 3 条 type_id=14 进球事件（缺 0-1/0-3）。前端 MatchTimeline 已做容错（）：事件进球数 < 终场总进球时显示琥珀提示「数据源仅记录 N 个进球事件…比分以终场为准」。同期终场比分/xG 数据完整，仅事件时间线受限；若订阅升级到全事件档，时间轴自动变完整，无需改代码。
+> **时间轴进球对齐（2026-11-14 修复，`87bc4f6` 后续）**：保加利亚 0-5 冰岛时间轴只显示 3 球的根因**不是订阅限制**——Sportmonks 事件里点球（type_id=16）与乌龙球（type_id=15）不是 type_id=14，旧过滤直接丢弃。修复：`_collect_goals` 收 14/15/16 三类并按累计比分 `result` 推导进球方（乌龙球 participant 是防守方，按 participant 判会标错队），payload 增加 `kind`（goal/penalty/own_goal），前端时间轴显示「（点球）（乌龙球）」注记。同场另发现 `sync_postmatch_intel` 原本不 commit（依赖调用方），已自 commit。生产 2042728 已重同步：5 球全量、注记正确、「数据源不完整」兜底提示自动消失。
 
 ## 1. 进程与目录
 

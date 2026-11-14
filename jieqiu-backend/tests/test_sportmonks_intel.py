@@ -199,6 +199,10 @@ def test_postmatch_intel_adds_score_xg_and_goals(db, monkeypatch):
             "events": [
                 {"type_id": 14, "participant_id": 10, "player_name": "甲",
                  "player": {"name": "甲（中文）"}, "minute": 12, "result": "1-0"},
+                {"type_id": 16, "participant_id": 20, "player_name": "乙",
+                 "player": {"name": "乙（点球）"}, "minute": 45, "result": "1-1"},
+                {"type_id": 15, "participant_id": 10, "player_name": "丙",
+                 "player": {"name": "丙（乌龙）"}, "minute": 78, "result": "1-2"},
             ],
             "xgfixture": [
                 {"type_id": 5304, "location": "home", "data": {"value": 1.8}},
@@ -215,6 +219,12 @@ def test_postmatch_intel_adds_score_xg_and_goals(db, monkeypatch):
     assert post["score_home"] == 2 and post["score_away"] == 1
     assert post["xg_home"] == 1.8 and post["xg_away"] == 1.1
     assert post["goals"][0]["player"] == "甲（中文）"
+    assert post["goals"][0]["side"] == "home"
+    assert post["goals"][1]["kind"] == "penalty"
+    assert post["goals"][1]["side"] == "away"
+    assert post["goals"][2]["kind"] == "own_goal"
+    # 乌龙球 participant 是防守方（10=主队），side 由累计比分推导应为客队
+    assert post["goals"][2]["side"] == "away"
 
 
 def test_focus_uses_sportmonks_lineups_and_standings(client, db):

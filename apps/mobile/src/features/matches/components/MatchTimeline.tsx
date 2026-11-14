@@ -69,6 +69,7 @@ export function MatchTimeline({
             <Icon name="football" size={14} color={colors.muted} />
             <Text variant="small" color={colors.muted} numberOfLines={1} style={styles.flex}>
               {goal.player || "进球"}
+              {goal.kind === "penalty" ? "（点球）" : goal.kind === "own_goal" ? "（乌龙球）" : ""}
               {goal.side === "home" ? "（主）" : goal.side === "away" ? "（客）" : ""}
             </Text>
           </View>

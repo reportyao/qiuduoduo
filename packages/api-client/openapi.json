@@ -11985,6 +11985,11 @@
             "type": "string",
             "title": "Result",
             "default": ""
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": ""
           }
         },
         "type": "object",

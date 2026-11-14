@@ -702,6 +702,48 @@ def sync_fixture_intel(db: Session, base: str, token: str,
     }
 
 
+_GOAL_TYPE_IDS = {14: "goal", 15: "own_goal", 16: "penalty"}
+
+
+def _collect_goals(data: dict) -> list[dict]:
+    """收集进球事件：普通进球/点球/乌龙球（type_id 14/16/15）都算。
+
+    side 由累计比分 `result`（"H-A"）推导：乌龙球的 participant 是防守方，
+    按 participant_id 判会把乌龙标到错的队。result 缺失时回退 participant_id。
+    """
+    raw = []
+    for event in data.get("events") or []:
+        kind = _GOAL_TYPE_IDS.get(int(event.get("type_id") or 0))
+        if kind:
+            raw.append((event.get("minute") or 0, event.get("added_minute") or 0, kind, event))
+    raw.sort(key=lambda item: (item[0], item[1]))
+    goals = []
+    last_home, last_away = 0, 0
+    sides, _ = _participants(data)
+    for minute, _added, kind, event in raw:
+        side = ""
+        result = event.get("result") or ""
+        try:
+            home, away = (int(x) for x in str(result).split("-"))
+            if away == last_away + 1 and home == last_home:
+                side = "away"
+            elif home == last_home + 1 and away == last_away:
+                side = "home"
+            last_home, last_away = home, away
+        except (ValueError, AttributeError):
+            side = next((key for key, team in sides.items()
+                         if team.get("id") == event.get("participant_id")), "")
+        event_player = event.get("player") or {}
+        goals.append({
+            "minute": event.get("minute"),
+            "player": event_player.get("name") or event.get("player_name") or "",
+            "side": side,
+            "kind": kind,
+            "result": result,
+        })
+    return goals[:20]
+
+
 def sync_postmatch_intel(db: Session, base: str, token: str,
                          match: SPMatch, fixture_id: int) -> bool:
     """赛后补 xG/进球时间线到已有 intel payload；不覆盖赛前阵容/积分榜。"""
@@ -727,20 +769,7 @@ def sync_postmatch_intel(db: Session, base: str, token: str,
         value = _num((item.get("data") or {}).get("value"))
         if side in ("home", "away") and value is not None:
             xg[side] = round(value, 2)
-    goals = []
-    sides, _ = _participants(data)
-    for event in data.get("events") or []:
-        if int(event.get("type_id") or 0) != 14:
-            continue
-        side = next((key for key, team in sides.items()
-                     if team.get("id") == event.get("participant_id")), "")
-        event_player = event.get("player") or {}
-        goals.append({
-            "minute": event.get("minute"),
-            "player": event_player.get("name") or event.get("player_name") or "",
-            "side": side,
-            "result": event.get("result") or "",
-        })
+    goals = _collect_goals(data)
     existing = dict(row.payload or {})
     existing["postmatch"] = {
         "score_home": result["score_home"],
@@ -751,6 +780,8 @@ def sync_postmatch_intel(db: Session, base: str, token: str,
         "captured_at": _iso(),
     }
     row.payload = existing
+    # 独立增强步骤：自 commit，不依赖调用方（否则手动重跑会「读库还是旧值」）。
+    db.commit()
     return True
 
 

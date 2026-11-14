@@ -155,6 +155,8 @@ class PostmatchGoal(BaseModel):
     player: str = ""
     side: str = ""
     result: str = ""
+    # goal / penalty / own_goal（Sportmonks type_id 14/16/15）
+    kind: str = ""
 
 
 class PostmatchData(BaseModel):
