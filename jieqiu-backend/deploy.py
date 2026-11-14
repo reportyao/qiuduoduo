@@ -130,6 +130,12 @@ def make_tar() -> bytes:
     def _skip_cache(info: tarfile.TarInfo):
         if "__pycache__" in info.name or info.name.endswith(".pyc"):
             return None
+        # H5 产物不经全量部署发布：它由 h5-publish 合并式上传，且旧 entry 是
+        # 浏览器缓存旧 index.html 的回退路径（删了会让缓存用户白屏）。
+        # 打包跳过 + 解包前原位保留，见 main() 上传步骤。
+        if info.name == "jieqiu-backend/app/static/h5" \
+                or info.name.startswith("jieqiu-backend/app/static/h5/"):
+            return None
         return info
 
     buf = io.BytesIO()
@@ -170,7 +176,17 @@ def main() -> None:
                          f"mv {ROOT}/jieqiu.db {DATA}/jieqiu.db; echo migrated-old-db; fi; "
                          f"if [ -d {ROOT}/xg_dumps ] && [ ! -d {DATA}/xg_dumps_bak ]; then "
                          f"cp -r {ROOT}/xg_dumps {DATA}/xg_dumps_bak 2>/dev/null; fi; "
-                         f"cd {ROOT}/.. && rm -rf jieqiu-backend && tar xzf /tmp/jieqiu-backend.tar.gz && echo deploy-ok")
+                         # 滚动保留近两代 H5 产物：h5_prev / h5_prev2，解包后按旧→新合回，
+                         # 保证已发布的 entry 与其资源在任何一次全量部署后仍然可达。
+                         f"rm -rf {DATA}/h5_prev2 && "
+                         f"if [ -d {DATA}/h5_prev ]; then mv {DATA}/h5_prev {DATA}/h5_prev2; fi; "
+                         f"if [ -d {ROOT}/app/static/h5 ]; then "
+                         f"mv {ROOT}/app/static/h5 {DATA}/h5_prev; fi; "
+                         f"cd {ROOT}/.. && rm -rf jieqiu-backend && tar xzf /tmp/jieqiu-backend.tar.gz && "
+                         f"mkdir -p {ROOT}/app/static/h5 && "
+                         f"if [ -d {DATA}/h5_prev2 ]; then cp -r {DATA}/h5_prev2/. {ROOT}/app/static/h5/; fi && "
+                         f"if [ -d {DATA}/h5_prev ]; then cp -r {DATA}/h5_prev/. {ROOT}/app/static/h5/; fi && "
+                         f"echo deploy-ok")
     print("[3/6] code uploaded", len(data), "bytes |",
           out.strip().splitlines()[-1] if out.strip() else "(no output)")
     _require(code == 0 and "deploy-ok" in out, f"代码上传/解包失败：{out[-800:]}")

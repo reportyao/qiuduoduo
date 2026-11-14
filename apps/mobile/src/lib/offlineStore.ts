@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { onlineManager } from "@tanstack/react-query";
+import { Platform } from "react-native";
 import NetInfo, { type NetInfoState } from "@react-native-community/netinfo";
 
 /**
@@ -21,8 +22,13 @@ export const useOfflineStore = create<OfflineState>(() => ({
 let unsubscribed = false;
 
 function handle(state: NetInfoState) {
-  // isInternetReachable 为 null（探测中）时按可达处理，避免误报离线。
-  const online = Boolean(state.isConnected) && state.isInternetReachable !== false;
+  // web 端只用 isConnected（navigator.onLine）：部分浏览器/WebView 的
+  // Network Information API 会把 rtt/downlink 报成 0，isInternetReachable 被误判为
+  // false → 全页误挂「网络已断开」横幅（2026-11-14 H5 线上复现）。
+  // 原生端保留 isInternetReachable 校验（null 探测中按可达处理，避免误报）。
+  const online = Platform.OS === "web"
+    ? Boolean(state.isConnected)
+    : Boolean(state.isConnected) && state.isInternetReachable !== false;
   // TanStack 默认 onlineManager 在 RN 上拿不到真实网络状态（navigator.onLine 恒 true），
   // 用 NetInfo 驱动它：离线时 mutation 走正常的 pause 语义，恢复时自动续跑。
   onlineManager.setOnline(online);

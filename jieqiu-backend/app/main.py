@@ -83,6 +83,12 @@ app.include_router(collector_router)
 # H5 预览：与移动端同一套 Expo/React Native Web 代码，部署在 /h5 下。
 # 只做预览，不作为正式 Web 产品；未构建时返回 404，不影响 API。
 _H5_DIR = Path(__file__).resolve().parent / "static" / "h5"
+# 会被 SPA 回退误伤的资源后缀：这些路径缺失时必须 404，不能回退 index.html——
+# 浏览器拿到 text/html 当 JS 模块加载会因 MIME 校验直接白屏（2026-11-14 线上事故）。
+_H5_ASSET_SUFFIXES = {
+    ".js", ".mjs", ".css", ".map", ".json", ".txt", ".png", ".jpg", ".jpeg",
+    ".gif", ".svg", ".webp", ".woff", ".woff2", ".ttf", ".otf", ".eot", ".ico",
+}
 
 
 @app.get("/h5", include_in_schema=False)
@@ -92,8 +98,18 @@ def h5_preview(path: str = ""):
     target = (root / path).resolve()
     if root not in target.parents and target != root:
         raise HTTPException(404, "not found")
+    posix_path = path.replace("\\", "/")
     if path and target.is_file():
-        return FileResponse(target)
+        # 哈希命名的产物内容不可变，允许长缓存；index.html 由下方 no-cache 每次回源校验。
+        # path 参数不带前导斜杠，统一补上再匹配目录段。
+        anchored = f"/{posix_path}"
+        if "/_expo/" in anchored or "/assets/" in anchored:
+            headers = {"Cache-Control": "public, max-age=31536000, immutable"}
+        else:
+            headers = None
+        return FileResponse(target, headers=headers)
+    if path and target.suffix.lower() in _H5_ASSET_SUFFIXES:
+        raise HTTPException(404, "asset not found")
     index = root / "index.html"
     if not index.is_file():
         raise HTTPException(404, "H5 preview not built")
