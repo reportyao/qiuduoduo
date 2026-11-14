@@ -106,7 +106,7 @@ export default function MeScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.green} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brand} />}
       >
         {meQuery.isError ? (
           <ErrorState compact message="账号状态暂时取不到，先显示本机偏好。" onRetry={() => meQuery.refetch()} />
@@ -119,8 +119,8 @@ export default function MeScreen() {
               {loggedIn ? me?.phone ?? me?.email ?? "手机号已绑定" : "设备账户 · 绑定手机可跨设备"}
             </Text>
             <View style={styles.badges}>
-              <Chip label={meta.name} tone="green" />
-              {me?.streak.active ? <Chip label={`连败 ${me.streak.streak}`} tone="danger" /> : null}
+              <Chip label={meta.name} tone="positive" />
+              {me?.streak.active ? <Chip label={`连败 ${me.streak.streak}`} tone="negative" /> : null}
               {rested ? <Chip label="休息中" tone="amber" /> : null}
             </View>
           </View>

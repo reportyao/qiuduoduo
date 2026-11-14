@@ -28,8 +28,8 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const KIND_META: Record<ToastKind, { icon: IconName; color: string; bg: string }> = {
-  // success 背景不用 colors.green：暗色下它变亮，与 greenAccent 文字对比不足。
-  success: { icon: "checkmark-circle", color: colors.greenAccent, bg: colors.toastSuccessBg },
+  // success 背景不用 colors.brand：暗色下它变亮，与 greenAccent 文字对比不足。
+  success: { icon: "checkmark-circle", color: colors.white, bg: colors.toastSuccessBg },
   info: { icon: "information-circle", color: colors.white, bg: colors.heroTop },
   warning: { icon: "alert-circle", color: colors.amberAccent, bg: colors.toastWarningBg },
   error: { icon: "close-circle", color: colors.dangerAccentLight, bg: colors.toastErrorBg },

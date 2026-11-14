@@ -23,7 +23,7 @@ export function AccuracyCard({ summary }: { summary: PredictionAccuracy }) {
     <View style={styles.hero}>
       <View style={styles.heroTop}>
         <View style={styles.heroRate}>
-          <Text variant="overline" color={colors.greenAccent}>预测战绩</Text>
+          <Text variant="overline" color={colors.brandAccent}>预测战绩</Text>
           <Text variant="metric" color={colors.white}>{pct(rate, 1)}</Text>
           <Text variant="small" color={colors.mutedInverse}>主流玩法命中率</Text>
         </View>
@@ -35,7 +35,7 @@ export function AccuracyCard({ summary }: { summary: PredictionAccuracy }) {
         <View style={[styles.fill, { width: `${Math.round((rate ?? 0) * 100)}%` }]} />
       </View>
       <View style={styles.heroStats}>
-        <Count label="命中" value={summary.hit_items} tone={colors.greenAccent} />
+        <Count label="命中" value={summary.hit_items} tone={colors.brandAccent} />
         <Count label="未中" value={summary.miss_items} tone={colors.inkInverse} />
         <Count label="走水" value={summary.push_items} tone={colors.mutedInverse} />
       </View>
@@ -102,7 +102,7 @@ export function PredictionMatchCard({
       <View style={styles.pickRow}>
         <View style={styles.flex}>
           <Text variant="caption" color={colors.muted}>主预测</Text>
-          <Text variant="h3" color={result === "hit" ? colors.green : colors.ink} numberOfLines={1}>
+          <Text variant="h3" color={result === "hit" ? colors.brand : colors.ink} numberOfLines={1}>
             {pick}
           </Text>
         </View>
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.whiteOverlay12,
     overflow: "hidden",
   },
-  fill: { height: "100%", borderRadius: radii.pill, backgroundColor: colors.greenAccent },
+  fill: { height: "100%", borderRadius: radii.pill, backgroundColor: colors.brandAccent },
   heroNote: { lineHeight: 16 },
   card: {
     backgroundColor: colors.surface,

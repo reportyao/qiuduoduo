@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { colors, radii, spacing } from "@/theme/tokens";
 import { Text } from "./Text";
 
-export type ChipTone = "neutral" | "green" | "amber" | "danger" | "dark";
+export type ChipTone = "neutral" | "positive" | "amber" | "negative" | "dark";
 
 interface ChipProps {
   label: string;
@@ -17,24 +17,24 @@ interface ChipProps {
 
 const TONES: Record<ChipTone, { bg: string; fg: string; border: string }> = {
   neutral: { bg: colors.bgElevated, fg: colors.muted, border: colors.line },
-  green: { bg: colors.greenSoft, fg: colors.green, border: colors.greenSoft },
+  positive: { bg: colors.brandSoft, fg: colors.brand, border: colors.brandSoft },
   amber: { bg: colors.amberSoft, fg: colors.amber, border: colors.amberLine },
-  danger: { bg: colors.dangerSoft, fg: colors.danger, border: colors.dangerSoft },
+  negative: { bg: colors.lossSoft, fg: colors.loss, border: colors.lossSoft },
   dark: { bg: colors.whiteSoft, fg: colors.inkInverse, border: colors.whiteOverlay16 },
 };
 
 export function Chip({ label, tone = "neutral", selected = false, selectedStyle = "solid", onPress, dot = false, style }: ChipProps) {
   const palette = TONES[tone];
-  const selectedBg = selectedStyle === "soft" ? colors.greenSoft : colors.green;
+  const selectedBg = selectedStyle === "soft" ? colors.brandSoft : colors.brand;
   // solid 选中态同 Button primary：暗色下绿底变亮，白字改深字保证对比。
-  const selectedFg = selectedStyle === "soft" ? colors.green : colors.onGreen;
+  const selectedFg = selectedStyle === "soft" ? colors.brand : colors.onBrand;
   const body = (
     <View
       style={[
         styles.chip,
         {
           backgroundColor: selected ? selectedBg : palette.bg,
-          borderColor: selected ? (selectedStyle === "soft" ? colors.greenSoft : colors.green) : palette.border,
+          borderColor: selected ? (selectedStyle === "soft" ? colors.brandSoft : colors.brand) : palette.border,
         },
         style,
       ]}

@@ -59,14 +59,14 @@ export default function PlansScreen() {
         title="计划"
         subtitle="AI 定投 · 模拟方案"
         showAssistant={false}
-        right={<Chip label={tier === "free" ? "免费" : tier.toUpperCase()} tone={tier === "max" ? "green" : "neutral"} />}
+        right={<Chip label={tier === "free" ? "免费" : tier.toUpperCase()} tone={tier === "max" ? "positive" : "neutral"} />}
       />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.green} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brand} />}
       >
-        <Text variant="overline" color={colors.green}>AI 计划</Text>
+        <Text variant="overline" color={colors.brand}>AI 计划</Text>
         <Text variant="display" style={styles.title}>每期 4 场，每场 100</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
           固定预算 400，可单关，也可把两场各 100 合成 2 串 1。只展示方案，不跟单。
@@ -95,7 +95,7 @@ export default function PlansScreen() {
             <View style={styles.summaryCard}>
               <View style={styles.summaryHead}>
                 <View style={styles.flex}>
-                  <Text variant="overline" color={colors.greenAccent}>AI 模拟定投</Text>
+                  <Text variant="overline" color={colors.brandAccent}>AI 模拟定投</Text>
                   <Text variant="h3" color={colors.inkInverse}>{item?.name ?? "稳健定投"}</Text>
                 </View>
                 <Text variant="caption" color={colors.mutedInverse}>
@@ -104,8 +104,8 @@ export default function PlansScreen() {
               </View>
               <Text
                 variant="metric"
-                color={(item?.pnl ?? 0) > 0 ? colors.greenAccent
-                  : (item?.pnl ?? 0) < 0 ? colors.dangerAccent : colors.inkInverse}
+                color={(item?.pnl ?? 0) > 0 ? colors.brandAccent
+                  : (item?.pnl ?? 0) < 0 ? colors.lossAccentLight : colors.inkInverse}
               >
                 {signed(item?.pnl ?? 0)}
               </Text>
@@ -133,14 +133,14 @@ export default function PlansScreen() {
               <Card style={styles.planCard}>
                 <View style={styles.summaryHead}>
                   <Text variant="h3">第 {plan.cycle_no} 期 · {plan.name}</Text>
-                  <Chip label={plan.status === "settled" ? "已结算" : "进行中"} tone={plan.status === "settled" ? "green" : "amber"} />
+                  <Chip label={plan.status === "settled" ? "已结算" : "进行中"} tone={plan.status === "settled" ? "positive" : "amber"} />
                 </View>
                 <Text variant="caption" color={colors.muted}>
                   预算 {money(plan.budget)} · {plan.match_count} 场 · {plan.bet_count} 注
                 </Text>
                 <View style={styles.metrics}>
                   <Metric label="总投入" value={money(plan.total_stake)} />
-                  <Metric label="当前盈亏" value={signed(plan.pnl)} tone={plan.pnl > 0 ? "green" : plan.pnl < 0 ? "danger" : "default"} />
+                  <Metric label="当前盈亏" value={signed(plan.pnl)} tone={plan.pnl > 0 ? "positive" : plan.pnl < 0 ? "negative" : "default"} />
                   <Metric label="回报率" value={plan.roi == null ? "—" : pct(plan.roi)} />
                 </View>
 
@@ -182,7 +182,7 @@ export default function PlansScreen() {
                         {cycle.match_count} 场 · {cycle.bet_count} 注 · {cycle.status === "settled" ? "已结算" : "进行中"}
                       </Text>
                     </View>
-                    <Text variant="bodyStrong" color={cycle.pnl > 0 ? colors.green : cycle.pnl < 0 ? colors.danger : colors.ink}>
+                    <Text variant="bodyStrong" color={cycle.pnl > 0 ? colors.brand : cycle.pnl < 0 ? colors.loss : colors.ink}>
                       {signed(cycle.pnl)}
                     </Text>
                   </Pressable>
@@ -201,11 +201,11 @@ function signed(value: number) {
   return `${value > 0 ? "+" : ""}${money(value)}`;
 }
 
-function Metric({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "green" | "danger" }) {
+function Metric({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "positive" | "negative" }) {
   return (
     <View style={styles.metric}>
       <Text variant="caption" color={colors.muted}>{label}</Text>
-      <Text variant="bodyStrong" color={tone === "green" ? colors.green : tone === "danger" ? colors.danger : colors.ink}>{value}</Text>
+      <Text variant="bodyStrong" color={tone === "positive" ? colors.brand : tone === "negative" ? colors.loss : colors.ink}>{value}</Text>
     </View>
   );
 }
@@ -226,7 +226,7 @@ function BetRow({ bet }: { bet: PlanBet }) {
           <Text variant="caption" color={colors.subtle}>{leg.selection_reason}</Text>
         </View>
       ))}
-      <Text variant="caption" color={bet.pnl > 0 ? colors.green : bet.pnl < 0 ? colors.danger : colors.muted}>
+      <Text variant="caption" color={bet.pnl > 0 ? colors.brand : bet.pnl < 0 ? colors.loss : colors.muted}>
         {bet.status === "pending" ? "待结算" : `${bet.status} · ${signed(bet.pnl)}`}
       </Text>
     </View>

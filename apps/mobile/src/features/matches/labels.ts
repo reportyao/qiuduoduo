@@ -40,9 +40,9 @@ export function resultLabel(result: string): string {
   }[result] ?? "待结算";
 }
 
-export function resultTone(result: string): "green" | "danger" | "amber" | "neutral" {
-  if (result === "hit") return "green";
-  if (result === "miss") return "danger";
+export function resultTone(result: string): "positive" | "negative" | "amber" | "neutral" {
+  if (result === "hit") return "positive";
+  if (result === "miss") return "negative";
   if (result === "push") return "amber";
   return "neutral";
 }

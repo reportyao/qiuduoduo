@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 2,
     bottom: 4,
-    backgroundColor: colors.green,
+    backgroundColor: colors.brandAccent,
     borderWidth: 2,
     borderColor: colors.white,
   },

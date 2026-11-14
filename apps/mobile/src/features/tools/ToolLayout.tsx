@@ -28,7 +28,7 @@ export function ToolScreen({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.content}
       >
-        <Text variant="overline" color={colors.green}>{eyebrow}</Text>
+        <Text variant="overline" color={colors.brand}>{eyebrow}</Text>
         <Text variant="display" style={styles.title}>{headline ?? title}</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>{description}</Text>
         {children}
@@ -49,7 +49,7 @@ export function ResultPanel({
 }) {
   return (
     <Card style={styles.result}>
-      <Text variant="overline" color={colors.green}>{title}</Text>
+      <Text variant="overline" color={colors.brand}>{title}</Text>
       {children}
     </Card>
   );
@@ -64,12 +64,12 @@ export function ResultRow({
   label: string;
   value: string;
   strong?: boolean;
-  tone?: "default" | "green" | "danger" | "amber";
+  tone?: "default" | "positive" | "negative" | "amber";
 }) {
   const color = {
     default: colors.ink,
-    green: colors.green,
-    danger: colors.danger,
+    positive: colors.brand,
+    negative: colors.loss,
     amber: colors.amber,
   }[tone];
   return (

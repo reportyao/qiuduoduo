@@ -190,7 +190,7 @@ export function BetSheet({ visible, verdict, you, onClose, onRecorded }: BetShee
             <Text variant="h3" style={styles.pick}>
               {pickLabel} <Text variant="caption" color={colors.muted}>@ {spLabel} · {formatLabel}</Text>
             </Text>
-            <Text variant="caption" color={colors.green}>三关全过 · 抽水 {(Number(verdict.rake ?? 0) * 100).toFixed(1)}%</Text>
+            <Text variant="caption" color={colors.brand}>三关全过 · 抽水 {(Number(verdict.rake ?? 0) * 100).toFixed(1)}%</Text>
           </View>
 
           <Stepper value={amount} onChange={(next) => { if (!createBet.isPending) setAmount(next); }}
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   successBox: {
     alignItems: "center",
     gap: 2,
-    backgroundColor: colors.greenSoft,
+    backgroundColor: colors.brandSoft,
     borderRadius: radii.md,
     paddingVertical: spacing.xl,
     marginBottom: spacing.base,

@@ -11,7 +11,7 @@ const SEGMENTS = [
 ];
 
 function segmentColor(key: "home" | "draw" | "away", dark: boolean): string {
-  if (key === "home") return dark ? colors.greenAccent : colors.green;
+  if (key === "home") return dark ? colors.brandAccent : colors.brand;
   if (key === "draw") return colors.amber;
   return dark ? colors.mutedInverse : colors.muted;
 }

@@ -75,7 +75,7 @@ export const BriefMatchPicker = memo(function BriefMatchPicker({
                 {formatTime(option.kickoff)} · {statusLabel(option)}
               </Text>
             </View>
-            <Text variant="caption" color={colors.green}>看这场 ›</Text>
+            <Text variant="caption" color={colors.brand}>看这场 ›</Text>
           </Pressable>
         ))}
       </View>
@@ -88,7 +88,7 @@ export const BriefMatchPicker = memo(function BriefMatchPicker({
           hitSlop={6}
           style={styles.more}
         >
-          <Text variant="captionStrong" color={colors.green}>
+          <Text variant="captionStrong" color={colors.brand}>
             查看全部 {total} 场 ›
           </Text>
         </Pressable>

@@ -56,15 +56,15 @@ export default function StakeToolScreen() {
       </View>
 
       {!valid ? (
-        <Text variant="small" color={colors.danger} style={{ marginTop: spacing.base }}>
+        <Text variant="small" color={colors.loss} style={{ marginTop: spacing.base }}>
           本金需大于 0，胜率在 0–100% 之间，赔率大于 1。
         </Text>
       ) : result ? (
         <>
           <ResultPanel title="数学仓位">
-            <ResultRow label="单注期望收益率" value={pct(result.edge, 2)} strong tone={result.edge >= 0 ? "green" : "danger"} />
+            <ResultRow label="单注期望收益率" value={pct(result.edge, 2)} strong tone={result.edge >= 0 ? "positive" : "negative"} />
             <ResultRow label="全凯利比例" value={pct(result.fullKelly, 2)} />
-            <ResultRow label={`${FRACTIONS.find((f) => f.value === fraction)?.label}建议`} value={money(result.stake, 0)} strong tone="green" />
+            <ResultRow label={`${FRACTIONS.find((f) => f.value === fraction)?.label}建议`} value={money(result.stake, 0)} strong tone="positive" />
             {result.capped ? <ResultRow label="已触及 5% 本金上限" value="是" tone="amber" /> : null}
           </ResultPanel>
           <FormulaNote>
@@ -72,7 +72,7 @@ export default function StakeToolScreen() {
             胜率估计一旦偏高，凯利会放大亏损；所以默认半凯利并加 5% 上限。
           </FormulaNote>
           {result.edge <= 0 ? (
-            <Text variant="small" color={colors.danger} style={{ marginTop: spacing.base }}>
+            <Text variant="small" color={colors.loss} style={{ marginTop: spacing.base }}>
               当前赔率下期望为负。数学上没有仓位，不下注才是正确仓位。
             </Text>
           ) : null}

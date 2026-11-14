@@ -55,7 +55,7 @@ export default function WhyNotScreen() {
           </Card>
         ) : data.status === "promoted" ? (
           <Card style={styles.emptyCard}>
-            <Chip label="三关全过" tone="green" />
+            <Chip label="三关全过" tone="positive" />
             <Text variant="h2" style={styles.promotedTitle}>{data.home} vs {data.away}</Text>
             <Text variant="small" color={colors.muted} style={styles.paragraph}>
               这场已经有三关通过的预测，不该出现在「为什么不出」里。直接看完整预测。
@@ -76,7 +76,7 @@ export default function WhyNotScreen() {
               <View style={styles.heroHead}>
                 <Chip
                   label={data.verdictKind === "pending" ? "预测复核中" : "未给预测"}
-                  tone={data.verdictKind === "pending" ? "amber" : "danger"}
+                  tone={data.verdictKind === "pending" ? "amber" : "negative"}
                 />
                 <Text variant="caption" color={colors.muted}>
                   {data.matchNo} · 竞彩日 {formatDate(date)}
@@ -113,7 +113,7 @@ export default function WhyNotScreen() {
             <Card style={styles.block}>
               <Text variant="h3">什么时候会重新进池</Text>
               <View style={styles.reentry}>
-                <View style={[styles.dot, { backgroundColor: data.verdictKind === "pending" ? colors.amber : colors.green }]} />
+                <View style={[styles.dot, { backgroundColor: data.verdictKind === "pending" ? colors.amber : colors.brand }]} />
                 <Text variant="small" style={styles.paragraph}>{data.whatIf || "数据条件满足后自动重评"}</Text>
               </View>
               <Text variant="caption" color={colors.subtle} style={styles.paragraph}>
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.sm, paddingBottom: spacing.x7 },
   flex: { flex: 1 },
   hero: { gap: spacing.xs },
-  failHero: { borderColor: colors.dangerSoft },
+  failHero: { borderColor: colors.lossSoft },
   pendingHero: { borderColor: colors.amberLine, backgroundColor: colors.surface },
   heroHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   match: { marginTop: spacing.sm },

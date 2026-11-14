@@ -16,14 +16,14 @@ const SCORE_LABEL: Record<string, string> = {
   missing: "缺失",
 };
 
-const SCORE_TONE: Record<string, "green" | "amber" | "danger"> = {
-  low: "green",
-  good: "green",
+const SCORE_TONE: Record<string, "positive" | "amber" | "negative"> = {
+  low: "positive",
+  good: "positive",
   medium: "amber",
   partial: "amber",
-  high: "danger",
-  weak: "danger",
-  missing: "danger",
+  high: "negative",
+  weak: "negative",
+  missing: "negative",
 };
 
 const MISSING_LABEL: Record<string, string> = {
@@ -75,8 +75,8 @@ function Notes({ title, items }: { title: string; items: ParlayNote[] }) {
             <View
               style={[
                 styles.noteDot,
-                { backgroundColor: item.level === "high" ? colors.danger
-                  : item.level === "medium" ? colors.amber : colors.green },
+                { backgroundColor: item.level === "high" ? colors.loss
+                  : item.level === "medium" ? colors.amber : colors.brand },
               ]}
             />
             <Text variant="small" color={colors.ink} style={styles.noteText}>
@@ -108,7 +108,7 @@ function LegCard({ leg, index, oddsFormat }: {
           </Text>
         </View>
         <Chip label={leg.coverage.level === "full" ? "信息全" : leg.coverage.level === "partial" ? "信息部分" : "信息不足"}
-              tone={leg.coverage.level === "full" ? "green" : leg.coverage.level === "partial" ? "amber" : "danger"} />
+              tone={leg.coverage.level === "full" ? "positive" : leg.coverage.level === "partial" ? "amber" : "negative"} />
       </View>
 
       <View style={styles.legRow}>
@@ -142,7 +142,7 @@ function LegCard({ leg, index, oddsFormat }: {
       ) : null}
 
       <Pressable onPress={() => setOpen((v) => !v)} hitSlop={8} accessibilityRole="button">
-        <Text variant="captionStrong" color={colors.green}>
+        <Text variant="captionStrong" color={colors.brand}>
           {open ? "收起依据" : "展开依据"}
         </Text>
       </Pressable>
@@ -174,7 +174,7 @@ export function ParlayReport({ data, oddsFormat }: {
   return (
     <View style={styles.wrap}>
       <Text variant="h3">体检结果</Text>
-      <Card tone="green" style={styles.block}>
+      <Card tone="positive" style={styles.block}>
         <Text variant="small" style={styles.summary}>{data.summary}</Text>
         <View style={styles.scores}>
           <Score label="成本" value={scores.cost} />
@@ -195,7 +195,7 @@ export function ParlayReport({ data, oddsFormat }: {
         <View style={styles.mathRow}><Text variant="small" color={colors.muted}>市场隐含概率</Text><Text variant="bodyStrong">{pct(combo.market_prob)}</Text></View>
         <View style={styles.mathRow}><Text variant="small" color={colors.muted}>模型组合概率</Text><Text variant="bodyStrong" color={combo.model_prob == null ? colors.amber : colors.ink}>{combo.model_prob == null ? `不完整（${combo.model_coverage}）` : pct(combo.model_prob)}</Text></View>
         <View style={styles.mathRow}><Text variant="small" color={colors.muted}>模型 vs 市场</Text><Text variant="bodyStrong">{combo.model_edge == null ? "—" : `${combo.model_edge >= 0 ? "+" : ""}${(combo.model_edge * 100).toFixed(1)}pp`}</Text></View>
-        <View style={styles.mathRow}><Text variant="small" color={colors.muted}>抽水成本</Text><Text variant="bodyStrong" color={colors.danger}>{money(combo.cost, 2)}</Text></View>
+        <View style={styles.mathRow}><Text variant="small" color={colors.muted}>抽水成本</Text><Text variant="bodyStrong" color={colors.loss}>{money(combo.cost, 2)}</Text></View>
         <View style={styles.mathRow}><Text variant="small" color={colors.muted}>市场期望返还</Text><Text variant="bodyStrong">{money(combo.market_expected_return, 2)}</Text></View>
         <View style={styles.mathRow}><Text variant="small" color={colors.muted}>模型期望返还</Text><Text variant="bodyStrong">{combo.model_expected_return == null ? "—" : money(combo.model_expected_return, 2)}</Text></View>
         <Text variant="caption" color={colors.subtle}>

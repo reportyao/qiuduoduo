@@ -79,11 +79,11 @@ export default function OnSaleScreen() {
                 setPulling(false);
               }
             }}
-            tintColor={colors.green}
+            tintColor={colors.brand}
           />
         }
       >
-        <Text variant="overline" color={colors.green}>在售 · 官方停售时间</Text>
+        <Text variant="overline" color={colors.brand}>在售 · 官方停售时间</Text>
         <Text variant="display" style={styles.title}>今天能看的场</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
           竞彩足球停售时刻 = 官方开赛时刻。凌晨场次会在前一晚截止，别把日期看错。
@@ -136,24 +136,24 @@ export default function OnSaleScreen() {
                       {countdownText(item.saleClose, now)}停售 · {item.rake != null ? `抽水 ${pct(item.rake)}` : "抽水待同步"}
                       {item.coverage ? ` · 覆盖 ${item.coverage.score}` : ""}
                     </Text>
-                    {item.single ? <Chip label="单关" tone="green" /> : null}
+                    {item.single ? <Chip label="单关" tone="positive" /> : null}
                   </View>
                 </View>
                 <View style={styles.status}>
                   <StatusDot
                     color={
                       item.status === "promoted"
-                        ? colors.green
+                        ? colors.brand
                         : item.status === "screening"
                           ? colors.amber
                           : item.status === "killed"
-                            ? colors.danger
+                            ? colors.loss
                             : colors.subtle
                     }
                   />
                   <Text
                     variant="caption"
-                    color={item.status === "killed" ? colors.danger : colors.muted}
+                    color={item.status === "killed" ? colors.loss : colors.muted}
                   >
                     {onSaleStatusLabel(item.status)}
                   </Text>

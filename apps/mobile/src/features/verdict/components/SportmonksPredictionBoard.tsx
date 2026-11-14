@@ -52,7 +52,7 @@ export function SportmonksPredictionBoard({
                   <Text variant="small" color={colors.muted} style={styles.flex} numberOfLines={1}>
                     {item.label}
                   </Text>
-                  <Text variant="caption" color={colors.green} numberOfLines={1}>
+                  <Text variant="caption" color={colors.brand} numberOfLines={1}>
                     {dist.predictedLabel} {dist.predictedValue.toFixed(1)}%
                   </Text>
                 </View>
@@ -68,7 +68,7 @@ export function SportmonksPredictionBoard({
         {locked ? (
           <View style={styles.lock}>
             <View style={styles.lockIcon}>
-              <Icon name="lock-closed" size={18} color={colors.green} />
+              <Icon name="lock-closed" size={18} color={colors.brand} />
             </View>
             <Text variant="bodyStrong" center>开通会员解锁全部预测</Text>
             <Text variant="caption" color={colors.muted} center>
@@ -88,7 +88,7 @@ export function SportmonksPredictionBoard({
                   {market.name}
                 </Text>
                 {market.line ? (
-                  <Text variant="caption" color={colors.green} mono>{market.line}</Text>
+                  <Text variant="caption" color={colors.brand} mono>{market.line}</Text>
                 ) : null}
               </View>
               {market.selections.map((row) => (
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.greenSoft,
+    backgroundColor: colors.brandSoft,
     alignItems: "center",
     justifyContent: "center",
   },

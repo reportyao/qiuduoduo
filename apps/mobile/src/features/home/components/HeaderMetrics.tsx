@@ -43,7 +43,7 @@ export function HeaderMetrics({ engine, dataPoints }: {
     <View style={styles.metrics} accessibilityLabel="AI 助理状态">
       <View style={styles.line}>
         <Animated.View style={[styles.dot, { opacity: pulse }]} />
-        <Text variant="captionStrong" color={colors.green} numberOfLines={1}>AI助理在线</Text>
+        <Text variant="captionStrong" color={colors.brand} numberOfLines={1}>AI助理在线</Text>
       </View>
       <Text variant="caption" color={colors.muted} numberOfLines={1}>
         {points > 0 ? `已读${read}条` : "数据同步中"}
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.green,
+    backgroundColor: colors.brandAccent,
     flexShrink: 0,
   },
 });

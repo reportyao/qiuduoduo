@@ -27,7 +27,7 @@ export function LiveMatchCard({
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={[styles.minuteBox, isBreak(match.state) && styles.minuteBreak]}>
-        <Text variant="h3" color={isBreak(match.state) ? colors.amber : colors.green}>
+        <Text variant="h3" color={isBreak(match.state) ? colors.amber : colors.brand}>
           {minute}
         </Text>
         <Text variant="caption" color={colors.muted} numberOfLines={1}>
@@ -56,7 +56,7 @@ export function ResultMatchCard({ match }: { match: ResultMatch }) {
   return (
     <View style={styles.card}>
       <View style={styles.statusCol}>
-        <Text variant="captionStrong" color={colors.green}>
+        <Text variant="captionStrong" color={colors.brand}>
           {scoreStatusLabel(match.status)}
         </Text>
         <Text variant="caption" color={colors.subtle}>{formatTime(match.kickoff)}</Text>
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     width: 60,
     alignSelf: "stretch",
     borderRadius: radii.md,
-    backgroundColor: colors.greenSoft,
+    backgroundColor: colors.brandSoft,
     alignItems: "center",
     justifyContent: "center",
     gap: 1,

@@ -69,7 +69,7 @@ export default function PersonaScreen() {
               <View style={styles.flex}>
                 <View style={styles.titleRow}>
                   <Text variant="bodyStrong">{persona.name}</Text>
-                  {selected ? <Icon name="checkmark-circle" size={18} color={colors.green} /> : null}
+                  {selected ? <Icon name="checkmark-circle" size={18} color={colors.brand} /> : null}
                 </View>
                 <Text variant="caption" color={colors.muted}>{persona.tag}</Text>
                 <Text variant="small" color={colors.muted} style={styles.sample}>
@@ -82,7 +82,7 @@ export default function PersonaScreen() {
       </View>
 
       <Card style={styles.preview}>
-        <Text variant="overline" color={colors.green}>预览 · 今晚的预测会这样说</Text>
+        <Text variant="overline" color={colors.brand}>预览 · 今晚的预测会这样说</Text>
         <Text variant="body" color={colors.ink} style={styles.paragraph}>
           {meta.sample}
         </Text>
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     padding: spacing.base,
     alignItems: "center",
   },
-  selected: { borderColor: colors.green, backgroundColor: colors.greenSoft },
+  selected: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
   pressed: { opacity: 0.8 },
   flex: { flex: 1, gap: 2 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

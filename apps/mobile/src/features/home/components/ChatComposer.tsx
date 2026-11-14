@@ -44,7 +44,7 @@ export function ChatComposer({
           accessibilityLabel="展开助理输入框"
           style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
         >
-          <Icon name="chatbubble-ellipses" size={24} color={colors.onGreen} />
+          <Icon name="chatbubble-ellipses" size={24} color={colors.onBrand} />
           <View style={styles.fabDot} />
         </Pressable>
       </View>
@@ -64,7 +64,7 @@ export function ChatComposer({
           <Icon name="chevron-down" size={20} color={colors.muted} />
         </Pressable>
         <View style={styles.spark}>
-          <Icon name="sparkles" size={15} color={colors.green} />
+          <Icon name="sparkles" size={15} color={colors.brand} />
         </View>
         <TextInput
           ref={inputRef}
@@ -75,7 +75,7 @@ export function ChatComposer({
           style={styles.input}
           multiline
           maxLength={300}
-          selectionColor={colors.green}
+          selectionColor={colors.brand}
           accessibilityLabel="向助理提问"
           editable={!sending}
           autoFocus
@@ -90,7 +90,7 @@ export function ChatComposer({
             { opacity: disabled ? 0.35 : pressed ? 0.8 : 1 },
           ]}
         >
-          <Icon name="arrow-up" size={18} color={colors.onGreen} />
+          <Icon name="arrow-up" size={18} color={colors.onBrand} />
         </Pressable>
       </View>
       {sending ? (
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: colors.green,
+    backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
     ...shadows.float,
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.greenAccent,
+    backgroundColor: colors.brandAccent,
     borderWidth: 2,
     borderColor: colors.bg,
   },
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: colors.greenSoft,
+    backgroundColor: colors.brandSoft,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.sm,
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.green,
+    backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 0,

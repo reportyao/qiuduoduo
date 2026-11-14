@@ -48,7 +48,7 @@ export default function OnboardingScreen() {
 
       {step === "age" ? (
         <View style={styles.body}>
-          <Text variant="overline" color={colors.green}>开始之前</Text>
+          <Text variant="overline" color={colors.brand}>开始之前</Text>
           <Text variant="display" style={styles.title}>先确认一件事</Text>
           <Text variant="body" color={colors.muted} style={styles.lead}>
             球多多提供赛前预测与数据分析，不卖彩票、不代购。未满 18 周岁不能购买彩票，也不能使用预测与记录功能。
@@ -56,7 +56,7 @@ export default function OnboardingScreen() {
 
           <Card style={styles.note}>
             <View style={styles.noteRow}>
-              <Icon name="lock-closed-outline" size={17} color={colors.green} />
+              <Icon name="lock-closed-outline" size={17} color={colors.brand} />
               <Text variant="small" color={colors.muted} style={styles.noteText}>
                 不收集出生日期，只在本机记录「已确认」状态。你随时可以在「我的 → 合规中心」查看。
               </Text>
@@ -69,14 +69,14 @@ export default function OnboardingScreen() {
           </View>
           <Text variant="caption" color={colors.subtle} center style={styles.legal}>
             继续即表示你已阅读
-            <Text variant="caption" color={colors.green} onPress={() => openLegal("terms")}>《服务说明》</Text>
+            <Text variant="caption" color={colors.brand} onPress={() => openLegal("terms")}>《服务说明》</Text>
             和
-            <Text variant="caption" color={colors.green} onPress={() => openLegal("privacy")}>《隐私政策》</Text>
+            <Text variant="caption" color={colors.brand} onPress={() => openLegal("privacy")}>《隐私政策》</Text>
           </Text>
         </View>
       ) : (
         <View style={styles.body}>
-          <Text variant="overline" color={colors.green}>球多多怎么用</Text>
+          <Text variant="overline" color={colors.brand}>球多多怎么用</Text>
           <Text variant="display" style={styles.title}>先看预测，再做决定</Text>
           <Text variant="body" color={colors.muted} style={styles.lead}>
             对能算清的场次给出方向、预测概率和成立条件；看不准的就不发。
@@ -116,7 +116,7 @@ function Promise({
   return (
     <View style={styles.promise}>
       <View style={styles.promiseIcon}>
-        <Icon name={icon} size={18} color={colors.green} />
+        <Icon name={icon} size={18} color={colors.brand} />
       </View>
       <View style={styles.promiseText}>
         <Text variant="bodyStrong">{title}</Text>
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     width: 180,
     height: 80,
     borderRadius: 90,
-    backgroundColor: colors.greenSoft,
+    backgroundColor: colors.brandSoft,
     opacity: 0.9,
   },
   body: { flex: 1, marginTop: spacing.x4 },
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: colors.greenSoft,
+    backgroundColor: colors.brandSoft,
     alignItems: "center",
     justifyContent: "center",
   },

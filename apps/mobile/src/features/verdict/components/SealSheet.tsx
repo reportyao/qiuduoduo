@@ -57,12 +57,12 @@ export function SealSheet({ visible, verdictId, sealed = true, onClose }: SealSh
             <Icon
               name={!sealed ? "time-outline" : seal.match ? "shield-checkmark" : "alert-circle"}
               size={22}
-              color={!sealed ? colors.amber : seal.match ? colors.green : colors.danger}
+              color={!sealed ? colors.amber : seal.match ? colors.brand : colors.danger}
             />
             <View style={styles.flex}>
               <Text
                 variant="bodyStrong"
-                color={!sealed ? colors.amber : seal.match ? colors.green : colors.danger}
+                color={!sealed ? colors.amber : seal.match ? colors.brand : colors.danger}
               >
                 {!sealed
                   ? "尚未封存 · 当前载荷预览"
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     marginBottom: spacing.base,
   },
-  verifyOk: { backgroundColor: colors.greenSoft },
+  verifyOk: { backgroundColor: colors.brandSoft },
   verifyBad: { backgroundColor: colors.dangerSoft },
   verifyPending: { backgroundColor: colors.amberSoft },
   kvBlock: {
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     padding: spacing.base,
   },
   payloadText: {
-    color: colors.greenAccent,
+    color: colors.brandAccent,
     fontSize: type.caption.fontSize,
     lineHeight: 17,
     fontFamily: "monospace",

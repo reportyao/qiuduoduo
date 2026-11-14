@@ -61,13 +61,13 @@ export default function WatchScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} tintColor={colors.green} />
+          <RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} tintColor={colors.brand} />
         }
       >
         {query.isError && watched.length > 0 ? (
           <ErrorState compact message="刷新失败，先显示上次的关注。" onRetry={() => query.refetch()} />
         ) : null}
-        <Text variant="overline" color={colors.green}>关注列表</Text>
+        <Text variant="overline" color={colors.brand}>关注列表</Text>
         <Text variant="h2" style={styles.title}>{watched.length} 场</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
           关注后，预测更新、停售和终场会出现在收件箱。锁屏推送不会出现队名和赔率。
@@ -108,7 +108,7 @@ export default function WatchScreen() {
                       : "时间待同步"}
                   </Text>
                   <View style={styles.chips}>
-                    <Chip label="预测更新" tone="green" />
+                    <Chip label="预测更新" tone="positive" />
                     <Chip label="终场" tone="neutral" />
                   </View>
                 </Pressable>

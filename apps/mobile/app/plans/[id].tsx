@@ -39,14 +39,14 @@ export default function PlanDetailScreen() {
             <Card style={styles.head}>
               <View style={styles.row}>
                 <Text variant="h2">第 {plan.cycle_no} 期 · {plan.name}</Text>
-                <Chip label={plan.status === "settled" ? "已结算" : "进行中"} tone={plan.status === "settled" ? "green" : "amber"} />
+                <Chip label={plan.status === "settled" ? "已结算" : "进行中"} tone={plan.status === "settled" ? "positive" : "amber"} />
               </View>
               <Text variant="caption" color={colors.muted}>
                 预算 {money(plan.budget)} · {plan.match_count} 场 · {plan.bet_count} 注
               </Text>
               <View style={styles.metrics}>
                 <Metric label="总投入" value={money(plan.total_stake)} />
-                <Metric label="盈亏" value={signed(plan.pnl)} tone={plan.pnl > 0 ? "green" : plan.pnl < 0 ? "danger" : "default"} />
+                <Metric label="盈亏" value={signed(plan.pnl)} tone={plan.pnl > 0 ? "positive" : plan.pnl < 0 ? "negative" : "default"} />
                 <Metric label="回报率" value={plan.roi == null ? "—" : pct(plan.roi)} />
               </View>
               <Text variant="caption" color={colors.muted}>
@@ -75,11 +75,11 @@ function signed(value: number) {
   return `${value > 0 ? "+" : ""}${money(value)}`;
 }
 
-function Metric({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "green" | "danger" }) {
+function Metric({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "positive" | "negative" }) {
   return (
     <View style={styles.metric}>
       <Text variant="caption" color={colors.muted}>{label}</Text>
-      <Text variant="bodyStrong" color={tone === "green" ? colors.green : tone === "danger" ? colors.danger : colors.ink}>{value}</Text>
+      <Text variant="bodyStrong" color={tone === "positive" ? colors.brand : tone === "negative" ? colors.loss : colors.ink}>{value}</Text>
     </View>
   );
 }
@@ -100,7 +100,7 @@ function BetCard({ bet }: { bet: PlanBet }) {
           <Text variant="caption" color={colors.subtle}>{leg.selection_reason}</Text>
         </View>
       ))}
-      <Text variant="caption" color={bet.pnl > 0 ? colors.green : bet.pnl < 0 ? colors.danger : colors.muted}>
+      <Text variant="caption" color={bet.pnl > 0 ? colors.brand : bet.pnl < 0 ? colors.loss : colors.muted}>
         {bet.status === "pending" ? "待结算" : `${bet.status} · ${signed(bet.pnl)}`}
       </Text>
     </Card>

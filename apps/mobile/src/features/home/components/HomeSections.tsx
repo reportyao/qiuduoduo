@@ -88,8 +88,8 @@ export function DataStatusSheet({
           <View key={row.name} style={styles.sourceRow}>
             <Text variant="small">{row.name}</Text>
             <View style={styles.sourceStatus}>
-              <View style={[styles.gateDot, { backgroundColor: row.ok ? colors.green : colors.amber }]} />
-              <Text variant="caption" color={row.ok ? colors.green : colors.amber}>{row.status}</Text>
+              <View style={[styles.gateDot, { backgroundColor: row.ok ? colors.brand : colors.amber }]} />
+              <Text variant="caption" color={row.ok ? colors.brand : colors.amber}>{row.status}</Text>
             </View>
           </View>
         ))}

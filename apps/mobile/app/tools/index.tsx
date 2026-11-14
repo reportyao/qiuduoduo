@@ -51,27 +51,27 @@ export default function ToolsScreen() {
         onScroll={onScroll}
         scrollEventThrottle={48}
       >
-        <Text variant="overline" color={colors.green}>工具</Text>
+        <Text variant="overline" color={colors.brand}>工具</Text>
         <Text variant="display" style={styles.title}>把预测看透</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
           预测之后，用这些工具把成本、仓位、组合和复盘算清楚。
         </Text>
 
         <Card
-          tone="green"
+          tone="positive"
           onPress={() => router.push(TOOLS[0].route as never)}
           accessibilityLabel="串关参谋"
           style={styles.feature}
         >
           <View style={styles.featureIcon}>
-            <Icon name={TOOLS[0].icon} size={22} color={colors.green} />
+            <Icon name={TOOLS[0].icon} size={22} color={colors.brand} />
           </View>
           <View style={styles.featureText}>
-            <Text variant="overline" color={colors.green}>主工具</Text>
+            <Text variant="overline" color={colors.brand}>主工具</Text>
             <Text variant="h2">{TOOLS[0].title}</Text>
             <Text variant="small" color={colors.muted}>{TOOLS[0].subtitle}</Text>
           </View>
-          <Icon name="arrow-forward" size={18} color={colors.green} />
+          <Icon name="arrow-forward" size={18} color={colors.brand} />
         </Card>
 
         <View style={styles.groups}>
@@ -105,10 +105,10 @@ export default function ToolsScreen() {
         <Card style={styles.summary}>
           <View style={styles.summaryHead}>
             <View style={styles.flex}>
-              <Text variant="overline" color={colors.green}>今日数据</Text>
+              <Text variant="overline" color={colors.brand}>今日数据</Text>
               <Text variant="h3">{stats ? `扫描 ${stats.total} 场` : "正在同步今日场次"}</Text>
             </View>
-            <Icon name="pulse-outline" size={20} color={colors.green} />
+            <Icon name="pulse-outline" size={20} color={colors.brand} />
           </View>
           <View style={styles.metricsRow}>
             <Metric label="通过三关" value={String(stats?.promoted ?? 0)} />

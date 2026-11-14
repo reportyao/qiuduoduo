@@ -116,7 +116,7 @@ export function MatchPickerSheet({
           placeholder="搜球队或场次"
           placeholderTextColor={colors.subtle}
           style={styles.input}
-          selectionColor={colors.green}
+          selectionColor={colors.brand}
           accessibilityLabel="搜索比赛"
         />
       </View>
@@ -171,7 +171,7 @@ export function MatchPickerSheet({
                 </Text>
               </View>
               {row.gates?.price === "pass" ? (
-                <StatusDot color={row.status === "promoted" ? colors.green : colors.amber} />
+                <StatusDot color={row.status === "promoted" ? colors.brand : colors.amber} />
               ) : (
                 <Icon name="chevron-forward" size={15} color={colors.subtle} />
               )}

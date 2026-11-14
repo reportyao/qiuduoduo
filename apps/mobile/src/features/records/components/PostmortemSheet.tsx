@@ -33,7 +33,7 @@ export function PostmortemSheet({
         <ErrorState message={errorText(query.error)} onRetry={() => query.refetch()} />
       ) : pm ? (
         <>
-          <Card tone={pm.settled === "win" ? "green" : pm.settled === "lose" ? "danger" : "default"} style={styles.hero}>
+          <Card tone={pm.settled === "win" ? "positive" : pm.settled === "lose" ? "negative" : "default"} style={styles.hero}>
             <Text variant="caption" color={colors.muted}>{pm.matchNo} · {pm.tradeDate}</Text>
             <Text variant="h3">{pm.match}</Text>
             <Text variant="small" color={colors.muted}>
@@ -53,7 +53,7 @@ export function PostmortemSheet({
                 <Text variant="caption" color={colors.muted}>注额 {money(pm.bet.amount)}</Text>
                 <Text
                   variant="bodyStrong"
-                  color={pm.bet.pnl == null ? colors.muted : pm.bet.pnl >= 0 ? colors.green : colors.danger}
+                  color={pm.bet.pnl == null ? colors.muted : pm.bet.pnl >= 0 ? colors.brand : colors.loss}
                 >
                   {pm.bet.pnl != null ? money(pm.bet.pnl) : "待结算"}
                 </Text>
@@ -63,7 +63,7 @@ export function PostmortemSheet({
 
           {pm.attribution ? (
             <View style={styles.block}>
-              <Text variant="overline" color={colors.green}>归因</Text>
+              <Text variant="overline" color={colors.brand}>归因</Text>
               <Text variant="bodyStrong">{pm.attribution.class ?? "未归因"}</Text>
               <Text variant="small" color={colors.muted} style={styles.text}>{pm.attribution.note}</Text>
             </View>

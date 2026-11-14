@@ -43,7 +43,7 @@ export const FocusSection = memo(function FocusSection({
     <View style={styles.focus}>
       <View style={styles.head}>
         <View style={styles.flex}>
-          <Text variant="overline" color={colors.green}>正在看</Text>
+          <Text variant="overline" color={colors.brand}>正在看</Text>
           <Text variant="bodyStrong" numberOfLines={1}>
             {focus.home} vs {focus.away}
           </Text>
@@ -52,7 +52,7 @@ export const FocusSection = memo(function FocusSection({
           </Text>
         </View>
         <Pressable onPress={onSwitch} accessibilityRole="button" accessibilityLabel="换一场比赛" hitSlop={8}>
-          <Text variant="captionStrong" color={colors.green}>换一场</Text>
+          <Text variant="captionStrong" color={colors.brand}>换一场</Text>
         </Pressable>
         <Pressable onPress={onClearAll} accessibilityRole="button" accessibilityLabel="回到今日全部" hitSlop={8}>
           <Text variant="caption" color={colors.subtle}>今日全部</Text>

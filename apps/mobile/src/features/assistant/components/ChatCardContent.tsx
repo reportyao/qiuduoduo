@@ -45,7 +45,7 @@ export function ChatCardContent({
   return (
     <View style={styles.content}>
       {card?.type ? (
-        <Text variant="overline" color={colors.green}>{INTENT_LABEL[card.type] ?? "球多多"}</Text>
+        <Text variant="overline" color={colors.brand}>{INTENT_LABEL[card.type] ?? "球多多"}</Text>
       ) : null}
       <Text
         variant="small"
@@ -69,7 +69,7 @@ export function ChatCardContent({
       {card?.protection ? (
         <Chip
           label={`连败 ${card.protection.streak} 场 · ${card.protection.active ? "保护中" : "未触发"}`}
-          tone={card.protection.active ? "danger" : "green"}
+          tone={card.protection.active ? "negative" : "positive"}
         />
       ) : null}
 
@@ -92,8 +92,8 @@ export function ChatCardContent({
       ) : null}
 
       {card?.postmortem ? (
-        <Card tone="green" style={styles.postmortem}>
-          <Text variant="captionStrong" color={colors.green}>
+        <Card tone="positive" style={styles.postmortem}>
+          <Text variant="captionStrong" color={colors.brand}>
             {card.postmortem.attribution?.class ?? "复盘"}
           </Text>
           <Text variant="caption" color={colors.muted}>

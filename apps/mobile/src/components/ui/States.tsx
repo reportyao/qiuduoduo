@@ -30,7 +30,7 @@ export function EmptyState({
   return (
     <View style={[styles.empty, style]}>
       <View style={styles.iconWrap}>
-        <Icon name={icon} size={24} color={colors.green} />
+        <Icon name={icon} size={24} color={colors.brand} />
       </View>
       <Text variant="h3" center>{title}</Text>
       <Text variant="small" color={colors.muted} center style={styles.emptyBody}>
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: colors.greenSoft,
+    backgroundColor: colors.brandSoft,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.xs,

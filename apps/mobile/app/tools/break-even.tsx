@@ -27,19 +27,19 @@ export default function BreakEvenToolScreen() {
       <Field label="赔率（欧洲盘）" value={decimal} onChangeText={setDecimal} keyboardType="decimal-pad" />
       <Field label="单注金额" value={stake} onChangeText={setStake} keyboardType="number-pad" hint="单位：元" />
       {!valid ? (
-        <Text variant="small" color={colors.danger} style={{ marginTop: spacing.base }}>
+        <Text variant="small" color={colors.loss} style={{ marginTop: spacing.base }}>
           赔率需大于 1，金额需大于 0。
         </Text>
       ) : result ? (
         <>
           <ResultPanel title="不亏需要赢">
-            <ResultRow label="回本胜率" value={pct(result.winRate, 2)} strong tone="green" />
+            <ResultRow label="回本胜率" value={pct(result.winRate, 2)} strong tone="positive" />
             <ResultRow label="每 10 注约需赢" value={`${result.winsOfTen.toFixed(1)} 注`} />
             <ResultRow label="押中一次盈利" value={money(result.profit, 2)} />
-            <ResultRow label="未中一次亏损" value={money(result.loss, 2)} tone="danger" />
+            <ResultRow label="未中一次亏损" value={money(result.loss, 2)} tone="negative" />
           </ResultPanel>
           <ResultPanel title="按市场概率的单注期望">
-            <ResultRow label="期望值" value={money(result.expectedValue, 2)} strong tone={result.expectedValue >= 0 ? "green" : "danger"} />
+            <ResultRow label="期望值" value={money(result.expectedValue, 2)} strong tone={result.expectedValue >= 0 ? "positive" : "negative"} />
             <ResultRow label="期望收益率" value={pct(result.expectedValue / amount, 2)} />
           </ResultPanel>
           <FormulaNote>

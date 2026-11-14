@@ -179,7 +179,7 @@ export default function NotificationsScreen() {
             ) : null}
           </SettingsGroup>
 
-          <Text variant="overline" color={colors.green}>推什么</Text>
+          <Text variant="overline" color={colors.brand}>推什么</Text>
           <View style={styles.chips}>
             {EVENT_OPTIONS.map((option) => {
               const selected = selectedTypes.includes(option.id);

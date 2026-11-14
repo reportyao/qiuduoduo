@@ -90,7 +90,7 @@ export function MatchTimeline({
     <Card style={styles.card}>
       <View style={styles.head}>
         <View style={styles.flex}>
-          <Text variant="overline" color={colors.green}>时间轴复盘</Text>
+          <Text variant="overline" color={colors.brand}>时间轴复盘</Text>
           <Text variant="h3">
             {postmatch?.score_home ?? scoreHome ?? "—"} -{" "}
             {postmatch?.score_away ?? scoreAway ?? "—"}
@@ -120,7 +120,7 @@ function HalfCheckRow({ check }: { check: HalfCheck }) {
   return (
     <View style={[styles.halfBox, check.on_track && styles.halfBoxOk]}>
       <Text variant="caption" color={colors.muted}>半场对照</Text>
-      <Text variant="smallStrong" color={check.on_track ? colors.green : colors.amber}>
+      <Text variant="smallStrong" color={check.on_track ? colors.brand : colors.amber}>
         预测 {check.predicted_ht} / 实际 {check.actual_ht}
       </Text>
     </View>
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.green,
+    backgroundColor: colors.brand,
     marginTop: 4,
   },
   dotHalf: {
@@ -161,6 +161,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSunken,
     gap: 2,
   },
-  halfBoxOk: { backgroundColor: colors.greenSoft },
+  halfBoxOk: { backgroundColor: colors.brandSoft },
   note: { marginTop: spacing.xs, lineHeight: 16 },
 });

@@ -35,9 +35,9 @@ function PlanCard({ item, oddsFormat }: { item: ReviewedPlanItem; oddsFormat: Od
         </View>
         <View style={styles.badges}>
           <Chip label={item.check.combo.model_coverage === `${item.legs.length}/${item.legs.length}` ? "模型覆盖" : "模型不完整"}
-                tone={item.check.combo.model_coverage === `${item.legs.length}/${item.legs.length}` ? "green" : "amber"} />
+                tone={item.check.combo.model_coverage === `${item.legs.length}/${item.legs.length}` ? "positive" : "amber"} />
           <Chip label={`结构${item.check.scores.structure === "low" ? "低" : item.check.scores.structure === "medium" ? "中" : "高"}`}
-                tone={item.check.scores.structure === "low" ? "green" : item.check.scores.structure === "medium" ? "amber" : "danger"} />
+                tone={item.check.scores.structure === "low" ? "positive" : item.check.scores.structure === "medium" ? "amber" : "negative"} />
         </View>
       </View>
       {item.check.legs.map((leg) => (
@@ -72,7 +72,7 @@ export function ParlayPlans({ data, oddsFormat, reviewed = false }: { data: Parl
   }
   return (
     <View style={styles.wrap}>
-      <Text variant="caption" color={reviewed ? colors.green : colors.amber}>
+      <Text variant="caption" color={reviewed ? colors.brand : colors.amber}>
         {reviewed ? "参考组合 · 已复核" : "参考组合"}
       </Text>
       {data.plans.map((item) => (

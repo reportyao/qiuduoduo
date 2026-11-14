@@ -23,7 +23,7 @@ describe("match board labels", () => {
   it("maps settlement results to tones", () => {
     expect(resultLabel("hit")).toBe("命中");
     expect(resultLabel("push")).toBe("走水");
-    expect(resultTone("miss")).toBe("danger");
+    expect(resultTone("miss")).toBe("negative");
     expect(resultTone("insufficient_data")).toBe("neutral");
   });
 

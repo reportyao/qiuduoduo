@@ -17,7 +17,7 @@ export default function MinorScreen() {
           style={styles.avatar}
           resizeMode="cover"
         />
-        <Text variant="overline" color={colors.green}>未成年模式</Text>
+        <Text variant="overline" color={colors.brand}>未成年模式</Text>
         <Text variant="display" center style={styles.title}>只看，不参与</Text>
         <Text variant="body" color={colors.muted} center style={styles.lead}>
           未满 18 周岁不能购买彩票。球多多只开放公开账本给你了解分析怎么做，不展示记注和个性化预测。
@@ -26,9 +26,9 @@ export default function MinorScreen() {
 
       <Card style={styles.card}>
         <View style={styles.row}>
-          <Icon name="book-outline" size={18} color={colors.green} />
+          <Icon name="book-outline" size={18} color={colors.brand} />
           <Text variant="bodyStrong" style={styles.flex}>公开账本</Text>
-          <Text variant="caption" color={colors.green}>可查看</Text>
+          <Text variant="caption" color={colors.brand}>可查看</Text>
         </View>
         <View style={styles.row}>
           <Icon name="close-circle-outline" size={18} color={colors.danger} />

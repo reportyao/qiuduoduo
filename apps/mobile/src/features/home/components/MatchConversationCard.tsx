@@ -27,7 +27,7 @@ function formText(form: string[] | undefined): string {
 function IntelNameCard({ card }: { card: IntelCard }) {
   return (
     <View style={styles.card}>
-      <Text variant="captionStrong" color={colors.green}>{card.label}</Text>
+      <Text variant="captionStrong" color={colors.brand}>{card.label}</Text>
       <Text variant="captionStrong" numberOfLines={2}>{card.value}</Text>
       <Text variant="caption" color={colors.muted} numberOfLines={2}>{card.note}</Text>
     </View>
@@ -136,7 +136,7 @@ export const MatchConversationCard = memo(function MatchConversationCard({
   const visibleCards = verdict ? cards.slice(0, 4) : cards;
   return (
     <AssistantMessage>
-      <Text variant="overline" color={colors.green}>这场</Text>
+      <Text variant="overline" color={colors.brand}>这场</Text>
       <Text variant="h3" style={styles.match}>
         {option.home} <Text variant="small" color={colors.muted}>vs</Text> {option.away}
       </Text>
@@ -148,7 +148,7 @@ export const MatchConversationCard = memo(function MatchConversationCard({
         {visibleCards.length ? visibleCards.map((card) => <IntelNameCard key={card.key} card={card} />) : (
           ["阵容", "积分榜", "环境"].map((label) => (
             <View key={label} style={styles.card}>
-              <Text variant="captionStrong" color={colors.green}>{label}</Text>
+              <Text variant="captionStrong" color={colors.brand}>{label}</Text>
               <Text variant="captionStrong">同步中</Text>
               <Text variant="caption" color={colors.muted}>正在拉取</Text>
             </View>
@@ -157,7 +157,7 @@ export const MatchConversationCard = memo(function MatchConversationCard({
       </View>
       {verdict && cards.length > visibleCards.length ? (
         <Pressable onPress={onOpenMatch} accessibilityRole="button" accessibilityLabel="查看完整情报" hitSlop={6}>
-          <Text variant="captionStrong" color={colors.green} style={styles.more}>
+          <Text variant="captionStrong" color={colors.brand} style={styles.more}>
             完整 {cards.length} 项情报在详情 ›
           </Text>
         </Pressable>
@@ -169,7 +169,7 @@ export const MatchConversationCard = memo(function MatchConversationCard({
           <Text variant="h3">{direction ?? "暂无方向"}</Text>
         </View>
         {probability != null ? (
-          <Text variant="metric" color={colors.green}>{pct(probability)}</Text>
+          <Text variant="metric" color={colors.brand}>{pct(probability)}</Text>
         ) : null}
       </View>
 

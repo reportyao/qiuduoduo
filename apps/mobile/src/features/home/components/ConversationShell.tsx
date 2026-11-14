@@ -131,7 +131,7 @@ export function QuickReply({
       hitSlop={4}
       style={({ pressed }) => [styles.quick, style, pressed && styles.quickPressed]}
     >
-      <Text variant="captionStrong" color={colors.green}>{label}</Text>
+      <Text variant="captionStrong" color={colors.brand}>{label}</Text>
     </Pressable>
   );
 }
@@ -147,7 +147,7 @@ export function MiniStat({
 }) {
   return (
     <View style={styles.stat}>
-      <Text variant="h3" color={accent ? colors.green : colors.ink}>{value}</Text>
+      <Text variant="h3" color={accent ? colors.brand : colors.ink}>{value}</Text>
       <Text variant="caption" color={colors.subtle}>{label}</Text>
     </View>
   );
@@ -222,5 +222,5 @@ const styles = StyleSheet.create({
   quickPressed: { opacity: 0.75 },
   stat: { flex: 1, gap: 1 },
   typing: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.green },
+  dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.brand },
 });

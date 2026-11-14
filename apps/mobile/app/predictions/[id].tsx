@@ -40,7 +40,7 @@ export default function PredictionHistoryDetailScreen() {
           <RefreshControl
             refreshing={query.isFetching && !query.isLoading}
             onRefresh={() => query.refetch()}
-            tintColor={colors.green}
+            tintColor={colors.brand}
           />
         }>
         {query.isLoading ? (
@@ -79,12 +79,12 @@ function Body({
         />
       ) : null}
       <Card style={styles.hero}>
-        <Text variant="overline" color={colors.green}>赛后复盘</Text>
+        <Text variant="overline" color={colors.brand}>赛后复盘</Text>
         <View style={styles.heroTop}>
           <Text variant="caption" color={colors.muted}>
             {formatDateTime(data.kickoff)} 开赛
           </Text>
-          <Chip label={scoreStatusLabel(data.status) || "待赛果"} tone={data.status ? "green" : "neutral"} />
+          <Chip label={scoreStatusLabel(data.status) || "待赛果"} tone={data.status ? "positive" : "neutral"} />
         </View>
         <View style={styles.teams}>
           <View style={styles.flex}>
@@ -101,7 +101,7 @@ function Body({
       <Card style={styles.summary}>
         <View style={styles.flex}>
           <Text variant="caption" color={colors.muted}>主流玩法命中率</Text>
-          <Text variant="metric" color={colors.green}>{pct(data.summary.hit_rate, 1)}</Text>
+          <Text variant="metric" color={colors.brand}>{pct(data.summary.hit_rate, 1)}</Text>
         </View>
         <SummaryCount summary={data.summary} />
       </Card>
@@ -154,9 +154,9 @@ function snapshotText(snapshot: {
 function SummaryCount({ summary }: { summary: PredictionAccuracy }) {
   return (
     <View style={styles.summaryCounts}>
-      <Count label="命中" value={summary.hit_items} tone={colors.green} />
+      <Count label="命中" value={summary.hit_items} tone={colors.brand} />
       <Count label="走水" value={summary.push_items} tone={colors.amber} />
-      <Count label="未中" value={summary.miss_items} tone={colors.danger} />
+      <Count label="未中" value={summary.miss_items} tone={colors.loss} />
     </View>
   );
 }

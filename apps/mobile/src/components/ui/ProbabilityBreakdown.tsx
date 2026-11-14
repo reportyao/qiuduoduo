@@ -69,7 +69,7 @@ export function ProbabilityBreakdown({
               <View style={styles.cellText}>
                 <Text
                   variant={grid ? "captionStrong" : "caption"}
-                  color={predicted ? (dark ? colors.greenAccent : colors.green)
+                  color={predicted ? (dark ? colors.brandAccent : colors.brand)
                     : actual ? colors.amber : (dark ? colors.mutedInverse : colors.muted)}
                   numberOfLines={1}
                   style={styles.flex}
@@ -79,7 +79,7 @@ export function ProbabilityBreakdown({
                 <Text
                   variant={grid ? "captionStrong" : "captionStrong"}
                   mono
-                  color={predicted ? (dark ? colors.greenAccent : colors.green)
+                  color={predicted ? (dark ? colors.brandAccent : colors.brand)
                     : actual ? colors.amber : (dark ? colors.inkInverse : colors.ink)}
                 >
                   {formatPct(item.value)}
@@ -108,7 +108,7 @@ function formatPct(value: number): string {
 }
 
 function segmentColor(key: string, predicted?: string, actual?: string, dark = false): string {
-  if (key === predicted) return dark ? colors.greenAccent : colors.green;
+  if (key === predicted) return dark ? colors.brandAccent : colors.brand;
   if (key === actual) return colors.amber;
   return dark ? colors.whiteOverlay22 : colors.lineStrong;
 }
@@ -136,8 +136,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     backgroundColor: colors.surfaceSunken,
   },
-  cellPredicted: { backgroundColor: colors.greenSoft },
-  cellPredictedDark: { backgroundColor: colors.greenAccentSoft },
+  cellPredicted: { backgroundColor: colors.brandSoft },
+  cellPredictedDark: { backgroundColor: colors.brandAccentSoft },
   cellActual: { borderWidth: 1, borderColor: colors.amberLine },
   cellText: { flexDirection: "row", alignItems: "baseline", gap: 3 },
   flex: { flex: 1 },

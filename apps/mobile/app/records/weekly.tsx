@@ -54,8 +54,8 @@ export default function WeeklyScreen() {
           <EmptyState title="周报还没生成" body="等第一批结算出来，这里只讲事实。" />
         ) : (
           <>
-            <Card tone="green" style={styles.hero}>
-              <Text variant="overline" color={colors.green}>近 {report.rangeDays} 天</Text>
+            <Card tone="positive" style={styles.hero}>
+              <Text variant="overline" color={colors.brand}>近 {report.rangeDays} 天</Text>
               <Text variant="metric" style={styles.heroTitle}>
                 {report.settled > 0 ? `${report.wins} / ${report.settled}` : "等待赛果"}
               </Text>
@@ -80,7 +80,7 @@ export default function WeeklyScreen() {
                   <Mini
                     label="盈亏"
                     value={signedMoney(report.you.pnl)}
-                    tone={report.you.pnl > 0 ? "green" : report.you.pnl < 0 ? "danger" : "default"}
+                    tone={report.you.pnl > 0 ? "positive" : report.you.pnl < 0 ? "negative" : "default"}
                   />
                 </View>
                 <Text variant="caption" color={colors.muted} style={styles.note}>
@@ -113,14 +113,14 @@ export default function WeeklyScreen() {
               <Text variant="h3">砍掉的场，后来怎样了</Text>
               <View style={styles.killedRow}>
                 <Mini label="砍掉" value={String(report.killed.killedTotal)} />
-                <Mini label="砍对" value={String(report.killed.wouldLose)} tone="green" />
-                <Mini label="砍错" value={String(report.killed.wouldWin)} tone="danger" />
+                <Mini label="砍对" value={String(report.killed.wouldLose)} tone="positive" />
+                <Mini label="砍错" value={String(report.killed.wouldWin)} tone="negative" />
               </View>
               <View style={styles.moneyRow}>
                 <Text variant="caption" color={colors.muted}>避免损失</Text>
-                <Text variant="bodyStrong" color={colors.green}>{money(report.killed.avoidedLossCny)}</Text>
+                <Text variant="bodyStrong" color={colors.brand}>{money(report.killed.avoidedLossCny)}</Text>
                 <Text variant="caption" color={colors.muted}>错过机会</Text>
-                <Text variant="bodyStrong" color={colors.danger}>{money(report.killed.missedWinCny)}</Text>
+                <Text variant="bodyStrong" color={colors.loss}>{money(report.killed.missedWinCny)}</Text>
               </View>
               <Text variant="caption" color={colors.muted} style={styles.note}>
                 两面都公开。只讲砍对不讲砍错，是营销，不是账本。
@@ -154,12 +154,12 @@ function Mini({
 }: {
   label: string;
   value: string;
-  tone?: "default" | "green" | "danger";
+  tone?: "default" | "positive" | "negative";
 }) {
   return (
     <View style={styles.mini}>
       <Text variant="caption" color={colors.muted}>{label}</Text>
-      <Text variant="h3" color={tone === "green" ? colors.green : tone === "danger" ? colors.danger : colors.ink}>
+      <Text variant="h3" color={tone === "positive" ? colors.brand : tone === "negative" ? colors.loss : colors.ink}>
         {value}
       </Text>
     </View>

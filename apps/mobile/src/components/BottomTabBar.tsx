@@ -73,7 +73,7 @@ export function BottomTabBar({
               <Icon
                 name={focused ? meta.activeIcon : meta.icon}
                 size={23}
-                color={focused ? colors.green : colors.muted}
+                color={focused ? colors.brand : colors.muted}
               />
               {route.name === "me" && unread > 0 ? (
                 <View style={styles.badge}>
@@ -85,7 +85,7 @@ export function BottomTabBar({
             </View>
             <Text
               variant="caption"
-              color={focused ? colors.green : colors.muted}
+              color={focused ? colors.brand : colors.muted}
               style={[styles.label, focused && styles.labelActive]}
             >
               {meta.label}

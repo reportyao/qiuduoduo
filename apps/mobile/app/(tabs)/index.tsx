@@ -553,7 +553,7 @@ export default function HomeScreen() {
             <RefreshControl
               refreshing={pulling}
               onRefresh={refreshAll}
-              tintColor={colors.green}
+              tintColor={colors.brand}
             />
           }
         >
@@ -680,7 +680,7 @@ export default function HomeScreen() {
                       accessibilityLabel="重新刷新"
                       hitSlop={6}
                     >
-                      <Text variant="captionStrong" color={colors.green} style={styles.retry}>重试 ›</Text>
+                      <Text variant="captionStrong" color={colors.brand} style={styles.retry}>重试 ›</Text>
                     </Pressable>
                   </AssistantMessage>
                 ) : null}
@@ -712,7 +712,7 @@ export default function HomeScreen() {
                     return (
                       <View key={message.id} style={styles.userRow}>
                         <View style={styles.userBubble}>
-                          <Text variant="small" color={colors.onGreen}>{message.text}</Text>
+                          <Text variant="small" color={colors.onBrand}>{message.text}</Text>
                         </View>
                       </View>
                     );
@@ -951,7 +951,7 @@ const styles = StyleSheet.create({
   userRow: { alignItems: "flex-end", marginTop: spacing.sm },
   userBubble: {
     maxWidth: "82%",
-    backgroundColor: colors.green,
+    backgroundColor: colors.brand,
     borderRadius: 18,
     borderBottomRightRadius: 6,
     paddingHorizontal: spacing.base,

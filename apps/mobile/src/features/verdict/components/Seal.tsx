@@ -8,7 +8,7 @@ export function HashGrid({
   hash,
   size = 5,
   gap = 3,
-  color = colors.greenAccent,
+  color = colors.brandAccent,
 }: {
   hash: string | null;
   size?: number;
@@ -51,12 +51,12 @@ export function SealLine({
 }) {
   const content = (
     <View style={styles.line}>
-      <HashGrid hash={hash} color={dark ? colors.greenAccent : colors.green} />
+      <HashGrid hash={hash} color={dark ? colors.brandAccent : colors.brand} />
       <Text variant="caption" color={dark ? colors.mutedInverse : colors.muted} style={styles.text}>
         {sealed ? `已封存 · ${shortHash(hash)}` : "尚未封存"}
       </Text>
-      <View style={[styles.stamp, { borderColor: dark ? colors.greenAccent : colors.green }]}>
-        <Text variant="caption" color={dark ? colors.greenAccent : colors.green}>封</Text>
+      <View style={[styles.stamp, { borderColor: dark ? colors.brandAccent : colors.brand }]}>
+        <Text variant="caption" color={dark ? colors.brandAccent : colors.brand}>封</Text>
       </View>
     </View>
   );

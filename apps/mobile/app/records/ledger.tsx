@@ -49,10 +49,10 @@ export default function LedgerScreen() {
         subtitle="输赢与连败都公开"
         showAssistant={false}
         onBack={() => goBackOr(router)}
-        right={<Chip label="可复算" tone="green" />}
+        right={<Chip label="可复算" tone="positive" />}
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <Text variant="overline" color={colors.green}>F14 · 不删历史</Text>
+        <Text variant="overline" color={colors.brand}>F14 · 不删历史</Text>
         <Text variant="display" style={styles.title}>赢的写，输的也写</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
           每条预测赛前封存 SHA-256。任何一条都能独立复算，连败也公开。
@@ -62,7 +62,7 @@ export default function LedgerScreen() {
           <Stat label="通过三关" value={String(stats?.promotedTotal ?? 0)} />
           <Stat label="已结算" value={String(stats?.settled ?? 0)} />
           <Stat label="中 / 未中" value={`${stats?.wins ?? 0} / ${stats?.losses ?? 0}`} />
-          <Stat label="当前连败" value={String(stats?.currentLosingStreak ?? 0)} tone="danger" />
+          <Stat label="当前连败" value={String(stats?.currentLosingStreak ?? 0)} tone="negative" />
         </View>
 
         <View style={styles.filters}>
@@ -74,7 +74,7 @@ export default function LedgerScreen() {
             <Chip key={key} label={label} selected={filter === key} onPress={() => setFilter(key)} />
           ))}
           <Pressable onPress={() => setVerifyOpen(true)} hitSlop={6}>
-            <Text variant="captionStrong" color={colors.green}>如何验证</Text>
+            <Text variant="captionStrong" color={colors.brand}>如何验证</Text>
           </Pressable>
         </View>
 
@@ -118,7 +118,7 @@ export default function LedgerScreen() {
                   <Text variant="bodyStrong" numberOfLines={1}>{item.match}</Text>
                   <Text
                     variant="caption"
-                    color={item.status === "killed" ? colors.danger : colors.muted}
+                    color={item.status === "killed" ? colors.loss : colors.muted}
                   >
                     {ledgerStatusLabel(item.status)} ·{" "}
                     {item.pick?.dir ? pickDirectionLabel(item.pool, item.pick.dir) : "未给方向"}
@@ -128,7 +128,7 @@ export default function LedgerScreen() {
                 </View>
                 <Chip
                   label={item.settled === "win" ? "✓ 中" : item.settled === "lose" ? "× 未中" : "待定"}
-                  tone={item.settled === "win" ? "green" : item.settled === "lose" ? "danger" : "neutral"}
+                  tone={item.settled === "win" ? "positive" : item.settled === "lose" ? "negative" : "neutral"}
                 />
               </Pressable>
             ))}
@@ -175,11 +175,11 @@ export default function LedgerScreen() {
   );
 }
 
-function Stat({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "danger" }) {
+function Stat({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "negative" }) {
   return (
     <View style={styles.stat}>
       <Text variant="caption" color={colors.muted}>{label}</Text>
-      <Text variant="h3" color={tone === "danger" ? colors.danger : colors.ink}>{value}</Text>
+      <Text variant="h3" color={tone === "negative" ? colors.loss : colors.ink}>{value}</Text>
     </View>
   );
 }

@@ -23,12 +23,12 @@ import { BriefMatchPicker, type BriefMatchOption } from "./BriefMatchPicker";
 
 function verdictStatus(verdict: VerdictSummary): { label: string; color: string } {
   if (verdict.tier === "market_reference" || verdict.tier === "verified") {
-    return { label: "预测", color: verdict.status === "promoted" ? colors.greenAccent : colors.green };
+    return { label: "预测", color: verdict.status === "promoted" ? colors.brandAccent : colors.brand };
   }
   if (verdict.tier === "avoid" || verdict.status === "killed") {
-    return { label: "回避", color: colors.danger };
+    return { label: "回避", color: colors.loss };
   }
-  return { label: "预测", color: colors.green };
+  return { label: "预测", color: colors.brand };
 }
 
 /**
@@ -103,7 +103,7 @@ export function AssistantBrief({
         </Text>
       ) : null}
       {publishedReady && publishedCount === 0 && predictionCount > 0 ? (
-        <Text variant="caption" color={colors.green}>点下方场次查看完整预测。</Text>
+        <Text variant="caption" color={colors.brand}>点下方场次查看完整预测。</Text>
       ) : null}
 
       <Pressable
@@ -113,11 +113,11 @@ export function AssistantBrief({
         hitSlop={6}
         style={styles.dataLink}
       >
-        <StatusDot color={colors.green} />
+        <StatusDot color={colors.brand} />
         <Text variant="caption" color={colors.muted} style={styles.flex} numberOfLines={1}>
           数据已更新
         </Text>
-        <Text variant="caption" color={colors.green}>数据状态 ›</Text>
+        <Text variant="caption" color={colors.brand}>数据状态 ›</Text>
       </Pressable>
 
       <View style={styles.quickRow}>
@@ -183,14 +183,14 @@ export const VerdictMessage = memo(function VerdictMessage({
     <AssistantMessage dark={dark} delay={delay}>
       {header}
       {hero ? (
-        <Text variant="overline" color={dark ? colors.greenAccent : colors.green}>
+        <Text variant="overline" color={dark ? colors.brandAccent : colors.brand}>
           {copy.feedTitle}
         </Text>
       ) : null}
       <View style={styles.msgHead}>
         <View style={styles.statusRow}>
-          <StatusDot color={dark ? colors.greenAccent : status.color} />
-          <Text variant="captionStrong" color={dark ? colors.greenAccent : status.color}>
+          <StatusDot color={dark ? colors.brandAccent : status.color} />
+          <Text variant="captionStrong" color={dark ? colors.brandAccent : status.color}>
             {status.label}
           </Text>
         </View>
@@ -234,11 +234,11 @@ export const VerdictMessage = memo(function VerdictMessage({
       {verdict.snapshotId && !compact ? (
         <View style={styles.recommendation}>
           <View style={styles.recommendationHead}>
-            <Text variant="overline" color={dark ? colors.greenAccent : colors.green}>
+            <Text variant="overline" color={dark ? colors.brandAccent : colors.brand}>
               已发布预测
             </Text>
             {verdict.review ? (
-              <Text variant="caption" color={verdict.review.status === "passed" ? colors.green : colors.amber}>
+              <Text variant="caption" color={verdict.review.status === "passed" ? colors.brand : colors.amber}>
                 {verdict.review.llmDegraded ? "规则复核" : "AI 复核"} · {verdict.review.status === "passed" ? "通过" : "待修"}
               </Text>
             ) : null}
@@ -303,7 +303,7 @@ export const VerdictMessage = memo(function VerdictMessage({
 
       {hero && onParlay ? (
         <Pressable onPress={onParlay} accessibilityRole="button" hitSlop={8}>
-          <Text variant="captionStrong" color={dark ? colors.greenAccent : colors.green}>
+          <Text variant="captionStrong" color={dark ? colors.brandAccent : colors.brand}>
             看今日组合 ›
           </Text>
         </Pressable>
@@ -395,7 +395,7 @@ export function PostmortemMessage({
             </View>
             <Text
               variant="captionStrong"
-              color={item.settled === "win" ? colors.green : item.settled === "lose" ? colors.danger : colors.muted}
+              color={item.settled === "win" ? colors.brand : item.settled === "lose" ? colors.loss : colors.muted}
             >
               {item.settled === "win" ? "✓ 中" : item.settled === "lose" ? "× 未中" : "待定"}
             </Text>
@@ -417,7 +417,7 @@ export function UnattendedMessage({
   if (items.length === 0) return null;
   return (
     <AssistantMessage>
-      <Text variant="overline" color={colors.green}>你当时看过</Text>
+      <Text variant="overline" color={colors.brand}>你当时看过</Text>
       <Text variant="small" color={colors.muted} style={styles.paragraph}>
         这些场次你打开过、但没有记注。赛后结果如下，只作复盘，不追损。
       </Text>
@@ -442,7 +442,7 @@ export function UnattendedMessage({
             </View>
             <Text
               variant="captionStrong"
-              color={item.settled === "win" ? colors.green : item.settled === "lose" ? colors.danger : colors.muted}
+              color={item.settled === "win" ? colors.brand : item.settled === "lose" ? colors.loss : colors.muted}
             >
               {item.settled === "win" ? "✓ 中" : item.settled === "lose" ? "× 未中" : "待定"}
             </Text>
@@ -470,7 +470,7 @@ export function RestMessage({
       <Text variant="small" color={colors.muted} style={styles.paragraph}>{copy.restBody}</Text>
       {rest.course.title ? (
         <View style={styles.lesson}>
-          <Text variant="captionStrong" color={colors.green}>
+          <Text variant="captionStrong" color={colors.brand}>
             {rest.course.minutes || 2} 分钟 · {rest.course.title}
           </Text>
           <Text variant="small" style={styles.paragraph}>{rest.course.body}</Text>

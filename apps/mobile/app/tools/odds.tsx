@@ -30,7 +30,7 @@ export default function OddsToolScreen() {
         hint="含本金，例如 2.05 表示下 100 元返还 205 元。"
       />
       {!valid ? (
-        <Text variant="small" color={colors.danger} style={{ marginTop: spacing.base }}>
+        <Text variant="small" color={colors.loss} style={{ marginTop: spacing.base }}>
           赔率需要大于 1。
         </Text>
       ) : result ? (

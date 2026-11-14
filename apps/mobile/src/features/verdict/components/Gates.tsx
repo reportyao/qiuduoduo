@@ -12,9 +12,9 @@ export function gateTone(result: GateResult | undefined): {
 } {
   switch (result) {
     case "pass":
-      return { color: colors.green, soft: colors.greenSoft, label: "已通过", short: "✓" };
+      return { color: colors.brand, soft: colors.brandSoft, label: "已通过", short: "✓" };
     case "fail":
-      return { color: colors.danger, soft: colors.dangerSoft, label: "未通过", short: "×" };
+      return { color: colors.loss, soft: colors.lossSoft, label: "未通过", short: "×" };
     case "pending_data":
       return { color: colors.amber, soft: colors.amberSoft, label: "等数据", short: "…" };
     default:

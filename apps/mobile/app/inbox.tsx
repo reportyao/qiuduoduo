@@ -59,7 +59,7 @@ export default function InboxScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} tintColor={colors.green} />
+          <RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} tintColor={colors.brand} />
         }
       >
         {query.isError && items.length > 0 ? (
@@ -96,7 +96,7 @@ export default function InboxScreen() {
                 style={({ pressed }) => [styles.row, !item.openedAt && styles.unread, pressed && styles.pressed]}
               >
                 <View style={styles.dotCol}>
-                  {!item.openedAt ? <StatusDot color={colors.green} size={7} /> : null}
+                  {!item.openedAt ? <StatusDot color={colors.brand} size={7} /> : null}
                 </View>
                 <View style={styles.flex}>
                   <Text variant={item.openedAt ? "bodyStrong" : "bodyStrong"}>{item.title}</Text>
@@ -105,13 +105,13 @@ export default function InboxScreen() {
                   </Text>
                   <Text variant="caption" color={colors.subtle}>{relativeTime(item.createdAt, now)}</Text>
                 </View>
-                <Text variant="caption" color={colors.green}>查看</Text>
+                <Text variant="caption" color={colors.brand}>查看</Text>
               </Pressable>
             ))}
           </View>
         )}
 
-        <Card tone="green" style={styles.note}>
+        <Card tone="positive" style={styles.note}>
           <Text variant="caption" color={colors.muted} style={styles.noteText}>
             系统推送只写「你关注的比赛有更新」，不写队名、赔率和“买”字。站内信才会展开具体内容。
           </Text>
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     minHeight: 92,
   },
-  unread: { backgroundColor: colors.greenSoft },
+  unread: { backgroundColor: colors.brandSoft },
   pressed: { opacity: 0.75 },
   dotCol: { width: 8, paddingTop: 6 },
   flex: { flex: 1, gap: 3 },

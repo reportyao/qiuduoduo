@@ -15,7 +15,7 @@ interface CardProps {
   onPress?: () => void;
   accessibilityLabel?: string;
   padded?: boolean;
-  tone?: "default" | "green" | "amber" | "danger" | "dark";
+  tone?: "default" | "positive" | "amber" | "negative" | "dark";
 }
 
 export function Card({
@@ -28,9 +28,9 @@ export function Card({
 }: CardProps) {
   const bg = {
     default: colors.surface,
-    green: colors.greenSoft,
+    positive: colors.brandSoft,
     amber: colors.amberSoft,
-    danger: colors.dangerSoft,
+    negative: colors.lossSoft,
     dark: colors.heroBottom,
   }[tone];
   const contentStyle = [
@@ -74,7 +74,7 @@ export function SectionHeader({ title, eyebrow, actionLabel, onAction, style }: 
       </View>
       {actionLabel && onAction ? (
         <Pressable onPress={onAction} hitSlop={8} accessibilityRole="button">
-          <Text variant="smallStrong" color={colors.green}>{actionLabel}</Text>
+          <Text variant="smallStrong" color={colors.brand}>{actionLabel}</Text>
         </Pressable>
       ) : null}
     </View>

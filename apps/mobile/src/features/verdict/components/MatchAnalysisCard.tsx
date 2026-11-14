@@ -102,7 +102,7 @@ export function MatchAnalysisCard({ matchId, date }: Props) {
             disabled={generate.isPending}
             onPress={() => generate.mutate({ matchId, date })}
           />
-          {generate.isPending ? <ActivityIndicator size="small" color={colors.green} /> : null}
+          {generate.isPending ? <ActivityIndicator size="small" color={colors.brand} /> : null}
         </View>
       ) : null}
       <Text variant="caption" color={colors.subtle}>

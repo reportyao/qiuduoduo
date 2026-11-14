@@ -274,7 +274,7 @@ export default function ParlayToolScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text variant="overline" color={colors.green}>串关参谋 · 帮我配</Text>
+        <Text variant="overline" color={colors.brand}>串关参谋 · 帮我配</Text>
         <Text variant="display" style={styles.title}>先看组合，再自己改</Text>
         <Text variant="body" color={colors.muted} style={styles.lead}>
           从今日有预测的场次生成参考组合；也可以往下自己选 2–6 场做四维体检。
@@ -341,7 +341,7 @@ export default function ParlayToolScreen() {
                     </Text>
                   </View>
                   {match.pick?.dir ? (
-                    <Text variant="caption" color={colors.green}>
+                    <Text variant="caption" color={colors.brand}>
                       已判 {pickDirectionLabel(match.pool, match.pick.dir)}
                     </Text>
                   ) : null}
@@ -362,10 +362,10 @@ export default function ParlayToolScreen() {
                           pressed && styles.pressed,
                         ]}
                       >
-                        <Text variant="caption" color={selected ? colors.onGreen : colors.muted}>
+                        <Text variant="caption" color={selected ? colors.onBrand : colors.muted}>
                           {match.pool === "hhad" ? "让球" : ""}{DIR_LABEL[dir]}
                         </Text>
-                        <Text variant="bodyStrong" color={selected ? colors.onGreen : colors.ink}>
+                        <Text variant="bodyStrong" color={selected ? colors.onBrand : colors.ink}>
                           {decimalToFormat(match.sp[DIR_KEY[dir]], oddsFormat)}
                         </Text>
                       </Pressable>
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 1,
   },
-  oddsSelected: { backgroundColor: colors.green, borderColor: colors.green },
+  oddsSelected: { backgroundColor: colors.brand, borderColor: colors.brand },
   pressed: { opacity: 0.7 },
   label: { marginTop: spacing.x4, marginBottom: spacing.xs },
   planBox: { gap: spacing.sm, marginTop: spacing.base, padding: spacing.base,

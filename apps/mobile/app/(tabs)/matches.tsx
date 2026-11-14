@@ -69,7 +69,7 @@ export default function MatchesScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={pulling} onRefresh={refresh} tintColor={colors.green} />
+          <RefreshControl refreshing={pulling} onRefresh={refresh} tintColor={colors.brand} />
         }
       >
         <SegmentedTabs value={tab} onChange={setTab} liveCount={live.data?.count ?? 0} />
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
-  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.green },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brand },
   idleDot: { backgroundColor: colors.subtle },
   list: { marginTop: spacing.md },
   skeleton: { gap: spacing.sm, marginTop: spacing.xl },

@@ -37,10 +37,10 @@ const ANSWERS = [
 ];
 
 function riskLevel(score: number): { label: string; tone: string; advice: string } {
-  if (score === 0) return { label: "目前无明显风险", tone: colors.green, advice: "继续保持只把分析当参考，不追损。" };
+  if (score === 0) return { label: "目前无明显风险", tone: colors.brand, advice: "继续保持只把分析当参考，不追损。" };
   if (score <= 2) return { label: "低风险", tone: colors.amber, advice: "留意自己是否在追损或加注。可以先停一晚。" };
   if (score <= 7) return { label: "中等风险", tone: colors.amber, advice: "建议开启自排除 7 天，并和信任的人聊聊。" };
-  return { label: "较高风险", tone: colors.danger, advice: "建议立即自排除并联系专业帮助。这不是意志力问题。" };
+  return { label: "较高风险", tone: colors.loss, advice: "建议立即自排除并联系专业帮助。这不是意志力问题。" };
 }
 
 export default function ComplianceScreen() {
@@ -117,7 +117,7 @@ export default function ComplianceScreen() {
 
   return (
     <SettingsPage title="合规中心" subtitle="永远免费，不用于营销" onBack={() => goBackOr(router)}>
-      <Card tone="green">
+      <Card tone="positive">
         <Text variant="h3">先照顾你这个人</Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>
           球多多不卖彩票、不代购，也不靠你多下注赚钱。这里的功能永远免费，也不会出现在任何营销里。
@@ -125,7 +125,7 @@ export default function ComplianceScreen() {
       </Card>
 
       <Card style={styles.block}>
-        <Text variant="overline" color={colors.green}>求助热线</Text>
+        <Text variant="overline" color={colors.brand}>求助热线</Text>
         <Text variant="h3">{legal.data?.helpline || "当地心理援助热线"}</Text>
         <Text variant="caption" color={colors.muted}>
           {legal.data?.compliance || "如果你感到失控，请先联系专业帮助。数据分析不构成投注建议。"}
@@ -194,7 +194,7 @@ export default function ComplianceScreen() {
               <Text variant="h3" color={level.tone}>{level.label}</Text>
               <Text variant="caption" color={colors.muted}>{score} / 27</Text>
             </View>
-            <ProgressBar value={score / 27} tone={score >= 8 ? "danger" : score >= 3 ? "amber" : "green"} />
+            <ProgressBar value={score / 27} tone={score >= 8 ? "negative" : score >= 3 ? "amber" : "positive"} />
             <Text variant="small" color={colors.muted} style={styles.paragraph}>{level.advice}</Text>
           </View>
         ) : lastScore != null ? (

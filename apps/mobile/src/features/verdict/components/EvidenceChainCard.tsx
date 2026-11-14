@@ -65,7 +65,7 @@ export function EvidenceChainCard({
     <Card padded={false} style={styles.card}>
       <View style={styles.head}>
         <View style={styles.flex}>
-          <Text variant="overline" color={colors.green}>证据链</Text>
+          <Text variant="overline" color={colors.brand}>证据链</Text>
           <Text variant="h3">每条判断都有来源</Text>
           <Text variant="caption" color={colors.muted}>
             {rows.length} 条 · {sources.size} 个来源 · 截止 {cutoff ? formatDateTime(cutoff) : "同步中"}
@@ -104,14 +104,14 @@ export function EvidenceChainCard({
               ]}
             >
               <View style={styles.iconWrap}>
-                <Icon name={sourceIcon(item)} size={18} color={colors.green} />
+                <Icon name={sourceIcon(item)} size={18} color={colors.brand} />
               </View>
               <View style={styles.body}>
                 <View style={styles.titleRow}>
                   <Text variant="bodyStrong" style={styles.flex} numberOfLines={open ? undefined : 1}>
                     {clean(item.title)}
                   </Text>
-                  <Chip label={label} tone={label === "核心" ? "green" : "neutral"} />
+                  <Chip label={label} tone={label === "核心" ? "positive" : "neutral"} />
                 </View>
                 <Text
                   variant="small"
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radii.md,
-    backgroundColor: colors.greenSoft,
+    backgroundColor: colors.brandSoft,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,

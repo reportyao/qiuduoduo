@@ -52,14 +52,14 @@ export default function ShareScreen() {
           <ErrorState message={errorText(query.error)} onRetry={() => query.refetch()} />
         ) : data ? (
           <>
-            <Card tone={match ? "green" : "danger"} style={styles.verify}>
+            <Card tone={match ? "positive" : "negative"} style={styles.verify}>
               <Icon
                 name={match ? "shield-checkmark" : "alert-circle"}
                 size={26}
-                color={match ? colors.green : colors.danger}
+                color={match ? colors.brand : colors.loss}
               />
               <View style={styles.flex}>
-                <Text variant="h3" color={match ? colors.green : colors.danger}>
+                <Text variant="h3" color={match ? colors.brand : colors.loss}>
                   {match ? "分享卡有效 · 内容一致" : "分享卡校验失败"}
                 </Text>
                 <Text variant="caption" color={colors.muted}>
@@ -76,7 +76,7 @@ export default function ShareScreen() {
             </Card>
 
             <Card style={styles.block}>
-              <Text variant="overline" color={colors.green}>分享原文</Text>
+              <Text variant="overline" color={colors.brand}>分享原文</Text>
               <Text variant="mono" color={colors.muted} selectable style={styles.payload}>
                 {JSON.stringify(payload, null, 2)}
               </Text>
@@ -84,7 +84,7 @@ export default function ShareScreen() {
 
             {data.verdict_seal_url ? (
               <Card
-                tone="green"
+                tone="positive"
                 onPress={() => {
                   const parts = string(data.verdict_seal_url).split("/").filter(Boolean);
                   const idx = parts.indexOf("verdicts");
@@ -94,8 +94,8 @@ export default function ShareScreen() {
                 accessibilityLabel="查看原判决封存"
                 style={styles.link}
               >
-                <Text variant="smallStrong" color={colors.green}>查看原判决封存</Text>
-                <Icon name="arrow-forward" size={15} color={colors.green} />
+                <Text variant="smallStrong" color={colors.brand}>查看原判决封存</Text>
+                <Icon name="arrow-forward" size={15} color={colors.brand} />
               </Card>
             ) : null}
             {string(payload.data_cutoff) ? (

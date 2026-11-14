@@ -72,7 +72,7 @@ export function PredictionGroupBoard({
           accessibilityLabel={allOpen ? "收起全部分组" : "展开全部分组"}
           style={styles.allRow}
         >
-          <Text variant="captionStrong" color={colors.green}>
+          <Text variant="captionStrong" color={colors.brand}>
             {allOpen ? "收起全部" : "展开全部 25 维"}
           </Text>
         </Pressable>
@@ -94,7 +94,7 @@ export function PredictionGroupBoard({
                 <Text variant="smallStrong">{group.title}</Text>
                 <Text variant="caption" color={colors.subtle}>{group.note}</Text>
               </View>
-              <Text variant="captionStrong" color={colors.green}>
+              <Text variant="captionStrong" color={colors.brand}>
                 {items.length} 项 · {expanded ? "收起" : "展开"}
               </Text>
             </Pressable>
@@ -110,7 +110,7 @@ export function PredictionGroupBoard({
                       <Text variant="captionStrong" style={styles.flex} numberOfLines={1}>
                         {item.label}
                       </Text>
-                      <Text variant="caption" color={colors.green} numberOfLines={1}>
+                      <Text variant="caption" color={colors.brand} numberOfLines={1}>
                         {dist.predictedLabel} {dist.predictedValue.toFixed(1)}%
                       </Text>
                     </View>

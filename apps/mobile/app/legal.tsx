@@ -27,7 +27,7 @@ export default function LegalScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         {key === "terms" ? <Terms /> : key === "privacy" ? <Privacy disclosure={disclosure.data} /> : <AiNotice />}
 
-        <Card tone="green" style={styles.help}>
+        <Card tone="positive" style={styles.help}>
           <Text variant="smallStrong">需要帮助</Text>
           <Text variant="small" color={colors.muted} style={styles.paragraph}>
             {legal.data?.helpline ? `求助热线：${legal.data.helpline}` : "如感到失控，请联系当地心理援助或戒赌热线。"}
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   paragraph: { lineHeight: 22 },
   block: { gap: spacing.sm },
   bullet: { flexDirection: "row", gap: spacing.sm, alignItems: "flex-start" },
-  dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.green, marginTop: 8 },
+  dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.brand, marginTop: 8 },
   bulletText: { flex: 1, lineHeight: 19 },
   help: { marginTop: spacing.x4, gap: spacing.xs },
   footer: { marginTop: spacing.x4, lineHeight: 18 },

@@ -101,7 +101,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text variant="overline" color={colors.green}>手机号验证码</Text>
+          <Text variant="overline" color={colors.brand}>手机号验证码</Text>
           <Text variant="display" style={styles.title}>登录后，账跟着你</Text>
           <Text variant="body" color={colors.muted} style={styles.lead}>
             设备账户也可以直接使用；绑定手机号后，换手机不会丢注单和记忆。
@@ -153,7 +153,7 @@ export default function LoginScreen() {
             继续即表示你已阅读
             <Text
               variant="caption"
-              color={colors.green}
+              color={colors.brand}
               accessibilityRole="link"
               onPress={() => router.push({ pathname: "/legal", params: { doc: "terms" } })}
             >
@@ -162,7 +162,7 @@ export default function LoginScreen() {
             和
             <Text
               variant="caption"
-              color={colors.green}
+              color={colors.brand}
               accessibilityRole="link"
               onPress={() => router.push({ pathname: "/legal", params: { doc: "privacy" } })}
             >

@@ -69,7 +69,7 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
       <View style={styles.head}>
         <Text variant="h3">概率对比</Text>
         <View style={styles.legend}>
-          <Legend color={colors.green} label="主胜" />
+          <Legend color={colors.brand} label="主胜" />
           <Legend color={colors.lineStrong} label="平局" />
           <Legend color={colors.amber} label="客胜" />
         </View>
@@ -79,7 +79,7 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
         <Row
           label="竞彩隐含"
           probs={data.sp}
-          tone={colors.green}
+          tone={colors.brand}
           delta={divergence(data.model ?? data.thirdParty?.probs, data.sp)}
         />
       ) : null}
@@ -87,7 +87,7 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
         <Row
           label="模型概率"
           probs={data.model}
-          tone={colors.greenDark}
+          tone={colors.brandDeep}
           delta={divergence(data.model, data.market?.probs ?? data.thirdParty?.probs)}
         />
       ) : null}

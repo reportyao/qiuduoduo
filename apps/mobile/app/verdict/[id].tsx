@@ -187,7 +187,7 @@ export default function VerdictDetailScreen() {
           <RefreshControl
             refreshing={detailQuery.isFetching && !detailQuery.isLoading}
             onRefresh={() => detailQuery.refetch()}
-            tintColor={colors.green}
+            tintColor={colors.brand}
           />
         }
         contentContainerStyle={styles.content}

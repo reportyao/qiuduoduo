@@ -20,7 +20,7 @@ export function Toggle({ value, onChange, label, disabled = false }: ToggleProps
       hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
       style={[
         styles.track,
-        { backgroundColor: value ? colors.green : colors.lineStrong, opacity: disabled ? 0.5 : 1 },
+        { backgroundColor: value ? colors.brand : colors.lineStrong, opacity: disabled ? 0.5 : 1 },
       ]}
     >
       <View style={[styles.knob, value ? styles.knobOn : styles.knobOff]} />
@@ -74,14 +74,14 @@ export function Stepper({
 
 export function ProgressBar({
   value,
-  tone = "green",
+  tone = "positive",
   height = 6,
 }: {
   value: number;
-  tone?: "green" | "amber" | "danger";
+  tone?: "positive" | "amber" | "negative";
   height?: number;
 }) {
-  const color = { green: colors.green, amber: colors.amber, danger: colors.danger }[tone];
+  const color = { positive: colors.brand, amber: colors.amber, negative: colors.loss }[tone];
   return (
     <View style={[styles.progressTrack, { height }]}>
       <View

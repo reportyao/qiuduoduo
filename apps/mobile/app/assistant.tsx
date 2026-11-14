@@ -125,7 +125,7 @@ export default function AssistantScreen() {
             message.role === "user" ? (
               <View key={message.id} style={styles.userRow}>
                 <View style={styles.userBubble}>
-                  <Text variant="small" color={colors.onGreen}>{message.text}</Text>
+                  <Text variant="small" color={colors.onBrand}>{message.text}</Text>
                 </View>
               </View>
             ) : (
@@ -165,7 +165,7 @@ export default function AssistantScreen() {
 
           {chat.isPending ? (
             <View style={styles.typing}>
-              <ActivityIndicator size="small" color={colors.green} />
+              <ActivityIndicator size="small" color={colors.brand} />
               <Text variant="caption" color={colors.muted}>{meta.name}正在核对数据…</Text>
             </View>
           ) : null}
@@ -181,7 +181,7 @@ export default function AssistantScreen() {
             style={styles.input}
             multiline
             maxLength={300}
-            selectionColor={colors.green}
+            selectionColor={colors.brand}
             accessibilityLabel="向助理提问"
             onSubmitEditing={() => send()}
             blurOnSubmit={false}
@@ -196,7 +196,7 @@ export default function AssistantScreen() {
               { opacity: !input.trim() || chat.isPending ? 0.4 : pressed ? 0.8 : 1 },
             ]}
           >
-            <Icon name="arrow-up" size={19} color={colors.onGreen} />
+            <Icon name="arrow-up" size={19} color={colors.onBrand} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   userRow: { alignItems: "flex-end", marginTop: spacing.sm },
   userBubble: {
     maxWidth: "82%",
-    backgroundColor: colors.green,
+    backgroundColor: colors.brand,
     borderRadius: radii.lg,
     borderBottomRightRadius: 6,
     paddingHorizontal: spacing.base,
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: colors.green,
+    backgroundColor: colors.brand,
     alignItems: "center",
     justifyContent: "center",
     ...shadows.card,

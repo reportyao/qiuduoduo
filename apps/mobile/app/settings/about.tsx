@@ -21,26 +21,26 @@ export default function AboutScreen() {
 
   return (
     <SettingsPage title="关于球多多" subtitle="赛前预测，有依据" onBack={() => goBackOr(router)}>
-      <Card tone="green">
+      <Card tone="positive">
         <Text variant="h2">球多多</Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>
           面向竞彩用户的赛前预测助理。给出方向、预测概率、依据与失效条件，也把这一注的成本和不确定性算清楚。
           没有把握的场次，就不发预测。
         </Text>
-        <Text variant="caption" color={colors.green} style={styles.slogan}>
+        <Text variant="caption" color={colors.brand} style={styles.slogan}>
           看得准才说，看不准就不发。
         </Text>
       </Card>
 
       <Card style={styles.block}>
-        <Text variant="overline" color={colors.green}>版本</Text>
+        <Text variant="overline" color={colors.brand}>版本</Text>
         <KeyValueRow label="App" value={Constants.expoConfig?.version ?? "0.1.0"} />
         <KeyValueRow label="API" value={version.data?.api ?? "连接中"} />
         <KeyValueRow label="最低 App 版本" value={version.data?.min_app_version ?? "—"} last />
       </Card>
 
       <Card style={styles.block}>
-        <Text variant="overline" color={colors.green}>数据与预测</Text>
+        <Text variant="overline" color={colors.brand}>数据与预测</Text>
         <Text variant="small" color={colors.muted} style={styles.paragraph}>
           价格来自竞彩官方 SP；国际盘与 xG 模型按覆盖情况接入。每个数字都带截止时间，
           未覆盖的维度会明确写「未覆盖」，不会补编。

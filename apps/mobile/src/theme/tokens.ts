@@ -2,11 +2,17 @@ import { Appearance, Platform } from "react-native";
 
 /**
  * 设计令牌：所有页面只从这里取颜色/字号/圆角，禁止在组件里散落魔法值。
- * 视觉基准来自 archive/legacy/jieqiu-app/index.html v3.1（暖白 + 深墨绿），但生产字号不低于 11px。
+ *
+ * 色彩语义（2026-11-14 全面改版，中国彩民心智）：
+ * - 红 brand = 中/命中/通过/盈利/品牌主行动（"红中"，麻将红中心智）
+ * - 黑 loss = 不中/回避/亏损/连败/高风险（"手气黑了"；暗色下灰化表示负向）
+ * - 琥珀 amber = 等数据/走水/离线/会员金
+ * - 红 danger = 删除/退出/表单错误/系统错误（破坏性与品牌同族，场景天然隔离）
+ * - hero 深红黑渐变 + 金 accent（中奖金）
  *
  * 暗色模式：模块初始化时按系统深浅色一次性选定色板（同名 token 全量覆盖），
  * 全站模块级 StyleSheet 自动跟随；运行中切换系统主题需重启/刷新生效。
- * 暗色色板基于墨绿品牌（非纯黑），dark hero 比页面更深一档以保持主卡层次。
+ * 暗色底为暖炭（非绿黑、非纯黑），dark hero 比页面更深一档保持主卡层次。
  */
 const lightColors = {
   bg: "#F6F3EC",
@@ -21,31 +27,42 @@ const lightColors = {
   line: "#E5E0D4",
   lineStrong: "#D6CFBF",
 
-  green: "#0C6549",
-  greenPressed: "#084D38",
-  greenSoft: "#E7F0EA",
-  greenSoftStrong: "#D7E8DE",
-  greenDark: "#063E2E",
-  greenAccent: "#A8E4C9",
-  greenHighlight: "#8CD6B8",
-  greenAccentSoft: "rgba(168,228,201,0.14)",
-  onGreen: "#FFFFFF",
+  // 红 = 中/品牌
+  brand: "#B0362B",
+  brandPressed: "#8A2820",
+  brandSoft: "#F8E9E5",
+  brandSoftStrong: "#F0D6CF",
+  brandDeep: "#3D2A08",
+  brandAccent: "#E3B25C",
+  brandHighlight: "#D0A04C",
+  brandAccentSoft: "rgba(227,178,92,0.16)",
+  onBrand: "#FFFFFF",
 
-  danger: "#A8443A",
-  dangerSolid: "#A8443A",
-  dangerPressed: "#8F352D",
-  dangerSoft: "#F7E9E6",
+  // 黑 = 不中/亏损/回避
+  loss: "#26231F",
+  lossSolid: "#33302C",
+  lossPressed: "#211F1C",
+  lossSoft: "#ECEAE5",
+  lossAccent: "#565049",
+  lossAccentLight: "#B5AFA6",
+
+  // 红 = 删除/退出/表单错误（破坏性，与品牌同族）
+  danger: "#B0362B",
+  dangerSolid: "#B0362B",
+  dangerPressed: "#8A2820",
+  dangerSoft: "#F8E9E5",
   dangerAccent: "#F2B8AE",
   dangerAccentLight: "#FFD3CC",
 
+  // 琥珀 = 等数据/走水/警示/会员金
   amber: "#8C5A16",
   amberSoft: "#F6EEDD",
   amberLine: "#E4D2AF",
   amberAccent: "#FFD99B",
 
-  heroTop: "#132920",
-  heroBottom: "#08130E",
-  heroLine: "rgba(168,228,201,0.20)",
+  heroTop: "#29100B",
+  heroBottom: "#120504",
+  heroLine: "rgba(227,178,92,0.22)",
 
   white: "#FFFFFF",
   black: "#000000",
@@ -59,49 +76,56 @@ const lightColors = {
   whiteOverlay22: "rgba(255,255,255,0.22)",
   whiteLine: "rgba(255,255,255,0.28)",
   lockCover: "rgba(255,255,255,0.94)",
-  toastSuccessBg: "rgba(14,107,79,0.94)",
+  toastSuccessBg: "rgba(176,54,43,0.95)",
   toastWarningBg: "rgba(90,58,14,0.96)",
-  toastErrorBg: "rgba(125,42,34,0.96)",
+  toastErrorBg: "rgba(30,27,24,0.96)",
 } as const;
 
 const darkColors: Record<keyof typeof lightColors, string> = {
-  bg: "#0D1A12",
-  bgElevated: "#12241A",
-  surface: "#13291F",
-  surfaceSunken: "#0E2015",
-  ink: "#E8EDE8",
+  bg: "#171210",
+  bgElevated: "#1E1814",
+  surface: "#241D18",
+  surfaceSunken: "#1A1410",
+  ink: "#F0EAE3",
   inkInverse: "#F4F6F1",
-  muted: "#8AA094",
-  mutedInverse: "#B3C0B8",
-  subtle: "#7E9086",
-  line: "#1E3D2C",
-  lineStrong: "#2A4D38",
+  muted: "#A89C90",
+  mutedInverse: "#C8BCAE",
+  subtle: "#93867B",
+  line: "#3C3129",
+  lineStrong: "#4D3F33",
 
-  green: "#34C28B",
-  greenPressed: "#2AA776",
-  greenSoft: "#12301F",
-  greenSoftStrong: "#1A4029",
-  greenDark: "#063E2E",
-  greenAccent: "#A8E4C9",
-  greenHighlight: "#8CD6B8",
-  greenAccentSoft: "rgba(168,228,201,0.14)",
-  onGreen: "#06231A",
+  brand: "#F0876B",
+  brandPressed: "#B84A2F",
+  brandSoft: "#3A211B",
+  brandSoftStrong: "#4C2C22",
+  brandDeep: "#3D2A08",
+  brandAccent: "#F0C97F",
+  brandHighlight: "#D0A04C",
+  brandAccentSoft: "rgba(240,201,127,0.14)",
+  onBrand: "#FFFFFF",
 
-  danger: "#D97C6F",
-  dangerSolid: "#A85546",
-  dangerPressed: "#8A4638",
-  dangerSoft: "#2E1B18",
+  loss: "#A39B90",
+  lossSolid: "#3B352E",
+  lossPressed: "#2C2722",
+  lossSoft: "#2A2420",
+  lossAccent: "#A39B90",
+  lossAccentLight: "#C9C1B6",
+
+  danger: "#F0876B",
+  dangerSolid: "#B84A2F",
+  dangerPressed: "#A03D28",
+  dangerSoft: "#3A211B",
   dangerAccent: "#F2B8AE",
   dangerAccentLight: "#FFD3CC",
 
   amber: "#D9A75B",
-  amberSoft: "#2B2416",
+  amberSoft: "#322718",
   amberLine: "#4A3D22",
   amberAccent: "#FFD99B",
 
-  heroTop: "#051009",
-  heroBottom: "#020805",
-  heroLine: "rgba(168,228,201,0.20)",
+  heroTop: "#1D0D08",
+  heroBottom: "#0E0503",
+  heroLine: "rgba(240,201,127,0.22)",
 
   white: "#FFFFFF",
   black: "#000000",
@@ -115,9 +139,9 @@ const darkColors: Record<keyof typeof lightColors, string> = {
   whiteOverlay22: "rgba(255,255,255,0.22)",
   whiteLine: "rgba(255,255,255,0.28)",
   lockCover: "rgba(255,255,255,0.96)",
-  toastSuccessBg: "rgba(10,72,52,0.96)",
+  toastSuccessBg: "rgba(150,42,32,0.96)",
   toastWarningBg: "rgba(56,38,8,0.97)",
-  toastErrorBg: "rgba(66,20,15,0.97)",
+  toastErrorBg: "rgba(24,21,18,0.97)",
 };
 
 export const colorSchemeName: "light" | "dark" =
@@ -127,7 +151,7 @@ export const colors: Readonly<Record<keyof typeof lightColors, string>> =
   colorSchemeName === "dark" ? darkColors : lightColors;
 
 export const gradients = {
-  // 仅用于已发布预测主卡：同一墨绿色相内的明度变化，不做彩色渐变。
+  // 仅用于已发布预测主卡：同一深红色相内的明度变化，不做彩色渐变。
   verdict: [colors.heroTop, colors.heroBottom] as const,
 } as const;
 
@@ -193,7 +217,7 @@ export const type = {
 export const shadows = {
   card: Platform.select({
     ios: {
-      shadowColor: "#102018",
+      shadowColor: "#1A120E",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.03,
       shadowRadius: 6,
@@ -203,7 +227,7 @@ export const shadows = {
   }),
   float: Platform.select({
     ios: {
-      shadowColor: "#102018",
+      shadowColor: "#1A120E",
       shadowOffset: { width: 0, height: 12 },
       shadowOpacity: 0.16,
       shadowRadius: 28,
@@ -213,7 +237,7 @@ export const shadows = {
   }),
   header: Platform.select({
     ios: {
-      shadowColor: "#102018",
+      shadowColor: "#1A120E",
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.04,
       shadowRadius: 2,

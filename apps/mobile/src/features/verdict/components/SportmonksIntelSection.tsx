@@ -216,7 +216,7 @@ export function SportmonksIntelSection({ data }: { data?: SportmonksIntelData | 
                     {market.name}
                   </Text>
                   {market.line ? (
-                    <Text variant="caption" color={colors.green} mono>{market.line}</Text>
+                    <Text variant="caption" color={colors.brand} mono>{market.line}</Text>
                   ) : null}
                 </View>
                 {market.selections.map((row) => (

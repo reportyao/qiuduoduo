@@ -66,7 +66,7 @@ export default function PrivacyScreen() {
 
   return (
     <SettingsPage title="隐私与数据" subtitle="你能拿走，也能删掉" onBack={() => goBackOr(router)}>
-      <Card tone="green">
+      <Card tone="positive">
         <Text variant="small" color={colors.muted} style={styles.note}>
           球多多不卖用户数据、不上传通讯录、不收集出生日期。下注金额只有你自己看得到，公开账本只展示预测本身。
         </Text>

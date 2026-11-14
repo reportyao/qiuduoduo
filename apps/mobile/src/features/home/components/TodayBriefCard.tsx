@@ -51,7 +51,7 @@ export function TodayBriefCard({
     <Card style={styles.card}>
       <View style={styles.head}>
         <View style={styles.flex}>
-          <Text variant="overline" color={colors.green}>
+          <Text variant="overline" color={colors.brand}>
             {date === currentTradeDateCn() ? "今日简报" : "历史简报"}
           </Text>
           <Text variant="h2">{formatDate(date)}</Text>
@@ -63,8 +63,8 @@ export function TodayBriefCard({
 
       <View style={styles.stats}>
         <Stat label="场次" value={total} />
-        <Stat label="有预测" value={predicted} tone={colors.green} />
-        <Stat label="已发布" value={published} tone={colors.green} />
+        <Stat label="有预测" value={predicted} tone={colors.brand} />
+        <Stat label="已发布" value={published} tone={colors.brand} />
         <Stat label="在售" value={onsale} />
       </View>
 
@@ -85,7 +85,7 @@ export function TodayBriefCard({
             accessibilityLabel={`查看 ${next.home} 对 ${next.away}`}
             style={styles.nextButton}
           >
-            <Text variant="smallStrong" color={colors.green}>看这场</Text>
+            <Text variant="smallStrong" color={colors.brand}>看这场</Text>
           </Pressable>
         </View>
       ) : (
@@ -111,7 +111,7 @@ export function TodayBriefCard({
                   {formatTime(option.kickoff)} · {option.league || "未分类"}
                 </Text>
               </View>
-              <Text variant="captionStrong" color={colors.green}>详情 ›</Text>
+              <Text variant="captionStrong" color={colors.brand}>详情 ›</Text>
             </Pressable>
           ))}
         </View>
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.md,
     borderRadius: radii.md,
-    backgroundColor: colors.greenSoft,
+    backgroundColor: colors.brandSoft,
   },
   nextButton: {
     paddingHorizontal: spacing.md,

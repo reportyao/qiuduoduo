@@ -52,7 +52,7 @@ export default function RecordsScreen() {
         contentContainerStyle={styles.content}
         onScroll={onScroll}
         scrollEventThrottle={48}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.green} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brand} />}
       >
         <View style={styles.stats}>
           <Stat label="本周注数" value={week ? String(week.bets) : "—"} sub={week ? "近 7 天 · 只记账" : "周报同步中"} />
@@ -65,7 +65,7 @@ export default function RecordsScreen() {
             label="本周盈亏"
             value={week ? signedMoney(week.pnl) : "—"}
             sub={week ? "近 7 天真实盈亏" : "周报同步中"}
-            tone={!week || week.pnl === 0 ? "default" : week.pnl > 0 ? "green" : "danger"}
+            tone={!week || week.pnl === 0 ? "default" : week.pnl > 0 ? "positive" : "negative"}
           />
         </View>
 
@@ -126,11 +126,11 @@ export default function RecordsScreen() {
                 <View style={styles.right}>
                   <Chip
                     label={bet.settled === "win" ? "✓ 中" : bet.settled === "lose" ? "× 未中" : "待结算"}
-                    tone={bet.settled === "win" ? "green" : bet.settled === "lose" ? "danger" : "neutral"}
+                    tone={bet.settled === "win" ? "positive" : bet.settled === "lose" ? "negative" : "neutral"}
                   />
                   <Text
                     variant="smallStrong"
-                    color={bet.pnl == null ? colors.muted : bet.pnl >= 0 ? colors.green : colors.danger}
+                    color={bet.pnl == null ? colors.muted : bet.pnl >= 0 ? colors.brand : colors.loss}
                   >
                     {bet.pnl == null ? "—" : signedMoney(bet.pnl)}
                   </Text>
@@ -157,12 +157,12 @@ function Stat({
   label: string;
   value: string;
   sub: string;
-  tone?: "default" | "green" | "danger";
+  tone?: "default" | "positive" | "negative";
 }) {
   return (
     <View style={styles.stat}>
       <Text variant="caption" color={colors.muted}>{label}</Text>
-      <Text variant="h2" color={tone === "green" ? colors.green : tone === "danger" ? colors.danger : colors.ink}>
+      <Text variant="h2" color={tone === "positive" ? colors.brand : tone === "negative" ? colors.loss : colors.ink}>
         {value}
       </Text>
       <Text variant="caption" color={colors.subtle}>{sub}</Text>

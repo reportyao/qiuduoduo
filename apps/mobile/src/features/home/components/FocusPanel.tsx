@@ -55,11 +55,11 @@ export function FocusPanel({
   return (
     <View style={styles.panel}>
       <View style={styles.head}>
-        <Text variant="overline" color={colors.green}>
+        <Text variant="overline" color={colors.brand}>
           数据覆盖 {focus.coverage.score}
         </Text>
         <View style={styles.headRight}>
-          <Text variant="caption" color={colors.green}>
+          <Text variant="caption" color={colors.brand}>
             {focus.coverage.deepEligible ? "数据完整" : "数据同步"}
           </Text>
         </View>
@@ -102,7 +102,7 @@ export function FocusPanel({
           accessibilityLabel={`展开全部 ${focus.facts.length} 条情报`}
           hitSlop={6}
         >
-          <Text variant="captionStrong" color={colors.green}>
+          <Text variant="captionStrong" color={colors.brand}>
             全部 {focus.facts.length} 条情报 · 展开 ›
           </Text>
         </Pressable>

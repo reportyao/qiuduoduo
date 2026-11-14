@@ -10,9 +10,9 @@ type Performance = components["schemas"]["PerformanceResponse"];
 
 function rateColor(rate: number | null | undefined): string {
   if (rate == null) return colors.muted;
-  if (rate >= 0.55) return colors.green;
+  if (rate >= 0.55) return colors.brand;
   if (rate >= 0.45) return colors.amber;
-  return colors.danger;
+  return colors.loss;
 }
 
 /** 横向条形行：名称 + 条 + 右侧数值。 */
@@ -76,7 +76,7 @@ export function PerformanceDashboard({ days = 30 }: { days?: number }) {
     <Card style={styles.card}>
       <View style={styles.head}>
         <View style={styles.flex}>
-          <Text variant="overline" color={colors.green}>战绩看板</Text>
+          <Text variant="overline" color={colors.brand}>战绩看板</Text>
           <Text variant="h3">近 {data.days} 天</Text>
         </View>
         <View style={styles.kpi}>
@@ -154,7 +154,7 @@ export function PerformanceDashboard({ days = 30 }: { days?: number }) {
               const gap = bucket.actual != null
                 ? (bucket.actual - bucket.predicted) * 100 : null;
               const tone = gap == null ? colors.muted
-                : gap >= -5 ? colors.green : gap <= -15 ? colors.danger : colors.amber;
+                : gap >= -5 ? colors.brand : gap <= -15 ? colors.loss : colors.amber;
               return (
                 <View key={bucket.bucket} style={styles.calibrationRow}>
                   <Text variant="captionStrong" mono>{bucket.bucket}</Text>

@@ -34,14 +34,14 @@ export default function RakeToolScreen() {
       <Field label="客胜赔率" value={away} onChangeText={setAway} keyboardType="decimal-pad" />
 
       {!valid ? (
-        <Text variant="small" color={colors.danger} style={{ marginTop: spacing.base }}>
+        <Text variant="small" color={colors.loss} style={{ marginTop: spacing.base }}>
           三项赔率都需要大于 1。
         </Text>
       ) : result ? (
         <>
           <ResultPanel title="抽水与返还">
-            <ResultRow label="官方抽水（overround 归一）" value={pct(result.rake, 2)} strong tone="danger" />
-            <ResultRow label="理论返还率" value={pct(result.returnRate, 2)} strong tone="green" />
+            <ResultRow label="官方抽水（overround 归一）" value={pct(result.rake, 2)} strong tone="negative" />
+            <ResultRow label="理论返还率" value={pct(result.returnRate, 2)} strong tone="positive" />
             <ResultRow label="超额投注比例" value={pct(result.overround, 2)} />
           </ResultPanel>
           <ResultPanel title="去水后的真实概率">

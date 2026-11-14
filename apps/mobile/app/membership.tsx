@@ -21,7 +21,7 @@ const PRODUCTS = [
     name: "Max · 全市场版",
     price: "¥699/月 · ¥1,699/季",
     items: ["全市场数据（逐项开放）", "AI 计划完整方案", "跨市场串关", "最高优先级提醒"],
-    tone: "green" as const,
+    tone: "positive" as const,
   },
 ];
 
@@ -58,7 +58,7 @@ export default function MembershipScreen() {
               <Text variant="caption" color={colors.muted}>当前会员</Text>
               <Text variant="h2">{me.data?.tier === "max" ? "Max" : me.data?.tier === "pro" ? "Pro" : "免费"}</Text>
             </View>
-            <Chip label={paid ? "已开通" : "未开通"} tone={paid ? "green" : "neutral"} />
+            <Chip label={paid ? "已开通" : "未开通"} tone={paid ? "positive" : "neutral"} />
           </View>
           {me.data?.expires_at ? (
             <Text variant="caption" color={colors.muted}>有效期至 {me.data.expires_at.slice(0, 10)}</Text>

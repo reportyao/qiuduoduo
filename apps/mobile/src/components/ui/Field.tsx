@@ -43,7 +43,7 @@ export function Field({ label, hint, error, right, containerStyle, style, ...res
           }}
           placeholderTextColor={colors.subtle}
           style={[styles.input, style]}
-          selectionColor={colors.green}
+          selectionColor={colors.brand}
         />
         {right}
       </View>
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
   },
-  focused: { borderColor: colors.green, backgroundColor: colors.surface },
+  focused: { borderColor: colors.brand, backgroundColor: colors.surface },
   errorBorder: { borderColor: colors.danger },
   input: {
     flex: 1,

@@ -69,7 +69,7 @@ export default function ProfileScreen() {
   return (
     <SettingsPage title="个人资料" subtitle="昵称与头像" onBack={() => goBackOr(router)}>
       <Card style={styles.card}>
-        <Text variant="overline" color={colors.green}>头像</Text>
+        <Text variant="overline" color={colors.brand}>头像</Text>
         <View style={styles.currentRow}>
           <Avatar source={avatarUri ? { uri: avatarUri } : meta.avatar} fallbackSource={meta.avatar} size={64} online />
           <View style={styles.flex}>
@@ -168,7 +168,7 @@ export default function ProfileScreen() {
       </Card>
 
       <Card style={styles.card}>
-        <Text variant="overline" color={colors.green}>账号</Text>
+        <Text variant="overline" color={colors.brand}>账号</Text>
         <Row label="手机号 / 邮箱" value={me?.phone ?? me?.email ?? "未绑定"} />
         <Row label="登录方式" value={session?.mode === "jwt" ? "手机号" : "设备账户"} />
         <Row label="地区" value={me?.region === "global" ? "国际" : "中国"} />
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "transparent",
   },
-  avatarSelected: { borderColor: colors.green },
+  avatarSelected: { borderColor: colors.brand },
   note: { lineHeight: 18 },
   row: {
     flexDirection: "row",

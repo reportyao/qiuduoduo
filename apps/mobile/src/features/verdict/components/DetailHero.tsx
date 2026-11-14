@@ -39,7 +39,7 @@ export function DetailHero({
   const tier = detail.tier ?? (detail.status === "promoted" ? "verified"
     : detail.status === "killed" ? "avoid" : "market_reference");
   const statusLabel = tier === "avoid" ? "回避" : "预测";
-  const statusColor = tier === "avoid" ? colors.danger : colors.greenAccent;
+  const statusColor = tier === "avoid" ? colors.loss : colors.brandAccent;
 
   const content = (
     <>
@@ -64,7 +64,7 @@ export function DetailHero({
         {detail.status === "promoted" && published != null ? (
           <Chip
             label={published ? "已发布" : "预测"}
-            tone={dark ? "dark" : "green"}
+            tone={dark ? "dark" : "positive"}
           />
         ) : null}
       </View>

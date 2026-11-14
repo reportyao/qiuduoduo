@@ -46,7 +46,7 @@ export default function PreferencesScreen() {
 
   return (
     <SettingsPage title="偏好" subtitle="赔率格式与语言" onBack={() => goBackOr(router)}>
-      <Text variant="overline" color={colors.green}>赔率格式</Text>
+      <Text variant="overline" color={colors.brand}>赔率格式</Text>
       <Text variant="small" color={colors.muted} style={styles.lead}>
         只改显示方式，不改变赔率本身。以欧洲盘 2.05 为例：
       </Text>
@@ -67,8 +67,8 @@ export default function PreferencesScreen() {
                 <Text variant="bodyStrong">{oddsFormatLabel(format.id)}</Text>
                 <Text variant="caption" color={colors.muted}>{format.hint}</Text>
               </View>
-              <Text variant="h3" color={selected ? colors.green : colors.ink}>{format.example}</Text>
-              {selected ? <Icon name="checkmark-circle" size={18} color={colors.green} /> : null}
+              <Text variant="h3" color={selected ? colors.brand : colors.ink}>{format.example}</Text>
+              {selected ? <Icon name="checkmark-circle" size={18} color={colors.brand} /> : null}
             </Pressable>
           );
         })}
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     padding: spacing.base,
   },
-  selected: { borderColor: colors.green, backgroundColor: colors.greenSoft },
+  selected: { borderColor: colors.brand, backgroundColor: colors.brandSoft },
   pressed: { opacity: 0.8 },
   flex: { flex: 1, gap: 2 },
   noteCard: { gap: spacing.xs },
