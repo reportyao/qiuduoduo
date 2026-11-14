@@ -26,7 +26,7 @@ from ..features.ops import workbench as ops_workbench
 from ..features.recommendations import service as recommendation_service
 from ..features.tools import service as parlay_service
 from ..features.tools.schemas import ParlayPlanRequest
-from ..models import (AIResearch, AdminAudit, AdminUser, CollectorStatus,
+from ..models import (AIResearch, AdminAudit, AdminUser, AnalysisQuota, CollectorStatus,
                       DecisionSnapshot, EngineConfig, InteractionEvent, LeagueModelConfig, LLMProfile,
                       Notification, PersonaLLMModel, PlanCycle, PushToken,
                       RecommendationEvent, RecommendationPlan, ReviewRun,
@@ -883,7 +883,8 @@ class PlanBuildBody(BaseModel):
     publish: bool = True
 
 
-def _app_user(row: User, member: UserMembership | None) -> dict:
+def _app_user(row: User, member: UserMembership | None,
+              quota: AnalysisQuota | None = None) -> dict:
     from ..modules.auth import mask_email, mask_phone
     return {
         "user_id": row.id,
@@ -900,6 +901,19 @@ def _app_user(row: User, member: UserMembership | None) -> dict:
             "source": member.source,
         } if member else {"tier": "free", "status": "none",
                           "expires_at": None, "source": ""}),
+        # 合规与保护（与前端 我的/合规 能力对齐，供 OPC 巡检）
+        "age_verified": row.age_verified,
+        "under18_locked": row.under18_locked,
+        "self_exclusion_until": _iso(row.self_exclusion_until),
+        "self_exclusion_reason": row.self_exclusion_reason or "",
+        "discipline_on": row.discipline_on,
+        "rested_until": row.rested_until or "",
+        # 今日 AI 分析额度（free 有日限；pro/max 不限则 limit_count=0 表示不限）
+        "quota": ({
+            "trade_date": quota.trade_date,
+            "used": quota.used,
+            "limit": quota.limit_count,
+        } if quota else None),
     }
 
 
@@ -921,7 +935,14 @@ def admin_app_users(query: str = "", limit: int = 50,
             UserMembership.user_id.in_(ids),
             UserMembership.status == "active")
     ).all()} if ids else {}
-    return {"users": [_app_user(u, members.get(u.id)) for u in rows]}
+    today = trade_date_now()
+    quotas = {q.user_id: q for q in db.scalars(
+        select(AnalysisQuota).where(
+            AnalysisQuota.user_id.in_(ids),
+            AnalysisQuota.trade_date == today)
+    ).all()} if ids else {}
+    return {"users": [_app_user(u, members.get(u.id), quotas.get(u.id))
+                      for u in rows]}
 
 
 @router.post("/api/app-users/{user_id}/membership")

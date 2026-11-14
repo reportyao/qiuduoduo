@@ -1,7 +1,10 @@
 """管理后台 v4：用户手动开通、AI 计划、OPC、引擎配置。"""
 from __future__ import annotations
 
-from app.models import User
+from app.models import AnalysisQuota, OpsJob, User
+from app.modules.membership import expire_all
+from app.modules.plan_service import settle_open_cycles
+from app.modules.timeutil import trade_date_now
 from tests.conftest import admin_login
 
 
@@ -74,3 +77,55 @@ def test_admin_plans_endpoint(client):
     response = client.get("/admin/api/plans?risk=stable&limit=5")
     assert response.status_code == 200
     assert "plans" in response.json()
+
+
+def test_ops_v4_job_summary(client, db):
+    """OPC：/api/ops-v4 返回按 job_key 聚合的健康汇总。"""
+    import datetime as dt
+    db.add(OpsJob(job_key="settle_pending", status="ok",
+                  started_at=dt.datetime(2026, 11, 14, 6, 0)))
+    db.commit()
+    admin_login(client)
+    payload = client.get("/admin/api/ops-v4?limit=80")
+    assert payload.status_code == 200
+    body = payload.json()
+    assert isinstance(body.get("summary"), list)
+    row = next(x for x in body["summary"] if x["job_key"] == "settle_pending")
+    assert row["runs"] >= 1
+    assert row["errors"] == 0
+    assert row["last_status"] == "ok"
+
+
+def test_ops_producers_write_jobs(db):
+    """OPC 生产者：settle_open_cycles 与 membership.expire_all 必须写 ops_jobs。"""
+    before = {j.job_key for j in db.query(OpsJob).all()}
+    assert settle_open_cycles(db) == 0
+    assert expire_all(db) == 0
+    after = {j.job_key for j in db.query(OpsJob).all()}
+    assert "settle_open_cycles" in after
+    assert "membership_expire" in after
+    fresh = [j for j in db.query(OpsJob).all()
+             if j.job_key in ("settle_open_cycles", "membership_expire")
+             and j.job_key not in before]
+    assert all(j.status == "ok" for j in fresh)
+
+
+def test_admin_app_users_compliance_quota(client, db):
+    """app-users 与前端能力对齐：合规/保护/今日额度字段。"""
+    user = User(id="u-opc-compliance", device_token="dev-opc-compliance",
+                display_name="合规巡检", age_verified=False,
+                under18_locked=False, discipline_on=False,
+                rested_until="2026-11-20")
+    db.add(user)
+    db.add(AnalysisQuota(user_id=user.id, trade_date=trade_date_now(),
+                         limit_count=3, used=2))
+    db.commit()
+    admin_login(client)
+    listed = client.get("/admin/api/app-users?query=u-opc-compliance")
+    assert listed.status_code == 200
+    row = next(x for x in listed.json()["users"] if x["user_id"] == user.id)
+    assert row["age_verified"] is False
+    assert row["discipline_on"] is False
+    assert row["rested_until"] == "2026-11-20"
+    assert row["quota"]["used"] == 2
+    assert row["quota"]["limit"] == 3

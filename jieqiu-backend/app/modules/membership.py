@@ -70,22 +70,33 @@ def membership_payload(db: Session, user_id: str | None) -> dict:
 
 
 def expire_all(db: Session) -> int:
-    now = utcnow()
-    rows = list(db.scalars(select(UserMembership).where(
-        UserMembership.status == "active",
-        UserMembership.expires_at <= now,
-    )).all())
-    for row in rows:
-        row.status = "expired"
-        db.add(MembershipEvent(
-            user_id=row.user_id, action="expire", tier=row.tier,
-            before_json={"status": "active", "expires_at": row.expires_at.isoformat()},
-            after_json={"status": "expired"}, actor="system",
-            note="到期自动失效",
-        ))
-    if rows:
-        db.commit()
-    return len(rows)
+    """到期会员批量失效；seed/cron 调用。OPC：失败记 jobs + exception。"""
+    from . import ops
+    job_id = ops.job_start(db, "membership_expire")
+    try:
+        now = utcnow()
+        rows = list(db.scalars(select(UserMembership).where(
+            UserMembership.status == "active",
+            UserMembership.expires_at <= now,
+        )).all())
+        for row in rows:
+            row.status = "expired"
+            db.add(MembershipEvent(
+                user_id=row.user_id, action="expire", tier=row.tier,
+                before_json={"status": "active", "expires_at": row.expires_at.isoformat()},
+                after_json={"status": "expired"}, actor="system",
+                note="到期自动失效",
+            ))
+        if rows:
+            db.commit()
+        ops.job_finish(db, job_id, "ok")
+        return len(rows)
+    except Exception as exc:
+        db.rollback()
+        ops.job_finish(db, job_id, "error", f"{type(exc).__name__}: {exc}")
+        ops.exception(db, "membership_expire_error", str(exc), severity=3,
+                      source="membership_expire", dedupe_key="membership_expire_error")
+        return 0
 
 
 def grant(db: Session, user_id: str, tier: str, days: int,

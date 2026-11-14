@@ -304,14 +304,28 @@ def settle_cycle(db: Session, cycle: PlanCycle) -> bool:
 
 
 def settle_open_cycles(db: Session) -> int:
-    """结算所有已发布但未完成的计划；由赛果同步/seed/后台调用。"""
-    cycles = list(db.scalars(select(PlanCycle).where(
-        PlanCycle.status == "published")).all())
-    n = 0
-    for cycle in cycles:
-        if settle_cycle(db, cycle):
-            n += 1
-    return n
+    """结算所有已发布但未完成的计划；由赛果同步/seed/后台调用。
+
+    OPC：与 settle_pending 同模式——job 失败记 ops_jobs + ops_exception 后
+    吞掉异常返回 0，不让调度链（seed/cron）被单次结算失败拖死。
+    """
+    from . import ops
+    job_id = ops.job_start(db, "settle_open_cycles")
+    try:
+        cycles = list(db.scalars(select(PlanCycle).where(
+            PlanCycle.status == "published")).all())
+        n = 0
+        for cycle in cycles:
+            if settle_cycle(db, cycle):
+                n += 1
+        ops.job_finish(db, job_id, "ok")
+        return n
+    except Exception as exc:
+        db.rollback()
+        ops.job_finish(db, job_id, "error", f"{type(exc).__name__}: {exc}")
+        ops.exception(db, "settle_open_cycles_error", str(exc), severity=3,
+                      source="settle_open_cycles", dedupe_key="settle_open_cycles_error")
+        return 0
 
 
 def _leg_payload(db: Session, leg: PlanBetLeg) -> dict:

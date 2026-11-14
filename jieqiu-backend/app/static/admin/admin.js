@@ -1346,10 +1346,20 @@ function filteredAppUsers() {
   });
 }
 
+function appUserCompliance(user) {
+  const flags = [];
+  if (user.under18_locked) flags.push('<b style="color:var(--danger,#c0392b)">未成年锁定</b>');
+  if (user.self_exclusion_until) flags.push(`自排除至 ${esc(String(user.self_exclusion_until).slice(0, 10))}`);
+  if (!user.age_verified) flags.push('未过年龄门');
+  if (user.discipline_on === false) flags.push('保护已关');
+  if (user.rested_until) flags.push(`休息至 ${esc(String(user.rested_until).slice(0, 10))}`);
+  return flags.length ? flags.join('<br>') : '<span class="card-sub">正常</span>';
+}
+
 function appUsersRows() {
   const rows = filteredAppUsers();
   if (!rows.length) {
-    return `<tr><td colspan="5"><div class="empty">没有匹配的用户</div></td></tr>`;
+    return `<tr><td colspan="6"><div class="empty">没有匹配的用户</div></td></tr>`;
   }
   return rows.map(user => {
     const member = user.membership || {};
@@ -1363,11 +1373,14 @@ function appUsersRows() {
       const current = tier === target;
       return `<button class="btn ${current ? "ghost" : "secondary"}" data-grant-user="${esc(user.user_id)}" data-grant-tier="${target}" data-grant-name="${esc(label)}" ${current ? "disabled" : ""}>${current ? `当前 ${text}` : `${active ? "改为" : "开通"} ${text} 30 天`}</button>`;
     };
+    const quota = user.quota;
+    const quotaText = quota ? `${quota.used}/${quota.limit || "∞"}` : "0/默认";
     return `<tr>
       <td><b>${name}</b><div class="card-sub mono">${esc(user.user_id)}</div><div class="card-sub">${esc(user.phone || user.email || "设备账户")}</div></td>
       <td class="mono">${fmtTime(user.created_at)}</td>
       <td>${appUserTierPill(tier)}${source ? `<div class="card-sub">${source}</div>` : ""}</td>
       <td class="mono">${active ? fmtTime(member.expires_at) : "—"}</td>
+      <td>${appUserCompliance(user)}${quota ? `<div class="card-sub">今日额度 ${quotaText}</div>` : ""}</td>
       <td>${canAdmin() ? `<div class="member-actions">${tierButton("pro", "Pro")}${tierButton("max", "Max")}${active ? `<button class="btn ghost" data-revoke-user="${esc(user.user_id)}" data-revoke-name="${esc(label)}">撤销</button>` : ""}</div>` : '<span class="card-sub">只读</span>'}</td>
     </tr>`;
   }).join("");
@@ -1397,7 +1410,7 @@ function renderAppUsersTable() {
   const table = el("#app-users-table");
   if (!table) return;
   const visible = filteredAppUsers().length;
-  table.innerHTML = `<div class="table-wrap"><table><thead><tr><th>用户</th><th>注册</th><th>会员</th><th>到期</th><th>操作</th></tr></thead><tbody>${appUsersRows()}</tbody></table></div>`;
+  table.innerHTML = `<div class="table-wrap"><table><thead><tr><th>用户</th><th>注册</th><th>会员</th><th>到期</th><th>合规/额度</th><th>操作</th></tr></thead><tbody>${appUsersRows()}</tbody></table></div>`;
   const count = el("#app-users-count");
   if (count) count.textContent = `${visible} / ${appUsersCache.length} 位用户`;
   bindAppUserActions();
@@ -1465,6 +1478,9 @@ async function loadOpsV4() {
       ${(data.exceptions || []).map(ex => `<tr><td><span class="severity ${Number(ex.severity) >= 3 ? "high" : Number(ex.severity) === 2 ? "mid" : ""}">${ex.severity}</span></td><td>${esc(ex.type)}</td><td>${esc(ex.message)}</td><td>${statusPill(ex.status)}</td><td class="mono">${fmtTime(ex.created_at)}</td><td>${canOperate() ? `<button class="btn secondary" data-resolve-exception="${ex.id}">标记处理</button>` : ""}</td></tr>`).join("") || '<tr><td colspan="6">没有未处理异常</td></tr>'}
       </tbody></table></div>
     </div>
+    <div class="card" style="margin-top:16px"><div class="toolbar"><div><h2 style="margin:0">任务健康汇总</h2><div class="card-sub">按任务聚合最近 200 次运行；errors>0 或最近失败的任务优先排查</div></div></div><div class="table-wrap"><table><thead><tr><th>任务</th><th>最近状态</th><th>最近开始</th><th class="num">最近耗时</th><th class="num">运行/失败</th><th>最近错误</th></tr></thead><tbody>
+      ${(data.summary || []).map(row => `<tr><td><span class="mono">${esc(row.job_key)}</span></td><td>${statusPill(row.last_status)}</td><td class="mono">${fmtTime(row.last_started_at)}</td><td class="num">${row.last_duration_ms == null ? "—" : row.last_duration_ms + "ms"}</td><td class="num">${row.runs} / ${Number(row.errors) > 0 ? `<b style="color:var(--danger,#c0392b)">${row.errors}</b>` : "0"}</td><td class="card-sub">${esc(row.last_error || "")}</td></tr>`).join("") || '<tr><td colspan="6">还没有任务运行记录</td></tr>'}
+    </tbody></table></div></div>
     <div class="card" style="margin-top:16px"><div class="toolbar"><div><h2 style="margin:0">最近任务</h2><div class="card-sub">ops_jobs 最近 80 条</div></div></div><div class="table-wrap"><table><thead><tr><th>任务</th><th>状态</th><th>开始</th><th class="num">耗时</th><th>错误</th></tr></thead><tbody>
       ${(data.jobs || []).map(job => `<tr><td><span class="mono">${esc(job.job_key)}</span></td><td>${statusPill(job.status)}</td><td class="mono">${fmtTime(job.started_at)}</td><td class="num">${job.duration_ms == null ? "—" : job.duration_ms + "ms"}</td><td class="card-sub">${esc(job.error || "")}</td></tr>`).join("") || '<tr><td colspan="5">暂无任务</td></tr>'}
     </tbody></table></div></div>

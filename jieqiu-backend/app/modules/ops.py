@@ -74,10 +74,12 @@ def exception(db: Session, type_: str, message: str, *,
 def list_ops(db: Session, limit: int = 50) -> dict:
     jobs = list(db.scalars(select(OpsJob).order_by(
         OpsJob.started_at.desc()).limit(limit)).all())
+    summary = _job_summary(db)
     excs = list(db.scalars(select(OpsException).where(
         OpsException.status != "resolved").order_by(
         OpsException.severity.desc(), OpsException.created_at.desc()).limit(limit)).all())
     return {
+        "summary": summary,
         "jobs": [{
             "id": j.id, "job_key": j.job_key, "status": j.status,
             "started_at": j.started_at.isoformat() if j.started_at else None,
@@ -91,6 +93,28 @@ def list_ops(db: Session, limit: int = 50) -> dict:
             "created_at": e.created_at.isoformat() if e.created_at else None,
         } for e in excs],
     }
+
+
+def _job_summary(db: Session, window: int = 200) -> list[dict]:
+    """按 job_key 聚合最近 window 条：运营一眼看出每个任务是否健康。"""
+    rows = list(db.scalars(select(OpsJob).order_by(
+        OpsJob.started_at.desc()).limit(window)).all())
+    agg: dict[str, dict] = {}
+    for j in rows:
+        s = agg.setdefault(j.job_key, {
+            "runs": 0, "errors": 0, "last_status": "",
+            "last_started_at": None, "last_duration_ms": None, "last_error": "",
+        })
+        s["runs"] += 1
+        if j.status == "error":
+            s["errors"] += 1
+        if s["last_started_at"] is None:
+            s["last_status"] = j.status
+            s["last_started_at"] = j.started_at.isoformat() if j.started_at else None
+            s["last_duration_ms"] = j.duration_ms
+            s["last_error"] = j.error or ""
+    return [{"job_key": key, **v} for key, v in sorted(
+        agg.items(), key=lambda kv: kv[1]["last_started_at"] or "", reverse=True)]
 
 
 def resolve_exception(db: Session, exception_id: int, status: str = "resolved") -> bool:

@@ -32,6 +32,8 @@ def main() -> int:
 
     init_db()
     db = SessionLocal()
+    from .modules import ops
+    seed_job = ops.job_start(db, "seed_daily")
     try:
         # 修订日期回填（W6 深审查：trade_date 冗余列一次性补齐）
         from .modules.sealchain import backfill_revision_dates
@@ -119,7 +121,14 @@ def main() -> int:
         print(f"[membership] 到期 {n_expired} · [performance] {n_perf} 天")
         print(f"[plans] 新建 {len(cycles)} 期 " + ", ".join(
             f"{c.risk_level}#{c.cycle_no}" for c in cycles) if cycles else "[plans] 今日已有计划")
+        ops.job_finish(db, seed_job, "ok")
         return 0
+    except Exception as exc:
+        db.rollback()
+        ops.job_finish(db, seed_job, "error", f"{type(exc).__name__}: {exc}")
+        ops.exception(db, "seed_error", str(exc), severity=3,
+                      source="seed_daily", dedupe_key="seed_error")
+        raise
     finally:
         db.close()
 
