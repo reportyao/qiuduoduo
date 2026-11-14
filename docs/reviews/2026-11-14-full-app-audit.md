@@ -17,6 +17,22 @@
 
 **验证**：typecheck + lint 全绿；前端 64 tests、后端 364 tests 全过；Android Hermes bundle 3.61MB 出包成功；H5 已部署生产（200）。APK 由 tag `apk-20261114-ux5` 构建（netinfo 为新增原生依赖，JS-only 推送不覆盖）。
 
+### 复核整改（同日第二轮 review，commit `4860234`，tag `apk-20261114-ux6`）
+
+首轮交付后的复查抓出 8 处问题，全部修复：
+
+| # | 问题 | 修复 |
+|---|---|---|
+| 1 | netinfo 装了 `^12.0.1`，Expo bundledNativeModules 期望 `11.4.1`，Gradle 能过但运行时兼容无保证 | 降级对齐 11.4.1 |
+| 2 | Chip solid 选中态白字踩 `colors.green`（暗色 1.9:1） | 改 `onGreen` |
+| 3 | Button danger 白字踩暗色亮 danger（3.0:1）；danger 同时承担文字色与实心底两种语义 | 新增 `dangerSolid`/暗色 `dangerPressed`=#8A4638，实心底与文字色分离 |
+| 4 | `android_ripple` 固定 whiteSoft 在浅底按钮不可见；`foreground:true` 圆角不裁 | ripple 按 PALETTE 分变体（浅底 `inkOverlay8`），去 foreground + `overflow:hidden` |
+| 5-6 | 用户气泡/发送键/FAB 白字踩绿底（ChatComposer×2、assistant×2、index×1） | 全部改 `onGreen` |
+| 7 | 串关选中赔率白字踩绿底 | 改 `onGreen` |
+| 8 | TanStack onlineManager 在 RN 上拿不到真实网络状态（navigator.onLine 恒 true），mutation 的 pause/resume 语义失效 | offlineStore 驱动 `onlineManager.setOnline`；恢复联网时 `resumePausedMutations()` |
+
+复核后验证：typecheck/lint/64 tests 全绿，Android bundle 出包成功，H5 全量替换部署（旧哈希产物一并清除）并回验线上 entry 为新哈希。修复后对比度：badge 5.18、danger 按钮暗色 5.18/按下 6.97、onGreen 7+。
+
 **暗色模式边界说明**：app.json 的原生 SplashScreen 仍是浅色（启动瞬间），深色启动图需后续 native 配置；`Appearance.addChangeListener` 的运行中热切换因全站模块级 StyleSheet 缓存而不做，属已知取舍。
 
 ---
