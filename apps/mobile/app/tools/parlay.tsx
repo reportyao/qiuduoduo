@@ -362,10 +362,10 @@ export default function ParlayToolScreen() {
                           pressed && styles.pressed,
                         ]}
                       >
-                        <Text variant="caption" color={selected ? colors.white : colors.muted}>
+                        <Text variant="caption" color={selected ? colors.onGreen : colors.muted}>
                           {match.pool === "hhad" ? "让球" : ""}{DIR_LABEL[dir]}
                         </Text>
-                        <Text variant="bodyStrong" color={selected ? colors.white : colors.ink}>
+                        <Text variant="bodyStrong" color={selected ? colors.onGreen : colors.ink}>
                           {decimalToFormat(match.sp[DIR_KEY[dir]], oddsFormat)}
                         </Text>
                       </Pressable>

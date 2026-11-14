@@ -26,7 +26,8 @@ const TONES: Record<ChipTone, { bg: string; fg: string; border: string }> = {
 export function Chip({ label, tone = "neutral", selected = false, selectedStyle = "solid", onPress, dot = false, style }: ChipProps) {
   const palette = TONES[tone];
   const selectedBg = selectedStyle === "soft" ? colors.greenSoft : colors.green;
-  const selectedFg = selectedStyle === "soft" ? colors.green : colors.white;
+  // solid 选中态同 Button primary：暗色下绿底变亮，白字改深字保证对比。
+  const selectedFg = selectedStyle === "soft" ? colors.green : colors.onGreen;
   const body = (
     <View
       style={[

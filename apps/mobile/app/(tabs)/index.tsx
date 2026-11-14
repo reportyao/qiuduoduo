@@ -712,7 +712,7 @@ export default function HomeScreen() {
                     return (
                       <View key={message.id} style={styles.userRow}>
                         <View style={styles.userBubble}>
-                          <Text variant="small" color={colors.white}>{message.text}</Text>
+                          <Text variant="small" color={colors.onGreen}>{message.text}</Text>
                         </View>
                       </View>
                     );

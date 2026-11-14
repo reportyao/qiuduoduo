@@ -17,11 +17,12 @@ export function OfflineBanner() {
   const reconnectCount = useOfflineStore((s) => s.reconnectCount);
   const lastHandled = useRef(0);
 
-  // 恢复联网：补拉一次全部查询（离线期间页面显示的是缓存）。
+  // 恢复联网：补拉一次全部查询 + 续跑离线期间被暂停的 mutation。
   useEffect(() => {
     if (isOnline !== true || reconnectCount === 0 || reconnectCount === lastHandled.current) return;
     lastHandled.current = reconnectCount;
     void queryClient.invalidateQueries();
+    void queryClient.resumePausedMutations();
   }, [isOnline, queryClient, reconnectCount]);
 
   if (isOnline !== false) return null;

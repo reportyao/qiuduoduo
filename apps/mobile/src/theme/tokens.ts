@@ -32,6 +32,7 @@ const lightColors = {
   onGreen: "#FFFFFF",
 
   danger: "#A8443A",
+  dangerSolid: "#A8443A",
   dangerPressed: "#8F352D",
   dangerSoft: "#F7E9E6",
   dangerAccent: "#F2B8AE",
@@ -49,6 +50,7 @@ const lightColors = {
   white: "#FFFFFF",
   black: "#000000",
   overlay: "rgba(8, 18, 13, 0.46)",
+  inkOverlay8: "rgba(23,34,28,0.08)",
   whiteSoft: "rgba(255,255,255,0.08)",
   whiteOverlay10: "rgba(255,255,255,0.10)",
   whiteOverlay12: "rgba(255,255,255,0.12)",
@@ -86,7 +88,8 @@ const darkColors: Record<keyof typeof lightColors, string> = {
   onGreen: "#06231A",
 
   danger: "#D97C6F",
-  dangerPressed: "#A85546",
+  dangerSolid: "#A85546",
+  dangerPressed: "#8A4638",
   dangerSoft: "#2E1B18",
   dangerAccent: "#F2B8AE",
   dangerAccentLight: "#FFD3CC",
@@ -103,6 +106,7 @@ const darkColors: Record<keyof typeof lightColors, string> = {
   white: "#FFFFFF",
   black: "#000000",
   overlay: "rgba(0, 0, 0, 0.60)",
+  inkOverlay8: "rgba(255,255,255,0.10)",
   whiteSoft: "rgba(255,255,255,0.08)",
   whiteOverlay10: "rgba(255,255,255,0.10)",
   whiteOverlay12: "rgba(255,255,255,0.12)",

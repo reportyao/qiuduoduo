@@ -125,8 +125,8 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     paddingHorizontal: 4,
-    // 用深一档的 dangerPressed：白字徽标在暗色 danger（变亮）上对比不足。
-    backgroundColor: colors.dangerPressed,
+    // 用实心底专用 token：暗色 danger 是文字色语义（变亮），白字徽标对比不足。
+    backgroundColor: colors.dangerSolid,
     alignItems: "center",
     justifyContent: "center",
   },

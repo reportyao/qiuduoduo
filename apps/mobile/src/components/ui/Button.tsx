@@ -37,30 +37,34 @@ interface ButtonProps {
 
 const PALETTE: Record<
   ButtonVariant,
-  { bg: string; pressed: string; fg: string; border: string }
+  { bg: string; pressed: string; fg: string; border: string; ripple: string }
 > = {
-  primary: { bg: colors.green, pressed: colors.greenPressed, fg: colors.onGreen, border: colors.green },
+  primary: { bg: colors.green, pressed: colors.greenPressed, fg: colors.onGreen, border: colors.green, ripple: colors.whiteSoft },
   secondary: {
     bg: colors.surface,
     pressed: colors.bgElevated,
     fg: colors.ink,
     border: colors.lineStrong,
+    ripple: colors.inkOverlay8,
   },
-  ghost: { bg: "transparent", pressed: colors.greenSoft, fg: colors.green, border: "transparent" },
-  danger: { bg: colors.danger, pressed: colors.dangerPressed, fg: colors.white, border: colors.danger },
-  dangerGhost: { bg: "transparent", pressed: colors.dangerSoft, fg: colors.danger, border: "transparent" },
-  light: { bg: colors.greenSoft, pressed: colors.greenSoftStrong, fg: colors.green, border: colors.greenSoft },
+  ghost: { bg: "transparent", pressed: colors.greenSoft, fg: colors.green, border: "transparent", ripple: colors.inkOverlay8 },
+  // danger 实心底不用 colors.danger：暗色下它变亮（文字色语义），白字对比不足。
+  danger: { bg: colors.dangerSolid, pressed: colors.dangerPressed, fg: colors.white, border: colors.dangerSolid, ripple: colors.whiteSoft },
+  dangerGhost: { bg: "transparent", pressed: colors.dangerSoft, fg: colors.danger, border: "transparent", ripple: colors.inkOverlay8 },
+  light: { bg: colors.greenSoft, pressed: colors.greenSoftStrong, fg: colors.green, border: colors.greenSoft, ripple: colors.inkOverlay8 },
   darkPrimary: {
     bg: colors.greenAccent,
     pressed: colors.greenHighlight,
     fg: colors.greenDark,
     border: colors.greenAccent,
+    ripple: colors.inkOverlay8,
   },
   darkGhost: {
     bg: "transparent",
     pressed: colors.whiteSoft,
     fg: colors.inkInverse,
     border: colors.whiteLine,
+    ripple: colors.whiteSoft,
   },
 };
 
@@ -89,7 +93,7 @@ export function Button({
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       onPress={isDisabled ? undefined : onPress}
       hitSlop={size === "sm" ? 8 : 4}
-      android_ripple={{ color: colors.whiteSoft, borderless: false, foreground: true }}
+      android_ripple={{ color: palette.ripple, borderless: false }}
       style={({ pressed }) => [
         styles.base,
         {
@@ -131,6 +135,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     alignItems: "center",
     justifyContent: "center",
+    // ripple 被圆角裁剪必需；Button 无阴影，overflow 不影响其他效果。
+    overflow: "hidden",
   },
   fullWidth: { alignSelf: "stretch" },
   small: { paddingHorizontal: spacing.base, borderRadius: radii.sm },

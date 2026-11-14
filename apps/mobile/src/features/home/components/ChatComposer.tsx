@@ -44,7 +44,7 @@ export function ChatComposer({
           accessibilityLabel="展开助理输入框"
           style={({ pressed }) => [styles.fab, pressed && styles.pressed]}
         >
-          <Icon name="chatbubble-ellipses" size={24} color={colors.white} />
+          <Icon name="chatbubble-ellipses" size={24} color={colors.onGreen} />
           <View style={styles.fabDot} />
         </Pressable>
       </View>
@@ -90,7 +90,7 @@ export function ChatComposer({
             { opacity: disabled ? 0.35 : pressed ? 0.8 : 1 },
           ]}
         >
-          <Icon name="arrow-up" size={18} color={colors.white} />
+          <Icon name="arrow-up" size={18} color={colors.onGreen} />
         </Pressable>
       </View>
       {sending ? (

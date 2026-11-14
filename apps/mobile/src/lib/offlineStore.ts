@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { onlineManager } from "@tanstack/react-query";
 import NetInfo, { type NetInfoState } from "@react-native-community/netinfo";
 
 /**
@@ -22,6 +23,9 @@ let unsubscribed = false;
 function handle(state: NetInfoState) {
   // isInternetReachable 为 null（探测中）时按可达处理，避免误报离线。
   const online = Boolean(state.isConnected) && state.isInternetReachable !== false;
+  // TanStack 默认 onlineManager 在 RN 上拿不到真实网络状态（navigator.onLine 恒 true），
+  // 用 NetInfo 驱动它：离线时 mutation 走正常的 pause 语义，恢复时自动续跑。
+  onlineManager.setOnline(online);
   const prev = useOfflineStore.getState().isOnline;
   useOfflineStore.setState((s) => ({
     isOnline: online,

@@ -125,7 +125,7 @@ export default function AssistantScreen() {
             message.role === "user" ? (
               <View key={message.id} style={styles.userRow}>
                 <View style={styles.userBubble}>
-                  <Text variant="small" color={colors.white}>{message.text}</Text>
+                  <Text variant="small" color={colors.onGreen}>{message.text}</Text>
                 </View>
               </View>
             ) : (
@@ -196,7 +196,7 @@ export default function AssistantScreen() {
               { opacity: !input.trim() || chat.isPending ? 0.4 : pressed ? 0.8 : 1 },
             ]}
           >
-            <Icon name="arrow-up" size={19} color={colors.white} />
+            <Icon name="arrow-up" size={19} color={colors.onGreen} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>

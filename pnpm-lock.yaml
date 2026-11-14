@@ -26,8 +26,8 @@ importers:
         specifier: 1.23.1
         version: 1.23.1(react-native@0.76.9(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.3.1))
       '@react-native-community/netinfo':
-        specifier: ^12.0.1
-        version: 12.0.1(react-native@0.76.9(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.3.1))(react@18.3.1)
+        specifier: ^11.4.1
+        version: 11.4.1(react-native@0.76.9(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.3.1))
       '@tanstack/react-query':
         specifier: ^5.62.0
         version: 5.105.3(@types/react@18.3.31)(react@18.3.1)
@@ -1228,10 +1228,9 @@ packages:
     peerDependencies:
       react-native: ^0.0.0-0 || >=0.60 <1.0
 
-  '@react-native-community/netinfo@12.0.1':
-    resolution: {integrity: sha512-P/3caXIvfYSJG8AWJVefukg+ZGRPs+M4Lp3pNJtgcTYoJxCjWrKQGNnCkj/Cz//zWa/avGed0i/wzm0T8vV2IQ==}
+  '@react-native-community/netinfo@11.4.1':
+    resolution: {integrity: sha512-B0BYAkghz3Q2V09BF88RA601XursIEA111tnc2JOaN7axJWmNefmfjZqw/KdSxKZp7CZUuPpjBmz/WCR9uaHYg==}
     peerDependencies:
-      react: '*'
       react-native: '>=0.59'
 
   '@react-native/assets-registry@0.76.9':
@@ -6644,9 +6643,8 @@ snapshots:
       merge-options: 3.0.4
       react-native: 0.76.9(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.3.1)
 
-  '@react-native-community/netinfo@12.0.1(react-native@0.76.9(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.3.1))(react@18.3.1)':
+  '@react-native-community/netinfo@11.4.1(react-native@0.76.9(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.3.1))':
     dependencies:
-      react: 18.3.1
       react-native: 0.76.9(@babel/core@7.29.7)(@babel/preset-env@7.29.7(@babel/core@7.29.7))(@types/react@18.3.31)(react@18.3.1)
 
   '@react-native/assets-registry@0.76.9': {}
