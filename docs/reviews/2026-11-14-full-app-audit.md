@@ -519,3 +519,35 @@ just mobile-web-export
 # 部署
 just h5-publish
 ```
+
+---
+
+## 七、色彩语义全面改版（同日追加需求，`dfea7dc`/`c018dec`）
+
+**需求来源**：用户反馈绿色在彩民语境里代表"没中/贬值"，寓意不好，要求全面改版。最终语义按用户拍板：**黑色是不中，红色是中**（麻将"红中"心智）。
+
+### 新语义表（light + dark 同名 token 全覆盖）
+
+| 语义 | 旧 | 新 |
+|---|---|---|
+| 品牌/主按钮/链接/激活/命中/通过/盈利 | 墨绿（暗色亮绿） | **朱砂红** `#B0362B`（暗色珊瑚红 `#F0876B`），hero 深红黑渐变 + 金 accent |
+| 不中/回避/亏损/砍错/连败/高风险/未通过 | 红 | **黑**（浅色近黑 `#26231F`；暗色灰化 `#A39B90`，"手气黑了"） |
+| 删除/退出/表单错误/系统错误/未读徽标 | 红 | 红保留（破坏性与品牌同族，京东/淘宝模式，场景隔离） |
+| 等数据/走水/离线/会员金 | 琥珀 | 琥珀金保留 |
+| 暗色底 | 绿黑 `#0D1A12` | 暖炭 `#171210`（去绿） |
+| success toast | 绿 | 红底白字（红中喜报）；error toast 黑底 |
+
+### 实现要点
+
+- token 重命名：`green*→brand*`（73 文件机械替换）、`onGreen→onBrand`、新增 `loss` 黑色族；`danger` 红族保留给破坏性/错误
+- tone key：`green→positive`、`danger→negative`（Chip/Card/Controls/ToolLayout/ParlayReport/labels + 全部调用点）
+- 业务负向 danger 站点逐个分流到 loss（~30 处：rateColor 低命中、Gates 未通过、回避、pnl<0、砍错/连败、串关高风险、抽水成本等）
+- AI 在线点 → 金（红点会像通知徽标）
+- 新增 H5 `?theme=light|dark` 强制主题参数（web 预览用，App 跟随系统）
+
+### 验证
+
+- 对比度脚本 32 组关键对全部 ≥4.5（暗色实心红白字 5.17）；红/黑明度差大 + 命中/未中全部配文字图标，色弱可用（color-not-only）
+- typecheck/lint/64 前端 tests/后端 366 tests 全绿；Android Hermes bundle 出包成功
+- 浏览器实测：浅色（暖纸白+朱砂红）与深色（暖炭+珊瑚红）各三屏（首页/比赛·预测战绩/计划），红中黑不中语义一致；复查抓出并修复 SegmentedTabs/ProbabilityCompare 误用 `brandDeep` 两处
+- H5 合并式部署（线上 entry `da90cb83`）；APK `apk-20261114-redblack2` 构建成功

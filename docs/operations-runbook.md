@@ -1,6 +1,6 @@
 # 运维 Runbook（当前实现）
 
-最后更新：2026-11-13。适用于当前过渡期 `jieqiu-backend/` + 单台腾讯云 VPS；目标数据库是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，见 ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。
+最后更新：2026-11-14。适用于当前过渡期 `jieqiu-backend/` + 单台腾讯云 VPS；目标数据库是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，见 ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。
 
 > **v4.1 部署状态**：2026-11-12 11:38 CST 已用 `deploy.py` 部署到 `43.128.24.244`，`systemctl is-active jieqiu-backend` = active，`/health` 200，OpenAPI 158/174，管理后台静态资源 `v=20261112e`；生产仍为 SQLite（`/home/ubuntu/jieqiu-data/jieqiu.db`，约 40M）。部署前备份：`/home/ubuntu/backups/jieqiu-backend-20261112-113522.tar.gz`（代码）与 `jieqiu-20261112-113522.db`（库）。回滚：停服务 → 解压代码备份到 `/home/ubuntu/jieqiu-backend` → 用 `sqlite3` 的 `.backup` 恢复库（或先保留现库为 `.bak`）→ `systemctl start jieqiu-backend`。v4 新增计划/会员/结算/OPC 表已在生产 SQLite 建表；后续观察 `settle_pending`、`settle_open_cycles`、会员到期 job 与 seed 是否正常写 `ops_jobs/ops_exceptions`。
 >
@@ -9,6 +9,10 @@
 > **2026-11-12 17:00 CST 情报层部署**：生产应用 Alembic `20261112_24`，新增 `sportmonks_fixture_intel/predictions/markets`；6/6 场已同步 11 人首发、阵型、教练、裁判、伤停、积分榜、H2H、天气/场地和 25 维预测。聚焦覆盖从 55 提升到 100（价格新鲜时），`deep_eligible=true`；AIResearch 已包含阵容/伤停/积分榜/环境。部署前库备份 `/home/ubuntu/backups/jieqiu-20261112-162055-pre-sm-intel.db`。回滚：停服务 → `alembic downgrade 20261112_23` → 恢复上述库/旧代码 → 启动。
 >
 > **2026-11-13 13:11 CST 比赛中心部署**：生产应用 Alembic `20261113_26`，新增 `sp_pool_snapshots / sportmonks_live_state / sportmonks_prediction_snapshots / sportmonks_prediction_settlements / match_result_details`；管理后台静态资源 `v=20261113a`。首次 `freeze` 生成 12 场赛前快照（4 场锁定），`enrich` 补齐 6 场 actuals，`settle` 写入 4 场 × 26 项对照；`/matches/live`、`/matches/results`、`/predictions/history` 均返回 200。部署前备份：`/home/ubuntu/backups/jieqiu-backend-20261113-131018.tar.gz`（代码）与 `jieqiu-20261113-131018-pre-match-board.db`（库，46M）。回滚：停服务 → `alembic downgrade 20261112_24` → 解压代码备份 → 用 Python `sqlite3` 的 `.backup` 恢复库 → 启动。
+
+> **2026-11-14 H5 白屏事故与修复（无数据库变更，后端代码已上生产）**：当日两次 H5 部署误用 `rm -rf` 全删服务器 h5 目录再拷最新，叠加两个既有隐患造成缓存用户白屏：① 浏览器缓存的旧 index.html 仍引用被删除的旧 entry JS；② `/h5/{path}` 路由把不存在的资源也回退成 index.html（200 + text/html），浏览器把 HTML 当 ES 模块加载因 MIME 校验失败直接白屏。**修复（`c3f7e31`/`56a01bf`/`c018dec`，已部署）**：`/h5/*` 对缺失 js/css/字体等资源返回真 404；`_expo/`、`assets/` 哈希产物 `Cache-Control: immutable` 长缓存；index.html 保持 no-cache；服务器恢复 6 代 entry 宽限缓存用户（`da90cb83` 最新 + 5 代回退）；`deploy.py` 打包跳过 `app/static/h5`、部署时滚动保留 `h5_prev/h5_prev2` 合回。后端为 scp 单文件 `app/main.py` + `systemctl restart`（非全量 deploy），重启后 `/health`、`/matches/live`、`/admin`、`/h5/` 全 200，journalctl 无 error；后端全量 **366 tests** 通过。管理后台本日未改动（静态资源 `v=20261113b`）。
+>
+> **H5 发布纪律（长期有效）**：① 只做合并式发布（`just h5-publish` 或 scp 覆盖），**严禁在服务器 `rm -rf` h5 目录**——旧 entry 是缓存用户的回退路径；② 手动 `expo export` 必须带完整 `EXPO_PUBLIC_API_BASE_URL/APP_ENV/ALLOW_HTTP` 前缀（漏带会让 env 校验 fail-closed 在启动时抛错 → H5 黑屏，2026-11-14 实际发生过，靠浏览器捕获 unhandledrejection 定位）；③ 验证方式：`curl /h5/` 取 entry 哈希应等于本地 `index.html` 引用，`curl 旧entry` 应 200 + javascript MIME，`curl 不存在.js` 应 404。
 
 ## 1. 进程与目录
 
