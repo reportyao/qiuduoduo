@@ -133,7 +133,13 @@ export default function MatchesScreen() {
           ) : (
             <View style={styles.list}>
               {resultItems.map((item) => (
-                <ResultMatchCard key={item.match_id} match={item} />
+                <ResultMatchCard
+                  key={item.match_id}
+                  match={item}
+                  onPress={() =>
+                    router.push(`/predictions/${item.match_id}` as Href)
+                  }
+                />
               ))}
             </View>
           )

@@ -51,10 +51,21 @@ export function LiveMatchCard({
 }
 
 /** 赛果行：FT90 口径，加时/点球单独标注。 */
-export function ResultMatchCard({ match }: { match: ResultMatch }) {
+export function ResultMatchCard({
+  match,
+  onPress,
+}: {
+  match: ResultMatch;
+  onPress: () => void;
+}) {
   const hasHalf = match.ht_home != null && match.ht_away != null;
   return (
-    <View style={styles.card}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${match.home} 对 ${match.away}，${scoreStatusLabel(match.status)}，比分 ${scoreText(match.score_home)} 比 ${scoreText(match.score_away)}，点击查看逐维复盘`}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+    >
       <View style={styles.statusCol}>
         <Text variant="captionStrong" color={colors.brand}>
           {scoreStatusLabel(match.status)}
@@ -72,7 +83,7 @@ export function ResultMatchCard({ match }: { match: ResultMatch }) {
           </Text>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
