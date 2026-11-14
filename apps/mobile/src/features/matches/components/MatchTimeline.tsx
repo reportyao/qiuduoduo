@@ -33,6 +33,11 @@ export function MatchTimeline({
       ),
     [postmatch],
   );
+  // 数据源事件覆盖不全（低档订阅）：事件进球数 < 终场总进球时明确提示，
+  // 避免用户把不完整的时间线当成比分错了。
+  const eventsIncomplete = postmatch != null
+    && goals.length > 0
+    && goals.length < (postmatch.score_home ?? 0) + (postmatch.score_away ?? 0);
   const scoredGoals = useMemo(() => {
     let home = 0;
     let away = 0;
@@ -107,6 +112,12 @@ export function MatchTimeline({
         <Text variant="small" color={colors.muted}>这场没有进球事件记录。</Text>
       )}
 
+      {eventsIncomplete ? (
+        <Text variant="caption" color={colors.amber} style={styles.incomplete}>
+          数据源仅记录 {goals.length} 个进球事件（终场 {postmatch?.score_home}-{postmatch?.score_away}），时间线可能不完整；比分以终场为准。
+        </Text>
+      ) : null}
+
       {postmatch?.captured_at ? (
         <Text variant="caption" color={colors.subtle} style={styles.note}>
           时间线来自 Sportmonks 赛后事件；半场对照来自赛前快照。
@@ -163,4 +174,5 @@ const styles = StyleSheet.create({
   },
   halfBoxOk: { backgroundColor: colors.brandSoft },
   note: { marginTop: spacing.xs, lineHeight: 16 },
+  incomplete: { marginTop: spacing.xs, lineHeight: 16 },
 });
