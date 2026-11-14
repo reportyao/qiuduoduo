@@ -20,6 +20,8 @@
 
 > **时间轴进球对齐（2026-11-14 修复，`87bc4f6` 后续）**：保加利亚 0-5 冰岛时间轴只显示 3 球的根因**不是订阅限制**——Sportmonks 事件里点球（type_id=16）与乌龙球（type_id=15）不是 type_id=14，旧过滤直接丢弃。修复：`_collect_goals` 收 14/15/16 三类并按累计比分 `result` 推导进球方（乌龙球 participant 是防守方，按 participant 判会标错队），payload 增加 `kind`（goal/penalty/own_goal），前端时间轴显示「（点球）（乌龙球）」注记。同场另发现 `sync_postmatch_intel` 原本不 commit（依赖调用方），已自 commit。生产 2042728 已重同步：5 球全量、注记正确、「数据源不完整」兜底提示自动消失。
 
+> **2026-11-14 数据接口系统性深挖（已部署）**：commit `d96ffd8`，后端 **375 tests**。两处与进球事件同类（type_id 枚举/覆盖）的修复：① `board/service.py` 的 `first_side`（TEAM_TO_SCORE_FIRST 25 维对照 actual 来源）同样只认 type_id=14——点球/乌龙开纪录判错队，修复收 14/15/16 并按累计比分推导；② `parse_result` 的 `{"FT","2ND_HALF"}` 混合集合按 side 覆盖且 FT 行缺失时把下半场比分当全场（上半场有进球即错），修复为 FT 精确优先 → 1ST+2ND 求和 → CURRENT → 2ND_HALF 仅最后兜底。部署后重同步：14/14 场 postmatch 事件数=总进球（5/11→0/14）、MatchResult vs intel 比分 0 不一致。**审查误判撤回记录**：`sportmonks.py` 237/240 预测类型与 intel `_scores` 的 type_id 1/2 求和分支经生产数据/API 实证均为正确逻辑，未改动。
+
 ## 1. 进程与目录
 
 | 项 | 当前值 |
