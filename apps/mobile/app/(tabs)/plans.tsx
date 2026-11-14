@@ -13,6 +13,7 @@ import {
   type PlanRisk,
 } from "@/features/plans/queries";
 import { errorText } from "@/lib/errors";
+import { haptic } from "@/lib/haptics";
 import { money, pct } from "@/lib/format";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 
@@ -41,6 +42,7 @@ export default function PlansScreen() {
   const locked = current.data?.locked ?? true;
   const tier = membership.data?.tier ?? current.data?.tier ?? "free";
   const refresh = async () => {
+    haptic("light");
     setRefreshing(true);
     try {
       await Promise.all([summary.refetch(), current.refetch(), history.refetch(), membership.refetch()]);

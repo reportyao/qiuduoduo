@@ -2,8 +2,9 @@ import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
-import { Button, Card, Chip, Text } from "@/components/ui";
+import { Button, Card, Chip, ErrorState, Skeleton, Text } from "@/components/ui";
 import { useMembershipQuery } from "@/features/plans/queries";
+import { errorText } from "@/lib/errors";
 import { goBackOr } from "@/lib/navigation";
 import { colors, layout, spacing } from "@/theme/tokens";
 
@@ -39,6 +40,18 @@ export default function MembershipScreen() {
         backLabel="返回"
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {me.isLoading ? (
+          <Card style={styles.current}>
+            <Skeleton width="40%" height={12} />
+            <Skeleton width="30%" height={26} style={styles.skeletonGap} />
+            <Skeleton width="70%" height={12} style={styles.skeletonGap} />
+          </Card>
+        ) : me.isError ? (
+          <ErrorState
+            message={errorText(me.error)}
+            onRetry={() => me.refetch()}
+          />
+        ) : (
         <Card style={styles.current}>
           <View style={styles.rowBetween}>
             <View>
@@ -59,6 +72,8 @@ export default function MembershipScreen() {
             会员权益与额度已生效；充值按钮仅为 UI 预览，不会产生订单或扣款。
           </Text>
         </Card>
+        )
+      }
 
         {PRODUCTS.map((product) => (
           <Card key={product.tier} style={styles.product}>
@@ -93,6 +108,7 @@ export default function MembershipScreen() {
 const styles = StyleSheet.create({
   content: { paddingHorizontal: layout.pagePadding, paddingTop: spacing.md, paddingBottom: spacing.x7, gap: spacing.base },
   current: { gap: spacing.xs },
+  skeletonGap: { marginTop: spacing.sm },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
   product: { gap: spacing.sm },
   items: { gap: 2 },

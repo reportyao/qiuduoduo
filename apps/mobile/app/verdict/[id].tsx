@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { goBackOr } from "@/lib/navigation";
-import { Share, ScrollView, StyleSheet, View } from "react-native";
+import { RefreshControl, Share, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
@@ -21,6 +21,7 @@ import { focusFromDetail, useFocusStore } from "@/features/home/focusStore";
 import { useParlayStore } from "@/features/tools/parlayStore";
 import { toParlayDir } from "@/features/tools/parlayDirection";
 import { errorText } from "@/lib/errors";
+import { haptic } from "@/lib/haptics";
 import { api } from "@/lib/api";
 import { currentTradeDateCn, formatDateTime } from "@/lib/format";
 import { colors, layout, spacing } from "@/theme/tokens";
@@ -79,6 +80,18 @@ export default function VerdictDetailScreen() {
       }
     : null;
   const watch = detail ? (watchQuery.data ?? []).find((item) => item.targetId === detail.matchId) : undefined;
+
+  // 三关全过首次展示时给一次成功触觉；按 verdict 记一次，切场/重进会重新触发。
+  const gatesHapticRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!detail) return;
+    const allPass = (["market", "model", "price"] as const)
+      .every((gate) => detail.gates[gate] === "pass");
+    if (allPass && gatesHapticRef.current !== detail.id) {
+      gatesHapticRef.current = detail.id;
+      haptic("success");
+    }
+  }, [detail]);
 
   const share = async () => {
     if (!detail || shareMutation.isPending) return;
@@ -170,6 +183,13 @@ export default function VerdictDetailScreen() {
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={detailQuery.isFetching && !detailQuery.isLoading}
+            onRefresh={() => detailQuery.refetch()}
+            tintColor={colors.green}
+          />
+        }
         contentContainerStyle={styles.content}
       >
         {detailQuery.isError ? (
@@ -247,6 +267,7 @@ export default function VerdictDetailScreen() {
               watching: Boolean(watch),
               watchId: watch?.id,
             });
+            haptic("light");
             toast.show(watch ? "已取消关注" : "已关注，停售和终场会提醒", "success");
           } catch (e) {
             toast.show(errorText(e), "error");

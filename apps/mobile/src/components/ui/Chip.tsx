@@ -20,7 +20,7 @@ const TONES: Record<ChipTone, { bg: string; fg: string; border: string }> = {
   green: { bg: colors.greenSoft, fg: colors.green, border: colors.greenSoft },
   amber: { bg: colors.amberSoft, fg: colors.amber, border: colors.amberLine },
   danger: { bg: colors.dangerSoft, fg: colors.danger, border: colors.dangerSoft },
-  dark: { bg: "rgba(255,255,255,0.08)", fg: colors.inkInverse, border: "rgba(255,255,255,0.16)" },
+  dark: { bg: colors.whiteSoft, fg: colors.inkInverse, border: colors.whiteOverlay16 },
 };
 
 export function Chip({ label, tone = "neutral", selected = false, selectedStyle = "solid", onPress, dot = false, style }: ChipProps) {

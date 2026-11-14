@@ -6,6 +6,7 @@ import { AppState, StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BootScreen } from "@/components/BootScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { ToastProvider } from "@/components/ui/Toast";
 import { useAuthStore } from "@/features/auth/authStore";
 import { useMeQuery } from "@/features/account/queries";
@@ -14,8 +15,9 @@ import { useComplianceSync } from "@/features/compliance/useComplianceSync";
 import { usePrefsStore } from "@/features/preferences/prefsStore";
 import { usePushRegistration } from "@/features/push/usePushRegistration";
 import { makeQueryClient } from "@/lib/queryClient";
+import { startNetworkListener } from "@/lib/offlineStore";
 import { useNow } from "@/lib/useNow";
-import { colors } from "@/theme/tokens";
+import { colorSchemeName, colors } from "@/theme/tokens";
 
 /**
  * 根布局只做四件事：
@@ -58,11 +60,14 @@ export default function RootLayout() {
     return () => sub.remove();
   }, [queryClient]);
 
+  // 全局网络监听：离线横幅 + 恢复联网后的全量重取都依赖这个 store。
+  useEffect(() => startNetworkListener(), []);
+
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-        <StatusBar style="dark" backgroundColor={colors.bg} />
+        <StatusBar style={colorSchemeName === "dark" ? "light" : "dark"} backgroundColor={colors.bg} />
         <ToastProvider>
           <View style={styles.fill}>
             <Stack
@@ -79,6 +84,7 @@ export default function RootLayout() {
                 options={{ presentation: "modal", animation: "slide_from_bottom" }}
               />
             </Stack>
+            <OfflineBanner />
             {booted ? (
               <>
                 <ProfileSync />

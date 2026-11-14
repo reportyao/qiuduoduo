@@ -49,7 +49,8 @@ export function EvidenceChainCard({
   items: EvidenceItem[];
   cutoff: string;
 }) {
-  const [expanded, setExpanded] = useState<number | null>(0);
+  // 多选展开：可同时摊开多条证据对照；默认展开第一条。
+  const [expanded, setExpanded] = useState<Set<number>>(() => new Set([0]));
   const rows = useMemo(
     () => items.filter((item) =>
       !/非五大联赛|窗口数据不足|W4 接入/.test(String(item.detail ?? ""))),
@@ -78,14 +79,21 @@ export function EvidenceChainCard({
         </View>
       ) : (
         rows.map((item, index) => {
-          const open = expanded === index;
+          const open = expanded.has(index);
           const label = tagLabel(item.tag);
           const source = sourceLabel(item);
           const cutoffText = sourceCutoff(item);
           return (
             <Pressable
               key={`${item.title}-${index}`}
-              onPress={() => setExpanded(open ? null : index)}
+              onPress={() =>
+                setExpanded((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(index)) next.delete(index);
+                  else next.add(index);
+                  return next;
+                })
+              }
               accessibilityRole="button"
               accessibilityState={{ expanded: open }}
               accessibilityLabel={`${clean(item.title)}，${label}，来源 ${source || "未知"}`}

@@ -1,5 +1,5 @@
 import { StyleSheet, View } from "react-native";
-import { ScrollView } from "react-native";
+import { RefreshControl, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
@@ -33,7 +33,16 @@ export default function PredictionHistoryDetailScreen() {
         subtitle={query.data ? `${query.data.league || "单场"} · ${query.data.match_no}` : "逐维对照"}
         onBack={() => goBackOr(router)}
       />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={query.isFetching && !query.isLoading}
+            onRefresh={() => query.refetch()}
+            tintColor={colors.green}
+          />
+        }>
         {query.isLoading ? (
           <>
             <Skeleton height={170} radius={22} />

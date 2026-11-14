@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { usePersonaContent } from "@/features/personas/usePersona";
+import { haptic } from "@/lib/haptics";
 import { colors, fontFamily, layout, radii, shadows, spacing } from "@/theme/tokens";
 import { Icon, Text } from "@/components/ui";
 
@@ -28,6 +29,7 @@ export function ChatComposer({
   const submit = () => {
     const text = value.trim();
     if (!text || sending) return;
+    haptic("light");
     setValue("");
     onSend(text);
     setTimeout(() => inputRef.current?.focus(), 40);

@@ -59,6 +59,7 @@ import { BetSheet } from "@/features/verdict/components/BetSheet";
 import { SportmonksPredictionBoard } from "@/features/verdict/components/SportmonksPredictionBoard";
 import { SealSheet } from "@/features/verdict/components/SealSheet";
 import { ApiError, errorText } from "@/lib/errors";
+import { haptic } from "@/lib/haptics";
 import { currentTradeDateCn, formatDate, shiftDateCn } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
 import { colors, layout, spacing } from "@/theme/tokens";
@@ -89,7 +90,6 @@ export default function HomeScreen() {
   const [pulling, setPulling] = useState(false);
   const focus = useFocusStore((s) => s.focus);
   const setFocus = useFocusStore((s) => s.setFocus);
-  const clearFocus = useFocusStore((s) => s.clearFocus);
   const pendingSelection = useHomeSelectionStore((s) => s.pending);
   const consumeSelection = useHomeSelectionStore((s) => s.consume);
   const conversation = useHomeConversation(date, session?.userId ?? "local");
@@ -170,11 +170,15 @@ export default function HomeScreen() {
     setDate(next);
     setManualDate(next !== currentTradeDateCn());
     setOpenedAll(false);
-    if (focus && focus.tradeDate !== next) clearFocus();
+    // 焦点跨日期保持：切回原日期时对话上下文自动恢复。
   };
 
   // 从别的 Tab 选中比赛后，首页要自动切到该场所属竞彩日。
+  const prevFocusRef = useRef<typeof focus>(null);
   useEffect(() => {
+    // 只在 focus 对象真正变化时跟随日期，手动翻日期不触发回跳。
+    if (prevFocusRef.current === focus) return;
+    prevFocusRef.current = focus;
     if (!focus || focus.tradeDate === date) return;
     setDate(focus.tradeDate);
     setManualDate(focus.tradeDate !== currentTradeDateCn());
@@ -469,6 +473,7 @@ export default function HomeScreen() {
   }, [openWhyNot, router, stream?.avoid, verdicts]);
 
   const refreshAll = async () => {
+    haptic("light");
     setPulling(true);
     try {
       await Promise.all([

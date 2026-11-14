@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   track: {
     height: 5,
     borderRadius: radii.pill,
-    backgroundColor: "rgba(255,255,255,0.12)",
+    backgroundColor: colors.whiteOverlay12,
     overflow: "hidden",
   },
   fill: { height: "100%", borderRadius: radii.pill, backgroundColor: colors.greenAccent },

@@ -53,6 +53,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
-  dark: { backgroundColor: "rgba(255,255,255,0.10)" },
+  dark: { backgroundColor: colors.whiteOverlay10 },
   pressed: { opacity: 0.62 },
 });

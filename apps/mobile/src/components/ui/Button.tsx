@@ -39,7 +39,7 @@ const PALETTE: Record<
   ButtonVariant,
   { bg: string; pressed: string; fg: string; border: string }
 > = {
-  primary: { bg: colors.green, pressed: colors.greenPressed, fg: colors.white, border: colors.green },
+  primary: { bg: colors.green, pressed: colors.greenPressed, fg: colors.onGreen, border: colors.green },
   secondary: {
     bg: colors.surface,
     pressed: colors.bgElevated,
@@ -52,15 +52,15 @@ const PALETTE: Record<
   light: { bg: colors.greenSoft, pressed: colors.greenSoftStrong, fg: colors.green, border: colors.greenSoft },
   darkPrimary: {
     bg: colors.greenAccent,
-    pressed: "#8CD6B8",
+    pressed: colors.greenHighlight,
     fg: colors.greenDark,
     border: colors.greenAccent,
   },
   darkGhost: {
     bg: "transparent",
-    pressed: "rgba(255,255,255,0.08)",
+    pressed: colors.whiteSoft,
     fg: colors.inkInverse,
-    border: "rgba(255,255,255,0.28)",
+    border: colors.whiteLine,
   },
 };
 
@@ -89,6 +89,7 @@ export function Button({
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       onPress={isDisabled ? undefined : onPress}
       hitSlop={size === "sm" ? 8 : 4}
+      android_ripple={{ color: colors.whiteSoft, borderless: false, foreground: true }}
       style={({ pressed }) => [
         styles.base,
         {

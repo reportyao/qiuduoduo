@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
 import { EmptyState, ErrorState, Skeleton, Text } from "@/components/ui";
 import { errorText } from "@/lib/errors";
+import { haptic } from "@/lib/haptics";
 import { countdownText, formatTime, parseCnDateTime, todayCn, tradeDateCnFromKickoff } from "@/lib/format";
 import { colors, layout, radii, spacing } from "@/theme/tokens";
 import { DateNavigator } from "@/features/matches/components/DateNavigator";
@@ -48,6 +49,7 @@ export default function MatchesScreen() {
   const historyItems = history.data?.matches ?? [];
 
   const refresh = async () => {
+    haptic("light");
     setPulling(true);
     try {
       if (tab === "live") await live.refetch();

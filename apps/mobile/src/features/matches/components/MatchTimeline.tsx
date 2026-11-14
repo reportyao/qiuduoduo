@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import type { components } from "@jieqiu/api-client";
 import { Card, Icon, Text } from "@/components/ui";
@@ -25,21 +26,29 @@ export function MatchTimeline({
   scoreHome: number | null;
   scoreAway: number | null;
 }) {
-  const goals = [...(postmatch?.goals ?? [])].sort(
-    (a, b) => (a.minute ?? 999) - (b.minute ?? 999),
+  const goals = useMemo(
+    () =>
+      [...(postmatch?.goals ?? [])].sort(
+        (a, b) => (a.minute ?? 999) - (b.minute ?? 999),
+      ),
+    [postmatch],
   );
+  const scoredGoals = useMemo(() => {
+    let home = 0;
+    let away = 0;
+    return goals.map((goal) => {
+      if (goal.side === "home") home++;
+      else if (goal.side === "away") away++;
+      return { ...goal, cumulative: `${home}-${away}` };
+    });
+  }, [goals]);
   const hasHalf = halfCheck != null && halfCheck.predicted_ht !== "";
   if (!postmatch && !hasHalf) return null;
-
-  let home = 0;
-  let away = 0;
-  const firstSecondHalf = goals.findIndex((goal) => (goal.minute ?? 0) > 45);
-  const rendered = goals.map((goal, index) => {
-    if (goal.side === "home") home += 1;
-    else if (goal.side === "away") away += 1;
-    const cumulative = `${home}-${away}`;
+  const firstSecondHalf = scoredGoals.findIndex((goal) => (goal.minute ?? 0) > 45);
+  const rendered = scoredGoals.map((goal, index) => {
+    const cumulative = goal.cumulative;
     const halfBefore = hasHalf && index === firstSecondHalf;
-    const isLast = index === goals.length - 1;
+    const isLast = index === scoredGoals.length - 1;
     return (
       <View key={`${goal.minute}-${goal.player}-${index}`} style={styles.event}>
         <View style={styles.marker}>
@@ -62,7 +71,7 @@ export function MatchTimeline({
       </View>
     );
   });
-  if (hasHalf && (firstSecondHalf <= 0 || goals.length === 0)) {
+  if (hasHalf && (firstSecondHalf <= 0 || scoredGoals.length === 0)) {
     rendered.unshift(
       <View key="half-marker" style={styles.event}>
         <View style={styles.marker}>

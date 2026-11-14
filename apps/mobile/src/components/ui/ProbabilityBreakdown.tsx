@@ -110,7 +110,7 @@ function formatPct(value: number): string {
 function segmentColor(key: string, predicted?: string, actual?: string, dark = false): string {
   if (key === predicted) return dark ? colors.greenAccent : colors.green;
   if (key === actual) return colors.amber;
-  return dark ? "rgba(255,255,255,0.22)" : colors.lineStrong;
+  return dark ? colors.whiteOverlay22 : colors.lineStrong;
 }
 
 const styles = StyleSheet.create({
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: colors.surfaceSunken,
   },
-  trackDark: { backgroundColor: "rgba(255,255,255,0.12)" },
+  trackDark: { backgroundColor: colors.whiteOverlay12 },
   legend: { flexDirection: "row", flexWrap: "wrap", columnGap: spacing.lg, rowGap: spacing.xs },
   legendItem: { flexDirection: "row", alignItems: "center" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
@@ -137,11 +137,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceSunken,
   },
   cellPredicted: { backgroundColor: colors.greenSoft },
-  cellPredictedDark: { backgroundColor: "rgba(168,228,201,0.14)" },
+  cellPredictedDark: { backgroundColor: colors.greenAccentSoft },
   cellActual: { borderWidth: 1, borderColor: colors.amberLine },
   cellText: { flexDirection: "row", alignItems: "baseline", gap: 3 },
   flex: { flex: 1 },
   miniTrack: { height: 3, borderRadius: radii.pill, backgroundColor: colors.line, overflow: "hidden" },
-  miniTrackDark: { backgroundColor: "rgba(255,255,255,0.15)" },
+  miniTrackDark: { backgroundColor: colors.whiteOverlay15 },
   miniFill: { height: "100%", borderRadius: radii.pill },
 });

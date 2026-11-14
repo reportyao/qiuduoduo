@@ -1,13 +1,19 @@
 import { useEffect, useRef } from "react";
 import { Animated, Image, StyleSheet, View } from "react-native";
 import { colors, spacing } from "@/theme/tokens";
+import { useReducedMotion } from "@/lib/useReducedMotion";
 import { Text } from "./ui/Text";
 
 /** 启动/水合期间的稳定占位，避免闪白屏和「先空后有」的抖动。 */
 export function BootScreen() {
   const pulse = useRef(new Animated.Value(0.4)).current;
+  const reduced = useReducedMotion();
 
   useEffect(() => {
+    if (reduced) {
+      pulse.setValue(1);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
@@ -16,7 +22,7 @@ export function BootScreen() {
     );
     loop.start();
     return () => loop.stop();
-  }, [pulse]);
+  }, [pulse, reduced]);
 
   return (
     <View style={styles.wrap}>

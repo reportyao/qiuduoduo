@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { colors, radii, spacing } from "@/theme/tokens";
+import { useReducedMotion } from "@/lib/useReducedMotion";
 import { Button } from "./Button";
 import { Icon, type IconName } from "./Icon";
 import { Text } from "./Text";
@@ -82,8 +83,10 @@ export function Skeleton({
   style?: StyleProp<ViewStyle>;
 }) {
   const opacity = useRef(new Animated.Value(0.45)).current;
+  const reduced = useReducedMotion();
 
   useEffect(() => {
+    if (reduced) return; // 前庭障碍用户：静态灰块，不循环闪烁
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, { toValue: 0.9, duration: 700, useNativeDriver: true }),
@@ -92,7 +95,7 @@ export function Skeleton({
     );
     loop.start();
     return () => loop.stop();
-  }, [opacity]);
+  }, [opacity, reduced]);
 
   return (
     <Animated.View

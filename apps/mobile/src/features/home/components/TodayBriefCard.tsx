@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Card, Chip, Text } from "@/components/ui";
-import { countdownText, formatDate, formatTime, parseCnDateTime } from "@/lib/format";
+import { countdownText, currentTradeDateCn, formatDate, formatTime, parseCnDateTime } from "@/lib/format";
 import { useNow } from "@/lib/useNow";
 import { colors, radii, spacing } from "@/theme/tokens";
 import type { BriefMatchOption } from "./BriefMatchPicker";
@@ -51,7 +51,9 @@ export function TodayBriefCard({
     <Card style={styles.card}>
       <View style={styles.head}>
         <View style={styles.flex}>
-          <Text variant="overline" color={colors.green}>今日简报</Text>
+          <Text variant="overline" color={colors.green}>
+            {date === currentTradeDateCn() ? "今日简报" : "历史简报"}
+          </Text>
           <Text variant="h2">{formatDate(date)}</Text>
         </View>
         <Pressable onPress={onOpenData} accessibilityRole="button" accessibilityLabel="查看数据状态">

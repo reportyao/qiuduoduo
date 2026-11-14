@@ -51,8 +51,32 @@ export function PredictionGroupBoard({
     return map;
   }, [highlights]);
 
+  const presentGroups = GROUPS.filter((group) => (grouped.get(group.key) ?? []).length > 0);
+  const allOpen = presentGroups.length > 0 && presentGroups.every((group) => open[group.key]);
+
+  const toggleAll = () => {
+    const next = !allOpen;
+    setOpen((prev) => {
+      const updated = { ...prev };
+      for (const group of presentGroups) updated[group.key] = next;
+      return updated;
+    });
+  };
+
   return (
     <View style={styles.wrap}>
+      {presentGroups.length > 1 ? (
+        <Pressable
+          onPress={toggleAll}
+          accessibilityRole="button"
+          accessibilityLabel={allOpen ? "收起全部分组" : "展开全部分组"}
+          style={styles.allRow}
+        >
+          <Text variant="captionStrong" color={colors.green}>
+            {allOpen ? "收起全部" : "展开全部 25 维"}
+          </Text>
+        </Pressable>
+      ) : null}
       {GROUPS.map((group) => {
         const items = grouped.get(group.key) ?? [];
         if (!items.length) return null;
@@ -107,6 +131,7 @@ export function PredictionGroupBoard({
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.md },
+  allRow: { alignSelf: "flex-start", paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
   group: { gap: spacing.xs },
   head: { flexDirection: "row", alignItems: "center", gap: spacing.md },
   flex: { flex: 1 },

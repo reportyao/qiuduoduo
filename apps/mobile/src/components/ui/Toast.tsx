@@ -28,10 +28,11 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const KIND_META: Record<ToastKind, { icon: IconName; color: string; bg: string }> = {
-  success: { icon: "checkmark-circle", color: colors.greenAccent, bg: "rgba(14,107,79,0.94)" },
-  info: { icon: "information-circle", color: colors.white, bg: "rgba(21,33,27,0.94)" },
-  warning: { icon: "alert-circle", color: "#FFD99B", bg: "rgba(90,58,14,0.96)" },
-  error: { icon: "close-circle", color: "#FFD3CC", bg: "rgba(125,42,34,0.96)" },
+  // success 背景不用 colors.green：暗色下它变亮，与 greenAccent 文字对比不足。
+  success: { icon: "checkmark-circle", color: colors.greenAccent, bg: colors.toastSuccessBg },
+  info: { icon: "information-circle", color: colors.white, bg: colors.heroTop },
+  warning: { icon: "alert-circle", color: colors.amberAccent, bg: colors.toastWarningBg },
+  error: { icon: "close-circle", color: colors.dangerAccentLight, bg: colors.toastErrorBg },
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {

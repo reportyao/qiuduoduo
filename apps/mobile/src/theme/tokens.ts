@@ -1,10 +1,14 @@
-import { Platform } from "react-native";
+import { Appearance, Platform } from "react-native";
 
 /**
  * 设计令牌：所有页面只从这里取颜色/字号/圆角，禁止在组件里散落魔法值。
  * 视觉基准来自 archive/legacy/jieqiu-app/index.html v3.1（暖白 + 深墨绿），但生产字号不低于 11px。
+ *
+ * 暗色模式：模块初始化时按系统深浅色一次性选定色板（同名 token 全量覆盖），
+ * 全站模块级 StyleSheet 自动跟随；运行中切换系统主题需重启/刷新生效。
+ * 暗色色板基于墨绿品牌（非纯黑），dark hero 比页面更深一档以保持主卡层次。
  */
-export const colors = {
+const lightColors = {
   bg: "#F6F3EC",
   bgElevated: "#FCFAF5",
   surface: "#FFFEFB",
@@ -23,15 +27,20 @@ export const colors = {
   greenSoftStrong: "#D7E8DE",
   greenDark: "#063E2E",
   greenAccent: "#A8E4C9",
+  greenHighlight: "#8CD6B8",
+  greenAccentSoft: "rgba(168,228,201,0.14)",
+  onGreen: "#FFFFFF",
 
   danger: "#A8443A",
   dangerPressed: "#8F352D",
   dangerSoft: "#F7E9E6",
   dangerAccent: "#F2B8AE",
+  dangerAccentLight: "#FFD3CC",
 
   amber: "#8C5A16",
   amberSoft: "#F6EEDD",
   amberLine: "#E4D2AF",
+  amberAccent: "#FFD99B",
 
   heroTop: "#132920",
   heroBottom: "#08130E",
@@ -40,7 +49,78 @@ export const colors = {
   white: "#FFFFFF",
   black: "#000000",
   overlay: "rgba(8, 18, 13, 0.46)",
+  whiteSoft: "rgba(255,255,255,0.08)",
+  whiteOverlay10: "rgba(255,255,255,0.10)",
+  whiteOverlay12: "rgba(255,255,255,0.12)",
+  whiteOverlay15: "rgba(255,255,255,0.15)",
+  whiteOverlay16: "rgba(255,255,255,0.16)",
+  whiteOverlay22: "rgba(255,255,255,0.22)",
+  whiteLine: "rgba(255,255,255,0.28)",
+  lockCover: "rgba(255,255,255,0.94)",
+  toastSuccessBg: "rgba(14,107,79,0.94)",
+  toastWarningBg: "rgba(90,58,14,0.96)",
+  toastErrorBg: "rgba(125,42,34,0.96)",
 } as const;
+
+const darkColors: Record<keyof typeof lightColors, string> = {
+  bg: "#0D1A12",
+  bgElevated: "#12241A",
+  surface: "#13291F",
+  surfaceSunken: "#0E2015",
+  ink: "#E8EDE8",
+  inkInverse: "#F4F6F1",
+  muted: "#8AA094",
+  mutedInverse: "#B3C0B8",
+  subtle: "#7E9086",
+  line: "#1E3D2C",
+  lineStrong: "#2A4D38",
+
+  green: "#34C28B",
+  greenPressed: "#2AA776",
+  greenSoft: "#12301F",
+  greenSoftStrong: "#1A4029",
+  greenDark: "#063E2E",
+  greenAccent: "#A8E4C9",
+  greenHighlight: "#8CD6B8",
+  greenAccentSoft: "rgba(168,228,201,0.14)",
+  onGreen: "#06231A",
+
+  danger: "#D97C6F",
+  dangerPressed: "#A85546",
+  dangerSoft: "#2E1B18",
+  dangerAccent: "#F2B8AE",
+  dangerAccentLight: "#FFD3CC",
+
+  amber: "#D9A75B",
+  amberSoft: "#2B2416",
+  amberLine: "#4A3D22",
+  amberAccent: "#FFD99B",
+
+  heroTop: "#051009",
+  heroBottom: "#020805",
+  heroLine: "rgba(168,228,201,0.20)",
+
+  white: "#FFFFFF",
+  black: "#000000",
+  overlay: "rgba(0, 0, 0, 0.60)",
+  whiteSoft: "rgba(255,255,255,0.08)",
+  whiteOverlay10: "rgba(255,255,255,0.10)",
+  whiteOverlay12: "rgba(255,255,255,0.12)",
+  whiteOverlay15: "rgba(255,255,255,0.15)",
+  whiteOverlay16: "rgba(255,255,255,0.16)",
+  whiteOverlay22: "rgba(255,255,255,0.22)",
+  whiteLine: "rgba(255,255,255,0.28)",
+  lockCover: "rgba(255,255,255,0.96)",
+  toastSuccessBg: "rgba(10,72,52,0.96)",
+  toastWarningBg: "rgba(56,38,8,0.97)",
+  toastErrorBg: "rgba(66,20,15,0.97)",
+};
+
+export const colorSchemeName: "light" | "dark" =
+  Appearance.getColorScheme() === "dark" ? "dark" : "light";
+
+export const colors: Readonly<Record<keyof typeof lightColors, string>> =
+  colorSchemeName === "dark" ? darkColors : lightColors;
 
 export const gradients = {
   // 仅用于已发布预测主卡：同一墨绿色相内的明度变化，不做彩色渐变。

@@ -72,5 +72,5 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: colors.surfaceSunken,
   },
-  trackDark: { backgroundColor: "rgba(255,255,255,0.10)" },
+  trackDark: { backgroundColor: colors.whiteOverlay10 },
 });
