@@ -15,6 +15,7 @@ export type PredictionItem = components["schemas"]["PredictionSettlementItem"];
 export type PredictionAccuracy = components["schemas"]["PredictionAccuracy"];
 
 export const matchKeys = {
+  performance: (days: number) => ["matches", "performance", days] as const,
   live: ["matches", "live"] as const,
   results: (date: string) => ["matches", "results", date] as const,
   history: (date: string) => ["matches", "predictions", date] as const,
@@ -53,6 +54,19 @@ export function usePredictionHistoryQuery(date: string, enabled = true) {
     enabled,
     staleTime: 60_000,
     refetchInterval: 120_000,
+  });
+}
+
+/** 战绩看板：近 N 天聚合（趋势/按市场/校准）。 */
+export function usePerformanceQuery(days: number, enabled = true) {
+  return useQuery({
+    queryKey: matchKeys.performance(days),
+    queryFn: async () =>
+      callApi(api.client.GET("/predictions/performance", {
+        params: { query: { days } },
+      })),
+    enabled,
+    staleTime: 120_000,
   });
 }
 

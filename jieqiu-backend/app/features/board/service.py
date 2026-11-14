@@ -17,8 +17,8 @@ from sqlalchemy.orm import Session
 
 from ...config import get_settings
 from ...models import (InteractionEvent, MatchResult, MatchResultDetail, SPMatch,
-                       SPPoolSnapshot, SportmonksLiveState, SportmonksMarket,
-                       SportmonksMatchData, SportmonksPrediction,
+                       SPPoolSnapshot, SportmonksFixtureIntel, SportmonksLiveState,
+                       SportmonksMarket, SportmonksMatchData, SportmonksPrediction,
                        SportmonksPredictionSettlement,
                        SportmonksPredictionSnapshot, User, Verdict, WatchTarget,
                        utcnow)
@@ -890,6 +890,160 @@ def _accuracy(rows: list[SportmonksPredictionSettlement]) -> dict[str, Any]:
     }
 
 
+MARKET_GROUPS = (
+    ("主预测", ("product_main",)),
+    ("胜平负", ("FULLTIME_RESULT_PROBABILITY",)),
+    ("大小球", ("OVER_UNDER_1_5_PROBABILITY", "OVER_UNDER_2_5_PROBABILITY",
+                "OVER_UNDER_3_5_PROBABILITY", "OVER_UNDER_4_5_PROBABILITY",
+                "OVER_UNDER_0_5_PROBABILITY")),
+    ("主队大小球", ("HOME_OVER_UNDER_0_5_PROBABILITY", "HOME_OVER_UNDER_1_5_PROBABILITY",
+                    "HOME_OVER_UNDER_2_5_PROBABILITY", "HOME_OVER_UNDER_3_5_PROBABILITY")),
+    ("客队大小球", ("AWAY_OVER_UNDER_0_5_PROBABILITY", "AWAY_OVER_UNDER_1_5_PROBABILITY",
+                    "AWAY_OVER_UNDER_2_5_PROBABILITY", "AWAY_OVER_UNDER_3_5_PROBABILITY")),
+    ("双方进球", ("BTTS_PROBABILITY",)),
+    ("半场", ("FIRST_HALF_WINNER_PROBABILITY", "HTFT_PROBABILITY")),
+    ("角球", ("CORNERS_OVER_UNDER_4_PROBABILITY", "CORNERS_OVER_UNDER_5_PROBABILITY",
+              "CORNERS_OVER_UNDER_6_PROBABILITY", "CORNERS_OVER_UNDER_7_PROBABILITY",
+              "CORNERS_OVER_UNDER_8_PROBABILITY", "CORNERS_OVER_UNDER_9_PROBABILITY")),
+    ("双重机会", ("DOUBLE_CHANCE_PROBABILITY",)),
+    ("其他", ()),
+)
+
+_MARKET_LOOKUP = {
+    code: name for name, codes in MARKET_GROUPS for code in codes
+}
+
+
+def market_group_name(prediction_type: str) -> str:
+    return _MARKET_LOOKUP.get(prediction_type, "其他")
+
+
+def _bucket_of(probability: float | None) -> str | None:
+    if probability is None:
+        return None
+    value = probability * 100
+    if value < 40:
+        return "<40%"
+    if value < 50:
+        return "40-50%"
+    if value < 60:
+        return "50-60%"
+    if value < 70:
+        return "60-70%"
+    if value < 80:
+        return "70-80%"
+    return "≥80%"
+
+
+_BUCKET_ORDER = ("<40%", "40-50%", "50-60%", "60-70%", "70-80%", "≥80%")
+_BUCKET_MID = {"<40%": 0.35, "40-50%": 0.45, "50-60%": 0.55,
+               "60-70%": 0.65, "70-80%": 0.75, "≥80%": 0.85}
+
+
+def build_performance(db: Session, days: int = 30) -> dict:
+    """战绩看板聚合：趋势 / 按市场 / 按联赛 / 校准。只统计已计入且已结算的条目。"""
+    days = max(7, min(days, 90))
+    cutoff = (_cn_now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    rows = db.scalars(
+        select(SportmonksPredictionSettlement).where(
+            SportmonksPredictionSettlement.kickoff_cn >= cutoff,
+            SportmonksPredictionSettlement.counted_in_accuracy.is_(True),
+            SportmonksPredictionSettlement.result.in_(("hit", "miss", "push")),
+        ).order_by(SportmonksPredictionSettlement.kickoff_cn)).all()
+
+    def _rate(hits: int, settled: int) -> float | None:
+        return round(hits / settled, 4) if settled else None
+
+    # 趋势：按竞彩日
+    trend: dict[str, dict] = {}
+    for row in rows:
+        day = row.kickoff_cn[:10]
+        bucket = trend.setdefault(day, {"settled": 0, "hits": 0})
+        bucket["settled"] += 1
+        if row.result == "hit":
+            bucket["hits"] += 1
+    trend_list = [
+        {"date": day, "settled": item["settled"], "hits": item["hits"],
+         "rate": _rate(item["hits"], item["settled"])}
+        for day, item in sorted(trend.items())
+    ]
+
+    # 按市场组
+    market: dict[str, dict] = {}
+    league: dict[str, dict] = {}
+    match_rows = {}
+    calibration: dict[str, dict] = {}
+    for row in rows:
+        name = market_group_name(row.prediction_type)
+        bucket = market.setdefault(name, {"settled": 0, "hits": 0, "pushes": 0})
+        bucket["settled"] += 1
+        if row.result == "hit":
+            bucket["hits"] += 1
+        elif row.result == "push":
+            bucket["pushes"] += 1
+
+        if row.match_id not in match_rows:
+            match_rows[row.match_id] = db.get(SPMatch, row.match_id)
+        match = match_rows[row.match_id]
+        league_name = match.league if match else "未分类"
+        lbucket = league.setdefault(league_name, {"settled": 0, "hits": 0, "pushes": 0})
+        lbucket["settled"] += 1
+        if row.result == "hit":
+            lbucket["hits"] += 1
+        elif row.result == "push":
+            lbucket["pushes"] += 1
+
+        if row.result == "hit":
+            bkey = _bucket_of(row.predicted_probability)
+            if bkey:
+                cbucket = calibration.setdefault(
+                    bkey, {"predicted": 0.0, "hits": 0, "count": 0})
+                cbucket["hits"] += 1
+                cbucket["count"] += 1
+        elif row.result == "miss":
+            bkey = _bucket_of(row.predicted_probability)
+            if bkey:
+                cbucket = calibration.setdefault(
+                    bkey, {"predicted": 0.0, "hits": 0, "count": 0})
+                cbucket["count"] += 1
+
+    by_market = sorted(
+        ({"market": name, "settled": item["settled"], "hits": item["hits"],
+          "pushes": item["pushes"], "rate": _rate(item["hits"], item["settled"])}
+         for name, item in market.items()),
+        key=lambda row: -row["settled"])
+    by_league = sorted(
+        ({"market": name, "settled": item["settled"], "hits": item["hits"],
+          "pushes": item["pushes"], "rate": _rate(item["hits"], item["settled"])}
+         for name, item in league.items()),
+        key=lambda row: -row["settled"])
+
+    calibration_list = []
+    for bkey in _BUCKET_ORDER:
+        item = calibration.get(bkey)
+        if not item or item["count"] == 0:
+            continue
+        calibration_list.append({
+            "bucket": bkey,
+            "predicted": _BUCKET_MID.get(bkey, 0.5),
+            "actual": round(item["hits"] / item["count"], 4),
+            "count": item["count"],
+        })
+
+    total_settled = len(rows)
+    total_hits = sum(1 for row in rows if row.result == "hit")
+    return {
+        "days": days,
+        "total_settled": total_settled,
+        "total_hits": total_hits,
+        "hit_rate": _rate(total_hits, total_settled),
+        "trend": trend_list,
+        "by_market": by_market,
+        "by_league": by_league,
+        "calibration": calibration_list,
+    }
+
+
 def build_prediction_history(db: Session, date: str | None = None,
                              user: User | None = None) -> dict:
     """预测战绩列表：汇总 + 每场主结果；25 维详情另走单场接口。"""
@@ -983,6 +1137,40 @@ def _probability_rows(snapshot: SportmonksPredictionSnapshot | None,
     return out
 
 
+def _half_check(snapshot: SportmonksPredictionSnapshot | None,
+                actuals: dict[str, Any] | None) -> dict | None:
+    """半场对照：赛前预测的半场胜平负 vs 实际半场结果。"""
+    if snapshot is None or not actuals:
+        return None
+    predicted_key = ""
+    best = -1.0
+    for item in snapshot.predictions or []:
+        if str(item.get("type_code") or "") != "FIRST_HALF_WINNER_PROBABILITY":
+            continue
+        key, value = _argmax(item.get("probabilities") or {})
+        if key and value is not None and value > best:
+            predicted_key, best = key, value
+    if not predicted_key:
+        return None
+    actual_key = str(actuals.get("ht_outcome") or "")
+    if not actual_key:
+        return None
+    predicted = _outcome_cn(predicted_key)
+    actual = _outcome_cn(actual_key)
+    return {
+        "predicted_ht": predicted,
+        "actual_ht": actual,
+        "on_track": predicted_key == actual_key,
+    }
+
+
+def _postmatch_from_intel(intel: SportmonksFixtureIntel | None) -> dict | None:
+    raw = (intel.payload or {}).get("postmatch") if intel else None
+    if not isinstance(raw, dict) or not raw:
+        return None
+    return raw
+
+
 def build_prediction_history_detail(db: Session, match_id: str) -> dict | None:
     match = db.get(SPMatch, match_id)
     if match is None:
@@ -992,6 +1180,12 @@ def build_prediction_history_detail(db: Session, match_id: str) -> dict | None:
         MatchResult.fixture_id == snapshot.fixture_id)) if snapshot else None
     rows = db.scalars(select(SportmonksPredictionSettlement).where(
         SportmonksPredictionSettlement.match_id == match_id)).all()
+    intel_row = db.scalar(select(SportmonksFixtureIntel).where(
+        SportmonksFixtureIntel.match_id == match_id)) if snapshot else None
+    postmatch = _postmatch_from_intel(intel_row)
+    result_detail = db.scalar(select(MatchResultDetail).where(
+        MatchResultDetail.fixture_id == snapshot.fixture_id)) if snapshot else None
+    half_check = _half_check(snapshot, result_detail.actuals if result_detail else None)
     product_probs: dict = {}
     if snapshot is not None:
         product_probs = dict(snapshot.product_probs or {})
@@ -1011,6 +1205,8 @@ def build_prediction_history_detail(db: Session, match_id: str) -> dict | None:
         "score_away": (result.ft_away if result and result.ft_away is not None
                        else result.goals_away if result else None),
         "status": result.status if result else "",
+        "postmatch": postmatch,
+        "half_check": half_check,
         "snapshot": {
             "captured_at": snapshot.captured_at.isoformat() if snapshot and snapshot.captured_at else None,
             "locked_at": snapshot.locked_at.isoformat() if snapshot and snapshot.locked_at else None,

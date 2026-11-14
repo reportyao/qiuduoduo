@@ -7,7 +7,8 @@ from ...db import get_db
 from ...models import User
 from ...routers.w6 import optional_user
 from . import service
-from .schemas import (LiveBoardResponse, PredictionHistoryDetailResponse,
+from .schemas import (LiveBoardResponse, PerformanceResponse,
+                      PredictionHistoryDetailResponse,
                       PredictionHistoryResponse, ResultBoardResponse)
 
 router = APIRouter(tags=["match-board"])
@@ -41,6 +42,15 @@ def prediction_history(date: str | None = None,
     """预测战绩列表：汇总命中率与每场主预测，不携带 25 维明细。"""
     try:
         return service.build_prediction_history(db, date, user=user)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.get("/predictions/performance", response_model=PerformanceResponse)
+def predictions_performance(days: int = 30, db: Session = Depends(get_db)):
+    """战绩看板：趋势 / 按市场 / 按联赛 / 校准，纯聚合。"""
+    try:
+        return service.build_performance(db, days=days)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
 

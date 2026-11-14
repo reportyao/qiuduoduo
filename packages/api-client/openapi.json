@@ -901,6 +901,50 @@
         }
       }
     },
+    "/predictions/performance": {
+      "get": {
+        "tags": [
+          "match-board"
+        ],
+        "summary": "Predictions Performance",
+        "description": "战绩看板：趋势 / 按市场 / 按联赛 / 校准，纯聚合。",
+        "operationId": "predictions_performance_predictions_performance_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerformanceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/predictions/history/{match_id}": {
       "get": {
         "tags": [
@@ -8613,6 +8657,40 @@
         ],
         "title": "CalendarResponse"
       },
+      "CalibrationBucket": {
+        "properties": {
+          "bucket": {
+            "type": "string",
+            "title": "Bucket"
+          },
+          "predicted": {
+            "type": "number",
+            "title": "Predicted"
+          },
+          "actual": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bucket",
+          "predicted",
+          "count"
+        ],
+        "title": "CalibrationBucket"
+      },
       "Capabilities": {
         "properties": {
           "can_bet": {
@@ -9352,6 +9430,33 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HalfCheck": {
+        "properties": {
+          "predicted_ht": {
+            "type": "string",
+            "title": "Predicted Ht",
+            "default": ""
+          },
+          "actual_ht": {
+            "type": "string",
+            "title": "Actual Ht",
+            "default": ""
+          },
+          "on_track": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On Track"
+          }
+        },
+        "type": "object",
+        "title": "HalfCheck"
       },
       "Heartbeat": {
         "properties": {
@@ -11355,6 +11460,141 @@
         ],
         "title": "ParlayScores"
       },
+      "PerformanceMarketRow": {
+        "properties": {
+          "market": {
+            "type": "string",
+            "title": "Market"
+          },
+          "settled": {
+            "type": "integer",
+            "title": "Settled"
+          },
+          "hits": {
+            "type": "integer",
+            "title": "Hits"
+          },
+          "pushes": {
+            "type": "integer",
+            "title": "Pushes",
+            "default": 0
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "market",
+          "settled",
+          "hits"
+        ],
+        "title": "PerformanceMarketRow"
+      },
+      "PerformanceResponse": {
+        "properties": {
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "total_settled": {
+            "type": "integer",
+            "title": "Total Settled"
+          },
+          "total_hits": {
+            "type": "integer",
+            "title": "Total Hits"
+          },
+          "hit_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hit Rate"
+          },
+          "trend": {
+            "items": {
+              "$ref": "#/components/schemas/PerformanceTrendPoint"
+            },
+            "type": "array",
+            "title": "Trend"
+          },
+          "by_market": {
+            "items": {
+              "$ref": "#/components/schemas/PerformanceMarketRow"
+            },
+            "type": "array",
+            "title": "By Market"
+          },
+          "by_league": {
+            "items": {
+              "$ref": "#/components/schemas/PerformanceMarketRow"
+            },
+            "type": "array",
+            "title": "By League"
+          },
+          "calibration": {
+            "items": {
+              "$ref": "#/components/schemas/CalibrationBucket"
+            },
+            "type": "array",
+            "title": "Calibration"
+          }
+        },
+        "type": "object",
+        "required": [
+          "days",
+          "total_settled",
+          "total_hits"
+        ],
+        "title": "PerformanceResponse"
+      },
+      "PerformanceTrendPoint": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "settled": {
+            "type": "integer",
+            "title": "Settled"
+          },
+          "hits": {
+            "type": "integer",
+            "title": "Hits"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "settled",
+          "hits"
+        ],
+        "title": "PerformanceTrendPoint"
+      },
       "PersonaBody": {
         "properties": {
           "persona": {
@@ -11650,6 +11890,106 @@
         ],
         "title": "PlanPublic"
       },
+      "PostmatchData": {
+        "properties": {
+          "score_home": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Home"
+          },
+          "score_away": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Away"
+          },
+          "xg_home": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xg Home"
+          },
+          "xg_away": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xg Away"
+          },
+          "goals": {
+            "items": {
+              "$ref": "#/components/schemas/PostmatchGoal"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          }
+        },
+        "type": "object",
+        "title": "PostmatchData"
+      },
+      "PostmatchGoal": {
+        "properties": {
+          "minute": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minute"
+          },
+          "player": {
+            "type": "string",
+            "title": "Player",
+            "default": ""
+          },
+          "side": {
+            "type": "string",
+            "title": "Side",
+            "default": ""
+          },
+          "result": {
+            "type": "string",
+            "title": "Result",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "PostmatchGoal"
+      },
       "PredictionAccuracy": {
         "properties": {
           "total_items": {
@@ -11754,6 +12094,26 @@
           },
           "snapshot": {
             "$ref": "#/components/schemas/PredictionSnapshotMeta"
+          },
+          "postmatch": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PostmatchData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "half_check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HalfCheck"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "summary": {
             "$ref": "#/components/schemas/PredictionAccuracy"

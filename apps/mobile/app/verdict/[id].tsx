@@ -17,7 +17,6 @@ import {
   useVerdictPostmortemQuery,
   useWatchMatchMutation,
 } from "@/features/verdict/queries";
-import { buildIntelReport } from "@/domain/intel";
 import { focusFromDetail, useFocusStore } from "@/features/home/focusStore";
 import { useParlayStore } from "@/features/tools/parlayStore";
 import { toParlayDir } from "@/features/tools/parlayDirection";
@@ -30,8 +29,7 @@ import { ProbabilityCompareCard } from "@/features/verdict/components/Probabilit
 import { AiIntelCard } from "@/features/verdict/components/AiIntelCard";
 import { SportmonksIntelSection } from "@/features/verdict/components/SportmonksIntelSection";
 import { MatchAnalysisCard } from "@/features/verdict/components/MatchAnalysisCard";
-import { IntelSection } from "@/features/verdict/components/IntelSection";
-import { EvidenceList } from "@/features/verdict/components/EvidenceList";
+import { EvidenceChainCard } from "@/features/verdict/components/EvidenceChainCard";
 import { DetailActionBar } from "@/features/verdict/components/DetailActionBar";
 import { DetailSectionTabs, type DetailSection } from "@/features/verdict/components/DetailSectionTabs";
 import { BetSheet } from "@/features/verdict/components/BetSheet";
@@ -183,7 +181,7 @@ export default function VerdictDetailScreen() {
 
         {section === "overview" ? (
           <>
-            <IntelSection report={buildIntelReport(detail)} />
+            <EvidenceChainCard items={detail.evidence} cutoff={detail.dataCutoff} />
             {detail.aiResearch ? <AiIntelCard data={detail.aiResearch} /> : null}
           </>
         ) : null}
@@ -198,7 +196,6 @@ export default function VerdictDetailScreen() {
               <ProbabilityCompareCard data={detail.probabilityCompare} />
             ) : null}
             <MatchAnalysisCard matchId={detail.matchId} date={detail.tradeDate} />
-            <EvidenceList items={detail.evidence} cutoff={detail.dataCutoff} />
           </>
         ) : null}
 

@@ -82,6 +82,39 @@ class PredictionAccuracy(BaseModel):
     hit_rate: float | None = None
 
 
+class PerformanceTrendPoint(BaseModel):
+    date: str
+    settled: int
+    hits: int
+    rate: float | None = None
+
+
+class PerformanceMarketRow(BaseModel):
+    market: str
+    settled: int
+    hits: int
+    pushes: int = 0
+    rate: float | None = None
+
+
+class CalibrationBucket(BaseModel):
+    bucket: str
+    predicted: float
+    actual: float | None = None
+    count: int
+
+
+class PerformanceResponse(BaseModel):
+    days: int
+    total_settled: int
+    total_hits: int
+    hit_rate: float | None = None
+    trend: list[PerformanceTrendPoint] = Field(default_factory=list)
+    by_market: list[PerformanceMarketRow] = Field(default_factory=list)
+    by_league: list[PerformanceMarketRow] = Field(default_factory=list)
+    calibration: list[CalibrationBucket] = Field(default_factory=list)
+
+
 class PredictionHistoryResponse(BaseModel):
     date: str
     summary: PredictionAccuracy
@@ -117,6 +150,28 @@ class PredictionSettlementItem(BaseModel):
     counted_in_accuracy: bool
 
 
+class PostmatchGoal(BaseModel):
+    minute: int | None = None
+    player: str = ""
+    side: str = ""
+    result: str = ""
+
+
+class PostmatchData(BaseModel):
+    score_home: int | None = None
+    score_away: int | None = None
+    xg_home: float | None = None
+    xg_away: float | None = None
+    goals: list[PostmatchGoal] = Field(default_factory=list)
+    captured_at: str | None = None
+
+
+class HalfCheck(BaseModel):
+    predicted_ht: str = ""
+    actual_ht: str = ""
+    on_track: bool | None = None
+
+
 class PredictionHistoryDetailResponse(BaseModel):
     match_id: str
     match_no: str = ""
@@ -128,6 +183,8 @@ class PredictionHistoryDetailResponse(BaseModel):
     score_away: int | None = None
     status: str = ""
     snapshot: PredictionSnapshotMeta
+    postmatch: PostmatchData | None = None
+    half_check: HalfCheck | None = None
     summary: PredictionAccuracy
     items: list[PredictionSettlementItem]
 

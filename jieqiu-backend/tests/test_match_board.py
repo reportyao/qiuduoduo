@@ -184,6 +184,8 @@ def test_prediction_snapshot_locks_once_and_settles_all_dimensions(db):
     detail = service.build_prediction_history_detail(db, "board-1")
     assert detail is not None and len(detail["items"]) == 26
     assert detail["score_home"] == 2 and detail["score_away"] == 1
+    assert detail["half_check"] == {
+        "predicted_ht": "主胜", "actual_ht": "主胜", "on_track": True}
     labels = {item["type"]: item["predicted_label"] for item in detail["items"]}
     assert labels["product_main"] == "主胜"
     product = next(item for item in detail["items"]
@@ -211,6 +213,41 @@ def test_prediction_snapshot_locks_once_and_settles_all_dimensions(db):
     correct = next(row for row in rows
                    if row.prediction_type == "CORRECT_SCORE_PROBABILITY")
     assert correct.predicted_key == "1-1" and correct.result == "miss"
+
+
+def test_performance_dashboard_aggregates_settlements(db):
+    kickoff = future_kickoff(today_cn())
+    _seed_match(db, kickoff)
+    before = _kickoff_utc_value(kickoff) - timedelta(minutes=30)
+    service.freeze_prediction_snapshots(db, now=before)
+    service.freeze_prediction_snapshots(db, now=_kickoff_utc_value(kickoff) + timedelta(minutes=1))
+    result = MatchResult(
+        source="sportmonks", league="欧国联", home_raw="主队", away_raw="客队",
+        home="主队", away="客队", match_date=kickoff[:10], fixture_id=99001,
+        status="FT", ft_home=2, ft_away=1, ht_home=1, ht_away=0,
+        goals_home=2, goals_away=1, retrieved_at=utcnow().isoformat())
+    db.add(result)
+    db.flush()
+    db.add(MatchResultDetail(
+        result_id=result.id, fixture_id=99001,
+        actuals=service.parse_actuals({
+            "state": {"short_name": "FT"},
+            "scores": [
+                {"score": {"participant": "home", "goals": 2}, "description": "2ND_HALF"},
+                {"score": {"participant": "away", "goals": 1}, "description": "2ND_HALF"},
+            ],
+        })))
+    db.commit()
+    service.settle_prediction_snapshots(db)
+
+    perf = service.build_performance(db, days=30)
+    assert perf["total_settled"] == 3
+    assert perf["hit_rate"] is not None
+    assert len(perf["trend"]) >= 1
+    markets = {row["market"] for row in perf["by_market"]}
+    assert "主预测" in markets and "大小球" in markets and "双方进球" in markets
+    calibration = {row["bucket"] for row in perf["calibration"]}
+    assert calibration  # 至少一个桶有数据
 
 
 def test_live_and_result_boards_do_not_expose_predictions(db, client):

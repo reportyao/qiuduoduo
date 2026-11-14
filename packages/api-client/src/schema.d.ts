@@ -268,6 +268,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/predictions/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Predictions Performance
+         * @description 战绩看板：趋势 / 按市场 / 按联赛 / 校准，纯聚合。
+         */
+        get: operations["predictions_performance_predictions_performance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/predictions/history/{match_id}": {
         parameters: {
             query?: never;
@@ -3079,6 +3099,17 @@ export interface components {
             /** Days */
             days: components["schemas"]["CalendarDay"][];
         };
+        /** CalibrationBucket */
+        CalibrationBucket: {
+            /** Bucket */
+            bucket: string;
+            /** Predicted */
+            predicted: number;
+            /** Actual */
+            actual?: number | null;
+            /** Count */
+            count: number;
+        };
         /** Capabilities */
         Capabilities: {
             /** Can Bet */
@@ -3331,6 +3362,21 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HalfCheck */
+        HalfCheck: {
+            /**
+             * Predicted Ht
+             * @default
+             */
+            predicted_ht: string;
+            /**
+             * Actual Ht
+             * @default
+             */
+            actual_ht: string;
+            /** On Track */
+            on_track?: boolean | null;
         };
         /** Heartbeat */
         Heartbeat: {
@@ -4126,6 +4172,52 @@ export interface components {
             /** Structure */
             structure: string;
         };
+        /** PerformanceMarketRow */
+        PerformanceMarketRow: {
+            /** Market */
+            market: string;
+            /** Settled */
+            settled: number;
+            /** Hits */
+            hits: number;
+            /**
+             * Pushes
+             * @default 0
+             */
+            pushes: number;
+            /** Rate */
+            rate?: number | null;
+        };
+        /** PerformanceResponse */
+        PerformanceResponse: {
+            /** Days */
+            days: number;
+            /** Total Settled */
+            total_settled: number;
+            /** Total Hits */
+            total_hits: number;
+            /** Hit Rate */
+            hit_rate?: number | null;
+            /** Trend */
+            trend?: components["schemas"]["PerformanceTrendPoint"][];
+            /** By Market */
+            by_market?: components["schemas"]["PerformanceMarketRow"][];
+            /** By League */
+            by_league?: components["schemas"]["PerformanceMarketRow"][];
+            /** Calibration */
+            calibration?: components["schemas"]["CalibrationBucket"][];
+        };
+        /** PerformanceTrendPoint */
+        PerformanceTrendPoint: {
+            /** Date */
+            date: string;
+            /** Settled */
+            settled: number;
+            /** Hits */
+            hits: number;
+            /** Rate */
+            rate?: number | null;
+        };
         /** PersonaBody */
         PersonaBody: {
             /** Persona */
@@ -4236,6 +4328,41 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** PostmatchData */
+        PostmatchData: {
+            /** Score Home */
+            score_home?: number | null;
+            /** Score Away */
+            score_away?: number | null;
+            /** Xg Home */
+            xg_home?: number | null;
+            /** Xg Away */
+            xg_away?: number | null;
+            /** Goals */
+            goals?: components["schemas"]["PostmatchGoal"][];
+            /** Captured At */
+            captured_at?: string | null;
+        };
+        /** PostmatchGoal */
+        PostmatchGoal: {
+            /** Minute */
+            minute?: number | null;
+            /**
+             * Player
+             * @default
+             */
+            player: string;
+            /**
+             * Side
+             * @default
+             */
+            side: string;
+            /**
+             * Result
+             * @default
+             */
+            result: string;
+        };
         /** PredictionAccuracy */
         PredictionAccuracy: {
             /** Total Items */
@@ -4290,6 +4417,8 @@ export interface components {
              */
             status: string;
             snapshot: components["schemas"]["PredictionSnapshotMeta"];
+            postmatch?: components["schemas"]["PostmatchData"] | null;
+            half_check?: components["schemas"]["HalfCheck"] | null;
             summary: components["schemas"]["PredictionAccuracy"];
             /** Items */
             items: components["schemas"]["PredictionSettlementItem"][];
@@ -5594,6 +5723,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PredictionHistoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    predictions_performance_predictions_performance_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerformanceResponse"];
                 };
             };
             /** @description Validation Error */

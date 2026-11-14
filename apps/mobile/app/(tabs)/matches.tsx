@@ -10,6 +10,7 @@ import { colors, layout, radii, spacing } from "@/theme/tokens";
 import { DateNavigator } from "@/features/matches/components/DateNavigator";
 import { LiveMatchCard, ResultMatchCard } from "@/features/matches/components/MatchCard";
 import { AccuracyCard, PredictionMatchCard } from "@/features/matches/components/PredictionCard";
+import { PerformanceDashboard } from "@/features/matches/components/PerformanceDashboard";
 import { SegmentedTabs, type MatchTab } from "@/features/matches/components/SegmentedTabs";
 import {
   useLiveBoardQuery,
@@ -137,6 +138,7 @@ export default function MatchesScreen() {
         ) : (
           <>
             {history.data ? <AccuracyCard summary={history.data.summary} /> : null}
+            <PerformanceDashboard days={30} />
             {historyItems.length === 0 ? (
               <EmptyState
                 icon="analytics-outline"

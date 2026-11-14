@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { AppHeader } from "@/components/AppHeader";
 import { AppScreen } from "@/components/Screen";
 import { Card, Chip, EmptyState, ErrorState, ProbabilityBreakdown, Skeleton, Text } from "@/components/ui";
+import { MatchTimeline } from "@/features/matches/components/MatchTimeline";
 import { errorText } from "@/lib/errors";
 import { formatDateTime, pct, utcIso } from "@/lib/format";
 import { goBackOr } from "@/lib/navigation";
@@ -60,6 +61,14 @@ function Body({
     : `${data.score_home} - ${data.score_away}`;
   return (
     <>
+      {data.postmatch || data.half_check ? (
+        <MatchTimeline
+          postmatch={data.postmatch ?? null}
+          halfCheck={data.half_check ?? null}
+          scoreHome={data.score_home ?? null}
+          scoreAway={data.score_away ?? null}
+        />
+      ) : null}
       <Card style={styles.hero}>
         <Text variant="overline" color={colors.green}>赛后复盘</Text>
         <View style={styles.heroTop}>
