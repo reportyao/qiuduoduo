@@ -95,15 +95,24 @@ def list_ops(db: Session, limit: int = 50) -> dict:
     }
 
 
+_STALE_RUNNING_SECONDS = 1800  # running 超 30 分钟视为疑似挂起（进程死/OOM 没走到 job_finish）
+
+
 def _job_summary(db: Session, window: int = 200) -> list[dict]:
-    """按 job_key 聚合最近 window 条：运营一眼看出每个任务是否健康。"""
+    """按 job_key 聚合最近 window 条：运营一眼看出每个任务是否健康。
+
+    僵尸 running：job_start 后进程死亡（被杀/OOM）会永远停在 running，
+    既不是 ok 也不是 error——超过阈值的标记 stale，工作台按失败处理。
+    """
     rows = list(db.scalars(select(OpsJob).order_by(
         OpsJob.started_at.desc()).limit(window)).all())
+    now = utcnow()
     agg: dict[str, dict] = {}
     for j in rows:
         s = agg.setdefault(j.job_key, {
             "runs": 0, "errors": 0, "last_status": "",
-            "last_started_at": None, "last_duration_ms": None, "last_error": "",
+            "last_started_at": None, "last_duration_ms": None,
+            "last_error": "", "stale": False,
         })
         s["runs"] += 1
         if j.status == "error":
@@ -113,6 +122,10 @@ def _job_summary(db: Session, window: int = 200) -> list[dict]:
             s["last_started_at"] = j.started_at.isoformat() if j.started_at else None
             s["last_duration_ms"] = j.duration_ms
             s["last_error"] = j.error or ""
+            s["stale"] = (
+                j.status == "running" and j.started_at is not None
+                and (now - j.started_at).total_seconds() > _STALE_RUNNING_SECONDS
+            )
     return [{"job_key": key, **v} for key, v in sorted(
         agg.items(), key=lambda kv: kv[1]["last_started_at"] or "", reverse=True)]
 

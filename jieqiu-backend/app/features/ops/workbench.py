@@ -93,7 +93,8 @@ def _ops_stage(db: Session, data: dict | None = None) -> dict:
     exceptions = data.get("exceptions") or []
     by_key = {row["job_key"]: row for row in summary}
     core_failed = [key for key in _CORE_JOBS
-                   if by_key.get(key, {}).get("last_status") == "error"]
+                   if by_key.get(key, {}).get("last_status") == "error"
+                   or by_key.get(key, {}).get("stale")]
     core_ok = sum(1 for key in _CORE_JOBS
                   if by_key.get(key, {}).get("last_status") == "ok")
     total_errors = sum(int(row.get("errors") or 0) for row in summary)
@@ -108,7 +109,7 @@ def _ops_stage(db: Session, data: dict | None = None) -> dict:
         state = "blocked"
         bits = []
         if core_failed:
-            bits.append(f"核心任务失败：{'、'.join(core_failed)}")
+            bits.append(f"核心任务异常/挂起：{'、'.join(core_failed)}")
         if severe:
             bits.append(f"严重异常 {len(severe)} 条")
         headline = "；".join(bits) or "后台任务异常"

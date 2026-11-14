@@ -73,6 +73,28 @@ def test_workbench_ops_stage_reflects_health(db):
     assert wb2["raw"]["ops"]["open_exceptions"] >= 1
 
 
+def test_run_action_crash_records_error_exception(db, monkeypatch):
+    """OPC：动作内部崩溃（非业务失败）→ job error + sev3 异常 + 异常继续抛。"""
+    from app.modules import ops as ops_module
+    from app.models import OpsException
+
+    def boom(db, action, date):
+        raise RuntimeError("net down")
+    monkeypatch.setattr(ops, "_run_action_impl", boom)
+    import pytest
+    with pytest.raises(RuntimeError):
+        ops.run_action(db, "sync_intel", date="2026-11-14")
+    job = (db.query(OpsJob)
+           .filter(OpsJob.job_key == "action_sync_intel")
+           .order_by(OpsJob.id.desc()).first())
+    assert job is not None and job.status == "error"
+    assert "RuntimeError" in (job.error or "")
+    exc = (db.query(OpsException)
+           .filter(OpsException.dedupe_key == "action_sync_intel_error")
+           .first())
+    assert exc is not None and int(exc.severity) == 3
+
+
 def test_run_action_records_ops_job(db):
     """管理员一键动作必须写 ops_jobs：业务失败记 error + sev2 异常。"""
     result = ops.run_action(db, "sync_sportmonks", date="2026-11-14")

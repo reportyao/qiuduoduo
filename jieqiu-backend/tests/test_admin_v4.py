@@ -96,6 +96,22 @@ def test_ops_v4_job_summary(client, db):
     assert row["last_status"] == "ok"
 
 
+def test_ops_v4_summary_marks_stale_running(client, db):
+    """OPC：僵尸 running（job_start 后进程死）超 30 分钟标记 stale。"""
+    import datetime as dt
+    from app.models import OpsJob
+    stale_at = dt.datetime.utcnow() - dt.timedelta(minutes=45)
+    fresh_at = dt.datetime.utcnow()
+    db.add(OpsJob(job_key="seed_daily", status="running", started_at=stale_at))
+    db.add(OpsJob(job_key="settle_pending", status="running", started_at=fresh_at))
+    db.commit()
+    admin_login(client)
+    body = client.get("/admin/api/ops-v4?limit=80").json()
+    summary = {x["job_key"]: x for x in body["summary"]}
+    assert summary["seed_daily"]["stale"] is True
+    assert summary["settle_pending"]["stale"] is False
+
+
 def test_ops_producers_write_jobs(db):
     """OPC 生产者：settle_open_cycles 与 membership.expire_all 必须写 ops_jobs。"""
     before = {j.job_key for j in db.query(OpsJob).all()}
