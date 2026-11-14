@@ -4,7 +4,7 @@
 
 **H5 预览（2026-11-13）**：`apps/mobile` 已开启 Expo Web，与 App 共用同一套组件；生产预览 http://43.128.24.244:8100/h5/ ，本地 `just mobile-web`，重新导出 `just mobile-web-export`（产物进 `jieqiu-backend/app/static/h5/`）。H5 只做内部预览，不替代原生推送/安装包能力。
 
-当前事实（2026-11-13）：生产代码仍在 `jieqiu-backend/`，OpenAPI **162 路径 / 178 方法**，后端 **363 tests**，前端 **64 tests**，Alembic head `20261113_26`；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。v4.1 已部署腾讯云生产（2026-11-12 11:38 CST，管理后台静态资源 v=20261113b）；17:00 CST 追加 Sportmonks 情报层（首发/阵型/伤停/积分榜/H2H/天气/裁判/25 维预测/选定市场，Alembic `20261112_24`）。2026-11-13 UI 完成 unSlop 整站重构（字号、间距、预测可视化、市场卡片）；新增比赛中心：即时/赛果/预测战绩三 Tab，赛前预测快照锁定、赛后 25 维逐条对照（Alembic `20261113_26`）。v4 APK 已由 GitHub Actions 构建并在模拟器安装验证；2026-11-12 最终对话版 APK 对应 commit `2d8e75e`（workflow run `43351698209`），正式签名/上架未做。文档索引见 [docs/README.md](./docs/README.md)。
+当前事实（2026-11-14）：生产代码仍在 `jieqiu-backend/`，OpenAPI **162 路径 / 178 方法**，后端 **364 tests**，前端 **64 tests**，Alembic head `20261113_26`；生产数据库目标是境内 PostgreSQL 16（**云托管优先 / 自建兜底**，ADR-0004），未设置 `JQ_PROD_DATABASE_URL` 时仍是旧 SQLite。v4.1 已部署腾讯云生产（2026-11-12 11:38 CST，管理后台静态资源 v=20261113b）；17:00 CST 追加 Sportmonks 情报层（首发/阵型/伤停/积分榜/H2H/天气/裁判/25 维预测/选定市场，Alembic `20261112_24`）。2026-11-13 UI 完成 unSlop 整站重构（字号、间距、预测可视化、市场卡片）；新增比赛中心：即时/赛果/预测战绩三 Tab，赛前预测快照锁定、赛后 25 维逐条对照（Alembic `20261113_26`）。2026-11-14 全站 UX 五轮整改落地（commit `434b94c`，H5 已部署）：ErrorBoundary/触控目标/a11y/下拉刷新/焦点保持/触觉反馈/NetInfo 离线横幅/证据链多选/预测分组全展/暗色模式（tokens 按 `Appearance.getColorScheme()` 启动时选定，运行中切换需重启；新增原生依赖 `@react-native-community/netinfo`，APK 由 tag `apk-20261114-ux5` 构建）。正式签名/上架未做。文档索引见 [docs/README.md](./docs/README.md)。
 
 ## 1. 架构地图
 

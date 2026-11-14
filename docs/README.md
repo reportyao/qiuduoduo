@@ -23,7 +23,7 @@
 - 预览构建使用 `EXPO_PUBLIC_API_BASE_URL=http://43.128.24.244:8100`；正式 App 仍由 GitHub Actions 构建 APK。
 - H5 是内部预览入口，不替代 App 的推送、JPush、安装包等原生能力。
 
-最后对账：2026-11-13。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：后端 `0.8.0-w8+assistant` / 移动端 `0.3.4`，OpenAPI **162 路径 / 178 方法**，后端 **363 tests**，前端 **64 tests**，Alembic head `20261113_26`；开发库仍是 SQLite + WAL，生产目标境内 PostgreSQL 16 尚未切库。比赛中心已落地：即时/赛果/预测战绩，预测快照锁定与 25 维赛后对照。
+最后对账：2026-11-14。App 品牌为 **球多多**（技术标识/包名仍 `jieqiu`，Android/iOS 包名 `com.qiuduoduo.app`）。当前代码事实：后端 `0.8.0-w8+assistant` / 移动端 `0.3.4`，OpenAPI **162 路径 / 178 方法**，后端 **364 tests**，前端 **64 tests**，Alembic head `20261113_26`；开发库仍是 SQLite + WAL，生产目标境内 PostgreSQL 16 尚未切库。比赛中心已落地：即时/赛果/预测战绩，预测快照锁定与 25 维赛后对照。2026-11-14 全站 UX 五轮整改完成（见 `reviews/2026-11-14-full-app-audit.md` 执行标注）：暗色模式、离线检测、触觉反馈、a11y 补齐。
 
 > **产品/技术方案唯一有效版本：** [qiuduoduo-v4-final-plan.md](./qiuduoduo-v4-final-plan.md)。  
 > 其他 `ai-*` / `membership-*` / `grounded-*` 产品方案已标记作废，仅作历史参考；技术文档（architecture / database / API / workbench / OPC）不受影响。

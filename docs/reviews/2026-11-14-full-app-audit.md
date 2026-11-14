@@ -5,6 +5,25 @@
 
 ---
 
+## 〇、执行结果（2026-11-14 全部五轮已落地，commit `434b94c`）
+
+| 轮次 | 状态 | 实现要点 |
+|---|---|---|
+| Round 1 P0 | ✅ | ErrorBoundary 根布局包裹；开关 hitSlop 补足 44pt；a11y role/label 补齐；选场按 conversation.messages 去重；四段切换 scrollTo(y:0) |
+| Round 2 数据体验 | ✅ | verdict/predictions 详情 RefreshControl；chooseDate 不再 clearFocus + prevFocusRef 恢复；简报按日期显示"今日/历史简报"；MatchTimeline 累计比分改 useMemo（修复误从 react-native 导入 useMemo + hooks 顺序违规）；badge 16px 容器/12px 字号；Skeleton + BootScreen + HeaderMetrics 全部 reduced-motion |
+| Round 3 设计系统 | ✅ | 全部散落 hex/rgba 提取至 tokens（Button/Toast/Chip/IconButton/Probability*/Gates/SportmonksPredictionBoard/PredictionCard）；触觉：关注=light、三关全过=success（按 verdict id 一次）、下拉刷新=light、发送消息=light；会员页 Skeleton + ErrorState retry；NetInfo 离线横幅（OfflineBanner）+ queries `networkMode:"offlineFirst"` + 恢复联网 invalidateQueries；PredictionGroupBoard「展开全部 25 维」；EvidenceChainCard 改 Set 多选展开 |
+| Round 4 暗色模式 | ✅ | tokens.ts 内置 lightColors/darkColors 同名 token 全量覆盖；模块初始化按 `Appearance.getColorScheme()` 一次选定（运行中切换系统主题需重启/刷新生效，H5 刷新即跟随）；StatusBar 跟随 scheme；暗色 hero 比页面更深一档保层次；双用途色修正：Button primary fg→`onGreen`、Toast success bg→`toastSuccessBg`、TabBar badge→`dangerPressed`；关键组合对比度脚本实测全部 ≥4.5（最低 subtle/surface 4.56，badge 白字 5.18） |
+| Round 5 打磨 | ✅ | Button `android_ripple`（whiteSoft, foreground）；Sheet `keyboardShouldPersistTaps`、Toast `accessibilityLiveRegion`、工具页 keyboardType 复查发现已在早轮修复 |
+
+**验证**：typecheck + lint 全绿；前端 64 tests、后端 364 tests 全过；Android Hermes bundle 3.61MB 出包成功；H5 已部署生产（200）。APK 由 tag `apk-20261114-ux5` 构建（netinfo 为新增原生依赖，JS-only 推送不覆盖）。
+
+**暗色模式边界说明**：app.json 的原生 SplashScreen 仍是浅色（启动瞬间），深色启动图需后续 native 配置；`Appearance.addChangeListener` 的运行中热切换因全站模块级 StyleSheet 缓存而不做，属已知取舍。
+
+---
+
+
+---
+
 ## 一、设计系统审查
 
 ### P0 · CRITICAL
