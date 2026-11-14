@@ -144,8 +144,18 @@ const darkColors: Record<keyof typeof lightColors, string> = {
   toastErrorBg: "rgba(24,21,18,0.97)",
 };
 
+// H5 预览可用 ?theme=light|dark 强制主题（QA 双主题核对）；App 端跟随系统。
+const themeParam =
+  Platform.OS === "web" && typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("theme")
+    : null;
+
 export const colorSchemeName: "light" | "dark" =
-  Appearance.getColorScheme() === "dark" ? "dark" : "light";
+  themeParam === "light" || themeParam === "dark"
+    ? themeParam
+    : Appearance.getColorScheme() === "dark"
+      ? "dark"
+      : "light";
 
 export const colors: Readonly<Record<keyof typeof lightColors, string>> =
   colorSchemeName === "dark" ? darkColors : lightColors;

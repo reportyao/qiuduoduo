@@ -8,7 +8,7 @@ interface ChipProps {
   label: string;
   tone?: ChipTone;
   selected?: boolean;
-  /** 多选场景用 soft，避免一排全是深绿色实心块。 */
+  /** 多选场景用 soft，避免一排全是深色实心块。 */
   selectedStyle?: "solid" | "soft";
   onPress?: () => void;
   dot?: boolean;

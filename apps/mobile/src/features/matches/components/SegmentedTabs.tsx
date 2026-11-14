@@ -66,6 +66,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  active: { backgroundColor: colors.brandDeep },
+  active: { backgroundColor: colors.brandPressed },
   pressed: { backgroundColor: colors.brandSoft },
 });

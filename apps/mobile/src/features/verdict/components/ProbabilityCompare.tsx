@@ -87,7 +87,7 @@ export function ProbabilityCompareCard({ data }: { data: ProbabilityCompareData 
         <Row
           label="模型概率"
           probs={data.model}
-          tone={colors.brandDeep}
+          tone={colors.ink}
           delta={divergence(data.model, data.market?.probs ?? data.thirdParty?.probs)}
         />
       ) : null}

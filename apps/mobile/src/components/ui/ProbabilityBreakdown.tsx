@@ -22,7 +22,7 @@ interface ProbabilityBreakdownProps {
 /**
  * 概率分布的统一表达：
  * 少量结果用一条堆叠条 + 图例；正确比分这种多结果用网格。
- * 预测项用绿色，实际结果用琥珀色描边，避免把 19 个比分堆成一段文字。
+ * 预测项用红/金（红中），实际结果用琥珀色描边，避免把 19 个比分堆成一段文字。
  */
 export function ProbabilityBreakdown({
   items,

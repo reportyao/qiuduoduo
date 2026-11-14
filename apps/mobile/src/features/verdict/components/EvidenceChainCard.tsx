@@ -40,7 +40,7 @@ function sourceCutoff(item: EvidenceItem): string {
 
 /**
  * 证据链：把「这个判断依据什么」摊开。
- * 每条证据一行——来源图标、标题、内容；核心项墨绿 chip，数据项灰色 chip。
+ * 每条证据一行——来源图标、标题、内容；核心项红色 chip，数据项灰色 chip。
  */
 export function EvidenceChainCard({
   items,
