@@ -59,6 +59,27 @@
 
 **P0 验收**：关注一场比赛 → 开赛/每球/终场各在对话框收到助理气泡（延迟 ≤1 分钟），点击直达详情；未关注场次的比赛不收到（专属化边界）。
 
+### P0 实施细节确认（方案 review 后修订，以本节为准）
+
+代码实证后对 P0 的修正与补充：
+
+1. **提频成本大幅优于预估**：`sync_live_states` 用的是 `/livescores/inplay` 专用端点——
+   **一次请求覆盖全部映射场次**（`per_page=100`），且自带 25s 内存缓存（`_live_cache`）。
+   提频 = 全局每分钟 1 次请求（≈60 次/小时，与比赛场数无关），Growth 档配额无忧；
+   worker 节流（≥45s）防 force 绕过缓存后重叠拉取。
+2. **收件人边界（重要）**：`_recipients` 只含 **WatchTarget 关注者 + Bet 下注者**，
+   **不含 InteractionEvent 的"看过"用户**。P0 通知范围 = 关注者 + 下注者（现势能力）；
+   "看了的比赛也提示"放 P1——且做成**偏好开关**（看过≠想被盯盘，默认关，记忆面板里可开）。
+3. **goal 文案 P0 不带球员名**：live 轮询 include（participants;scores;state;periods;league）无 events，
+   进球者名字不在数据里。P0 文案 =「冰岛进球了，比分 2-0」；比分变化时可选补一次
+   `fixtures/{id}?include=events` 拿进球者与类型（点球/乌龙），每球一次额外调用（进球低频，P1 做）。
+4. **点球大战防刷屏**：state=PEN 时比分逐球变化会连环触发 goal 事件——
+   PEN 期间合并为一条「点球大战进行中」（dedupe_key=pen:{match_id}:{score 序列截断}），
+   终场由 final monitor 发结果。红牌事件（type_id=20）移入 P1（非比分语义，优先级低）。
+5. **read 语义理顺**：inapp 注入对话流**不自动标 read**；unread-count 归消息中心管理；
+   用户点助理气泡 → 标 read + 跳 deeplink。对话流防重复注入用本地「已注入 id 集合」，不依赖 read 状态。
+6. **工作量修正**：P0 = ~2 天（含 Sportmonks 限额实测与联调缓冲）。
+
 ### P1 · 专属记忆（~2.5 天）
 
 1. **`GET /assistant/memory`**：聚合最近 N 天 InteractionEvent（看过 x 场 / 问过 y 次 / 关注 z 场）+ WatchTarget + 上次日报时间。
