@@ -38,14 +38,14 @@ export function MatchTimeline({
     if (goal.side === "home") home += 1;
     else if (goal.side === "away") away += 1;
     const cumulative = `${home}-${away}`;
-    const halfAfter = hasHalf && index === firstSecondHalf;
+    const halfBefore = hasHalf && index === firstSecondHalf;
     const isLast = index === goals.length - 1;
     return (
       <View key={`${goal.minute}-${goal.player}-${index}`} style={styles.event}>
         <View style={styles.marker}>
           <View style={styles.dot} />
-          {!isLast || halfAfter ? <View style={styles.line} /> : null}
-          {halfAfter ? <View style={[styles.line, styles.lineHalf]} /> : null}
+          {!isLast || halfBefore ? <View style={styles.line} /> : null}
+          {halfBefore ? <View style={[styles.line, styles.lineHalf]} /> : null}
         </View>
         <View style={styles.eventBody}>
           <Text variant="captionStrong" mono>
@@ -62,7 +62,7 @@ export function MatchTimeline({
       </View>
     );
   });
-  if (hasHalf && (firstSecondHalf === -1 || goals.length === 0)) {
+  if (hasHalf && (firstSecondHalf <= 0 || goals.length === 0)) {
     rendered.unshift(
       <View key="half-marker" style={styles.event}>
         <View style={styles.marker}>

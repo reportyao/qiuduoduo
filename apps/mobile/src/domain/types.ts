@@ -344,26 +344,6 @@ export interface WhyNotResponse {
   verdictHash: string | null;
 }
 
-export interface IntelDimension {
-  key: string;
-  label: string;
-  value: string;
-  direction: "up" | "down" | "flat" | "unknown";
-  note: string;
-  source?: string;
-}
-
-export interface IntelReport {
-  headline: string;
-  summary: string;
-  dimensions: IntelDimension[];
-  unPriced: number;
-  total: number;
-  cutoff: string;
-  sourceCount: number;
-  isFallback: boolean;
-}
-
 export interface BetRecord {
   id: number;
   verdictId: string;
