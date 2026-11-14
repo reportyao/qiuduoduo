@@ -81,6 +81,57 @@ def _collector(db: Session) -> dict:
             "data_age_seconds": data_age}
 
 
+_CORE_JOBS = ("seed_daily", "settle_pending", "settle_open_cycles",
+              "membership_expire")
+
+
+def _ops_stage(db: Session, data: dict | None = None) -> dict:
+    """OPC 阶段：后台任务健康 + 未处理异常，单人管理员一眼定生死。"""
+    from ...modules import ops
+    data = data or ops.list_ops(db, limit=50)
+    summary = data.get("summary") or []
+    exceptions = data.get("exceptions") or []
+    by_key = {row["job_key"]: row for row in summary}
+    core_failed = [key for key in _CORE_JOBS
+                   if by_key.get(key, {}).get("last_status") == "error"]
+    core_ok = sum(1 for key in _CORE_JOBS
+                  if by_key.get(key, {}).get("last_status") == "ok")
+    total_errors = sum(int(row.get("errors") or 0) for row in summary)
+    severe = [ex for ex in exceptions if int(ex.get("severity") or 0) >= 3]
+    metrics = [
+        {"label": "核心任务正常", "value": f"{core_ok}/{len(_CORE_JOBS)}"},
+        {"label": "任务失败次数(近200)", "value": total_errors},
+        {"label": "未处理异常", "value": len(exceptions)},
+        {"label": "严重异常(sev≥3)", "value": len(severe)},
+    ]
+    if severe or core_failed:
+        state = "blocked"
+        bits = []
+        if core_failed:
+            bits.append(f"核心任务失败：{'、'.join(core_failed)}")
+        if severe:
+            bits.append(f"严重异常 {len(severe)} 条")
+        headline = "；".join(bits) or "后台任务异常"
+    elif total_errors or exceptions:
+        state = "warn"
+        headline = f"任务有 {total_errors} 次失败记录；未处理异常 {len(exceptions)} 条，非核心"
+    elif summary:
+        state = "ok"
+        headline = f"{len(summary)} 个监控任务全部正常"
+    else:
+        state = "ok"
+        headline = "还没有任务运行记录（seed/cron 尚未跑过）"
+    next_step = ("到「异常队列」页查看任务明细与异常，标记处理"
+                 if state != "ok" else "无需处理")
+    return _stage(
+        "ops", "后台任务与异常", "定时任务有没有失败？有没有异常等我处理？",
+        "OPC 视角：seed/结算/会员到期/每日抓取等 ops_jobs 健康汇总 + 未处理 ops_exceptions。",
+        state, headline, metrics,
+        [row.get("last_error", "") for row in summary if row.get("last_error")][:3],
+        next_step,
+    )
+
+
 def build_workbench(db: Session, date: str | None = None) -> dict:
     date = date or trade_date_now()
     start, end = trade_window(date)
@@ -348,6 +399,9 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
         push_next,
     ))
 
+    from ...modules import ops
+    ops_data = ops.list_ops(db, limit=50)
+    stages.append(_ops_stage(db, ops_data))
     blocked = [s for s in stages if s["state"] == "blocked"]
     warn = [s for s in stages if s["state"] == "warn"]
     headline = (f"今日 {len(matches)} 场 · SP {snapshots_today} 条 · "
@@ -395,6 +449,10 @@ def build_workbench(db: Session, date: str | None = None) -> dict:
             "no_matches": no_matches,
             "next_match": ({"home": next_match.home, "away": next_match.away,
                             "kickoff": next_match.kickoff} if next_match else None),
+            "ops": {
+                "summary": (ops_data.get("summary") or [])[:8],
+                "open_exceptions": len(ops_data.get("exceptions") or []),
+            },
         },
     }
 
@@ -464,6 +522,7 @@ def diagnose_workbench(db: Session, date: str | None = None) -> dict:
             "analyses": wb["raw"]["analyses"],
             "llm": wb["raw"]["llm"],
             "missing_league": wb["raw"]["missing_league"],
+            "ops": wb["raw"].get("ops", {}),
         },
     }
     result = llm_gateway.complete(
@@ -541,8 +600,36 @@ def db_profile_key(db: Session, name: str) -> bool:
 
 
 def run_action(db: Session, action: str, date: str | None = None) -> dict:
-    """执行 allowlist 动作；不执行任意 shell。"""
+    """执行 allowlist 动作；不执行任意 shell。
+
+    OPC：每次动作记 ops_jobs（action_*），业务失败记 sev2 异常、
+    崩溃记 sev3——管理员点过的每个按钮都可追溯。
+    """
+    from ...modules import ops
     date = date or trade_date_now()
+    job_id = ops.job_start(db, f"action_{action}")
+    try:
+        result = _run_action_impl(db, action, date)
+        ok = bool(result.get("ok"))
+        ops.job_finish(db, job_id, "ok" if ok else "error",
+                       "" if ok else str(result.get("message", ""))[:300])
+        if not ok:
+            ops.exception(db, f"action_{action}_fail",
+                          str(result.get("message", ""))[:200],
+                          severity=2, source=f"action:{action}",
+                          dedupe_key=f"action_{action}_fail")
+        return result
+    except Exception as exc:
+        db.rollback()
+        ops.job_finish(db, job_id, "error", f"{type(exc).__name__}: {exc}")
+        ops.exception(db, f"action_{action}_error", f"{type(exc).__name__}: {exc}"[:200],
+                      severity=3, source=f"action:{action}",
+                      dedupe_key=f"action_{action}_error")
+        raise
+
+
+def _run_action_impl(db: Session, action: str, date: str) -> dict:
+    """动作实现（allowlist；不执行任意 shell）。"""
     if action == "restart_collector":
         row = db.get(CollectorStatus, 1)
         if row is None:

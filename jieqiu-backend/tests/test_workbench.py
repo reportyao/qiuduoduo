@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from app.features.ops import workbench as ops
-from app.models import CollectorStatus
+from app.models import CollectorStatus, OpsException, OpsJob
 from tests.conftest import admin_login, today_cn
 
 
@@ -47,3 +47,45 @@ def test_workbench_api_with_admin(client):
     response = client.get("/admin/api/workbench")
     assert response.status_code == 200
     assert "stages" in response.json()
+
+
+def test_workbench_ops_stage_reflects_health(db):
+    """OPC 阶段：无异常时 ok；核心任务失败/严重异常时 blocked。"""
+    wb = ops.build_workbench(db)
+    stage = next(s for s in wb["stages"] if s["key"] == "ops")
+    assert stage["state"] == "ok"
+    assert "监控任务" in stage["headline"] or "任务运行记录" in stage["headline"]
+    assert wb["raw"]["ops"]["open_exceptions"] == 0
+
+    # 核心任务最近失败 → blocked
+    import datetime as dt
+    db.add(OpsJob(job_key="settle_pending", status="error",
+                  started_at=dt.datetime(2026, 11, 14, 6, 0),
+                  error="boom"))
+    db.add(OpsException(type="settlement_error", severity=3,
+                        message="crash", status="open",
+                        dedupe_key="test-sev3"))
+    db.commit()
+    wb2 = ops.build_workbench(db)
+    stage2 = next(s for s in wb2["stages"] if s["key"] == "ops")
+    assert stage2["state"] == "blocked"
+    assert "settle_pending" in stage2["headline"]
+    assert wb2["raw"]["ops"]["open_exceptions"] >= 1
+
+
+def test_run_action_records_ops_job(db):
+    """管理员一键动作必须写 ops_jobs：业务失败记 error + sev2 异常。"""
+    result = ops.run_action(db, "sync_sportmonks", date="2026-11-14")
+    job = (db.query(OpsJob)
+           .filter(OpsJob.job_key == "action_sync_sportmonks")
+           .order_by(OpsJob.id.desc()).first())
+    assert job is not None, "动作必须记录 ops_job"
+    # 无 sportmonks 数据的测试库：业务失败（ok False → error）或成功（ok）
+    assert job.status in ("ok", "error")
+    assert job.status == ("ok" if result.get("ok") else "error")
+    if not result.get("ok"):
+        exc = (db.query(OpsException)
+               .filter(OpsException.dedupe_key == "action_sync_sportmonks_fail")
+               .first())
+        assert exc is not None
+        assert exc.status == "open"
