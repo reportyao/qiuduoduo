@@ -370,3 +370,62 @@ def test_result_board_prioritizes_interested_match_without_label(db):
         "board-early", "board-late"]
     assert personalized["matches"][0]["interest"] is True
     assert "watched" not in personalized["matches"][0]
+
+
+def test_parse_actuals_own_goal_opener_side():
+    """乌龙球开纪录：participant 是防守方，进球方按累计比分推导。"""
+    from app.features.board import service as board_service
+    fixture = {
+        "state": {"short_name": "FT"},
+        "participants": [
+            {"id": 10, "name": "主队", "meta": {"location": "home"}},
+            {"id": 20, "name": "客队", "meta": {"location": "away"}},
+        ],
+        "scores": [
+            {"description": "1ST_HALF", "score": {"participant": "home", "goals": 0}},
+            {"description": "1ST_HALF", "score": {"participant": "away", "goals": 1}},
+            {"description": "2ND_HALF", "score": {"participant": "home", "goals": 0}},
+            {"description": "2ND_HALF", "score": {"participant": "away", "goals": 2}},
+            {"description": "CURRENT", "score": {"participant": "home", "goals": 0}},
+            {"description": "CURRENT", "score": {"participant": "away", "goals": 3}},
+        ],
+        "events": [
+            # 乌龙球开纪录：participant 10（主队/防守方），累计比分 0-1 → 进球方是客队
+            {"type_id": 15, "participant_id": 10, "minute": 12,
+             "player": {"name": "乌龙后卫"}, "result": "0-1"},
+            {"type_id": 14, "participant_id": 20, "minute": 55,
+             "player": {"name": "客队前锋"}, "result": "0-2"},
+            {"type_id": 14, "participant_id": 20, "minute": 70,
+             "player": {"name": "客队前锋"}, "result": "0-3"},
+        ],
+        "statistics": [],
+    }
+    actuals = board_service.parse_actuals(fixture)
+    assert actuals["first_goal_side"] == "away"
+
+
+def test_parse_actuals_penalty_opener_side():
+    """点球开纪录（type_id=16）也计入先进球。"""
+    from app.features.board import service as board_service
+    fixture = {
+        "state": {"short_name": "FT"},
+        "participants": [
+            {"id": 10, "name": "主队", "meta": {"location": "home"}},
+            {"id": 20, "name": "客队", "meta": {"location": "away"}},
+        ],
+        "scores": [
+            {"description": "1ST_HALF", "score": {"participant": "home", "goals": 1}},
+            {"description": "1ST_HALF", "score": {"participant": "away", "goals": 0}},
+            {"description": "2ND_HALF", "score": {"participant": "home", "goals": 0}},
+            {"description": "2ND_HALF", "score": {"participant": "away", "goals": 0}},
+            {"description": "CURRENT", "score": {"participant": "home", "goals": 1}},
+            {"description": "CURRENT", "score": {"participant": "away", "goals": 0}},
+        ],
+        "events": [
+            {"type_id": 16, "participant_id": 10, "minute": 8,
+             "player": {"name": "主队点球手"}, "result": "1-0"},
+        ],
+        "statistics": [],
+    }
+    actuals = board_service.parse_actuals(fixture)
+    assert actuals["first_goal_side"] == "home"

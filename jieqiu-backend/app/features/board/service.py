@@ -286,16 +286,27 @@ def parse_actuals(fixture: dict) -> dict[str, Any]:
                 corners[side] += int((row.get("data") or {}).get("value") or 0)
             except (TypeError, ValueError):
                 pass
+    # 点球(16)/乌龙球(15)也是进球；乌龙球的 participant 是防守方，
+    # 开纪录方按累计比分 result 推导，缺失时回退 participant。
     goals = [row for row in fixture.get("events") or []
-             if int(row.get("type_id") or 0) == 14]
+             if int(row.get("type_id") or 0) in (14, 15, 16)]
     first_side = ""
     if goals:
         goals.sort(key=lambda row: (int(row.get("minute") or 999),
                                     int(row.get("id") or 0)))
         first = goals[0]
-        participant = participants.get(int(first.get("participant_id") or 0))
-        if participant:
-            first_side = participant[0]
+        try:
+            home1, away1 = (int(x) for x in str(first.get("result") or "").split("-"))
+            if home1 == 1 and away1 == 0:
+                first_side = "home"
+            elif away1 == 1 and home1 == 0:
+                first_side = "away"
+        except (ValueError, AttributeError):
+            pass
+        if not first_side:
+            participant = participants.get(int(first.get("participant_id") or 0))
+            if participant:
+                first_side = participant[0]
     total = ft_home + ft_away
 
     def outcome(home: int, away: int) -> str:

@@ -132,3 +132,39 @@ def test_backfill_historical_verdict(db, monkeypatch):
     row = db.get(Verdict, "v-backfill-1")
     assert row.settled == "win"
     assert row.result_score == "2-0"
+
+
+def test_parse_result_prefers_ft_row_over_2nd_half():
+    """FT 行存在时优先 FT，不被后面的 2ND_HALF 行覆盖。"""
+    from app.modules.sportmonks_results import parse_result
+    fixture = {
+        "state": {"short_name": "FT"},
+        "scores": [
+            {"description": "FT", "score": {"participant": "home", "goals": 2}},
+            {"description": "FT", "score": {"participant": "away", "goals": 1}},
+            {"description": "2ND_HALF", "score": {"participant": "home", "goals": 2}},
+            {"description": "2ND_HALF", "score": {"participant": "away", "goals": 1}},
+        ],
+    }
+    parsed = parse_result(fixture)
+    assert parsed["ft"] == (2, 1)
+
+
+def test_parse_result_sums_halves_when_ft_missing():
+    """FT 行缺失（低档数据）时用 1ST_HALF + 2ND_HALF 求和——
+    保加利亚 0-5 型：上半场 0-2、下半场 0-3，全场 0-5。"""
+    from app.modules.sportmonks_results import parse_result
+    fixture = {
+        "state": {"short_name": "FT"},
+        "scores": [
+            {"description": "1ST_HALF", "score": {"participant": "home", "goals": 0}},
+            {"description": "1ST_HALF", "score": {"participant": "away", "goals": 2}},
+            {"description": "2ND_HALF", "score": {"participant": "home", "goals": 0}},
+            {"description": "2ND_HALF", "score": {"participant": "away", "goals": 3}},
+            {"description": "CURRENT", "score": {"participant": "home", "goals": 0}},
+            {"description": "CURRENT", "score": {"participant": "away", "goals": 5}},
+        ],
+    }
+    parsed = parse_result(fixture)
+    assert parsed["ft"] == (0, 5)
+    assert parsed["ht"] == (0, 2)

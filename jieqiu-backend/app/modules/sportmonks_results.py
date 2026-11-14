@@ -55,9 +55,21 @@ def parse_result(fixture: dict) -> dict | None:
     if state not in _FINISHED:
         return None
     rows = fixture.get("scores") or []
-    ft = _goals_from_rows(rows, {"FT", "2ND_HALF"})
+    # FT 行精确优先；缺失时用 1ST_HALF + 2ND_HALF 求和推算——
+    # 不能把 {"FT","2ND_HALF"} 混在一起取：goals dict 按 side 覆盖，
+    # FT 行缺失时会把下半场比分当全场（上半场有进球就错）。
+    ft = _goals_from_rows(rows, {"FT"})
+    if ft is None:
+        half1 = _goals_from_rows(rows, {"HT", "1ST_HALF"})
+        half2 = _goals_from_rows(rows, {"2ND_HALF"})
+        if half1 is not None and half2 is not None:
+            ft = (half1[0] + half2[0], half1[1] + half2[1])
     if ft is None and state in ("FT", "FINISHED"):
         ft = _goals_from_rows(rows, {"CURRENT"})
+    if ft is None:
+        # 最后手段（兼容只有 2ND_HALF 的残缺数据）：旧行为，上半场有进球时会算错，
+        # 但真实响应（FT/FINISHED）总有 CURRENT 行，此分支实际极少触发。
+        ft = _goals_from_rows(rows, {"2ND_HALF"})
     if ft is None and state in ("FT", "FINISHED"):
         match = _SCORE_RE.search(str(fixture.get("result_info") or ""))
         if match:
