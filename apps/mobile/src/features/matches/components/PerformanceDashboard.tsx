@@ -89,7 +89,9 @@ export function PerformanceDashboard({ days = 30 }: { days?: number }) {
 
       {trend.length >= 2 ? (
         <View style={styles.section}>
-          <Text variant="captionStrong" color={colors.muted}>每日命中率</Text>
+          <Text variant="captionStrong" color={colors.muted}>
+            每日命中率{trend.length > 10 ? `（最近 10 天 / 共 ${trend.length} 天）` : ""}
+          </Text>
           <View style={styles.trendList}>
             {trend.slice(-10).map((point) => (
               <BarRow
@@ -110,6 +112,24 @@ export function PerformanceDashboard({ days = 30 }: { days?: number }) {
           <Text variant="captionStrong" color={colors.muted}>按市场拆分</Text>
           <View style={styles.trendList}>
             {data?.by_market?.map((row) => (
+              <BarRow
+                key={row.market}
+                label={row.market}
+                value={row.settled}
+                maxValue={maxMarketSettled}
+                note={`${pct(row.rate, 0)} · ${row.hits}/${row.settled}`}
+                tone={rateColor(row.rate)}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {(data?.by_league ?? []).length > 1 ? (
+        <View style={styles.section}>
+          <Text variant="captionStrong" color={colors.muted}>按联赛拆分</Text>
+          <View style={styles.trendList}>
+            {data.by_league?.map((row) => (
               <BarRow
                 key={row.market}
                 label={row.market}

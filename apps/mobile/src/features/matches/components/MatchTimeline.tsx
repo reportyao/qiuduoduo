@@ -94,23 +94,9 @@ export function MatchTimeline({
         ) : null}
       </View>
 
-      {hasHalf && !goals.some((goal) => (goal.minute ?? 0) <= 45) ? (
-        <View style={styles.event}>
-          <View style={styles.marker}>
-            <View style={styles.dotHalf} />
-            <View style={styles.line} />
-          </View>
-          <View style={styles.eventBody}>
-            <Text variant="captionStrong" mono>45'</Text>
-            <HalfCheckRow check={halfCheck!} />
-          </View>
-        </View>
-      ) : null}
-
       {rendered.length ? rendered : (
         <Text variant="small" color={colors.muted}>这场没有进球事件记录。</Text>
       )}
-      {hasHalf && firstSecondHalf >= 0 ? null : null}
 
       {postmatch?.captured_at ? (
         <Text variant="caption" color={colors.subtle} style={styles.note}>
