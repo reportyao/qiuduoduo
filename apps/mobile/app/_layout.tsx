@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { AppState, StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BootScreen } from "@/components/BootScreen";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ToastProvider } from "@/components/ui/Toast";
 import { useAuthStore } from "@/features/auth/authStore";
 import { useMeQuery } from "@/features/account/queries";
@@ -58,8 +59,9 @@ export default function RootLayout() {
   }, [queryClient]);
 
   return (
-    <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
         <StatusBar style="dark" backgroundColor={colors.bg} />
         <ToastProvider>
           <View style={styles.fill}>
@@ -90,9 +92,10 @@ export default function RootLayout() {
               </View>
             )}
           </View>
-        </ToastProvider>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+          </ToastProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 

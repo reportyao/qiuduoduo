@@ -202,6 +202,13 @@ export default function HomeScreen() {
       trackInteraction("focus_select", { matchId: option.matchId });
       setFocus(focusFromOnSale(match, tradeDate));
     }
+    // 同一场比赛已在对话中时只聚焦，不重复追加消息卡。
+    if (conversation.messages.some(
+      (msg) => msg.kind === "match" && msg.option.matchId === option.matchId,
+    )) {
+      consumeSelection();
+      return;
+    }
     autoScroll.current = true;
     conversation.append({
       id: nextChatId("u"),
@@ -300,6 +307,15 @@ export default function HomeScreen() {
   const selectBriefOption = useCallback(
     (option: BriefMatchOption) => {
       setOpenedAll(false);
+      // 同一场比赛已在对话中时只聚焦，不重复追加消息卡。
+      if (conversation.messages.some(
+        (msg) => msg.kind === "match" && msg.option.matchId === option.matchId,
+      )) {
+        const verdict = verdicts.find((item) => item.matchId === option.matchId)
+          ?? references.find((item) => item.matchId === option.matchId);
+        if (verdict) setFocus(focusFromVerdict(verdict, stream?.tradeDate ?? date));
+        return;
+      }
       const verdict = verdicts.find((item) => item.matchId === option.matchId)
         ?? references.find((item) => item.matchId === option.matchId);
       if (verdict) {

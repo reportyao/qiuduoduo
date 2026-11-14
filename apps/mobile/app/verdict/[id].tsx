@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { goBackOr } from "@/lib/navigation";
 import { Share, ScrollView, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -42,6 +42,8 @@ export default function VerdictDetailScreen() {
   const { copy, id: personaId } = usePersonaContent();
   const session = useAuthStore((s) => s.session);
   const [section, setSection] = useState<DetailSection>("overview");
+  const scrollRef = useRef<ScrollView>(null);
+  useEffect(() => { scrollRef.current?.scrollTo({ y: 0, animated: false }); }, [section]);
   const [betOpen, setBetOpen] = useState(false);
   const [sealOpen, setSealOpen] = useState(false);
   const setFocus = useFocusStore((s) => s.setFocus);
@@ -166,6 +168,7 @@ export default function VerdictDetailScreen() {
         onBack={() => goBackOr(router)}
       />
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >

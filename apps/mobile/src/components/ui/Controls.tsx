@@ -17,7 +17,7 @@ export function Toggle({ value, onChange, label, disabled = false }: ToggleProps
       accessibilityLabel={label}
       accessibilityState={{ checked: value, disabled }}
       onPress={disabled ? undefined : () => onChange(!value)}
-      hitSlop={6}
+      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
       style={[
         styles.track,
         { backgroundColor: value ? colors.green : colors.lineStrong, opacity: disabled ? 0.5 : 1 },
