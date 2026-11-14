@@ -16,6 +16,8 @@
 
 > **2026-11-14 OPC 运营控制面补全（已部署，无数据库变更）**：commit `271ff27`，管理后台静态资源 `v=20261113b→20261114a`，后端全量 **369 tests** 通过。改动：① OPC 任务生产者补全——`settle_open_cycles`（plan 结算）、`membership_expire`（会员到期）、`seed_daily`（每日 seed）接入 `ops_jobs`/`ops_exception`（此前仅 `settle_pending` 有记录），失败记 exception 后吞掉异常不让调度链被单次失败拖死；② `/admin/api/ops-v4` 新增 `summary`（按 job_key 聚合最近 200 次：最近状态/耗时/失败数/最近错误）；③ `/admin/api/app-users` 新增合规巡检字段（年龄门/未成年锁定/自排除/连败保护开关/休息至/今日 AI 额度）；④ 管理后台 UI：异常队列页新增「任务健康汇总」卡、用户与会员表新增「合规/额度」列。部署方式：scp 7 个文件（admin_api/ops/plan_service/membership/seed/admin.js/index.html）+ `systemctl restart`，冒烟 active、`/health` 200、admin shell 引用 `v=20261114a`、`/admin/api/ops-v4` 未认证 401、journalctl 无 error。回滚：`git checkout 271ff27~1 -- app/routers/admin_api.py app/modules/ops.py app/modules/plan_service.py app/modules/membership.py app/seed.py app/static/admin/` 后重启。
 
+> **2026-11-14 工作台并入 OPC（已部署，无数据库变更）**：commit `c39731e`，后端全量 **371 tests**。① `build_workbench` 新增 **ops 阶段**（key=`ops`）：聚合 seed_daily/settle_pending/settle_open_cycles/membership_expire 四个核心任务的健康汇总与未处理异常——核心任务最近失败或 sev≥3 异常 → `blocked`（工作台 headline 自动点名主卡点），管理员首屏即可定生死，无需跳异常队列页；② `run_action` 的一键动作（重启采集器/同步国际盘/同步 Sportmonks/同步情报/测 LLM/跑主链）全部接入 `ops_jobs`（`action_*`），业务失败记 error+sev2 异常、崩溃记 sev3——每个按钮可追溯、失败自动进异常队列；③ diagnose 上下文带 ops 摘要，LLM 诊断可读任务失败原因。部署：scp `app/features/ops/workbench.py` + restart，冒烟 active/`/health` 200/workbench 未认证 401/journalctl 无 error。回滚：`git checkout c39731e~1 -- app/features/ops/workbench.py` 后重启。
+
 ## 1. 进程与目录
 
 | 项 | 当前值 |
