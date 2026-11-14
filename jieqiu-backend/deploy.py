@@ -343,7 +343,11 @@ WantedBy=multi-user.target
             f"venv/bin/python -m app.features.assistant.worker --once >> {ROOT}/assistant.log 2>&1\n"
             # 数据保留：每周日 04:10 清理可再生日志；判决/账本/SP 快照永不自动删除
             f"10 4 * * 0 {cron_prefix}"
-            f"venv/bin/python -m app.db_maint --apply --json >> {ROOT}/db_maint.log 2>&1\n")
+            f"venv/bin/python -m app.db_maint --apply --json >> {ROOT}/db_maint.log 2>&1\n"
+            # SQLite 每日在线备份（05:20）：.backup 对 WAL 安全；日备保留 7 份，周日归档周备保留 4 份。
+            # 单文件库一旦损坏/误删全丢——数据安全最后防线，所有部署无条件安装。
+            f"20 5 * * * {cron_prefix}"
+            f"venv/bin/python -m app.db_backup --keep 7 --json >> {ROOT}/db_backup.log 2>&1\n")
     if os.environ.get("JQ_SPORTMONKS_TOKEN") or remote_env.get("JQ_SPORTMONKS_TOKEN"):
         # Sportmonks 预测/市场 + AI 情报：每 30 分钟刷新当日在售场次。
         cron += (f"5,35 * * * * {cron_prefix}"

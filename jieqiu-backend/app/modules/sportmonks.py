@@ -12,6 +12,7 @@ import logging
 import re
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
@@ -246,11 +247,21 @@ def _retry_delay(exc: urllib.error.HTTPError, attempt: int) -> float:
 
 
 def _get(base: str, path: str, params: str, timeout: int = 25) -> dict | None:
-    url = f"{base}{path}?{params}"
+    # token 从 query 挪到 Authorization header：URL 会进代理/中间层日志，
+    # query 传 token 是不必要的泄漏面（Sportmonks v2 支持两种认证方式）。
+    query_pairs = [(k, v) for k, v in urllib.parse.parse_qsl(
+        params, keep_blank_values=True) if k != "api_token"]
+    query = urllib.parse.urlencode(query_pairs)
+    url = f"{base}{path}" + (f"?{query}" if query else "")
+    token = dict(urllib.parse.parse_qsl(params, keep_blank_values=True)).get(
+        "api_token", "")
+    headers = {"Accept": "application/json"}
+    if token:
+        headers["Authorization"] = token
     for attempt in range(_MAX_RETRIES + 1):
         try:
             with urllib.request.urlopen(urllib.request.Request(
-                    url, headers={"Accept": "application/json"}), timeout=timeout) as response:
+                    url, headers=headers), timeout=timeout) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             if exc.code not in _RETRY_STATUS or attempt >= _MAX_RETRIES:

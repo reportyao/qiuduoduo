@@ -102,7 +102,7 @@ def _seed_match(db, kickoff: str):
 
 
 def test_prediction_snapshot_locks_once_and_settles_all_dimensions(db):
-    kickoff = future_kickoff(today_cn())
+    kickoff = future_kickoff(today_cn(), hour=23, minute=59)
     _seed_match(db, kickoff)
     before = _kickoff_utc_value(kickoff) - timedelta(minutes=30)
     opened = service.freeze_prediction_snapshots(db, now=before)
@@ -216,7 +216,7 @@ def test_prediction_snapshot_locks_once_and_settles_all_dimensions(db):
 
 
 def test_performance_dashboard_aggregates_settlements(db):
-    kickoff = future_kickoff(today_cn())
+    kickoff = future_kickoff(today_cn(), hour=23, minute=59)
     _seed_match(db, kickoff)
     before = _kickoff_utc_value(kickoff) - timedelta(minutes=30)
     service.freeze_prediction_snapshots(db, now=before)
@@ -251,7 +251,7 @@ def test_performance_dashboard_aggregates_settlements(db):
 
 
 def test_live_and_result_boards_do_not_expose_predictions(db, client):
-    kickoff = future_kickoff(today_cn())
+    kickoff = future_kickoff(today_cn(), hour=23, minute=59)
     _seed_match(db, kickoff)
     db.merge(SportmonksLiveState(
         match_id="board-1", fixture_id=99001, state_short="2H", minute="72",
@@ -279,7 +279,7 @@ def test_live_and_result_boards_do_not_expose_predictions(db, client):
 
 
 def test_sync_live_states_parses_inplay_and_period_minute(db, monkeypatch):
-    kickoff = future_kickoff(today_cn())
+    kickoff = future_kickoff(today_cn(), hour=23, minute=59)
     _seed_match(db, kickoff)
     payload = {"data": [{
         "id": 99001,
@@ -305,7 +305,7 @@ def test_sync_live_states_parses_inplay_and_period_minute(db, monkeypatch):
 
 
 def test_market_lines_prefer_sporttery_ttg_over_sportmonks(db):
-    _seed_match(db, future_kickoff(today_cn()))
+    _seed_match(db, future_kickoff(today_cn(), hour=23, minute=59))
     db.add(SportmonksMarket(match_id="board-1", market_key="ou", line="2.5"))
     db.add(SPPoolSnapshot(
         match_id="board-1", pool="ttg", line="", captured_at="2026-11-13 10:00:00",

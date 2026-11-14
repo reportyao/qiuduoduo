@@ -22,6 +22,8 @@
 
 > **2026-11-14 数据接口系统性深挖（已部署）**：commit `d96ffd8`，后端 **375 tests**。两处与进球事件同类（type_id 枚举/覆盖）的修复：① `board/service.py` 的 `first_side`（TEAM_TO_SCORE_FIRST 25 维对照 actual 来源）同样只认 type_id=14——点球/乌龙开纪录判错队，修复收 14/15/16 并按累计比分推导；② `parse_result` 的 `{"FT","2ND_HALF"}` 混合集合按 side 覆盖且 FT 行缺失时把下半场比分当全场（上半场有进球即错），修复为 FT 精确优先 → 1ST+2ND 求和 → CURRENT → 2ND_HALF 仅最后兜底。部署后重同步：14/14 场 postmatch 事件数=总进球（5/11→0/14）、MatchResult vs intel 比分 0 不一致。**审查误判撤回记录**：`sportmonks.py` 237/240 预测类型与 intel `_scores` 的 type_id 1/2 求和分支经生产数据/API 实证均为正确逻辑，未改动。
 
+> **2026-11-14 全链路审计（抓取→处理→落库→前端）**：commit `e01ca70`/后续，后端 **380 tests**。安全修复：Sportmonks token 从 URL query 挪到 `Authorization` header（`sportmonks._get` 内部剥离，10+ 调用点零改动；日志本就只打 path 无泄漏）。效率复核：采集链路 sleep 0.12-0.15s 为 API 限流必要节流；WAL/busy_timeout/重试 backoff 已有；前端 client 统一 12s 超时；workbench 20 个小查询可接受。安全复核：collector 心跳 Bearer+hmac 常量时间比较、CORS 严格 localhost 白名单、admin 登录 IP+用户名锁定 10 分钟+失败审计——均已在位。**数据安全补齐**：新增 `app/db_backup.py`（每日 05:20 cron，无条件安装）——在线 `.backup`（WAL 安全）、日备 7 份滚动 + 周日周备 4 份、失败进 ops_exception；生产已实跑生成 51MB 首份备份。
+
 ## 1. 进程与目录
 
 | 项 | 当前值 |
